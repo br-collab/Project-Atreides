@@ -77,7 +77,7 @@ Tier 2 agents operate under Thifur-J: bounded autonomy, selection among pre-appr
 | Agent | Skill File | Path Inventory (aureon repo) | Status |
 |---|---|---|---|
 | Compliance Monitoring Analyst | `aureon/agents/tier2/specs/compliance-monitoring-analyst.md` | `jtac_paths/AUR-J-COMP-001.json` (7 paths) | **Operationalized 2026-07-04** (operator-approved). Live: OFAC counterparty screening, pre-trade policy, RTS 6 algo inventory, approval lineage. Deferred: surveillance hooks, fuzzy OFAC |
-| AML/KYC Analyst | `aureon/agents/tier2/specs/aml-kyc-analyst.md` | `jtac_paths/AUR-J-AML-001.json` (6 paths) | **Built + live-verified 2026-07-04** (skill file v0.1 DRAFT, operator approval pending). Built new; six-rung eligibility ladder incl. completion-gate predicate semantics. Deferred: fuzzy matching, KYC-utility integration |
+| AML/KYC Analyst | `aureon/agents/tier2/specs/aml-kyc-analyst.md` | `jtac_paths/AUR-J-AML-001.json` (6 paths) | **Operationalized 2026-07-04** (operator-approved). Built new; six-rung eligibility ladder incl. completion-gate predicate semantics; live-verified 8/8. Deferred: fuzzy matching, KYC-utility integration |
 
 Separately, `aureon/agents/tier2/` in this repository carries the FIAT Operations Specialist implementation (AUR-CUSTODY-001 §VI custody role) against the typed contracts layer — a custody-domain Tier 2 role distinct from the four canonical §IV risk-and-compliance roles above.
 

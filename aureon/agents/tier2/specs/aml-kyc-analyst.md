@@ -1,6 +1,6 @@
 # AML/KYC Analyst
 
-**Tier 2 · Thifur-J · Bounded Autonomy — v0.1 DRAFT (second Tier 2 skill file; operator approval pending per `AUR-J-PATHSET-AML-001` header)**
+**Tier 2 · Thifur-J · Bounded Autonomy — v1.0 (second Tier 2 skill file; operator-approved 2026-07-04)**
 
 ## Doctrine anchor
 
@@ -57,4 +57,4 @@ All non-clear rungs escalate through C2 to human authority — never laterally. 
 ---
 
 *Aureon · Guillermo Ravelo · Columbia University M.S. Technology Management*
-*aml-kyc-analyst.md · v0.1 DRAFT · written against WS-2.2 live code · Aureon Doctrine v1.9*
+*aml-kyc-analyst.md · v1.0 · written against WS-2.2 live code · operator-approved 2026-07-04 · Aureon Doctrine v1.9*
