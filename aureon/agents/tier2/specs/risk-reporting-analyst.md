@@ -1,6 +1,6 @@
 # Risk Reporting Analyst
 
-**Tier 2 · Thifur-J · Bounded Autonomy — v0.1 DRAFT (third Tier 2 skill file; operator approval pending per `AUR-J-PATHSET-RISK-001` header)**
+**Tier 2 · Thifur-J · Bounded Autonomy — v1.0 (third Tier 2 skill file; operator-approved 2026-07-04)**
 
 ## Doctrine anchor
 
@@ -43,4 +43,4 @@ BCBS 239 P3 (accuracy — automated aggregation) and P5 (timeliness); SR 11-7 (r
 ---
 
 *Aureon · Guillermo Ravelo · Columbia University M.S. Technology Management*
-*risk-reporting-analyst.md · v0.1 DRAFT · written against WS-2.3 live code · Aureon Doctrine v1.9*
+*risk-reporting-analyst.md · v1.0 · written against WS-2.3 live code · operator-approved 2026-07-04 · Aureon Doctrine v1.9*

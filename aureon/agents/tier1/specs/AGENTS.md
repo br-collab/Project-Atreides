@@ -70,7 +70,7 @@ These five constraints are the architectural floor for every Tier 1 skill file i
 
 ---
 
-## Tier 2 — Risk and Compliance (J-class) — first two roles operationalized
+## Tier 2 — Risk and Compliance (J-class) — band COMPLETE (all four roles)
 
 Tier 2 agents operate under Thifur-J: bounded autonomy, selection among pre-approved paths only, never generating new ones. The operationalization standard is four artifacts: a versioned path-inventory JSON, implemented path callables with halt-and-pend semantics, fixture-defined rule sets, and approval-lineage entries — declared in a path-set specification (`AUR-J-PATHSET-*`) and operationalized in a skill file. The runtime implementations live in the `br-collab/aureon` repository (The Grid 3); this repository carries the skill specifications at `aureon/agents/tier2/specs/`.
 
@@ -78,7 +78,8 @@ Tier 2 agents operate under Thifur-J: bounded autonomy, selection among pre-appr
 |---|---|---|---|
 | Compliance Monitoring Analyst | `aureon/agents/tier2/specs/compliance-monitoring-analyst.md` | `jtac_paths/AUR-J-COMP-001.json` (7 paths) | **Operationalized 2026-07-04** (operator-approved). Live: OFAC counterparty screening, pre-trade policy, RTS 6 algo inventory, approval lineage. Deferred: surveillance hooks, fuzzy OFAC |
 | AML/KYC Analyst | `aureon/agents/tier2/specs/aml-kyc-analyst.md` | `jtac_paths/AUR-J-AML-001.json` (6 paths) | **Operationalized 2026-07-04** (operator-approved). Built new; six-rung eligibility ladder incl. completion-gate predicate semantics; live-verified 8/8. Deferred: fuzzy matching, KYC-utility integration |
-| Risk Reporting Analyst | `aureon/agents/tier2/specs/risk-reporting-analyst.md` | `jtac_paths/AUR-J-RISK-001.json` (4 paths) | **Built + live-verified 2026-07-04** (skill file v0.1 DRAFT, operator approval pending). Portfolio-level risk aggregation; worst-rung disposition; breach dominates data-gap; gap-completeness invariant. Deferred: live-state wiring (needs sector-concentration compute), production risk engine |
+| Risk Reporting Analyst | `aureon/agents/tier2/specs/risk-reporting-analyst.md` | `jtac_paths/AUR-J-RISK-001.json` (4 paths) | **Operationalized 2026-07-04** (operator-approved). Portfolio-level risk aggregation; worst-rung disposition; breach dominates data-gap; gap-completeness invariant. Deferred: live-state wiring, production risk engine |
+| Trade Surveillance Analyst (FI) | `aureon/agents/tier2/specs/trade-surveillance-analyst.md` | `jtac_paths/AUR-J-SURV-001.json` (4 paths) | **Built + live-verified 2026-07-04** (skill file v0.1 DRAFT, operator approval pending). Authored scenario library (wash, marking-close, front-running, price deviation, concentration; layering declared-not-active); patterns never auto-disposed. Completes the Tier 2 band |
 
 Separately, `aureon/agents/tier2/` in this repository carries the FIAT Operations Specialist implementation (AUR-CUSTODY-001 §VI custody role) against the typed contracts layer — a custody-domain Tier 2 role distinct from the four canonical §IV risk-and-compliance roles above.
 
@@ -88,7 +89,7 @@ Separately, `aureon/agents/tier2/` in this repository carries the FIAT Operation
 
 The following are deliberately not specified as skill files in this repository at the current doctrine version. The reasons are doctrinal, not editorial.
 
-**Tier 2 agents (Thifur-J, bounded autonomy) — one of four.** Trade Surveillance Fixed Income is specified as a role in canonical §IV but has not yet produced the four operationalization artifacts at skill-file resolution — its scenario library is genuine new work, not documentation, and is the reason it is sequenced last. Compliance Monitoring, AML/KYC, and Risk Reporting left this section 2026-07-04 (WS-2.1/2.2/2.3) — see the Tier 2 section above. J-class agents select among pre-approved paths and never generate new ones.
+**Tier 2 agents (Thifur-J, bounded autonomy) — COMPLETE.** All four canonical Risk-and-Compliance roles (Compliance Monitoring, AML/KYC, Risk Reporting, Trade Surveillance FI) were operationalized or built 2026-07-04 (WS-2.1 through WS-2.4) — see the Tier 2 section above. No Tier 2 role remains in this out-of-scope section. J-class agents select among pre-approved paths and never generate new ones.
 
 **Tier 3 agents (Thifur-H, adaptive advisory).** Portfolio Risk, Model Risk SR 11-7, and Data Governance are specified as roles in canonical §IV and operate under the two-state distinction (advisory active, autonomous declared not activated) documented in canonical §II. Tier 3 skill files would need to document the advisory/autonomous boundary and the SR 11-7 Tier 1 independent validation gate that controls activation per domain. Neither is in scope at the current doctrine version.
 
@@ -124,4 +125,4 @@ In rough priority order, the additions anticipated to follow this v0.2 of `AGENT
 ---
 
 *Aureon · Guillermo Ravelo · Columbia University M.S. Technology Management*
-*AGENTS.md · v0.4 · Aureon Doctrine v1.9 · v0.4 (2026-07-04): three Tier 2 roles operationalized (Compliance, AML/KYC, Risk Reporting); only Trade Surveillance FI remains locked*
+*AGENTS.md · v0.5 · Aureon Doctrine v1.9 · v0.5 (2026-07-04): Tier 2 band COMPLETE — all four canonical roles operationalized or built (Compliance, AML/KYC, Risk Reporting approved; Trade Surveillance built, approval pending)*
