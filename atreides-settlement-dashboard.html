@@ -242,16 +242,16 @@ const PHASES = [
 ];
 const PIDX = Object.fromEntries(PHASES.map((p,i)=>[p.id,i]));
 const SCEN = [
-  {id:'gsd',nm:'FICC GSD Repo',ds:'overnight repo · within limits',rail:'FICC_GSD_DVP',halt:null,gate:null,out:'SETTLED',kind:'settlement_telemetry',dd:'T-note collateral; net delivery matches FICC published figure. All gates clear — telemetry recorded.'},
+  {id:'gsd',nm:'FICC GSD Repo',ds:'overnight repo · within limits',rail:'FICC_GSD_DVP',halt:null,gate:null,out:'SETTLED',kind:'settlement_telemetry',dd:'T-note collateral; net delivery matches FICC published figure. All gates clear → telemetry recorded.'},
   {id:'cash',nm:'Cash UST',ds:'outright · clean',rail:'FICC_GSD_DVP',halt:null,gate:null,out:'SETTLED',kind:'settlement_telemetry',dd:'Cash Treasury settlement, no exceptions. Telemetry record written and replayable.'},
   {id:'spon',nm:'Sponsored DVP',ds:'JPM as sponsoring member',rail:'FICC_SPONSORED_DVP',halt:null,gate:null,out:'SETTLED',kind:'settlement_telemetry',dd:'Sponsored DVP path; sponsoring-member identity carried into the DSOR lineage.'},
   {id:'gcf',nm:'GCF Repo',ds:'BNY Mellon pool custodian',rail:'FICC_GCF_REPO',halt:null,gate:null,out:'SETTLED',kind:'settlement_telemetry',dd:'General Collateral Finance repo; pool custodian recorded in telemetry.'},
   {id:'mtm',nm:'MTM Margin Call',ds:'Fedwire Funds',rail:'FEDWIRE_FUNDS',halt:null,gate:null,out:'SETTLED',kind:'settlement_telemetry',dd:'Intraday mark-to-market call routed over Fedwire Funds; distinct from DvP.'},
-  {id:'matl',nm:'Material Magnitude',ds:'above quorum threshold',rail:'FICC_GSD_DVP',halt:'quorum',gate:'Magnitude threshold',out:'QUORUM REQUIRED',kind:'quorum_required',dd:'Magnitude exceeds the auto threshold — routed to quorum authority. Settlement holds pending the N-of-M ceremony (roadmap). The requirement is recorded.'},
-  {id:'fund',nm:'Intraday Credit Breach',ds:'usage == facility cap',rail:'FICC_GSD_DVP',halt:'settle',gate:'Intraday funding position',out:'ESCALATED',kind:'settlement_escalation',dd:'Credit usage at 500M of a 500M cap — hold and escalate to C2. No path deviation. The escalation is recorded.'},
-  {id:'cf',nm:'Clearing-Fund Deficiency',ds:'FICC clearing fund non-compliant',rail:'FICC_GSD_DVP',halt:'settle',gate:'FICC clearing-fund compliance',out:'ESCALATED',kind:'settlement_escalation',dd:'Clearing-fund deficiency flagged before routing — hold and escalate. Escalation written to DSOR with the deficiency flag.'},
-  {id:'net',nm:'Net-Obligation Mismatch',ds:'10M vs FICC published 10.5M',rail:'FICC_GSD_DVP',halt:'settle',gate:'FICC net-settlement obligation',out:'ESCALATED',kind:'settlement_escalation',dd:'Tasking delivery differs from FICC’s published net obligation — hold. The discrepancy detail is captured in the escalation record.'},
-  {id:'dmis',nm:'DSOR Lineage Mismatch',ds:'operation_id ≠ lineage stub',rail:'FICC_GSD_DVP',halt:'settle',gate:'DSOR pre-trade verification',out:'ESCALATED',kind:'settlement_escalation',dd:'Pre-trade DSOR lineage does not match the operation — hold at the first gate. The framework refuses to settle without a matching record.'},
+  {id:'matl',nm:'Material Magnitude',ds:'above quorum threshold',rail:'FICC_GSD_DVP',halt:'quorum',gate:'Magnitude threshold',out:'QUORUM REQUIRED',kind:'quorum_required',dd:'Magnitude exceeds the auto threshold → routed to quorum authority. Settlement holds pending the N-of-M ceremony (roadmap). The requirement is recorded.'},
+  {id:'fund',nm:'Intraday Credit Breach',ds:'usage == facility cap',rail:'FICC_GSD_DVP',halt:'settle',gate:'Intraday funding position',out:'ESCALATED',kind:'settlement_escalation',dd:'Credit usage at 500M of a 500M cap → hold and escalate to C2. No path deviation. The escalation is recorded.'},
+  {id:'cf',nm:'Clearing-Fund Deficiency',ds:'FICC clearing fund non-compliant',rail:'FICC_GSD_DVP',halt:'settle',gate:'FICC clearing-fund compliance',out:'ESCALATED',kind:'settlement_escalation',dd:'Clearing-fund deficiency flagged before routing → hold and escalate. Escalation written to DSOR with the deficiency flag.'},
+  {id:'net',nm:'Net-Obligation Mismatch',ds:'10M vs FICC published 10.5M',rail:'FICC_GSD_DVP',halt:'settle',gate:'FICC net-settlement obligation',out:'ESCALATED',kind:'settlement_escalation',dd:'Tasking delivery differs from FICC\u2019s published net obligation → hold. The discrepancy detail is captured in the escalation record.'},
+  {id:'dmis',nm:'DSOR Lineage Mismatch',ds:'operation_id ≠ lineage stub',rail:'FICC_GSD_DVP',halt:'settle',gate:'DSOR pre-trade verification',out:'ESCALATED',kind:'settlement_escalation',dd:'Pre-trade DSOR lineage does not match the operation → hold at the first gate. The framework refuses to settle without a matching record.'},
 ];
 let seq=0, stepMode=false, pending=null;
 const stage=document.getElementById('stage'), scnList=document.getElementById('scnList'), ledger=document.getElementById('ledger');
@@ -316,7 +316,7 @@ const BREAKS=[
   {id:'BRK-0007',sev:'high',cls:'Funding short · intraday credit cap',expo:'$500.0M',age:'04:12',rail:'FICC_GSD_DVP',kind:'settlement_escalation',
    sym:'Intraday funding-position gate held — usage 500M of 500M cap',
    prox:'Cumulative intraday settlements consumed the facility line',
-   orig:'Facility cap not sized for the day’s volume / prior draws not yet returned',
+   orig:'Facility cap not sized for the day\u2019s volume / prior draws not yet returned',
    liaison:['Treasury / funding desk','Correspondent bank'],
    res:['Raise intraday credit line','Re-sequence settlements','Partial settlement','Source EOD funding early']},
   {id:'BRK-0010',sev:'high',cls:'Control break · DSOR lineage mismatch',expo:'—',age:'00:11',rail:'FICC_GSD_DVP',kind:'settlement_escalation',
@@ -385,7 +385,7 @@ function renderDetail(){
       <div class="actrow"><label>Resolution</label>
         <select id="resSel" ${resolved?'disabled':''}>${b.res.map(r=>`<option>${r}</option>`).join('')}</select>
         <button class="abtn" data-act="apply" ${resolved?'disabled':''}>Apply</button></div>
-      <button class="closebtn" data-act="close" ${resolved?'disabled':''}>${resolved?'✓ Resolved &amp; closed':'Resolve &amp; close'}</button>
+      <button class="closebtn" data-act="close" ${resolved?'disabled':''}>${resolved?'✓ Resolved & closed':'Resolve & close'}</button>
     </div>
 
     <p class="wbsec"><span>Action log</span><span class="ap">append-only</span></p>
@@ -393,16 +393,169 @@ function renderDetail(){
 
   brkDetail.querySelectorAll('[data-act],[data-liaison]').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      if(btn.dataset.liaison){logAct(b,'Liaison','Liaison initiated — '+btn.dataset.liaison);}
+      if(btn.dataset.liaison){logAct(b,'Liaison','Liaison initiated → '+btn.dataset.liaison);}
       else if(btn.dataset.act==='assign'){logAct(b, brkDetail.querySelector('#asgSel').value,'Assigned');}
-      else if(btn.dataset.act==='apply'){logAct(b,'Resolver','Resolution applied — '+brkDetail.querySelector('#resSel').value);}
-      else if(btn.dataset.act==='close'){logAct(b,'Resolver','Resolved &amp; closed — break cleared');b.status='RESOLVED';renderQueue();}
+      else if(btn.dataset.act==='apply'){logAct(b,'Resolver','Resolution applied → '+brkDetail.querySelector('#resSel').value);}
+      else if(btn.dataset.act==='close'){logAct(b,'Resolver','Resolved & closed — break cleared');b.status='RESOLVED';renderQueue();}
       renderDetail();
     });
   });
 }
 function logAct(b,who,what){b.actions.push({t:dtg(),who,what});}
 renderQueue();
+
+/* ---------- LIVE cockpit wiring (AUR-COCKPIT-001 · /api/cockpit/*) ----------
+   Drives the SAME pipeline + workbench from real endpoint responses.
+   API base defaults to same-origin (served by server.py); override with
+   ?api=http://host:port. CORS is enabled server-side. Only the phases the
+   cockpit actually governs (quorum·settle·dsor) light up in live mode —
+   intake/eligibility/routing/safety are out of the cockpit's scope. */
+const API_BASE = new URLSearchParams(location.search).get('api') || '';
+let LIVE = false;
+const OUT_OF_SCOPE = ['intake','eligibility','routing','safety'];
+const liveState = {};
+
+const LIVE_TASKINGS = [
+  {id:'l-clean', nm:'Cash UST · clean',        ds:'live · all gates clear',
+   body:{regime:'ccp',rail:'ficc_gsd_dvp',settlement_kind:'dvp',counterparty_id:'CP-ALPHA',cusip:'912828XX',
+         net_delivery_quantity:'1000000',net_payment_amount:'1000000',ficc_published_net_delivery:'1000000',
+         intraday_credit_limit:'100000000',intraday_credit_current_usage:'10000000',ficc_clearing_fund_compliant:true}},
+  {id:'l-matl',  nm:'Material Magnitude',       ds:'live · quorum hold',
+   body:{regime:'ccp',rail:'ficc_gsd_dvp',settlement_kind:'dvp',counterparty_id:'CP-ALPHA',cusip:'912828XX',
+         net_delivery_quantity:'1000000',net_payment_amount:'75000000',ficc_published_net_delivery:'1000000',
+         intraday_credit_limit:'100000000',intraday_credit_current_usage:'10000000',ficc_clearing_fund_compliant:true}},
+  {id:'l-cf',    nm:'Clearing-Fund Deficiency', ds:'live · escalation',
+   body:{regime:'ccp',rail:'ficc_gsd_dvp',settlement_kind:'dvp',counterparty_id:'CP-ALPHA',cusip:'912828XX',
+         net_delivery_quantity:'1000000',net_payment_amount:'1000000',ficc_published_net_delivery:'1000000',
+         intraday_credit_limit:'100000000',intraday_credit_current_usage:'10000000',ficc_clearing_fund_compliant:false}},
+  {id:'l-net',   nm:'Net-Obligation Mismatch',  ds:'live · escalation',
+   body:{regime:'ccp',rail:'ficc_gsd_dvp',settlement_kind:'dvp',counterparty_id:'CP-ALPHA',cusip:'912828XX',
+         net_delivery_quantity:'1000000',net_payment_amount:'1000000',ficc_published_net_delivery:'1050000',
+         intraday_credit_limit:'100000000',intraday_credit_current_usage:'10000000',ficc_clearing_fund_compliant:true}},
+  {id:'l-fund',  nm:'Intraday Credit Breach',   ds:'live · escalation',
+   body:{regime:'ccp',rail:'ficc_gsd_dvp',settlement_kind:'dvp',counterparty_id:'CP-ALPHA',cusip:'912828XX',
+         net_delivery_quantity:'1000000',net_payment_amount:'1000000',ficc_published_net_delivery:'1000000',
+         intraday_credit_limit:'50000000',intraday_credit_current_usage:'50000000',ficc_clearing_fund_compliant:true}},
+];
+
+async function api(path, opts){
+  const r = await fetch(API_BASE+path, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
+  let j={}; try{ j = await r.json(); }catch(e){}
+  return {status:r.status, json:j};
+}
+
+function liveRender(st, lb, disp, dd, cls){
+  clearStage();
+  PHASES.forEach((p,i)=>{
+    const el=document.getElementById('ph-'+p.id), sd=document.getElementById('st-'+p.id), k=st[i];
+    el.classList.add('on');
+    if(k==='pass')el.classList.add('pass'); else if(k==='hold')el.classList.add('hold'); else if(k==='quorum')el.classList.add('quorum');
+    sd.className='stat '+(k==='na'?'':k); sd.textContent=lb[i];
+  });
+  dispV.className='dv '+cls; dispV.textContent=disp; dispD.textContent=dd;
+}
+
+async function runLive(preset){
+  document.querySelectorAll('.scn').forEach(b=>b.setAttribute('aria-pressed','false'));
+  const btn=document.getElementById('scn-'+preset.id); if(btn)btn.setAttribute('aria-pressed','true');
+  dispV.className='dv idle'; dispV.textContent='Running live…'; dispD.textContent='Calling /api/cockpit …';
+  try{
+    const body=Object.assign({}, preset.body, {authority_id:'operator-bill', settlement_date:new Date(Date.now()+864e5).toISOString()});
+    const cap=await api('/api/cockpit/capture',{method:'POST',body:JSON.stringify(body)});
+    if(cap.status===423){ throw new Error('Tier 0 Halt active — surface frozen'); }
+    if(cap.status!==200) throw new Error('capture '+cap.status+' '+(cap.json.message||''));
+    const op=cap.json.operation_id; liveState[preset.id]=op;
+    const val=await api('/api/cockpit/validate',{method:'POST',body:JSON.stringify({operation_id:op})});
+    const prep=await api('/api/cockpit/prepare',{method:'POST',body:JSON.stringify({operation_id:op})});
+    const gate=val.json.gate||{}, pkg=prep.json.package||{};
+    const passed=!!gate.passed, disp=pkg.disposition;
+    const st=PHASES.map(p=>OUT_OF_SCOPE.includes(p.id)?'na':'pass');
+    const lb=PHASES.map(p=>OUT_OF_SCOPE.includes(p.id)?'— not in cockpit scope':'clear');
+    let outLabel, cls, kind, dd;
+    if(!passed){
+      st[PIDX['quorum']]='na'; lb[PIDX['quorum']]='— not reached';
+      st[PIDX['settle']]='hold'; lb[PIDX['settle']]='hold · '+(gate.discrepancy_code||'gate');
+      st[PIDX['dsor']]='pass';  lb[PIDX['dsor']]='escalation recorded';
+      outLabel='ESCALATED'; cls='escalated'; kind=gate.output_kind||'settlement_escalation';
+      dd='Gate held at settlement — '+(gate.detail||gate.discrepancy_code||'')+' No package emitted. Escalation written to the DSOR; surfaces in the Breaks Workbench.';
+    } else if(disp==='quorum_required_hold'){
+      st[PIDX['quorum']]='quorum'; lb[PIDX['quorum']]='quorum required';
+      st[PIDX['settle']]='pass';   lb[PIDX['settle']]='clear';
+      st[PIDX['dsor']]='pass';     lb[PIDX['dsor']]='recorded';
+      outLabel='QUORUM REQUIRED'; cls='quorum'; kind='quorum_required';
+      dd='Gates cleared but magnitude is material → routed to quorum. Quorum is unavailable under CAOM-001, so the release HOLDS and surfaces a CAOM-transition trigger. No package emitted.';
+    } else {
+      st[PIDX['quorum']]='pass'; lb[PIDX['quorum']]='sub-material · cleared';
+      st[PIDX['settle']]='pass'; lb[PIDX['settle']]='clear';
+      st[PIDX['dsor']]='pass';   lb[PIDX['dsor']]='recorded';
+      outLabel='PACKAGE EMITTED'; cls='settled'; kind=gate.output_kind||'settlement_telemetry';
+      dd='All gates cleared, sub-material magnitude → a validated instruction package is emitted for the entitled member to key. It is never a submission (is_submission=false).';
+    }
+    liveRender(st, lb, outLabel, dd, cls);
+    const empty=ledger.querySelector('.ledempty'); if(empty)empty.remove();
+    const rid=(gate.dsor_pre_trade_record_id||'').slice(0,8), oid=(op||'').slice(0,8);
+    const li=document.createElement('li');
+    li.innerHTML=`<span class="dtg">${dtg()}</span> · op ${oid} · <span class="k">${kind}</span> · ${(preset.body.rail||'').toUpperCase()} · DSOR ${rid} · <span class="r ${cls}">${outLabel}</span>`;
+    ledger.insertBefore(li, ledger.firstChild);
+  }catch(e){
+    dispV.className='dv escalated'; dispV.textContent='OFFLINE';
+    dispD.textContent='Live call failed: '+e.message+'. Start server.py (serves /api/cockpit/*) or open with ?api=<server-url>. Synthetic mode still works.';
+  }
+}
+
+function renderSynthRail(){
+  scnList.innerHTML='';
+  SCEN.forEach(s=>{
+    const tag=s.out==='SETTLED'?'ok':(s.out==='QUORUM REQUIRED'?'qr':'hd'), tlab=s.out==='SETTLED'?'settle':(s.out==='QUORUM REQUIRED'?'quorum':'hold');
+    const b=document.createElement('button'); b.className='scn'; b.id='scn-'+s.id; b.setAttribute('aria-pressed','false');
+    b.innerHTML=`<span class="tag ${tag}">${tlab}</span><span class="nm">${s.nm}</span><span class="ds">${s.ds}</span>`;
+    b.addEventListener('click',()=>run(s)); scnList.appendChild(b);
+  });
+}
+function renderLiveRail(){
+  scnList.innerHTML='';
+  LIVE_TASKINGS.forEach(s=>{
+    const b=document.createElement('button'); b.className='scn'; b.id='scn-'+s.id; b.setAttribute('aria-pressed','false');
+    b.innerHTML=`<span class="tag ok" style="opacity:.7">live</span><span class="nm">${s.nm}</span><span class="ds">${s.ds}</span>`;
+    b.addEventListener('click',()=>runLive(s)); scnList.appendChild(b);
+  });
+}
+
+const liveBtn=document.createElement('button');
+liveBtn.id='liveBtn'; liveBtn.setAttribute('aria-pressed','false'); liveBtn.textContent='Feed · Synthetic';
+const ctl=document.querySelector('.ctl'); if(ctl){ ctl.style.flexWrap='wrap'; liveBtn.style.flexBasis='100%'; ctl.appendChild(liveBtn); }
+liveBtn.addEventListener('click',()=>{
+  LIVE=!LIVE; liveBtn.setAttribute('aria-pressed',String(LIVE)); liveBtn.textContent='Feed · '+(LIVE?'LIVE':'Synthetic');
+  clearStage(); dispV.className='dv idle'; dispV.textContent='— Select a tasking';
+  dispD.textContent=LIVE?'LIVE feed — presets call /api/cockpit and drive the phases the cockpit governs (quorum · settle · DSOR).':'Pick a tasking on the left to run it through the pipeline.';
+  if(LIVE)renderLiveRail(); else renderSynthRail();
+});
+
+async function syncLiveBreaks(){
+  brkCount.textContent='';
+  try{
+    const r=await api('/api/cockpit/workbench',{method:'GET'});
+    const tks=r.json.tickets||[];
+    BREAKS.length=0;
+    tks.forEach(t=>{
+      const leg=(t.leg||'').replace(/_/g,' ');
+      BREAKS.push({id:t.break_id||'BRK', sev:(t.leg==='clearing_fund_break'||t.leg==='funding_break')?'high':'med',
+        cls:leg||'break', expo:'—', age:'live', rail:'live', kind:'settlement_escalation',
+        sym:'Live break · '+leg, prox:'operator readback diverged from expected',
+        orig:'DSOR '+((t.dsor_pre_trade_record_id||'').slice(0,8))+' · op '+((t.operation_id||'').slice(0,8)),
+        liaison:['FICC','Ops control'], res:['Investigate','Reconcile to expected','Resolve & close'],
+        status:'OPEN', actions:[]});
+    });
+    if(!BREAKS.length){ brkList.innerHTML='<p class="wbempty" style="padding:12px">No live breaks on the workbench.</p>'; }
+    else { selBrk=null; renderQueue(); }
+  }catch(e){
+    brkList.innerHTML='<p class="wbempty" style="padding:12px">Live sync failed: '+e.message+'. Start server.py or use ?api=&lt;url&gt;.</p>';
+  }
+}
+const syncBtn=document.createElement('button');
+syncBtn.textContent='⟳ Sync live breaks'; syncBtn.id='syncLiveBtn';
+syncBtn.style.cssText='cursor:pointer;background:transparent;border:1px solid var(--rule);color:var(--sand);font-family:inherit;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:7px 10px;border-radius:2px;margin:0 0 12px;width:100%';
+const wbq=document.querySelector('.wbq'); if(wbq){ wbq.insertBefore(syncBtn, brkList); syncBtn.addEventListener('click',syncLiveBreaks); }
 </script>
 </body>
 </html>
