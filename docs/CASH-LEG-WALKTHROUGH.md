@@ -33,6 +33,30 @@ package, and no field anywhere holds a credential.
 If you take one thing from this document, take that. Everything below is
 downstream of it.
 
+### A note on the term — *cash leg*, not *cash settlement*
+
+This document says **cash leg** throughout, and never *cash settlement*. The
+two are not synonyms, and the difference matters to precisely the audience
+this document is written for.
+
+A delivery-versus-payment settlement has two legs: the **securities leg**
+(the delivery) and the **cash leg** (the payment). They settle against each
+other, and DvP is the property that neither completes unless both do. This
+framework governs the second leg.
+
+*Cash settlement* names something else — a contract discharged by a cash
+payment **in lieu of** delivery of the underlying, as with a cash-settled
+future or an index option. It is a contract-terms concept, not a
+settlement-mechanics one. Calling this workstream "cash settlement" would
+name the wrong thing to the one reader most likely to catch it.
+
+The doctrine (`AUR-CUSTODY-CASH-001`), the module tree
+(`atreides.rails.cato_f`, `atreides.rails.funding_state`), the HTTP surface
+(`/api/cashleg/*`), and the console tab all carry the same word for the same
+reason. Terminology drift between a doctrine document and the code that
+claims to implement it is a small failure that looks exactly like a large
+one under review.
+
 ---
 
 ## The scenario

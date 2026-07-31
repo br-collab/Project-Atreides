@@ -1,6 +1,6 @@
 """CATO-F — FIAT/cash settlement-rail governance gate.
 
-Per AUR-CUSTODY-CASH-001 v0.1 Section V (gate specification) and
+Per AUR-CUSTODY-CASH-001 v0.2 Section V (gate specification) and
 AUR-CUSTODY-001 v1.0 Section X as amended by AUR-CUSTODY-AMD-001
 (FIAT settlement-rail governance reclassified from forward-state to
 present-state build obligation).
@@ -63,7 +63,7 @@ __all__ = [
     "GOLDEN_VECTORS",
 ]
 
-DOCTRINE_VERSION: Final[str] = "AUR-CUSTODY-CASH-001-v0.1"
+DOCTRINE_VERSION: Final[str] = "AUR-CUSTODY-CASH-001-v0.2"
 
 # Stress thresholds are deliberately identical to Cato's OFR STLFSI4
 # bands. The cash leg and the securities leg respond to systemic stress

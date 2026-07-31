@@ -47,6 +47,30 @@ operations and wants to see whether the code earns its claims.
 
 ---
 
+## See it running
+
+**[aureon-production.up.railway.app/cockpit](https://aureon-production.up.railway.app/cockpit)**
+— the Settlement & Custody Console. Custody is the console; it has three
+elements.
+
+| Element | What it shows |
+| --- | --- |
+| **Pipeline** | One custody operation through seven governance gates to an append-only decision-of-record. It stops at the first gate that holds — the agent escalates, it never deviates. Representative flow, synthetic inputs, replayed in the browser. |
+| **Breaks Workbench** | The exception surface. Where a held gate lands: symptom traced to proximate cause traced to originating event, with an action trail that is appended, never overwritten. |
+| **Cash Leg** | Funding feasibility → rail selection with an explicit finality class → an ISO 20022 `pacs.009.001.13` package emitted against the published schemas. Computed **server-side per request** by this package at `/api/cashleg/*` — not a scripted animation. |
+
+The securities leg and the cash leg both run the Pipeline's gates; the Cash
+Leg tab is where the money side is resolved to a rail, a finality class, and
+a message. Breaks Workbench is orthogonal to both — either leg feeds it.
+
+The console is served from the deployment repository and imports this one as
+a pinned dependency. It is deliberately not vendored here: per `AUR-ADD-006`
+the relationship between the two repositories is a dependency, not a copy,
+and a second copy of the console is the exact duplication that determination
+exists to eliminate.
+
+---
+
 ## What is built
 
 | Component | Module | What it does |
