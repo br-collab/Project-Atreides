@@ -1,0 +1,118 @@
+{
+  "_note": "Approved cause paths for the Cash-Leg Diagnostic Specialist (AUR-J-RCA-001). v0.1 theory-seeded from settlement-operations failure modes; to be re-derived empirically from break history once AUR-ADD-005 item 14 produces one. Three state-determination paths gate nine cause paths and one terminal escalation. The agent selects among these and NEVER generates a new cause — adding one is a doctrine event requiring operator approval and a version bump of this file.",
+  "_doctrine_anchors": [
+    "AUR-CUSTODY-AMD-002 (Cash-Leg Diagnostic Specialist, Tier 2 Thifur-J)",
+    "AUR-CUSTODY-001 v1.0 SVIII (four-class failure-mode taxonomy)",
+    "AUR-CUSTODY-001 v1.0 SIX (LVPS finality irreversibility)",
+    "AUR-CANONICAL-001 v1.6 Axiom 2 (agents advise, operators decide)",
+    "AUR-COCKPIT-001 v0.1 SVIII (raise_break)"
+  ],
+  "_ordering_rule": "State-determination paths are evaluated first and gate all cause paths. Within cause paths, CAUSE_L0_GOVERNANCE_HOLD is evaluated before all external causes: it is the fastest to confirm from DSOR lineage and the most frequently misattributed to an external party.",
+  "_ranking_rule": "Candidates are ranked by expected cost of delay, not by maximum likelihood. A lower-probability cause whose remediation window closes at an imminent rail cutoff outranks a higher-probability cause remediable on the following business day.",
+  "paths": [
+    {
+      "path_id": "STATE_IN_FLIGHT_PENDING",
+      "description": "Evidence indicates the operation was accepted and is queued or in flight (e.g. RTGS queue pending funded position), not failed. This is NOT a settlement failure and will settle when the pending condition clears. Emits an explicit no-remediation advisory. Halt-and-pend operator acknowledgment before any remediation is contemplated — misclassifying a pending operation as failed and re-issuing is the mechanism by which duplicate payments are created, an outcome that per AUR-CUSTODY-001 SIX cannot be reversed by the settlement system and resolves at best to UR-R.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_state_in_flight_pending",
+      "requires_approval": true,
+      "approval_predicates": ["operator_acknowledge_no_remediation"],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "STATE_SETTLED_CONFIRMATION_LOST",
+      "description": "Evidence indicates the operation reached settlement but the confirmation or status message was not received. The cash leg is complete; the observability of it is not. Routes to confirmation retrieval and reconciliation, never to re-issuance.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_state_settled_confirmation_lost",
+      "requires_approval": true,
+      "approval_predicates": ["operator_acknowledge_no_remediation"],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "STATE_FAILED_CONFIRMED",
+      "description": "Evidence positively establishes a failure state rather than an in-flight or settled-unconfirmed state. Only this path opens the cause paths below. Requires explicit operator confirmation of the failure determination before diagnosis proceeds, because every downstream remediation is predicated on it.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_state_failed_confirmed",
+      "requires_approval": true,
+      "approval_predicates": ["operator_confirm_failure_state"],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "CAUSE_L0_GOVERNANCE_HOLD",
+      "description": "Aureon itself held the operation: a gate HOLD, a material-magnitude quorum routing that resolved to HOLD under CAOM-001, a Tier 0 halt, or a validation break that prevented package emission. Confirmed by DSOR lineage replay. Evaluated first because it is the fastest cause to establish and the most commonly misattributed to an external party. Self-resolving: no external remediation applies.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_cause_l0_governance_hold",
+      "requires_approval": false,
+      "approval_predicates": [],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "CAUSE_L1_MESSAGE_FORMAT",
+      "description": "The instruction package was rejected on message or format grounds: schema-invalid ISO 20022, wrong message variant for the service, missing mandatory field, depository-specific profile violation, character-set truncation, or reference mismatch (UETR / EndToEndId). Discriminating evidence is the NACK content and schema validation of the emitted package. Typically RA.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_cause_l1_message_format",
+      "requires_approval": false,
+      "approval_predicates": [],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "CAUSE_L2_STATIC_REFERENCE_DATA",
+      "description": "Static or reference data defect: stale or incorrect standing settlement instructions, wrong BIC or routing number, account not enabled for the selected rail, omnibus or sub-account mapping error, wrong settlement location. Discriminating evidence is field-level comparison of the instruction against the reference source. Historically the single most common settlement-failure cause class.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_cause_l2_static_reference_data",
+      "requires_approval": false,
+      "approval_predicates": [],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "CAUSE_L3_ENTITLEMENT_ELIGIBILITY",
+      "description": "The submitting member is not entitled for the service or instrument, or the instrument is not eligible at the depository (not on file, not eligible for the settlement service). Discriminating evidence is the rejection reason code and entitlement readback.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_cause_l3_entitlement_eligibility",
+      "requires_approval": false,
+      "approval_predicates": [],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "CAUSE_L4_FUNDING_LIQUIDITY",
+      "description": "The cash leg was not funded to reach finality on the selected rail: insufficient funded position at the settlement instant, net-debit-cap breach under Federal Reserve Payment System Risk policy, clearing-fund or margin deficiency at the CCP, or settling-bank refusal to settle. Discriminating evidence is the intraday funding state against the net obligation. Distinguish carefully from STATE_IN_FLIGHT_PENDING: a queued operation awaiting funding is pending, not failed.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_cause_l4_funding_liquidity",
+      "requires_approval": false,
+      "approval_predicates": [],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "CAUSE_L5_TIMING_WINDOW",
+      "description": "A timing or calendar defect: missed rail cutoff, holiday-calendar mismatch where a currency holiday diverges from a market holiday, value-date or time-zone error, or a mismatch between a 24/7 rail and a business-hours rail in a linked settlement. Discriminating evidence is the operation timestamp against the rail calendar and cutoff schedule.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_cause_l5_timing_window",
+      "requires_approval": false,
+      "approval_predicates": [],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "CAUSE_L6_COUNTERPARTY",
+      "description": "The failure originates counterparty-side: no affirmation or matching, counterparty short of securities such that the securities leg drags the linked cash leg, counterparty funding failure, or an economics break in price, quantity, or settlement date. Discriminating evidence is matching and confirmation status. Remediation is not self-service.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_cause_l6_counterparty",
+      "requires_approval": false,
+      "approval_predicates": [],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "CAUSE_L7_SCREENING_HOLD",
+      "description": "The operation is held on sanctions, AML, or compliance screening grounds — either at the member, or invisibly at an intermediary correspondent whose screening Aureon has no visibility into. Discriminating evidence is characteristically an ABSENCE: upstream acknowledgment with no downstream status. Halt-and-pend compliance review before any advisory is acted on. The tipping-off conflict applies: advisory output must NOT recommend disclosing the existence or nature of a screening hold to the counterparty or to any party other than the entitled member's compliance function.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_cause_l7_screening_hold",
+      "requires_approval": true,
+      "approval_predicates": ["compliance_review"],
+      "conflict_keys": ["SCREENING_DISCLOSURE_VS_TIPPING_OFF"]
+    },
+    {
+      "path_id": "CAUSE_L8_INFRASTRUCTURE",
+      "description": "Operational or infrastructure failure: depository or rail outage or degradation, MQ or SFTP channel failure, message-queue backlog, or correspondent-bank operational status. Discriminating evidence is service status plus the behavior of peer instructions submitted in the same window.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_cause_l8_infrastructure",
+      "requires_approval": false,
+      "approval_predicates": [],
+      "conflict_keys": []
+    },
+    {
+      "path_id": "UNCLASSIFIED_ESCALATE",
+      "description": "Assembled evidence matches no cause in this inventory. Terminal — the agent does not guess, does not rank a nearest-match, and does not synthesize a cause. Escalates to the operator with the full evidence timeline and an explicit statement that the cause is unclassified. No override path exists because there is nothing to approve: the correct disposition is human diagnosis, after which the novel cause enters this inventory through propose/approve with a version bump. A non-zero rate on this path is a health indicator; a zero rate means the agent has begun improvising.",
+      "callable_ref": "aureon.agents.jtac.cash_leg_diagnostic:_path_unclassified_escalate",
+      "requires_approval": false,
+      "approval_predicates": [],
+      "conflict_keys": []
+    }
+  ]
+}
