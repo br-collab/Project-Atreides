@@ -21,6 +21,10 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-cov>=4.1",
+    # XSD validation of emitted ISO 20022 against the published schemas in
+    # tests/fixtures/iso20022/ (AUR-CUSTODY-CASH-001 SVIII). Test-only:
+    # validation runs in CI, never in the request path.
+    "lxml>=5.0",
     "ruff>=0.4",
     "mypy>=1.9",
 ]
