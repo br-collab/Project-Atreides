@@ -13,6 +13,8 @@ import pytest
 
 from aureon.rails.cato_f import (
     GOLDEN_VECTORS,
+    OFR_HOLD_THRESHOLD,
+    OFR_STRESS_PREFERENCE_THRESHOLD,
     CashRail,
     CatoFDecision,
     FinalityClass,
@@ -327,3 +329,76 @@ def test_golden_parity_vectors(vector: dict[str, object]) -> None:
     assert d.decision is vector["expect_decision"]
     assert d.reason_code is vector["expect_reason"]
     assert d.recommended_rail is vector["expect_rail"]
+
+
+# --- Section V.C.1: stress-posture preference band -------------------------
+#
+# These pin the OFR_STRESS_PREFERENCE_THRESHOLD boundary. The band only
+# changes an outcome where a later ladder rule would otherwise win, so
+# every case below uses a tokenized-deposit scenario (rule 5) and asserts
+# whether rule 1 overrides it.
+
+
+def _tokenized_rails() -> dict[CashRail, RailState]:
+    return _rails(
+        **{
+            CashRail.TOKENIZED_DEPOSIT: RailState(
+                CashRail.TOKENIZED_DEPOSIT, RailStatus.AVAILABLE, None
+            )
+        }
+    )
+
+
+def test_preference_band_sits_below_the_hold_band() -> None:
+    """The band must be reachable - above it the gate HOLDs instead."""
+    assert 0.0 < OFR_STRESS_PREFERENCE_THRESHOLD < OFR_HOLD_THRESHOLD
+
+
+def test_elevated_stress_prefers_gross_final_over_tokenized() -> None:
+    """Rule 1 beats rule 5: stressed windows do not carry ledger-final risk."""
+    d = _eval(
+        operation=_op(tokenized_deposit_supported=True),
+        rails=_tokenized_rails(),
+        ofr_stlfsi4=0.3,
+    )
+    assert d.decision is GateDecision.PROCEED
+    assert d.recommended_rail is CashRail.FEDWIRE
+    assert d.finality_class is FinalityClass.GROSS_FINAL
+    assert "Elevated systemic stress" in d.rationale
+
+
+def test_below_preference_band_tokenized_wins() -> None:
+    d = _eval(
+        operation=_op(tokenized_deposit_supported=True),
+        rails=_tokenized_rails(),
+        ofr_stlfsi4=0.1,
+    )
+    assert d.recommended_rail is CashRail.TOKENIZED_DEPOSIT
+    assert "Elevated systemic stress" not in d.rationale
+
+
+def test_preference_band_lower_boundary_is_inclusive() -> None:
+    d = _eval(
+        operation=_op(tokenized_deposit_supported=True),
+        rails=_tokenized_rails(),
+        ofr_stlfsi4=OFR_STRESS_PREFERENCE_THRESHOLD,
+    )
+    assert d.recommended_rail is CashRail.FEDWIRE
+
+
+def test_just_below_preference_band_does_not_fire() -> None:
+    d = _eval(
+        operation=_op(tokenized_deposit_supported=True),
+        rails=_tokenized_rails(),
+        ofr_stlfsi4=OFR_STRESS_PREFERENCE_THRESHOLD - 0.01,
+    )
+    assert d.recommended_rail is CashRail.TOKENIZED_DEPOSIT
+
+
+def test_zero_stress_does_not_fire_the_band() -> None:
+    d = _eval(
+        operation=_op(tokenized_deposit_supported=True),
+        rails=_tokenized_rails(),
+        ofr_stlfsi4=0.0,
+    )
+    assert d.recommended_rail is CashRail.TOKENIZED_DEPOSIT

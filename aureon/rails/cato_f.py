@@ -57,6 +57,7 @@ __all__ = [
     "RAIL_FINALITY",
     "OFR_ESCALATE_THRESHOLD",
     "OFR_HOLD_THRESHOLD",
+    "OFR_STRESS_PREFERENCE_THRESHOLD",
     "evaluate",
     "absent_gate_decision",
     "GOLDEN_VECTORS",
@@ -71,6 +72,14 @@ DOCTRINE_VERSION: Final[str] = "AUR-CUSTODY-CASH-001-v0.1"
 # of discipline (CASH-001 Section V.B).
 OFR_ESCALATE_THRESHOLD: Final[float] = 1.0
 OFR_HOLD_THRESHOLD: Final[float] = 0.5
+
+# Stress-posture preference band per AUR-CUSTODY-CASH-001 v0.2 SV.C.1.
+# Stress below the HOLD band but at or above this value is "elevated":
+# the ladder prefers gross-final rails so that deferred-net exposure is
+# not carried into a stressed window. Ratified into doctrine at CASH-001
+# v0.2 rather than left as an unattributed implementation constant --
+# every threshold in this module must trace to a doctrine line.
+OFR_STRESS_PREFERENCE_THRESHOLD: Final[float] = 0.25
 
 
 class GateDecision(StrEnum):
@@ -288,13 +297,14 @@ def _recommend_rail(
 
     # 1. Stress posture — elevated but below the HOLD band. Deferred-net
     #    exposure is the wrong risk to carry into a stressed window.
-    if ofr_stlfsi4 > 0.0 and (chosen := _prefer(gross_final)) is not None:
-        if ofr_stlfsi4 >= OFR_HOLD_THRESHOLD * 0.5:
-            return chosen, (
-                f"Elevated systemic stress (OFR {ofr_stlfsi4}); prefer "
-                f"gross-final settlement over deferred-net exposure "
-                f"(CASH-001 SV.C.1)."
-            )
+    if ofr_stlfsi4 >= OFR_STRESS_PREFERENCE_THRESHOLD and (
+        chosen := _prefer(gross_final)
+    ) is not None:
+        return chosen, (
+            f"Elevated systemic stress (OFR {ofr_stlfsi4} >= "
+            f"{OFR_STRESS_PREFERENCE_THRESHOLD}); prefer gross-final "
+            f"settlement over deferred-net exposure (CASH-001 SV.C.1)."
+        )
 
     # 2. Materiality proximity — approaching but not crossing the
     #    threshold still warrants gross-final treatment.
