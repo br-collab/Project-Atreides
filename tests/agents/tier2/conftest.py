@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from aureon.agents.tier2.outputs import (
+from atreides.agents.tier2.outputs import (
     EligibilityCheck,
     EligibilityCheckKind,
     EligibilityVerification,
@@ -22,7 +22,7 @@ from aureon.agents.tier2.outputs import (
     PathSelectionDimension,
     RoutingRecommendation,
 )
-from aureon.contracts import (
+from atreides.contracts import (
     AssetClass,
     CAOMTier,
     CustodyOperationUnion,
@@ -36,7 +36,7 @@ from aureon.contracts import (
     OrdinarySafekeepingObject,
     Representation,
 )
-from aureon.contracts.quorum import (
+from atreides.contracts.quorum import (
     CeremonyState,
     CeremonyStep,
     IndependenceRequirement,

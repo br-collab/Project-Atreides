@@ -17,7 +17,7 @@ from decimal import Decimal
 
 import pytest
 
-from aureon.agents.tier1.outputs import (
+from atreides.agents.tier1.outputs import (
     DiscrepancyCode,
     GCFPoolCustodian,
     SettlementEscalation,
@@ -26,8 +26,8 @@ from aureon.agents.tier1.outputs import (
     SettlementTaskingRecord,
     SettlementTelemetry,
 )
-from aureon.agents.tier1.settlement_operations_analyst import SettlementOperationsAnalyst
-from aureon.dsor import DSORAppendOnlyError, DSORStore
+from atreides.agents.tier1.settlement_operations_analyst import SettlementOperationsAnalyst
+from atreides.dsor import DSORAppendOnlyError, DSORStore
 
 # ===========================================================================
 # FICC GSD Repo Path (June 2027 eligible repo mandate)

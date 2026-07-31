@@ -1,5 +1,5 @@
 [project]
-name = "aureon"
+name = "atreides"
 version = "0.1.0"
 description = "Aureon Asset Services — doctrine-native institutional governance framework"
 authors = [{name = "Guillermo Ravelo", email = "bill@ravelostrategicsolutions.com"}]
@@ -31,7 +31,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["aureon*"]
+include = ["atreides*"]
 
 [tool.ruff]
 line-length = 100
@@ -49,4 +49,4 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
-addopts = "-ra --strict-markers --cov=aureon --cov-report=term-missing"
+addopts = "-ra --strict-markers --cov=atreides --cov-report=term-missing"

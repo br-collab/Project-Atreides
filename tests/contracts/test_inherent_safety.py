@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.inherent_safety``.
+"""Tests for ``atreides.contracts.inherent_safety``.
 
 Per AUR-CUSTODY-001 v1.0 Section IX (twenty-plus inherent-safety
 surfaces in 1:1 FIAT/digital parity).
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from aureon.contracts.inherent_safety import (
+from atreides.contracts.inherent_safety import (
     InherentSafetySide,
     InherentSafetySurface,
 )

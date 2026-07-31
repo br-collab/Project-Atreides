@@ -11,7 +11,7 @@ from decimal import Decimal
 
 import pytest
 
-from aureon.rails.cato_f import (
+from atreides.rails.cato_f import (
     GOLDEN_VECTORS,
     OFR_HOLD_THRESHOLD,
     OFR_STRESS_PREFERENCE_THRESHOLD,

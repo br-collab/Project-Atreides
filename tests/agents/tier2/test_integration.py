@@ -36,26 +36,26 @@ from decimal import Decimal
 import pytest
 from pydantic import TypeAdapter
 
-from aureon.agents.tier2.eligibility import (
+from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
     KYCEvidence,
     OFACScreeningEvidence,
     SanctionsScreeningEvidence,
 )
-from aureon.agents.tier2.fiat_operations_specialist import (
+from atreides.agents.tier2.fiat_operations_specialist import (
     FIATOperationsSpecialist,
     MagnitudeThresholdPolicy,
     PathSelectionRequest,
 )
-from aureon.agents.tier2.outputs import (
+from atreides.agents.tier2.outputs import (
     EscalationRequired,
     FIATOperationsOutput,
     JurisdictionalAttribution,
     QuorumAuthorityRequired,
     RoutingDecision,
 )
-from aureon.agents.tier2.routing_tables import default_routing_tables
-from aureon.contracts import (
+from atreides.agents.tier2.routing_tables import default_routing_tables
+from atreides.contracts import (
     AssetClass,
     AtomicSettlement,
     CAOMTier,
@@ -85,7 +85,7 @@ from aureon.contracts import (
     SettlementMethod,
     TripartySettlement,
 )
-from aureon.contracts.quorum import (
+from atreides.contracts.quorum import (
     CeremonyState,
     CeremonyStep,
     IndependenceRequirement,
@@ -94,7 +94,7 @@ from aureon.contracts.quorum import (
     Signature,
     SigningAuthority,
 )
-from aureon.rails.cato_f import (
+from atreides.rails.cato_f import (
     CashRail,
     CatoFDecision,
     FinalityClass,

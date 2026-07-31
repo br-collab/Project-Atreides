@@ -26,19 +26,19 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from aureon.agents.tier2.eligibility import (
+from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
     KYCEvidence,
     OFACScreeningEvidence,
     SanctionsScreeningEvidence,
 )
-from aureon.agents.tier2.fiat_operations_specialist import (
+from atreides.agents.tier2.fiat_operations_specialist import (
     GATE_REQUIRED_DIMENSIONS,
     FIATOperationsSpecialist,
     MagnitudeThresholdPolicy,
     PathSelectionRequest,
 )
-from aureon.agents.tier2.outputs import (
+from atreides.agents.tier2.outputs import (
     AGENT_CLASS_FIAT_OPERATIONS_SPECIALIST,
     EscalationRequired,
     JClassGuardrail,
@@ -48,18 +48,18 @@ from aureon.agents.tier2.outputs import (
     RoutingDecision,
     RoutingRecommendation,
 )
-from aureon.agents.tier2.routing_tables import (
+from atreides.agents.tier2.routing_tables import (
     FinalityModel,
     RoutingTables,
     default_routing_tables,
 )
-from aureon.contracts import (
+from atreides.contracts import (
     CAOMTier,
     CustodyOperationUnion,
     DSORLineageStub,
     InherentSafetySurface,
 )
-from aureon.rails.cato_f import (
+from atreides.rails.cato_f import (
     CashRail,
     CatoFDecision,
     FinalityClass,

@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.custody_object``.
+"""Tests for ``atreides.contracts.custody_object``.
 
 Per AUR-CUSTODY-001 v1.0 Section IV (Custody Object Inventory Applied
 to Operations).
@@ -9,12 +9,12 @@ from __future__ import annotations
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from aureon.contracts.asset_class import (
+from atreides.contracts.asset_class import (
     AssetClass,
     MajorAssetCategory,
     Representation,
 )
-from aureon.contracts.custody_object import (
+from atreides.contracts.custody_object import (
     CustodyObject,
     CustodyObjectCategory,
     Encumbrance,

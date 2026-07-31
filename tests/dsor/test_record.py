@@ -12,8 +12,8 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from aureon.agents.tier2.outputs import EscalationRequired, RoutingDecision
-from aureon.dsor.record import DSORRecord
+from atreides.agents.tier2.outputs import EscalationRequired, RoutingDecision
+from atreides.dsor.record import DSORRecord
 
 
 class TestDSORRecordAssembly:

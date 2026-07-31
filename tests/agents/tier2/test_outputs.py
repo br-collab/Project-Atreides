@@ -15,7 +15,7 @@ from uuid import uuid4
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from aureon.agents.tier2.outputs import (
+from atreides.agents.tier2.outputs import (
     AGENT_CLASS_FIAT_OPERATIONS_SPECIALIST,
     FIAT_SPECIALIST_OWNED_SURFACES,
     EligibilityCheck,
@@ -31,7 +31,7 @@ from aureon.agents.tier2.outputs import (
     RoutingDecision,
     RoutingRecommendation,
 )
-from aureon.contracts import (
+from atreides.contracts import (
     CAOMTier,
     CustodyOperationUnion,
     DSORLineageStub,

@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from aureon.contracts.operations import (
+from atreides.contracts.operations import (
     CustodyOperationUnion,
     DerivativeOperation,
     EquityOperation,

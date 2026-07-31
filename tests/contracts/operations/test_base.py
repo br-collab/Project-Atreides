@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.operations.base.CustodyOperation``.
+"""Tests for ``atreides.contracts.operations.base.CustodyOperation``.
 
 The base operation is abstract — it carries the four architectural
 cross-validators that the per-asset-class operation models inherit. To
@@ -17,13 +17,13 @@ from typing import Literal
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.custody_object import OrdinarySafekeepingObject
-from aureon.contracts.dsor_stub import DSORLineageStub
-from aureon.contracts.failure_mode import FailureModeClass
-from aureon.contracts.inherent_safety import InherentSafetySurface
-from aureon.contracts.operations.base import CustodyOperation
-from aureon.contracts.quorum import QuorumAuthority
-from aureon.contracts.settlement import DvP1Settlement
+from atreides.contracts.custody_object import OrdinarySafekeepingObject
+from atreides.contracts.dsor_stub import DSORLineageStub
+from atreides.contracts.failure_mode import FailureModeClass
+from atreides.contracts.inherent_safety import InherentSafetySurface
+from atreides.contracts.operations.base import CustodyOperation
+from atreides.contracts.quorum import QuorumAuthority
+from atreides.contracts.settlement import DvP1Settlement
 
 
 class _MinimalOperation(CustodyOperation):

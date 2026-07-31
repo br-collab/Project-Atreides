@@ -11,8 +11,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from aureon.agents.tier2.outputs import PathSelectionDimension
-from aureon.agents.tier2.routing_tables import (
+from atreides.agents.tier2.outputs import PathSelectionDimension
+from atreides.agents.tier2.routing_tables import (
     ApprovedPath,
     FinalityModel,
     OperationalHours,

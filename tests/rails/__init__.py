@@ -1,1 +1,1 @@
-"""Tests for the settlement-rail integration layer (aureon.rails)."""
+"""Tests for the settlement-rail integration layer (atreides.rails)."""

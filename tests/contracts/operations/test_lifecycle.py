@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.operations.lifecycle``.
+"""Tests for ``atreides.contracts.operations.lifecycle``.
 
 Per AUR-CUSTODY-001 v1.0 Section V Lifecycle and Exception Handling.
 """
@@ -11,10 +11,10 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.custody_object import OrdinarySafekeepingObject
-from aureon.contracts.dsor_stub import DSORLineageStub
-from aureon.contracts.failure_mode import FailureModeClass
-from aureon.contracts.operations.lifecycle import (
+from atreides.contracts.custody_object import OrdinarySafekeepingObject
+from atreides.contracts.dsor_stub import DSORLineageStub
+from atreides.contracts.failure_mode import FailureModeClass
+from atreides.contracts.operations.lifecycle import (
     LifecycleEventType,
     LifecycleOperation,
 )

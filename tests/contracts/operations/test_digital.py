@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.operations.digital``.
+"""Tests for ``atreides.contracts.operations.digital``.
 
 Per AUR-CUSTODY-001 v1.0 Section V Native Digital Assets and Section
 IX (native digital asset, key ceremony, cold storage are inherent-
@@ -10,15 +10,15 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.custody_object import NativeDigitalAssetObject
-from aureon.contracts.dsor_stub import DSORLineageStub
-from aureon.contracts.failure_mode import FailureModeClass
-from aureon.contracts.inherent_safety import InherentSafetySurface
-from aureon.contracts.operations.digital import (
+from atreides.contracts.custody_object import NativeDigitalAssetObject
+from atreides.contracts.dsor_stub import DSORLineageStub
+from atreides.contracts.failure_mode import FailureModeClass
+from atreides.contracts.inherent_safety import InherentSafetySurface
+from atreides.contracts.operations.digital import (
     NativeDigitalOperation,
     NativeDigitalTransactionType,
 )
-from aureon.contracts.quorum import QuorumAuthority
+from atreides.contracts.quorum import QuorumAuthority
 
 
 class TestNativeDigitalTransactionTypeCoverage:

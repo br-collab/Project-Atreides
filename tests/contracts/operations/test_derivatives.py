@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.operations.derivatives``.
+"""Tests for ``atreides.contracts.operations.derivatives``.
 
 Per AUR-CUSTODY-001 v1.0 Section V Derivatives.
 """
@@ -8,14 +8,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.custody_object import OrdinarySafekeepingObject
-from aureon.contracts.dsor_stub import DSORLineageStub
-from aureon.contracts.failure_mode import FailureModeClass
-from aureon.contracts.operations.derivatives import (
+from atreides.contracts.custody_object import OrdinarySafekeepingObject
+from atreides.contracts.dsor_stub import DSORLineageStub
+from atreides.contracts.failure_mode import FailureModeClass
+from atreides.contracts.operations.derivatives import (
     DerivativeOperation,
     DerivativeTransactionType,
 )
-from aureon.contracts.settlement import CCPClearedSettlement
+from atreides.contracts.settlement import CCPClearedSettlement
 
 
 class TestDerivativeTransactionTypeCoverage:

@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.operations.equity``.
+"""Tests for ``atreides.contracts.operations.equity``.
 
 Per AUR-CUSTODY-001 v1.0 Section V Equities.
 """
@@ -8,14 +8,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.custody_object import OrdinarySafekeepingObject
-from aureon.contracts.dsor_stub import DSORLineageStub
-from aureon.contracts.failure_mode import FailureModeClass
-from aureon.contracts.operations.equity import (
+from atreides.contracts.custody_object import OrdinarySafekeepingObject
+from atreides.contracts.dsor_stub import DSORLineageStub
+from atreides.contracts.failure_mode import FailureModeClass
+from atreides.contracts.operations.equity import (
     EquityOperation,
     EquityTransactionType,
 )
-from aureon.contracts.settlement import DvP1Settlement
+from atreides.contracts.settlement import DvP1Settlement
 
 
 class TestEquityTransactionTypeCoverage:

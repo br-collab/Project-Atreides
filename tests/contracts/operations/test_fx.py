@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.operations.fx``.
+"""Tests for ``atreides.contracts.operations.fx``.
 
 Per AUR-CUSTODY-001 v1.0 Section V FX.
 """
@@ -10,11 +10,11 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.custody_object import OrdinarySafekeepingObject
-from aureon.contracts.dsor_stub import DSORLineageStub
-from aureon.contracts.failure_mode import FailureModeClass
-from aureon.contracts.operations.fx import FXOperation, FXTransactionType
-from aureon.contracts.settlement import PvPSettlement
+from atreides.contracts.custody_object import OrdinarySafekeepingObject
+from atreides.contracts.dsor_stub import DSORLineageStub
+from atreides.contracts.failure_mode import FailureModeClass
+from atreides.contracts.operations.fx import FXOperation, FXTransactionType
+from atreides.contracts.settlement import PvPSettlement
 
 
 class TestFXTransactionTypeCoverage:

@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from aureon.agents.tier2.outputs import (
+from atreides.agents.tier2.outputs import (
     EligibilityCheck,
     EligibilityCheckKind,
     EligibilityVerification,
@@ -26,8 +26,8 @@ from aureon.agents.tier2.outputs import (
     RoutingDecision,
     RoutingRecommendation,
 )
-from aureon.contracts import CAOMTier, DSORLineageStub, FailureModeClass
-from aureon.dsor import DSORStore
+from atreides.contracts import CAOMTier, DSORLineageStub, FailureModeClass
+from atreides.dsor import DSORStore
 
 
 def _sha(payload: str) -> str:

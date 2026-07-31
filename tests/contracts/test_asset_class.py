@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.asset_class``.
+"""Tests for ``atreides.contracts.asset_class``.
 
 Per AUR-CUSTODY-001 v1.0 Section III (asset-class universe).
 """
@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.asset_class import (
+from atreides.contracts.asset_class import (
     AssetClass,
     MajorAssetCategory,
     Representation,

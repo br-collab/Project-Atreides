@@ -15,14 +15,14 @@ from uuid import uuid4
 
 import pytest
 
-from aureon.agents.tier1.outputs import (
+from atreides.agents.tier1.outputs import (
     GCFPoolCustodian,
     SettlementKind,
     SettlementRail,
     SettlementTaskingRecord,
 )
-from aureon.contracts import CAOMTier, DSORLineageStub
-from aureon.dsor import DSORStore
+from atreides.contracts import CAOMTier, DSORLineageStub
+from atreides.dsor import DSORStore
 
 
 def _sha(payload: str) -> str:

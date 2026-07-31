@@ -22,8 +22,8 @@ from uuid import uuid4
 
 import pytest
 
-from aureon.agents.tier2.outputs import EscalationRequired, RoutingDecision
-from aureon.dsor import DSORAppendOnlyError, DSORRecordNotFoundError, DSORStore
+from atreides.agents.tier2.outputs import EscalationRequired, RoutingDecision
+from atreides.dsor import DSORAppendOnlyError, DSORRecordNotFoundError, DSORStore
 
 # ---------------------------------------------------------------------------
 # Gate Check 1 — Replay determinism

@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.operations.tokenized``.
+"""Tests for ``atreides.contracts.operations.tokenized``.
 
 Per AUR-CUSTODY-001 v1.0 Section V Tokenized Securities and Section IX
 (tokenized asset issuer operations are inherent-safety surfaces).
@@ -9,16 +9,16 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.custody_object import TokenizedSecurityObject
-from aureon.contracts.dsor_stub import DSORLineageStub
-from aureon.contracts.failure_mode import FailureModeClass
-from aureon.contracts.inherent_safety import InherentSafetySurface
-from aureon.contracts.operations.tokenized import (
+from atreides.contracts.custody_object import TokenizedSecurityObject
+from atreides.contracts.dsor_stub import DSORLineageStub
+from atreides.contracts.failure_mode import FailureModeClass
+from atreides.contracts.inherent_safety import InherentSafetySurface
+from atreides.contracts.operations.tokenized import (
     TokenizedOperation,
     TokenizedTransactionType,
 )
-from aureon.contracts.quorum import QuorumAuthority
-from aureon.contracts.settlement import AtomicSettlement
+from atreides.contracts.quorum import QuorumAuthority
+from atreides.contracts.settlement import AtomicSettlement
 
 
 class TestTokenizedTransactionTypeCoverage:

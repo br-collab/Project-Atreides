@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.settlement``.
+"""Tests for ``atreides.contracts.settlement``.
 
 Per AUR-CUSTODY-001 v1.0 Section V (Settlement Methods Taxonomy).
 """
@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from aureon.contracts.settlement import (
+from atreides.contracts.settlement import (
     AtomicSettlement,
     BilateralSettlement,
     CCPClearedSettlement,

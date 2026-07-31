@@ -12,12 +12,12 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from aureon.contracts.asset_class import (
+from atreides.contracts.asset_class import (
     AssetClass,
     MajorAssetCategory,
     Representation,
 )
-from aureon.contracts.custody_object import (
+from atreides.contracts.custody_object import (
     Encumbrance,
     EncumbranceType,
     NativeDigitalAssetObject,
@@ -25,8 +25,8 @@ from aureon.contracts.custody_object import (
     PledgedAssetObject,
     TokenizedSecurityObject,
 )
-from aureon.contracts.dsor_stub import CAOMTier, DSORLineageStub
-from aureon.contracts.quorum import (
+from atreides.contracts.dsor_stub import CAOMTier, DSORLineageStub
+from atreides.contracts.quorum import (
     CeremonyState,
     CeremonyStep,
     IndependenceRequirement,

@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from pydantic import ValidationError
 
-from aureon.agents.tier2.eligibility import (
+from atreides.agents.tier2.eligibility import (
     CorrespondentBankComplianceEvidence,
     EligibilityInputs,
     KYBEvidence,
@@ -22,7 +22,7 @@ from aureon.agents.tier2.eligibility import (
     SanctionsScreeningEvidence,
     verify_eligibility,
 )
-from aureon.agents.tier2.outputs import (
+from atreides.agents.tier2.outputs import (
     EligibilityCheck,
     EligibilityCheckKind,
     EligibilityVerification,

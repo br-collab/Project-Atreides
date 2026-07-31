@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.quorum``.
+"""Tests for ``atreides.contracts.quorum``.
 
 Per AUR-CUSTODY-001 v1.0 Section VII (Quorum Authority Operational
 Specification).
@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.quorum import (
+from atreides.contracts.quorum import (
     DEFAULT_THRESHOLD_M,
     DEFAULT_THRESHOLD_N,
     CeremonyState,

@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.failure_mode``.
+"""Tests for ``atreides.contracts.failure_mode``.
 
 Per AUR-CUSTODY-001 v1.0 Section VIII (four-class custody taxonomy).
 """
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from aureon.contracts.failure_mode import FailureModeClass
+from atreides.contracts.failure_mode import FailureModeClass
 
 
 class TestFailureModeClassMembership:

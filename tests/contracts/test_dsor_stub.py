@@ -1,4 +1,4 @@
-"""Tests for ``aureon.contracts.dsor_stub``.
+"""Tests for ``atreides.contracts.dsor_stub``.
 
 Per AUR-CANONICAL-001 v1.6 Layer 2 (Kaladan), Axiom 1, Axiom 3, Axiom 4.
 """
@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-from aureon.contracts.dsor_stub import (
+from atreides.contracts.dsor_stub import (
     CAOM_MODE_DEFAULT,
     CURRENT_DOCTRINE_VERSION,
     CAOMTier,
