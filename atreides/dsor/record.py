@@ -23,6 +23,10 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from atreides.agents.tier1.investigation_outputs import (
+    EvidenceTimeline,
+    InvestigationEscalation,
+)
 from atreides.agents.tier1.outputs import SettlementEscalation, SettlementTelemetry
 from atreides.agents.tier2.outputs import (
     EscalationRequired,
@@ -33,6 +37,7 @@ from atreides.agents.tier2.outputs import (
 AureonOutput = (
     RoutingDecision | EscalationRequired | QuorumAuthorityRequired
     | SettlementTelemetry | SettlementEscalation
+    | EvidenceTimeline | InvestigationEscalation
 )
 
 RecordKind = Literal[
@@ -41,6 +46,8 @@ RecordKind = Literal[
     "quorum_authority_required",
     "settlement_telemetry",
     "settlement_escalation",
+    "evidence_timeline",
+    "investigation_escalation",
 ]
 
 
