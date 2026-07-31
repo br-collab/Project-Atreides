@@ -94,6 +94,26 @@ from aureon.contracts.quorum import (
     Signature,
     SigningAuthority,
 )
+from aureon.rails.cato_f import (
+    CashRail,
+    CatoFDecision,
+    FinalityClass,
+    GateDecision,
+    ReasonCode,
+)
+
+# CATO-F gate fixture. Cash-leg settlement-rail dimensions may not route
+# without a gate decision (AUR-CUSTODY-CASH-001 v0.2 SV.E); tests that
+# exercise those dimensions must declare their gate posture explicitly.
+CATO_F_PROCEED = CatoFDecision(
+    decision=GateDecision.PROCEED,
+    reason_code=ReasonCode.CLEARED,
+    recommended_rail=CashRail.FEDWIRE,
+    finality_class=FinalityClass.GROSS_FINAL,
+    rationale="Test fixture - gate cleared.",
+    checks_evaluated=(("fixture", "True"),),
+    funding_state_snapshot=(),
+)
 
 _SHA256_HEX_LEN = 64
 
@@ -445,6 +465,7 @@ class TestCrossAssetClassFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -467,6 +488,7 @@ class TestCrossAssetClassFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -488,6 +510,7 @@ class TestCrossAssetClassFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_cross_border_fx_leg(
             request, currency_pair="EUR/USD"
@@ -510,6 +533,7 @@ class TestCrossAssetClassFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_correspondent_banking_coordination(
             request, currency="USD"
@@ -532,6 +556,7 @@ class TestCrossAssetClassFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_cash_sweep_and_short_term_investment(
             request, currency="USD"
@@ -568,6 +593,7 @@ class TestCrossFailureModeFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -589,6 +615,7 @@ class TestCrossFailureModeFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -610,6 +637,7 @@ class TestCrossFailureModeFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -643,6 +671,7 @@ class TestCrossFailureModeFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -694,6 +723,7 @@ class TestCrossSettlementMethodFlows:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -727,6 +757,7 @@ class TestRoundTripSerialization:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -751,6 +782,7 @@ class TestRoundTripSerialization:
             eligibility_inputs=failing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -784,6 +816,7 @@ class TestRoundTripSerialization:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -824,6 +857,7 @@ class TestEndToEndScenarios:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -859,6 +893,7 @@ class TestEndToEndScenarios:
             eligibility_inputs=failing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -888,6 +923,7 @@ class TestEndToEndScenarios:
             attribution=attribution_us_domestic,
             emitted_at=now,
             amount=Decimal("15000000"),  # above 10M USD threshold
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
@@ -926,6 +962,7 @@ class TestEndToEndScenarios:
             eligibility_inputs=failing_eligibility,
             attribution=attribution,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD"
@@ -958,6 +995,7 @@ class TestEndToEndScenarios:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_cash_sweep_and_short_term_investment(
             request, currency="USD"
@@ -991,6 +1029,7 @@ class TestFXMagnitudeQuoteCurrency:
             attribution=attribution_us_domestic,
             emitted_at=now,
             amount=Decimal("23000000"),  # above EUR 22M threshold
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_cross_border_fx_leg(
             request, currency_pair="EUR/USD"
@@ -1026,6 +1065,7 @@ class TestFXMagnitudeQuoteCurrency:
             eligibility_inputs=passing_eligibility,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_cross_border_fx_leg(
             request, currency_pair="EUR/USD"

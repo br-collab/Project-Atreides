@@ -44,6 +44,7 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from aureon.agents.tier2.eligibility import EligibilityInputs, verify_eligibility
+from aureon.rails.cato_f import CatoFDecision, GateDecision
 from aureon.agents.tier2.outputs import (
     AGENT_CLASS_FIAT_OPERATIONS_SPECIALIST,
     AgentClass,
@@ -181,6 +182,25 @@ class MagnitudeThresholdPolicy(BaseModel):
         return self
 
 
+# Dimensions whose selection IS a cash-leg settlement-rail decision and
+# therefore may not be made without a CATO-F gate decision, per
+# AUR-CUSTODY-CASH-001 v0.2 Section V (the gate emits a recommended cash
+# rail) and Section V.E (absent gate resolves to HOLD).
+#
+# The other four dimensions are deliberately excluded: correspondent
+# banking coordination and depository-vs-sub-custodian select an
+# intermediary rather than a settlement rail; Fed-related operations are
+# facility operations, not settlement; cash sweep selects an investment
+# destination. Widening this set is a doctrine change, not a refactor.
+GATE_REQUIRED_DIMENSIONS: Final[frozenset[PathSelectionDimension]] = frozenset(
+    {
+        PathSelectionDimension.MULTI_CURRENCY_RAIL_ROUTING,
+        PathSelectionDimension.CROSS_BORDER_FX_LEG,
+        PathSelectionDimension.LARGE_VALUE_PAYMENT_SYSTEM,
+    }
+)
+
+
 class PathSelectionRequest(BaseModel):
     """Common inputs every path-selection method takes.
 
@@ -214,6 +234,19 @@ class PathSelectionRequest(BaseModel):
     )
     emitted_at: datetime = Field(
         description="UTC timestamp at which the agent emits its output.",
+    )
+    cato_f_decision: CatoFDecision | None = Field(
+        default=None,
+        description=(
+            "CATO-F cash-leg settlement-rail gate decision for this "
+            "operation, evaluated by the caller and consumed here. The "
+            "agent never invokes the gate itself -- CATO-F is pure and "
+            "its inputs are refreshed by the caller, exactly as Cato's "
+            "twin receives scalars from the refresh loop. None means NO "
+            "GATE DECISION EXISTS, which per AUR-CUSTODY-CASH-001 v0.2 "
+            "Section V.E resolves to HOLD for the dimensions in "
+            "GATE_REQUIRED_DIMENSIONS -- never to PROCEED."
+        ),
     )
     amount: Decimal | None = Field(
         default=None,
@@ -934,6 +967,65 @@ class FIATOperationsSpecialist:
     #      EscalationRequired.
     # ------------------------------------------------------------------
 
+    def _consult_cash_leg_gate(
+        self,
+        request: PathSelectionRequest,
+        dimension: PathSelectionDimension,
+    ) -> EscalationRequired | None:
+        """Consult CATO-F before a cash-leg settlement-rail selection.
+
+        Per AUR-CUSTODY-CASH-001 v0.2 Section V.E the absent-gate default
+        is HOLD, never PROCEED. A missing gate decision is not a missing
+        optional input -- it means the governance layer for the cash leg
+        did not run, and routing past it would be code overriding
+        doctrine (Guardrail 2, and Axiom 1: doctrine before execution).
+
+        Returns ``None`` when the dimension needs no gate, or when the
+        gate returned PROCEED. Returns an escalation otherwise.
+        """
+        if dimension not in GATE_REQUIRED_DIMENSIONS:
+            return None
+
+        decision = request.cato_f_decision
+        if decision is None:
+            failure_reason = (
+                f"No CATO-F gate decision supplied for dimension "
+                f"{dimension.value!r}, which is a cash-leg settlement-rail "
+                f"selection. Per AUR-CUSTODY-CASH-001 v0.2 Section V.E the "
+                f"absent-gate default is HOLD, never PROCEED; the agent "
+                f"does not route a cash leg the gate has not governed."
+            )
+            signature = ("cato_f_absent", dimension.value, "HOLD")
+        elif decision.decision is not GateDecision.PROCEED:
+            failure_reason = (
+                f"CATO-F returned {decision.decision.value} for dimension "
+                f"{dimension.value!r} (reason {decision.reason_code.value}): "
+                f"{decision.rationale}"
+            )
+            signature = (
+                "cato_f_" + decision.decision.value.lower(),
+                dimension.value,
+                decision.reason_code.value,
+            )
+        else:
+            return None
+
+        telemetry_hash = self.compute_telemetry_hash(
+            operation_id=str(request.operation.lineage.operation_id),
+            decision_kind="escalation_required",
+            ordered_inputs_signature=signature,
+        )
+        return EscalationRequired(
+            operation_id=request.operation.lineage.operation_id,
+            agent_telemetry_hash=telemetry_hash,
+            lineage_stub=request.operation.lineage,
+            emitted_at=request.emitted_at,
+            failed_guardrail=JClassGuardrail.NO_SETTLEMENT_WITHOUT_LINEAGE,
+            failure_reason=failure_reason,
+            escalation_tier=CAOMTier.T1,
+            attempted_dimension=dimension,
+        )
+
     def _run_pre_path_guardrails(
         self,
         request: PathSelectionRequest,
@@ -1000,6 +1092,10 @@ class FIATOperationsSpecialist:
         if isinstance(gate, EscalationRequired):
             return gate
         verification, attribution = gate
+
+        cash_gate = self._consult_cash_leg_gate(request, dimension)
+        if cash_gate is not None:
+            return cash_gate
 
         candidates = self._routing_tables.find_rail_paths(
             currency=currency,
@@ -1128,6 +1224,10 @@ class FIATOperationsSpecialist:
             return gate
         verification, attribution = gate
 
+        cash_gate = self._consult_cash_leg_gate(request, dimension)
+        if cash_gate is not None:
+            return cash_gate
+
         candidates = self._routing_tables.find_fx_pvp_paths(currency_pair)
         if not candidates:
             return self._build_approved_paths_escalation(
@@ -1242,6 +1342,10 @@ class FIATOperationsSpecialist:
         if isinstance(gate, EscalationRequired):
             return gate
         verification, attribution = gate
+
+        cash_gate = self._consult_cash_leg_gate(request, dimension)
+        if cash_gate is not None:
+            return cash_gate
 
         all_rail_candidates = self._routing_tables.find_rail_paths(
             currency=currency,

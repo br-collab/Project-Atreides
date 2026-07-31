@@ -33,6 +33,7 @@ from aureon.agents.tier2.eligibility import (
     SanctionsScreeningEvidence,
 )
 from aureon.agents.tier2.fiat_operations_specialist import (
+    GATE_REQUIRED_DIMENSIONS,
     FIATOperationsSpecialist,
     MagnitudeThresholdPolicy,
     PathSelectionRequest,
@@ -57,6 +58,26 @@ from aureon.contracts import (
     CustodyOperationUnion,
     DSORLineageStub,
     InherentSafetySurface,
+)
+from aureon.rails.cato_f import (
+    CashRail,
+    CatoFDecision,
+    FinalityClass,
+    GateDecision,
+    ReasonCode,
+)
+
+# CATO-F gate fixture. Cash-leg settlement-rail dimensions may not route
+# without a gate decision (AUR-CUSTODY-CASH-001 v0.2 SV.E); tests that
+# exercise those dimensions must declare their gate posture explicitly.
+CATO_F_PROCEED = CatoFDecision(
+    decision=GateDecision.PROCEED,
+    reason_code=ReasonCode.CLEARED,
+    recommended_rail=CashRail.FEDWIRE,
+    finality_class=FinalityClass.GROSS_FINAL,
+    rationale="Test fixture - gate cleared.",
+    checks_evaluated=(("fixture", "True"),),
+    funding_state_snapshot=(),
 )
 
 _SHA256_HEX_LEN = 64
@@ -640,6 +661,7 @@ def request_passing(
         eligibility_inputs=passing_eligibility_inputs,
         attribution=attribution_us_domestic,
         emitted_at=now,
+        cato_f_decision=CATO_F_PROCEED,
     )
 
 
@@ -655,6 +677,7 @@ def request_eligibility_fails(
         eligibility_inputs=failing_eligibility_inputs,
         attribution=attribution_us_domestic,
         emitted_at=now,
+        cato_f_decision=CATO_F_PROCEED,
     )
 
 
@@ -669,6 +692,7 @@ def request_attribution_missing(
         eligibility_inputs=passing_eligibility_inputs,
         attribution=None,
         emitted_at=now,
+        cato_f_decision=CATO_F_PROCEED,
     )
 
 
@@ -695,6 +719,7 @@ class TestPathSelectionRequest:
             operation=equity_operation_routine,
             eligibility_inputs=passing_eligibility_inputs,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         assert req.attribution is None
 
@@ -1209,6 +1234,7 @@ def request_above_fiat_settlement_threshold(
         attribution=attribution_us_domestic,
         emitted_at=now,
         amount=Decimal("15000000"),
+        cato_f_decision=CATO_F_PROCEED,
     )
 
 
@@ -1227,6 +1253,7 @@ def request_above_lvps_threshold(
         attribution=attribution_us_domestic,
         emitted_at=now,
         amount=Decimal("75000000"),
+        cato_f_decision=CATO_F_PROCEED,
     )
 
 
@@ -1245,6 +1272,7 @@ def request_above_fx_bundled_threshold(
         attribution=attribution_us_domestic,
         emitted_at=now,
         amount=Decimal("30000000"),
+        cato_f_decision=CATO_F_PROCEED,
     )
 
 
@@ -1274,6 +1302,7 @@ def request_with_sanctioned_adjacency(
         attribution=attribution_with_sanctioned_intermediary,
         emitted_at=now,
         amount=Decimal("100"),
+        cato_f_decision=CATO_F_PROCEED,
     )
 
 
@@ -1293,6 +1322,7 @@ def request_material_with_failed_eligibility(
         attribution=attribution_us_domestic,
         emitted_at=now,
         amount=Decimal("15000000"),
+        cato_f_decision=CATO_F_PROCEED,
     )
 
 
@@ -1314,6 +1344,7 @@ class TestCheckMaterialMagnitude:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=None,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent._check_material_magnitude(
             request=request,
@@ -1412,6 +1443,7 @@ class TestCheckMaterialMagnitude:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent._check_material_magnitude(
             request=request,
@@ -1786,6 +1818,7 @@ class TestMaterialMagnitudeTakesPrecedence:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_with_sanctioned_intermediary,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request,
@@ -1835,6 +1868,7 @@ class TestQuorumAuthorityRequiredStructure:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_with_sanctioned_intermediary,
             emitted_at=now,
+            cato_f_decision=CATO_F_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request,
@@ -1843,3 +1877,168 @@ class TestQuorumAuthorityRequiredStructure:
         )
         assert isinstance(result, QuorumAuthorityRequired)
         assert result.operation_package.routing_recommendation is None
+
+
+# ---------------------------------------------------------------------------
+# CATO-F cash-leg gate consultation (AUR-CUSTODY-CASH-001 v0.2 SV.E)
+#
+# The absent-gate default is HOLD, never PROCEED. A missing gate decision
+# is not a missing optional input -- it means the cash-leg governance
+# layer did not run, and routing past it would put a settlement rail
+# selection into the lineage that no gate approved.
+# ---------------------------------------------------------------------------
+
+
+def _gate(decision: GateDecision, reason: ReasonCode) -> CatoFDecision:
+    return CatoFDecision(
+        decision=decision,
+        reason_code=reason,
+        recommended_rail=None,
+        finality_class=None,
+        rationale="Test gate.",
+        checks_evaluated=(),
+        funding_state_snapshot=(),
+    )
+
+
+class TestCashLegGateConsultation:
+    def test_gated_dimensions_are_exactly_the_cash_rail_selectors(self) -> None:
+        """Widening this set is a doctrine change, not a refactor."""
+        assert GATE_REQUIRED_DIMENSIONS == {
+            PathSelectionDimension.MULTI_CURRENCY_RAIL_ROUTING,
+            PathSelectionDimension.CROSS_BORDER_FX_LEG,
+            PathSelectionDimension.LARGE_VALUE_PAYMENT_SYSTEM,
+        }
+
+    def test_absent_gate_escalates_rather_than_routing(
+        self,
+        agent: FIATOperationsSpecialist,
+        equity_operation_routine: object,
+        passing_eligibility_inputs: EligibilityInputs,
+        attribution_us_domestic: JurisdictionalAttribution,
+        now: datetime,
+    ) -> None:
+        request = PathSelectionRequest(
+            operation=equity_operation_routine,
+            eligibility_inputs=passing_eligibility_inputs,
+            attribution=attribution_us_domestic,
+            emitted_at=now,
+            cato_f_decision=None,
+        )
+        out = agent.select_multi_currency_rail_routing(request, currency="USD")
+        assert isinstance(out, EscalationRequired)
+        assert out.failed_guardrail is JClassGuardrail.NO_SETTLEMENT_WITHOUT_LINEAGE
+        assert "absent-gate default is HOLD" in out.failure_reason
+
+    def test_gate_hold_escalates(
+        self,
+        agent: FIATOperationsSpecialist,
+        equity_operation_routine: object,
+        passing_eligibility_inputs: EligibilityInputs,
+        attribution_us_domestic: JurisdictionalAttribution,
+        now: datetime,
+    ) -> None:
+        request = PathSelectionRequest(
+            operation=equity_operation_routine,
+            eligibility_inputs=passing_eligibility_inputs,
+            attribution=attribution_us_domestic,
+            emitted_at=now,
+            cato_f_decision=_gate(
+                GateDecision.HOLD, ReasonCode.UNFUNDED_AT_SETTLEMENT_INSTANT
+            ),
+        )
+        out = agent.select_multi_currency_rail_routing(request, currency="USD")
+        assert isinstance(out, EscalationRequired)
+        assert "HOLD" in out.failure_reason
+        assert "UNFUNDED_AT_SETTLEMENT_INSTANT" in out.failure_reason
+
+    def test_gate_escalate_escalates(
+        self,
+        agent: FIATOperationsSpecialist,
+        equity_operation_routine: object,
+        passing_eligibility_inputs: EligibilityInputs,
+        attribution_us_domestic: JurisdictionalAttribution,
+        now: datetime,
+    ) -> None:
+        request = PathSelectionRequest(
+            operation=equity_operation_routine,
+            eligibility_inputs=passing_eligibility_inputs,
+            attribution=attribution_us_domestic,
+            emitted_at=now,
+            cato_f_decision=_gate(
+                GateDecision.ESCALATE, ReasonCode.SYSTEMIC_STRESS_ESCALATE
+            ),
+        )
+        out = agent.select_multi_currency_rail_routing(request, currency="USD")
+        assert isinstance(out, EscalationRequired)
+        assert "ESCALATE" in out.failure_reason
+
+    def test_gate_proceed_routes_normally(
+        self,
+        agent: FIATOperationsSpecialist,
+        request_passing: PathSelectionRequest,
+    ) -> None:
+        out = agent.select_multi_currency_rail_routing(request_passing, currency="USD")
+        assert isinstance(out, RoutingDecision)
+
+    def test_ungated_dimension_routes_without_a_gate_decision(
+        self,
+        agent: FIATOperationsSpecialist,
+        equity_operation_routine: object,
+        passing_eligibility_inputs: EligibilityInputs,
+        attribution_us_domestic: JurisdictionalAttribution,
+        now: datetime,
+    ) -> None:
+        """Cash sweep selects an investment destination, not a settlement
+        rail — it is deliberately outside the gate's scope."""
+        request = PathSelectionRequest(
+            operation=equity_operation_routine,
+            eligibility_inputs=passing_eligibility_inputs,
+            attribution=attribution_us_domestic,
+            emitted_at=now,
+            cato_f_decision=None,
+        )
+        out = agent.select_cash_sweep_and_short_term_investment(
+            request, currency="USD"
+        )
+        assert not isinstance(out, EscalationRequired) or (
+            out.failed_guardrail is not JClassGuardrail.NO_SETTLEMENT_WITHOUT_LINEAGE
+        )
+
+    def test_absent_gate_escalates_on_cross_border_fx_leg(
+        self,
+        agent: FIATOperationsSpecialist,
+        equity_operation_routine: object,
+        passing_eligibility_inputs: EligibilityInputs,
+        attribution_us_domestic: JurisdictionalAttribution,
+        now: datetime,
+    ) -> None:
+        request = PathSelectionRequest(
+            operation=equity_operation_routine,
+            eligibility_inputs=passing_eligibility_inputs,
+            attribution=attribution_us_domestic,
+            emitted_at=now,
+            cato_f_decision=None,
+        )
+        out = agent.select_cross_border_fx_leg(request, currency_pair="EUR/USD")
+        assert isinstance(out, EscalationRequired)
+        assert out.failed_guardrail is JClassGuardrail.NO_SETTLEMENT_WITHOUT_LINEAGE
+
+    def test_absent_gate_escalates_on_large_value_payment_system(
+        self,
+        agent: FIATOperationsSpecialist,
+        equity_operation_routine: object,
+        passing_eligibility_inputs: EligibilityInputs,
+        attribution_us_domestic: JurisdictionalAttribution,
+        now: datetime,
+    ) -> None:
+        request = PathSelectionRequest(
+            operation=equity_operation_routine,
+            eligibility_inputs=passing_eligibility_inputs,
+            attribution=attribution_us_domestic,
+            emitted_at=now,
+            cato_f_decision=None,
+        )
+        out = agent.select_large_value_payment_system(request, currency="USD")
+        assert isinstance(out, EscalationRequired)
+        assert out.failed_guardrail is JClassGuardrail.NO_SETTLEMENT_WITHOUT_LINEAGE
