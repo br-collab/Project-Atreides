@@ -6,8 +6,25 @@ builds but should be addressed in subsequent work.
 
 ## Doctrine errata to fix in the next custody doctrine iteration
 
+### DISCHARGED 312350Z JUL 26 — §VI line 634 citation erratum
+
+**Closed by `AUR-CUSTODY-AMD-001` §III.** That amendment is the "next custody
+doctrine iteration" this entry was waiting for. Line 634's parenthetical now
+reads *"per canonical Section II (Layer 0 — Verana — Network Governance) and
+Axiom 8."* Code and doctrine agree; the FIAT Operations Specialist source had
+already carried the corrected citation in its Guardrail 5 comments and runtime
+error messages, so this closes a case where the code led the doctrine.
+
+`AUR-CUSTODY-AMD-001` §III also directed that the erratum be checked for in any
+Tier 2 specification or skill file that inherited the §VI guardrail language.
+**That check has been run** across `atreides/agents/tier1/specs/` and
+`atreides/agents/tier2/specs/`: no specification reproduces the erroneous
+Section VIII citation. Nothing further to correct.
+
+The original entry is retained below for the record.
+
 - **`AUR-CUSTODY-001 v1.0` Section VI line 634 — wrong Section
-  citation for Verana jurisdictional attribution.** The doctrine
+  citation for Verana jurisdictional attribution.** *(DISCHARGED — see above.)* The doctrine
   cites "AUR-CANONICAL-001 v1.6 Section VIII" as the authority for
   Verana jurisdictional attribution; Section VIII is the
   Institutional Licensing Thesis and does not address attribution.
