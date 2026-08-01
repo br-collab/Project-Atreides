@@ -1,8 +1,38 @@
-# Project Atreides — governance for the cash leg of settlement
+# Project Atreides — AI-assisted multi-asset settlement governance, with custodial routing
 
-Atreides is a **governance overlay for clearing and settlement**. It sits
-above the systems that actually move securities and money, governs the
-decision behind each operation, and records it as one replayable record.
+Atreides is a **governance layer for multi-asset settlement**. It sits above the
+systems that actually move securities and money, governs the decision behind each
+operation, selects the settlement path from an approved registry, and records the
+whole thing as one replayable decision-of-record.
+
+**Multi-asset** is a scope claim the code carries, not a slogan. Six securities
+rails (`FICC_GSD_DVP`, `FICC_GCF_REPO`, `FICC_SPONSORED_DVP`, `FEDWIRE_SECURITIES`,
+`FEDWIRE_FUNDS`, `SWIFT_MT202`), nine cash rails (Fedwire, CHIPS, FedNow,
+NSS/DTC-NSCC, FICC GSD funds-only, correspondent, tokenized deposit, regulated
+stablecoin, and a permanently reserved wholesale-tokenized placeholder), and three
+settlement kinds (DvP, mark-to-market margin call, end-of-day net funding). Every
+cash rail carries an explicit **finality class** — `GROSS_FINAL`, `DEFERRED_NET`,
+`LEDGER_FINAL`, or `CORRESPONDENT_DEPENDENT` — because a rail choice that does not
+state when the money becomes irrevocable has not actually been made.
+
+**Custodial routing** is a first-class dimension, not a configuration flag. Path
+selection runs across seven doctrine-defined dimensions, and Dimension 4 is
+*depository membership versus sub-custodian intermediation* — weighed on operational
+efficiency, counterparty-risk concentration, jurisdictional compliance, and cost.
+The other six cover multi-currency rail routing, correspondent-bank coordination,
+the cross-border FX leg, large-value payment-system selection at material magnitude,
+Federal Reserve account operations, and cash sweep destination.
+
+**AI-assisted, stated precisely.** Tier 1 agents are deterministic. Tier 2 agents
+have bounded autonomy over a **pre-declared approved-path registry** — 22 default
+paths, each carrying its eligible ISO 4217 currencies, ISO 3166-1 jurisdictions, and
+the doctrine subsection that justifies its inclusion. The agent enumerates from the
+registry; **it never constructs a path at decision time.** An empty match does not
+become improvisation — it becomes an `EscalationRequired` with
+`failed_guardrail = APPROVED_PATHS_ONLY`. There is no adaptive tier in the custody
+doctrine, and nothing here updates its own decision function from experience. That
+is what makes any decision deterministically replayable years later, and what keeps
+SR 11-7 ongoing-monitoring obligations tractable.
 
 It does not move anything itself. That constraint is the design.
 
@@ -31,9 +61,14 @@ regulator-replayable decision traced to the originating event.
 
 That gap is the product.
 
-It is sharpest on the **cash leg**. Most post-trade tooling governs the
-securities side and treats the money as a consequence. A settlement is two
-legs; governing one and defaulting the other is a half-governed settlement.
+The gap is widest on the **cash leg**, which is why the deepest implementation is
+there. Most post-trade tooling governs the securities side and treats the money as a
+consequence. A settlement has two legs; governing one and defaulting the other is a
+half-governed settlement. So the cash leg is where this framework goes deepest —
+funding feasibility, rail selection with finality, ISO 20022 emission — but it is
+the **centre of gravity of a multi-asset layer, not its boundary.** The securities
+leg, the FX leg, the custodial decision, and the cash leg all run the same gates and
+land in the same decision-of-record.
 
 ---
 
@@ -139,6 +174,53 @@ provable correctness.
   closed inventory is specified and not yet implemented.
 - **Multi-party authority ceremonies** — specified, deliberately inactive
   under the current single-operator model.
+
+---
+
+## Where this lands against the DTCC settlement transformation calendar
+
+Context for anyone evaluating relevance rather than architecture. DTCC's published
+[Settlement Transformation client roadmap](https://www.dtcc.com/-/media/Files/Downloads/Transformation/Settlement-Transformation-Client-Roadmap.pdf)
+puts the participant-side work on dates:
+
+| Date | Milestone |
+| --- | --- |
+| 21 Jan 2026 | PSE connectivity testing begins |
+| 4 Mar 2026 | ISO 20022 Test Facility available — Deliver Orders, Payment Orders |
+| 6 Jul 2026 | Production connectivity testing; ISO input/output early adoption begins |
+| **30 Sep 2026** | **UAT / functional testing available in PSE**; reporting files available |
+| 13 Nov 2026 | Production availability — Settlement Transaction Manager |
+| Q3 2027 | Modernized Inventory Management go-live; legacy interfaces decommissioned |
+
+PSE is DTCC's participant test environment — in their words, a testing environment
+that facilitates user acceptance testing without impact on live activity.
+
+**What this framework can plausibly contribute to that window.** Two things, stated
+narrowly because the honest claim is narrow.
+
+*Pre-submission conformance.* The emit path is validated in CI against the published
+XSDs, which catches a class of defect that otherwise surfaces as a depository
+rejection and costs a test cycle. Two real examples from this build: a timezone
+offset emitted as `+0000` where `xs:dateTime` requires `+00:00`, and a monetary
+amount normalised from `1000000.00` to `1E+6`. Both look correct in a unit test.
+Both fail at a venue.
+
+*Negative-path test generation.* Testing programmes are chronically thin on failure
+paths because constructing a failure deliberately is harder than constructing a
+success. The gate layer enumerates its own failure space — six funding dispositions
+crossed with CATO-F's eight ordered checks, plus clearing-fund, net-obligation, and
+lineage gates — so a negative test matrix can be derived from the decision space
+rather than hand-written. The highest-value case in that set is `WILL_QUEUE`: a
+queued gross-final instruction is **not** a failure, and a system that classifies it
+as one and re-issues has created an irreversible duplicate payment.
+
+**What it cannot contribute, and this is the more important half.** It cannot execute
+a test cycle, because it does not submit — it prepares and adjudicates; the entitled
+member transmits. It has never parsed a real depository readback, so it does nothing
+for the inbound half of testing. And whether `pacs.009.001.13` is even the right
+message against DTC's Payment Order mapping is precisely what sits behind the
+participant-access documentation named above. That is an open question, recorded as
+one rather than assumed away.
 
 ---
 
