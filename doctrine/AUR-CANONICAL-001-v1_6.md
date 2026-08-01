@@ -538,6 +538,15 @@ Quorum authority operational specification delivered. The N-of-M structure per o
 
 Workforce framing evolution from eFICC to Aureon Asset-Services Workforce. The Section IV workforce specification renamed framework-wide to match the asset-class breadth committed in `AUR-CUSTODY-001 v1.0` and the broader Asset Services strategic positioning. Existing role names (Settlement Operations Analyst, Trade Support Analyst, Reconciliation Analyst, Regulatory Reporting Analyst, the four Tier 2 roles, the three Tier 3 roles) remain canonical; the implicit scope of each role expands to span the full asset-class universe. Custody-specific roles added: Custody Operations Analyst at Tier 1; FIAT Operations Specialist, Digital Asset Custody Specialist, and Collateral Operations Specialist at Tier 2 (FIAT and Digital Specialists in explicit 1:1 parity). Anticipated additional asset-class-specific Tier 2 specialists (Physical Commodity Custody Specialist, Real Asset Custody Specialist, Alternative Asset Custody Specialist, Insurance and ILS Custody Specialist) named for future doctrine work.
 
+### Relationship to the authoritative document
+
+This is a **derived, public variant**. The authoritative document is held in the
+Restricted-Distribution doctrine repository. Entries in the **Open** register that
+describe internal engineering state are omitted here by the exclusion rule recorded
+in the authoritative copy; everything else is carried verbatim. Corrections made to
+this variant are merged back to the authoritative copy rather than diverging from it
+(`AUR-CANONICAL-AMD-001 §V`).
+
 ## Open
 
 Cato version parity. Deployed code is version-mixed: core gate logic at v0.2.2 (SOFR one-day delta trigger active), sticky last-known-good price cache at v0.2.3, several endpoint docstrings still at v0.2.1. External MCP README documents v0.2.0 / v0.2.1 routing. Action: issue a consolidated v0.2.3 stamp across core, cache, docstrings, and external README in a single commit series with verified identical decisions on identical inputs. Until that happens, the claim of parity is conditional, not established.
