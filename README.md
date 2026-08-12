@@ -80,6 +80,12 @@ module and naming the doctrine each decision traces to. If you are picking
 this up cold, start there — it is written for someone who knows settlement
 operations and wants to see whether the code earns its claims.
 
+Three **scenario write-ups** sit alongside it, each documenting one governance decision, the operator judgment it encodes, and the consequence of the alternative:
+
+- **[`docs/SCENARIO-FUNDING-DISPOSITION.md`](docs/SCENARIO-FUNDING-DISPOSITION.md)** - why a queued payment is not a failed payment, and the six-disposition answer to "can this leg settle at all."
+- **[`docs/SCENARIO-NET-OBLIGATION-MISMATCH.md`](docs/SCENARIO-NET-OBLIGATION-MISMATCH.md)** - the reconciliation control that holds rather than choosing when the firm's obligation and the CCP's published figure disagree.
+- **[`docs/SCENARIO-DSOR-LINEAGE-MISMATCH.md`](docs/SCENARIO-DSOR-LINEAGE-MISMATCH.md)** - fail-safe, not fail-open: what happens when the governance record itself is the thing that is wrong.
+
 ---
 
 ## See it running
