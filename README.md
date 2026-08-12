@@ -177,6 +177,29 @@ provable correctness.
 
 ---
 
+## Asset-class roadmap
+
+The contracts layer is asset-class agnostic and rails are pluggable — a new
+rail is a doctrine-plus-fixtures exercise, not an architecture change. The
+implemented depth today is the U.S. Treasury / FICC complex and the cash leg.
+The build order from here is chosen so that each rail forces the
+decision-of-record to prove a different finality class the doctrine already
+names:
+
+| Rail | Finality class exercised | Venue complex | Status |
+| --- | --- | --- | --- |
+| U.S. Treasury / FICC | GROSS_FINAL — queues, WILL_QUEUE | FICC GSD, Fedwire Securities | **Built** |
+| Equities | DEFERRED_NET — finality at end-of-day netting | NSCC CNS, DTC | Next build |
+| Digital assets | LEDGER_FINAL — no queue; atomic DvP | Tokenized DvP; DTCC Tokenization Service-aware | Next build |
+| Credit | Gross / deferred hybrid; TRACE reporting obligation | DTC / NSCC | Next build |
+| FX | CORRESPONDENT_DEPENDENT — PvP; finality not directly observable | CLS, correspondent network | Following build |
+
+The order is the finality taxonomy walked end to end. Status follows the same
+convention as the rest of this document: a rail is Built when its gates,
+contracts, and negative-path tests exist — not when a diagram does.
+
+---
+
 ## Where this lands against the DTCC settlement transformation calendar
 
 Context for anyone evaluating relevance rather than architecture. DTCC's published
