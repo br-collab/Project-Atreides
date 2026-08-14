@@ -1,0 +1,594 @@
+"""Tests for the margin-aware break model.
+
+House convention: every validator carries a positive and a negative test,
+and the negative tests are the point. Each one asserts that the model
+refuses to record a claim it cannot support.
+
+The load-bearing assertion in this file is that an unassessed break resolves
+to INDETERMINATE and never to NO_MARGIN_EFFECT. Everything else supports it.
+"""
+
+from __future__ import annotations
+
+from decimal import Decimal
+
+import pytest
+from pydantic import ValidationError
+
+from atreides.contracts.margin_impact import (
+    CallWindow,
+    MarginDirection,
+    MarginDisposition,
+    MarginImpact,
+    Observability,
+    absent_margin_assessment,
+    margin_impact_for_clearing_fund_deficiency,
+    margin_priority_rank,
+    raises_quorum_question,
+    sort_by_margin_consequence,
+)
+from atreides.contracts.margin_profile import CollectionModel
+from atreides.rails.finality import FinalityClass
+
+D = Decimal
+
+BASIS = "AUR-CUSTODY-MARGIN-001 sec. 7"
+
+
+def _impact(**kw: object) -> MarginImpact:
+    base: dict[str, object] = {
+        "disposition": MarginDisposition.UNDER_COLLATERALIZED,
+        "direction": MarginDirection.OWED_TO_VENUE,
+        "observability": Observability.OBSERVED,
+        "collateral_observability": Observability.OBSERVED,
+        "delta_amount": D("250000"),
+        "delta_currency": "USD",
+        "basis": BASIS,
+    }
+    base.update(kw)
+    return MarginImpact(**base)  # type: ignore[arg-type]
+
+
+def _open_window() -> CallWindow:
+    return CallWindow(
+        collection_model=CollectionModel.TRADITIONAL_HOURS_ONLY,
+        is_open=True,
+        closes_at_offset_seconds=7200,
+    )
+
+
+def _shut_window() -> CallWindow:
+    return CallWindow(
+        collection_model=CollectionModel.TRADITIONAL_HOURS_ONLY,
+        is_open=False,
+        reopens_at_offset_seconds=54000,
+    )
+
+
+# ---------------------------------------------------------------------------
+# The fail-safe default
+# ---------------------------------------------------------------------------
+
+
+def test_absent_assessment_is_indeterminate() -> None:
+    m = absent_margin_assessment()
+    assert m.disposition is MarginDisposition.INDETERMINATE
+    assert m.direction is MarginDirection.UNKNOWN
+    assert m.observability is Observability.UNOBSERVABLE
+
+
+def test_absent_assessment_is_never_no_margin_effect() -> None:
+    """A break with no margin assessment is not a break with no margin
+    impact. The framework does not infer neutrality from absence of
+    evidence, exactly as it does not infer finality from the absence of a
+    gate decision."""
+    assert absent_margin_assessment().disposition is not (
+        MarginDisposition.NO_MARGIN_EFFECT
+    )
+
+
+def test_absent_assessment_escalates() -> None:
+    assert absent_margin_assessment().escalates is True
+
+
+def test_absent_assessment_carries_its_reason() -> None:
+    m = absent_margin_assessment("upstream reconciliation not run")
+    assert "upstream reconciliation not run" in m.basis
+    assert "never" in m.basis
+
+
+# ---------------------------------------------------------------------------
+# Amount and currency travel together
+# ---------------------------------------------------------------------------
+
+
+def test_amount_with_currency_is_accepted() -> None:
+    assert _impact().delta_amount == D("250000")
+
+
+def test_amount_without_currency_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="requires delta_currency"):
+        _impact(delta_currency=None)
+
+
+def test_currency_without_amount_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="denominates nothing"):
+        _impact(
+            disposition=MarginDisposition.METHODOLOGY_DEPENDENT,
+            direction=MarginDirection.UNKNOWN,
+            delta_amount=None,
+        )
+
+
+def test_currency_must_be_three_characters() -> None:
+    with pytest.raises(ValidationError):
+        _impact(delta_currency="DOLLARS")
+
+
+# ---------------------------------------------------------------------------
+# An unobservable basis asserts no exposure
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "disposition,direction",
+    [
+        (MarginDisposition.UNDER_COLLATERALIZED, MarginDirection.OWED_TO_VENUE),
+        (MarginDisposition.OVER_COLLATERALIZED, MarginDirection.OWED_TO_FIRM),
+        (MarginDisposition.CALL_WINDOW_CLOSED, MarginDirection.OWED_TO_VENUE),
+    ],
+)
+def test_quantified_disposition_on_an_unobservable_basis_is_rejected(
+    disposition: MarginDisposition, direction: MarginDirection
+) -> None:
+    """If nobody can observe the collateral state, the disposition that says
+    what it is cannot be held. The correct answer is INDETERMINATE."""
+    with pytest.raises(ValidationError, match="cannot be held on an UNOBSERVABLE"):
+        _impact(
+            disposition=disposition,
+            direction=direction,
+            observability=Observability.UNOBSERVABLE,
+            call_window=_shut_window(),
+        )
+
+
+def test_derived_basis_may_carry_a_confident_disposition() -> None:
+    """Derived is not a weaker verdict, it is a different provenance. A
+    break can be confidently under-collateralised on a derived basis, and
+    the basis is visible to whoever acts on it."""
+    m = _impact(observability=Observability.DERIVED)
+    assert m.disposition is MarginDisposition.UNDER_COLLATERALIZED
+    assert m.observability is Observability.DERIVED
+
+
+# ---------------------------------------------------------------------------
+# Direction must agree with disposition
+# ---------------------------------------------------------------------------
+
+
+def test_under_collateralized_owed_to_firm_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="implies direction owed_to_venue"):
+        _impact(direction=MarginDirection.OWED_TO_FIRM)
+
+
+def test_over_collateralized_owed_to_venue_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="implies direction owed_to_firm"):
+        _impact(
+            disposition=MarginDisposition.OVER_COLLATERALIZED,
+            direction=MarginDirection.OWED_TO_VENUE,
+        )
+
+
+def test_over_collateralized_owed_to_firm_is_accepted() -> None:
+    m = _impact(
+        disposition=MarginDisposition.OVER_COLLATERALIZED,
+        direction=MarginDirection.OWED_TO_FIRM,
+    )
+    assert m.escalates is True
+
+
+def test_no_margin_effect_must_be_neutral() -> None:
+    with pytest.raises(ValidationError, match="implies direction neutral"):
+        _impact(
+            disposition=MarginDisposition.NO_MARGIN_EFFECT,
+            direction=MarginDirection.OWED_TO_VENUE,
+            delta_amount=None,
+            delta_currency=None,
+        )
+
+
+def test_indeterminate_direction_is_unconstrained() -> None:
+    """Deliberately not pinned. An unobservable state can still carry a
+    direction somebody has reason to suspect, and forcing UNKNOWN would
+    discard it."""
+    m = _impact(
+        disposition=MarginDisposition.INDETERMINATE,
+        direction=MarginDirection.OWED_TO_VENUE,
+        observability=Observability.UNOBSERVABLE,
+        delta_amount=None,
+        delta_currency=None,
+    )
+    assert m.direction is MarginDirection.OWED_TO_VENUE
+
+
+# ---------------------------------------------------------------------------
+# CALL_WINDOW_CLOSED
+# ---------------------------------------------------------------------------
+
+
+def test_call_window_closed_with_a_shut_window_is_accepted() -> None:
+    m = _impact(
+        disposition=MarginDisposition.CALL_WINDOW_CLOSED,
+        direction=MarginDirection.OWED_TO_VENUE,
+        call_window=_shut_window(),
+    )
+    assert m.call_window is not None
+    assert m.call_window.is_open is False
+
+
+def test_call_window_closed_without_a_window_is_rejected() -> None:
+    """Asserting a closed window without one is an inference, and the
+    registry does not hold inferences."""
+    with pytest.raises(ValidationError, match="requires a call_window"):
+        _impact(disposition=MarginDisposition.CALL_WINDOW_CLOSED)
+
+
+def test_call_window_closed_against_an_open_window_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="against an open window"):
+        _impact(
+            disposition=MarginDisposition.CALL_WINDOW_CLOSED,
+            call_window=_open_window(),
+        )
+
+
+def test_unknown_collection_model_may_not_state_a_schedule() -> None:
+    with pytest.raises(ValidationError, match="may not state a schedule"):
+        CallWindow(
+            collection_model=CollectionModel.UNKNOWN,
+            is_open=True,
+            closes_at_offset_seconds=3600,
+        )
+
+
+def test_unknown_collection_model_may_still_record_openness() -> None:
+    """Whether the desk can call right now is observable operationally
+    without the venue's published schedule."""
+    w = CallWindow(is_open=False)
+    assert w.collection_model is CollectionModel.UNKNOWN
+    assert w.is_open is False
+
+
+def test_open_window_may_not_state_a_reopen() -> None:
+    with pytest.raises(ValidationError, match="does not reopen"):
+        CallWindow(
+            collection_model=CollectionModel.TRADITIONAL_HOURS_ONLY,
+            is_open=True,
+            reopens_at_offset_seconds=3600,
+        )
+
+
+# ---------------------------------------------------------------------------
+# WITHIN_TOLERANCE records its threshold
+# ---------------------------------------------------------------------------
+
+
+def test_within_tolerance_without_a_threshold_is_rejected() -> None:
+    """"Below tolerance" with no stated tolerance is not a finding."""
+    with pytest.raises(ValidationError, match="must record the threshold"):
+        _impact(
+            disposition=MarginDisposition.WITHIN_TOLERANCE,
+            direction=MarginDirection.OWED_TO_VENUE,
+            delta_amount=D("12"),
+        )
+
+
+def test_within_tolerance_with_a_threshold_is_accepted() -> None:
+    m = _impact(
+        disposition=MarginDisposition.WITHIN_TOLERANCE,
+        direction=MarginDirection.OWED_TO_VENUE,
+        delta_amount=D("12"),
+        materiality_threshold=D("50000"),
+    )
+    assert m.escalates is False
+    assert m.materiality_threshold == D("50000")
+
+
+def test_no_default_materiality_threshold_exists() -> None:
+    """A fixed default would be wrong for every firm. The model records
+    which threshold was applied and supplies none of its own."""
+    assert _impact().materiality_threshold is None
+
+
+# ---------------------------------------------------------------------------
+# INDETERMINATE and NO_MARGIN_EFFECT assert no figure
+# ---------------------------------------------------------------------------
+
+
+def test_indeterminate_with_a_delta_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="delta figure contradicts it"):
+        _impact(
+            disposition=MarginDisposition.INDETERMINATE,
+            direction=MarginDirection.UNKNOWN,
+            observability=Observability.UNOBSERVABLE,
+        )
+
+
+def test_no_margin_effect_with_a_non_zero_delta_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="cannot carry a non-zero delta"):
+        _impact(
+            disposition=MarginDisposition.NO_MARGIN_EFFECT,
+            direction=MarginDirection.NEUTRAL,
+        )
+
+
+def test_no_margin_effect_with_an_explicit_zero_is_accepted() -> None:
+    """Recording a measured zero is different from recording nothing."""
+    m = _impact(
+        disposition=MarginDisposition.NO_MARGIN_EFFECT,
+        direction=MarginDirection.NEUTRAL,
+        delta_amount=D("0"),
+    )
+    assert m.escalates is False
+
+
+# ---------------------------------------------------------------------------
+# Collateral finality mismatch
+# ---------------------------------------------------------------------------
+
+
+def test_mismatch_is_representable() -> None:
+    """Collateral final on a ledger against an obligation settling on a
+    cycle. A record that cannot state this cannot govern the exposure
+    between them."""
+    m = _impact(
+        collateral_finality_class=FinalityClass.LEDGER_FINAL,
+        obligation_finality_class=FinalityClass.DEFERRED_NET,
+    )
+    assert m.collateral_mismatch is True
+
+
+def test_matching_classes_are_not_a_mismatch() -> None:
+    m = _impact(
+        collateral_finality_class=FinalityClass.DEFERRED_NET,
+        obligation_finality_class=FinalityClass.DEFERRED_NET,
+    )
+    assert m.collateral_mismatch is False
+
+
+def test_unrecorded_side_is_not_reported_as_a_match() -> None:
+    """Absence of a record is not evidence of a match."""
+    m = _impact(collateral_finality_class=FinalityClass.LEDGER_FINAL)
+    assert m.collateral_mismatch is False
+    assert m.obligation_finality_class is None
+
+
+def test_determination_dependent_obligation_is_representable_here() -> None:
+    m = _impact(
+        collateral_finality_class=FinalityClass.GROSS_FINAL,
+        obligation_finality_class=FinalityClass.DETERMINATION_DEPENDENT,
+    )
+    assert m.collateral_mismatch is True
+
+
+# ---------------------------------------------------------------------------
+# Prioritisation
+# ---------------------------------------------------------------------------
+
+
+def test_in_cycle_call_leads() -> None:
+    in_cycle = _impact(call_window=_open_window())
+    assert margin_priority_rank(in_cycle) == 1
+
+
+def test_call_window_closed_outranks_indeterminate() -> None:
+    shut = _impact(
+        disposition=MarginDisposition.CALL_WINDOW_CLOSED,
+        call_window=_shut_window(),
+    )
+    indet = absent_margin_assessment()
+    assert margin_priority_rank(shut) < margin_priority_rank(indet)
+
+
+def test_unknown_exposure_outranks_known_cost() -> None:
+    """An operator can plan around a quantified over-collateralisation and
+    cannot plan around a position whose collateral state nobody can
+    observe."""
+    indet = absent_margin_assessment()
+    over = _impact(
+        disposition=MarginDisposition.OVER_COLLATERALIZED,
+        direction=MarginDirection.OWED_TO_FIRM,
+    )
+    assert margin_priority_rank(indet) < margin_priority_rank(over)
+
+
+def test_under_collateralized_with_no_window_is_treated_as_out_of_cycle() -> None:
+    """Fail-safe cuts the other way here. Claiming an in-cycle deadline the
+    framework cannot evidence would put a break at the top of an operator's
+    queue on an assumption."""
+    no_window = _impact()
+    in_cycle = _impact(call_window=_open_window())
+    out_of_cycle = _impact(call_window=_shut_window())
+    assert margin_priority_rank(no_window) > margin_priority_rank(in_cycle)
+    assert margin_priority_rank(no_window) == margin_priority_rank(out_of_cycle)
+
+
+@pytest.mark.parametrize("disposition", list(MarginDisposition))
+def test_every_disposition_has_a_rank(disposition: MarginDisposition) -> None:
+    """Exhaustiveness. A new disposition added without a ranking decision
+    raises KeyError here rather than sorting silently to a default."""
+    direction = {
+        MarginDisposition.UNDER_COLLATERALIZED: MarginDirection.OWED_TO_VENUE,
+        MarginDisposition.OVER_COLLATERALIZED: MarginDirection.OWED_TO_FIRM,
+        MarginDisposition.NO_MARGIN_EFFECT: MarginDirection.NEUTRAL,
+    }.get(disposition, MarginDirection.UNKNOWN)
+    m = _impact(
+        disposition=disposition,
+        direction=direction,
+        delta_amount=None,
+        delta_currency=None,
+        materiality_threshold=D("1"),
+        observability=(
+            Observability.UNOBSERVABLE
+            if disposition is MarginDisposition.INDETERMINATE
+            else Observability.OBSERVED
+        ),
+        call_window=(
+            _shut_window()
+            if disposition is MarginDisposition.CALL_WINDOW_CLOSED
+            else None
+        ),
+    )
+    assert isinstance(margin_priority_rank(m), int)
+
+
+def test_ordering_is_a_total_order_and_stable() -> None:
+    routine_a = _impact(
+        disposition=MarginDisposition.NO_MARGIN_EFFECT,
+        direction=MarginDirection.NEUTRAL,
+        delta_amount=None,
+        delta_currency=None,
+        venue="A",
+    )
+    routine_b = _impact(
+        disposition=MarginDisposition.NO_MARGIN_EFFECT,
+        direction=MarginDirection.NEUTRAL,
+        delta_amount=None,
+        delta_currency=None,
+        venue="B",
+    )
+    urgent = _impact(call_window=_open_window())
+    ordered = sort_by_margin_consequence((routine_a, routine_b, urgent))
+    assert ordered[0] is urgent
+    # Equal ranks keep input order, so the caller's own secondary ordering
+    # survives and the result is reproducible.
+    assert ordered[1].venue == "A"
+    assert ordered[2].venue == "B"
+
+
+def test_sorting_is_deterministic() -> None:
+    items = (
+        absent_margin_assessment(),
+        _impact(call_window=_open_window()),
+        _impact(
+            disposition=MarginDisposition.OVER_COLLATERALIZED,
+            direction=MarginDirection.OWED_TO_FIRM,
+        ),
+    )
+    assert sort_by_margin_consequence(items) == sort_by_margin_consequence(items)
+
+
+# ---------------------------------------------------------------------------
+# Gate interactions
+# ---------------------------------------------------------------------------
+
+
+def test_clearing_fund_deficiency_becomes_an_under_collateralisation() -> None:
+    m = margin_impact_for_clearing_fund_deficiency(
+        requirement=D("1000000"),
+        posted=D("750000"),
+        currency="USD",
+        venue="CCP_A",
+        call_window=_open_window(),
+    )
+    assert m.disposition is MarginDisposition.UNDER_COLLATERALIZED
+    assert m.delta_amount == D("250000")
+    assert m.direction is MarginDirection.OWED_TO_VENUE
+    assert m.observability is Observability.OBSERVED
+    assert "no methodology was applied here" in m.basis
+
+
+def test_clearing_fund_deficiency_with_a_shut_window_is_uncollectable() -> None:
+    """Quantified and simultaneously uncollectable. Different state, different
+    remedy: a position or hedging decision, not a call."""
+    m = margin_impact_for_clearing_fund_deficiency(
+        requirement=D("1000000"),
+        posted=D("750000"),
+        currency="USD",
+        venue="CCP_A",
+        call_window=_shut_window(),
+    )
+    assert m.disposition is MarginDisposition.CALL_WINDOW_CLOSED
+
+
+def test_clearing_fund_bridge_computes_no_margin_of_its_own() -> None:
+    """Both figures come from the venue. The bridge subtracts; it does not
+    model."""
+    m = margin_impact_for_clearing_fund_deficiency(
+        requirement=D("3"), posted=D("1"), currency="USD", venue="CCP_A"
+    )
+    assert m.delta_amount == D("2")
+    assert m.methodology is None
+
+
+def test_large_delta_raises_the_quorum_question() -> None:
+    assert raises_quorum_question(_impact(), magnitude_threshold=D("100000")) is True
+
+
+def test_small_delta_does_not() -> None:
+    assert raises_quorum_question(_impact(), magnitude_threshold=D("500000")) is False
+
+
+def test_direction_does_not_change_the_quorum_trigger() -> None:
+    """Magnitude is magnitude. An over-collateralisation of the same size
+    raises the same routing question."""
+    over = _impact(
+        disposition=MarginDisposition.OVER_COLLATERALIZED,
+        direction=MarginDirection.OWED_TO_FIRM,
+    )
+    assert raises_quorum_question(over, magnitude_threshold=D("100000")) is True
+
+
+def test_an_unfigured_assessment_never_triggers_quorum() -> None:
+    """An unobservable exposure is a reason to investigate, not a reason to
+    convene a ceremony against a number nobody has. It escalates on its own
+    disposition instead."""
+    m = absent_margin_assessment()
+    assert raises_quorum_question(m, magnitude_threshold=D("1")) is False
+    assert m.escalates is True
+
+
+# ---------------------------------------------------------------------------
+# Immutability and determinism
+# ---------------------------------------------------------------------------
+
+
+def test_impact_is_frozen() -> None:
+    """A reassessment appends a new record with its own offset; the earlier
+    assessment stays visible, because how the picture changed through the day
+    is itself evidence."""
+    m = _impact()
+    with pytest.raises(ValidationError):
+        m.disposition = MarginDisposition.NO_MARGIN_EFFECT  # type: ignore[misc]
+
+
+def test_identical_inputs_produce_identical_records() -> None:
+    a = _impact(assessed_at_offset_seconds=3600)
+    b = _impact(assessed_at_offset_seconds=3600)
+    assert a == b
+    assert a.model_dump_json() == b.model_dump_json()
+
+
+def test_unknown_field_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        _impact(predicted_margin=D("1000"))
+
+
+def test_basis_is_required() -> None:
+    with pytest.raises(ValidationError):
+        _impact(basis="")
+
+
+# ---------------------------------------------------------------------------
+# Deliberate absence
+# ---------------------------------------------------------------------------
+
+
+def test_no_test_asserts_a_predicted_margin_figure() -> None:
+    """Placeholder marking a deliberate absence.
+
+    There is no forecast in this module and no test of one. A reader looking
+    for predictive coverage should find this note instead of a gap.
+    Doctrine: AUR-CUSTODY-MARGIN-001 sec. 2.
+    """
+    assert not hasattr(MarginImpact, "predict_margin")
+    assert not any("predict" in name for name in MarginImpact.model_fields)
