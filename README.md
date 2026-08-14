@@ -208,7 +208,7 @@ names:
 | Rail | Finality class exercised | Venue complex | Status |
 | --- | --- | --- | --- |
 | U.S. Treasury / FICC | GROSS_FINAL — queues, WILL_QUEUE | FICC GSD, Fedwire Securities | **Built** |
-| Equities | DEFERRED_NET — finality at end-of-day netting | NSCC CNS, DTC | Next build |
+| Equities | DEFERRED_NET — finality at end-of-day netting | Continuous net settlement, central depository | **Netting, fails and corporate-action overlay built**; market profiles unpopulated |
 | Digital assets | LEDGER_FINAL — no queue; atomic DvP | Tokenized DvP; DTCC Tokenization Service-aware | Next build |
 | Credit | Gross / deferred hybrid; TRACE reporting obligation | DTC / NSCC | Next build |
 | FX | CORRESPONDENT_DEPENDENT — PvP; finality not directly observable | CLS, correspondent network | Following build |
