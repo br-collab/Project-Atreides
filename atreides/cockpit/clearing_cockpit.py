@@ -52,7 +52,7 @@ import hashlib
 import json
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Literal
@@ -343,7 +343,7 @@ class ClearingCockpit:
 
     def _ledger_append(self, operation_id: UUID, beat: CycleBeat, obj) -> None:
         self._ledger.setdefault(operation_id, []).append(
-            {"beat": beat.value, "at": datetime.now(tz=timezone.utc).isoformat(), "record": obj}
+            {"beat": beat.value, "at": datetime.now(tz=UTC).isoformat(), "record": obj}
         )
 
     # -- Beat 1: gather ----------------------------------------------------
@@ -386,7 +386,7 @@ class ClearingCockpit:
             settlement_date=settlement_date,
             authority_tier=authority_tier,
             authority_id=authority_id,
-            captured_at=datetime.now(tz=timezone.utc),
+            captured_at=datetime.now(tz=UTC),
             net_delivery_quantity=net_delivery_quantity,
             net_payment_amount=net_payment_amount,
             ficc_published_net_delivery=ficc_published_net_delivery,
@@ -563,7 +563,7 @@ class ClearingCockpit:
         readback = PortalReadback(
             operation_id=operation_id,
             regime=regime,
-            ingested_at=datetime.now(tz=timezone.utc),
+            ingested_at=datetime.now(tz=UTC),
             position_balance=position_balance,
             clearing_fund_deficit=clearing_fund_deficit,
             ccp_net_obligation=ccp_net_obligation,
@@ -667,7 +667,7 @@ class ClearingCockpit:
                 leg=leg,
                 detail=json.dumps(reconciliation.detail.get(leg.value.split("_")[0], {})),
                 dsor_pre_trade_record_id=dsor_pre_trade_record_id,
-                raised_at=datetime.now(tz=timezone.utc),
+                raised_at=datetime.now(tz=UTC),
             )
             tickets.append(ticket)
             self._workbench.append(ticket)

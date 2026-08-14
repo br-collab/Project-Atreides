@@ -57,6 +57,7 @@ from enum import StrEnum
 from typing import Final
 
 from atreides.rails.cato_f import FinalityClass, FundingState
+from atreides.rails.determination import DeterminationOutcome
 
 __all__ = [
     "DOCTRINE_VERSION",
@@ -75,6 +76,14 @@ class FundingDisposition(StrEnum):
     """What will happen to this cash leg on funding grounds."""
 
     FUNDED = "funded"
+    """The committed position covers the obligation."""
+    #: Funded, and the obligation is DETERMINATION_DEPENDENT: the venue may
+    #: still cancel the contract and return the funds. The settlement
+    #: completes and the money is not yet the firm's to spend. Kept
+    #: distinct from FUNDED for the same reason WILL_QUEUE is kept distinct
+    #: from WILL_FAIL - an operator who treats a qualified receipt as free
+    #: cash has taken an unpriced exposure to a venue's emergency authority.
+    FUNDED_QUALIFIED = "funded_qualified"
     #: Gross-final rail, short at the settlement instant, but funding
     #: arrives before the window closes. NOT a failure — see module docstring.
     WILL_QUEUE = "will_queue"
@@ -128,6 +137,14 @@ class FundingInputs:
     net_debit_cap: Decimal | None = None
     clearing_fund_requirement: Decimal = Decimal(0)
     clearing_fund_posted: Decimal = Decimal(0)
+    #: Obligation-level classification for contingent payouts, supplied by
+    #: the caller from ``determination.classify_determination()``. Note that
+    #: this is ORTHOGONAL to ``finality_class`` above and does not replace
+    #: it: the rail is still gross-final or deferred-net or ledger-final,
+    #: and the obligation is separately qualified or not. One field cannot
+    #: carry two independent facts, and overloading ``finality_class`` to
+    #: try was the first design and was wrong.
+    determination_outcome: DeterminationOutcome = DeterminationOutcome.NOT_APPLICABLE
 
     @property
     def clearing_fund_sufficient(self) -> bool:
@@ -150,20 +167,39 @@ class FundingProjection:
     ladder: tuple[LadderPoint, ...]
     rationale: str
     doctrine_version: str = DOCTRINE_VERSION
+    determination_outcome: DeterminationOutcome = DeterminationOutcome.NOT_APPLICABLE
 
     @property
     def settles(self) -> bool:
-        """True only for FUNDED. A queue is not a settlement — but it is
-        also not a failure, which is why callers must branch on the
-        disposition rather than on this flag alone."""
-        return self.disposition is FundingDisposition.FUNDED
+        """True where the settlement completes.
+
+        FUNDED_QUALIFIED is included, and that inclusion is a decision
+        rather than a convenience: the payment happens, the rail's finality
+        holds, and the operation is not blocked. What is unresolved is
+        whether the value stays. Callers who need that distinction read
+        :attr:`qualified` or the disposition itself — which is the same
+        instruction the WILL_QUEUE case already carries.
+        """
+        return self.disposition in {
+            FundingDisposition.FUNDED,
+            FundingDisposition.FUNDED_QUALIFIED,
+        }
+
+    @property
+    def qualified(self) -> bool:
+        """True where settlement completed against a revocable entitlement."""
+        return self.disposition is FundingDisposition.FUNDED_QUALIFIED
 
     @property
     def is_failure(self) -> bool:
         """True only where the operation genuinely cannot settle.
 
         WILL_QUEUE is deliberately excluded. Treating a queue as a failure
-        is the mechanism that produces duplicate payments.
+        is the mechanism that produces duplicate payments. FUNDED_QUALIFIED
+        is excluded for a different reason: nothing failed, and a
+        contingent claw-back that has not happened is not a settlement
+        failure. Calling it one would re-import the same error in a new
+        place.
         """
         return self.disposition in {
             FundingDisposition.WILL_FAIL,
@@ -302,6 +338,23 @@ def project_funding(inputs: FundingInputs) -> FundingProjection:
             funded_at_offset_seconds=funded_at,
             ladder=ladder,
             rationale=rationale,
+            determination_outcome=inputs.determination_outcome,
+        )
+
+    # 0. Contract violation, caught rather than guessed at.
+    #    DETERMINATION_DEPENDENT is an obligation-level class and no rail
+    #    carries it. A caller who supplies it as the rail's class has made
+    #    a category error, and the fail-safe posture says refuse rather
+    #    than fall through to the gross-final branch, which is what the
+    #    if-ladder below would otherwise do silently.
+    if inputs.finality_class is FinalityClass.DETERMINATION_DEPENDENT:
+        return build(
+            FundingDisposition.INDETERMINATE,
+            "DETERMINATION_DEPENDENT is an obligation-level finality class "
+            "and is not carried by any rail. Supply the rail's own class in "
+            "finality_class and the contingency in determination_outcome. "
+            "The model refuses rather than defaulting to gross-final "
+            "treatment (CASH-001 SIV).",
         )
 
     # 1. Clearing fund / margin — a hard control, independent of position.
@@ -322,7 +375,21 @@ def project_funding(inputs: FundingInputs) -> FundingProjection:
             f"Payment System Risk policy; hold and escalate.",
         )
 
-    # 3. Correspondent-dependent finality is not observable — do not guess.
+    # 3. Awaiting determination — there is no fixed obligation yet.
+    #    Ordered ahead of the correspondent check because the existence of
+    #    an obligation is logically prior to the observability of the rail
+    #    that would carry it: if the amount owed is not yet a number,
+    #    whether the rail's finality can be seen is moot.
+    if inputs.determination_outcome is DeterminationOutcome.AWAITING_DETERMINATION:
+        return build(
+            FundingDisposition.INDETERMINATE,
+            "Contingent obligation awaiting outcome determination. The "
+            "amount owed is not yet fixed, so no shortfall can be projected "
+            "against it. The model declines to project rather than "
+            "projecting against a placeholder (CASH-001 SIV, SVII).",
+        )
+
+    # 4. Correspondent-dependent finality is not observable — do not guess.
     if inputs.finality_class is FinalityClass.CORRESPONDENT_DEPENDENT:
         return build(
             FundingDisposition.INDETERMINATE,
@@ -331,15 +398,41 @@ def project_funding(inputs: FundingInputs) -> FundingProjection:
             "declines to assert fundedness (CASH-001 §IV).",
         )
 
-    # 4. Funded outright.
-    if shortfall == 0:
+    # 5. Funded outright — subject to whether the entitlement is qualified.
+    #    A qualification never improves a worse disposition and is applied
+    #    only on a funded path: a shortfall is a shortfall whether or not
+    #    the venue can later cancel the contract, and marking a failure
+    #    "qualified" would dilute a disposition that is already correct.
+    def build_funded(rationale: str) -> FundingProjection:
+        """FUNDED, downgraded where the entitlement is revocable.
+
+        Written once so that the qualification cannot be applied on the
+        gross-final funded path and forgotten on the deferred-net one.
+        """
+        if inputs.determination_outcome not in {
+            DeterminationOutcome.QUALIFIED_BOUNDED,
+            DeterminationOutcome.QUALIFIED_UNBOUNDED,
+            DeterminationOutcome.QUALIFICATION_UNKNOWN,
+        }:
+            return build(FundingDisposition.FUNDED, rationale)
         return build(
-            FundingDisposition.FUNDED,
+            FundingDisposition.FUNDED_QUALIFIED,
+            rationale
+            + f" Obligation is DETERMINATION_DEPENDENT "
+            f"({inputs.determination_outcome.value}): the settlement "
+            f"completes and the venue retains authority to cancel the "
+            f"contract and return the funds. The contingent return "
+            f"obligation is NOT netted here and is NOT a committed flow "
+            f"(CASH-001 SIV, SVII).",
+        )
+
+    if shortfall == 0:
+        return build_funded(
             f"Committed position {committed} covers obligation "
             f"{inputs.obligation} at the settlement instant.",
         )
 
-    # 5. Short. What that means depends on finality.
+    # 6. Short. What that means depends on finality.
     if inputs.finality_class is FinalityClass.DEFERRED_NET:
         # Exposure runs to end-of-day finality; the position at finality is
         # what settles, not the position at instruction.
@@ -352,8 +445,7 @@ def project_funding(inputs: FundingInputs) -> FundingProjection:
             )
         )
         if at_finality >= inputs.obligation:
-            return build(
-                FundingDisposition.FUNDED,
+            return build_funded(
                 f"Deferred-net rail: position at finality {at_finality} covers "
                 f"obligation {inputs.obligation}. Exposure runs to end-of-day; "
                 f"the instruction-instant shortfall of {shortfall} is not a "

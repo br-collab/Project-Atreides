@@ -15,6 +15,19 @@ cash rail carries an explicit **finality class** — `GROSS_FINAL`, `DEFERRED_NE
 `LEDGER_FINAL`, or `CORRESPONDENT_DEPENDENT` — because a rail choice that does not
 state when the money becomes irrevocable has not actually been made.
 
+A fifth class, `DETERMINATION_DEPENDENT`, belongs to the **obligation** rather than
+to any rail, and no rail maps to it. It exists for contingent-payout instruments —
+event contracts are the clearest case — where the cash leg is irrevocable on its
+rail's own terms while the venue retains authority to cancel the contract and
+return the funds. A decision record carries two finality classes where this
+applies, because the money can be final while the entitlement to it is not. How
+long a determined outcome stays qualified is the venue's disclosure, never this
+framework's judgment: where a venue publishes a contest window the position leaves
+the qualified state when that window elapses, and where it publishes none the
+position stays qualified indefinitely and the record says so rather than converting
+an unbounded window into a finality timestamp. See
+`atreides/rails/determination.py`.
+
 **Custodial routing** is a first-class dimension, not a configuration flag. Path
 selection runs across seven doctrine-defined dimensions, and Dimension 4 is
 *depository membership versus sub-custodian intermediation* — weighed on operational
@@ -47,7 +60,7 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**793 tests · 99% coverage · MIT licensed.**
+**1,088 tests · 99% coverage · MIT licensed.**
 
 ---
 
@@ -73,6 +86,16 @@ land in the same decision-of-record.
 ---
 
 ## Where to start reading
+
+Run **`python3 tools/pipeline_probe.py`** to see twelve scenarios go end to end -
+funding, gate, emitted artifact, readback, break surface - each replayed twice and
+compared byte for byte. `--json` makes runs diffable across days.
+
+Two reference documents sit under `docs/` for anyone reviewing this cold:
+**[`DATA-DICTIONARY.md`](docs/DATA-DICTIONARY.md)**, generated from the models and
+the actual DDL so it cannot drift, and **[`GLOSSARY.md`](docs/GLOSSARY.md)**, which
+separates the vocabulary this framework consumes from the vocabulary it owns and
+the vocabulary it refuses to use.
 
 **[`docs/CASH-LEG-WALKTHROUGH.md`](docs/CASH-LEG-WALKTHROUGH.md)** follows a
 single USD settlement from tasking to instruction package, stopping at every
@@ -195,10 +218,11 @@ names:
 | Rail | Finality class exercised | Venue complex | Status |
 | --- | --- | --- | --- |
 | U.S. Treasury / FICC | GROSS_FINAL — queues, WILL_QUEUE | FICC GSD, Fedwire Securities | **Built** |
-| Equities | DEFERRED_NET — finality at end-of-day netting | NSCC CNS, DTC | Next build |
+| Equities | DEFERRED_NET — finality at end-of-day netting | Continuous net settlement, central depository | **Netting, fails and corporate-action overlay built**; market profiles unpopulated |
 | Digital assets | LEDGER_FINAL — no queue; atomic DvP | Tokenized DvP; DTCC Tokenization Service-aware | Next build |
 | Credit | Gross / deferred hybrid; TRACE reporting obligation | DTC / NSCC | Next build |
 | FX | CORRESPONDENT_DEPENDENT — PvP; finality not directly observable | CLS, correspondent network | Following build |
+| Event contracts | DETERMINATION_DEPENDENT — obligation-level; rail finality holds, entitlement is revocable | DCM-listed event contract venues | Contracts and gate branches built; venue profiles unpopulated |
 
 The order is the finality taxonomy walked end to end. Status follows the same
 convention as the rest of this document: a rail is Built when its gates,

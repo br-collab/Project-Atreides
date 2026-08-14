@@ -52,9 +52,17 @@ class FailureModeClass(StrEnum):
     """
 
     RA = "RA"
+    """Recoverable automatically. The system detects and recovers with no human action, and lineage
+    is continuous across the event."""
     RM = "RM"
+    """Recoverable manually. The system detects and a human must act. Lineage may carry a flagged
+    gap."""
     UR_R = "UR-R"
+    """Unrecoverable by the custody operation, but externally reversible - insurance,
+    indemnification, mutualised loss-sharing - so economic exposure is bounded."""
     UR_F = "UR-F"
+    """Unrecoverable and final. No mechanism undoes it and exposure is the full loss. Must not be
+    reachable on an inherent-safety surface."""
 
     @property
     def is_unrecoverable(self) -> bool:

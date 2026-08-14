@@ -19,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Final, Literal
+from typing import Literal
 from xml.etree import ElementTree as ET
 
 from atreides.messaging.canonical import CashLegInstruction, FinancialInstitution

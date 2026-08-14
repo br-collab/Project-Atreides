@@ -56,10 +56,17 @@ class CustodyObjectCategory(StrEnum):
     Section IV."""
 
     ORDINARY_SAFEKEEPING = "ordinary_safekeeping"
+    """Held for the client, unencumbered."""
     PLEDGED_ASSET = "pledged_asset"
+    """Encumbered in favour of a counterparty. The encumbrance is a first-class attribute, not a
+    flag."""
     SEPARATELY_MANAGED_ACCOUNT = "separately_managed_account"
+    """Held in a segregated account managed on the client's behalf."""
     TOKENIZED_SECURITY = "tokenized_security"
+    """A conventional security with a token representation. Two records of one asset, which is
+    where the reconciliation obligation comes from."""
     NATIVE_DIGITAL_ASSET = "native_digital_asset"
+    """Issued on a ledger with no off-ledger original. Key compromise is unrecoverable and final."""
 
 
 class EncumbranceType(StrEnum):
@@ -71,13 +78,24 @@ class EncumbranceType(StrEnum):
     """
 
     REPO = "repo"
+    """Sale and repurchase. Title moves; the economic exposure does not."""
     SECURITIES_LENDING = "securities_lending"
+    """Lent against collateral, with recall risk running back to the lender."""
     DERIVATIVE_MARGIN = "derivative_margin"
+    """Posted against a derivative exposure."""
     CREDIT_FACILITY = "credit_facility"
+    """Pledged to secure a lending facility."""
     PRIME_BROKERAGE_MARGIN = "prime_brokerage_margin"
+    """Held under a prime-brokerage margin arrangement, including rehypothecation rights where
+    granted."""
     CCP_MARGIN = "ccp_margin"
+    """Posted to a central counterparty. Recoverability depends on the CCP's own default
+    arrangements, which are not observable from the participant seat."""
     CENTRAL_BANK_FACILITY = "central_bank_facility"
+    """Pledged to a central bank facility."""
     OTHER_SECURED_ARRANGEMENT = "other_secured_arrangement"
+    """An encumbrance outside the enumerated types. Recorded as unclassified rather than mapped
+    to the nearest neighbour, because a wrong classification is worse than an admitted one."""
 
 
 class Encumbrance(BaseModel):
