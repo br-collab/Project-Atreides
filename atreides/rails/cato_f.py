@@ -43,6 +43,12 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Final
 
+from atreides.rails.determination import (
+    DeterminationOutcome,
+    obligation_finality_class,
+)
+from atreides.rails.finality import FinalityClass
+
 __all__ = [
     "DOCTRINE_VERSION",
     "CashRail",
@@ -90,20 +96,6 @@ class GateDecision(StrEnum):
     ESCALATE = "ESCALATE"
 
 
-class FinalityClass(StrEnum):
-    """Finality classes per AUR-CUSTODY-CASH-001 Section IV.
-
-    The doctrinal core of this gate: materiality tightens as
-    reversibility falls. An irreversible operation warrants a lower
-    trigger than a reversible one of the same size.
-    """
-
-    GROSS_FINAL = "GROSS_FINAL"
-    DEFERRED_NET = "DEFERRED_NET"
-    LEDGER_FINAL = "LEDGER_FINAL"
-    CORRESPONDENT_DEPENDENT = "CORRESPONDENT_DEPENDENT"
-
-
 class CashRail(StrEnum):
     """The cash-rail universe per AUR-CUSTODY-CASH-001 Section III."""
 
@@ -123,6 +115,12 @@ class CashRail(StrEnum):
     PORTS_WHOLESALE = "ports_wholesale"
 
 
+# DETERMINATION_DEPENDENT is deliberately absent from this table and its
+# absence is asserted by a test. It is an obligation-level class: the money
+# leg of a contingent-payout settlement runs on an ordinary rail with that
+# rail's ordinary finality. Adding a pseudo-rail to carry it would put a
+# property of the instrument into the table that answers "how does money
+# move", which is the category error this comment exists to prevent.
 RAIL_FINALITY: Final[dict[CashRail, FinalityClass]] = {
     CashRail.FEDWIRE: FinalityClass.GROSS_FINAL,
     CashRail.FEDNOW: FinalityClass.GROSS_FINAL,
@@ -146,6 +144,8 @@ class ReasonCode(StrEnum):
     BROAD_STRESS_HOLD = "BROAD_STRESS_HOLD"
     NO_RAIL_IN_WINDOW = "NO_RAIL_IN_WINDOW"
     UNRESOLVABLE_FINALITY = "UNRESOLVABLE_FINALITY"
+    DETERMINATION_PENDING = "DETERMINATION_PENDING"
+    UNASSESSED_REVOCATION_AUTHORITY = "UNASSESSED_REVOCATION_AUTHORITY"
     CLEARED = "CLEARED"
     GATE_UNAVAILABLE = "GATE_UNAVAILABLE"
 
@@ -224,6 +224,13 @@ class OperationContext:
     correspondent_finality_resolvable: bool = True
     tokenized_deposit_supported: bool = False
     within_business_hours: bool = True
+    # Contingent-payout instruments only. Supplied by the caller from
+    # `determination.classify_determination()`; this gate consumes the
+    # classification exactly as it consumes materiality and eligibility,
+    # and does not re-derive it. NOT_APPLICABLE is the default and means
+    # the obligation is not contingent, which is true of every instrument
+    # the framework handled before this class existed.
+    determination_outcome: DeterminationOutcome = DeterminationOutcome.NOT_APPLICABLE
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,12 +244,20 @@ class CatoFDecision:
     decision: GateDecision
     reason_code: ReasonCode
     recommended_rail: CashRail | None
+    #: The RAIL's finality class. Meaning unchanged since v0.1, deliberately:
+    #: historical records stay comparable and replay is not disturbed.
     finality_class: FinalityClass | None
     rationale: str
     checks_evaluated: tuple[tuple[str, str], ...]
     funding_state_snapshot: tuple[tuple[str, str], ...]
     doctrine_version: str = DOCTRINE_VERSION
     dsor_lineage_uri: str | None = None
+    #: The OBLIGATION's finality class, where it has one of its own. None
+    #: for every non-contingent instrument, which is why this is additive
+    #: rather than a change to the field above. Where this is populated it
+    #: is always DETERMINATION_DEPENDENT and the record carries two classes
+    #: at once: the money is final on its rail, the entitlement is not.
+    obligation_finality_class: FinalityClass | None = None
 
     @property
     def proceeds(self) -> bool:
@@ -380,8 +395,10 @@ def evaluate(
         ("correspondent_finality_resolvable", str(operation.correspondent_finality_resolvable)),
         ("is_fx_leg", str(operation.is_fx_leg)),
         ("pvp_available", str(operation.pvp_available)),
+        ("determination_outcome", operation.determination_outcome.value),
     ]
     snapshot = _snapshot_funding(funding)
+    obligation_class = obligation_finality_class(operation.determination_outcome)
 
     def _decide(
         decision: GateDecision,
@@ -398,6 +415,7 @@ def evaluate(
             checks_evaluated=tuple(checks),
             funding_state_snapshot=snapshot,
             dsor_lineage_uri=dsor_lineage_uri,
+            obligation_finality_class=obligation_class,
         )
 
     # 1. Systemic stress — escalate to human authority.
@@ -479,12 +497,67 @@ def evaluate(
             "finality (CASH-001 SV.B.7, SIV).",
         )
 
-    # 8. Cleared — recommend a rail.
+    # 8. Determination pending. A contingent payout whose outcome has not
+    #    been determined has no fixed obligation to settle, so there is
+    #    nothing for a rail to carry. Holding here is not a risk judgment,
+    #    it is a sequencing one: the instruction is premature.
+    if operation.determination_outcome is DeterminationOutcome.AWAITING_DETERMINATION:
+        return _decide(
+            GateDecision.HOLD,
+            ReasonCode.DETERMINATION_PENDING,
+            "Contingent obligation awaiting outcome determination; the "
+            "amount owed is not yet fixed. Instruction is premature, not "
+            "unsafe. Hold to determination (CASH-001 SIV, determination "
+            "dependence).",
+        )
+
+    # 9. Revocation authority unassessed. The outcome is determined and the
+    #    venue's power to cancel it and return funds has not been read.
+    #    Same doctrine as check 7 and the same sentence: unknown finality is
+    #    not acceptable finality. The remedy differs - this one is closed by
+    #    populating a registry entry, not by a market action.
+    if operation.determination_outcome is DeterminationOutcome.QUALIFICATION_UNKNOWN:
+        return _decide(
+            GateDecision.HOLD,
+            ReasonCode.UNASSESSED_REVOCATION_AUTHORITY,
+            "Outcome determined, but no determination profile has been "
+            "populated for the venue, so whether the settlement can be "
+            "cancelled and the funds returned is unread rather than absent. "
+            "Unknown finality is not acceptable finality (CASH-001 SIV). "
+            "Populate the registry entry from the venue rulebook.",
+        )
+
+    # 10. Cleared — recommend a rail.
     rail, ladder_rationale = _recommend_rail(
         operation=operation, rails=rails, ofr_stlfsi4=ofr_stlfsi4
     )
 
     rationale = ladder_rationale
+    if operation.determination_outcome in {
+        DeterminationOutcome.QUALIFIED_BOUNDED,
+        DeterminationOutcome.QUALIFIED_UNBOUNDED,
+    }:
+        # Not a hold. Contingent markets settle every day and a gate that
+        # refused them would be describing a market that does not exist.
+        # The qualification is a disclosure, and it is recorded on the
+        # decision in `obligation_finality_class` as well as here.
+        bounded = (
+            operation.determination_outcome is DeterminationOutcome.QUALIFIED_BOUNDED
+        )
+        rationale += (
+            " NOTE: obligation is DETERMINATION_DEPENDENT — the cash leg is "
+            "final on its rail and the venue retains authority to cancel the "
+            "contract and return the funds. "
+            + (
+                "The venue publishes a bounded window; the position stops "
+                "being qualified at a knowable moment."
+                if bounded
+                else "The venue states no bound, so the position does not "
+                "leave the qualified state. Recorded, not resolved "
+                "(CASH-001 SIV)."
+            )
+        )
+
     if operation.is_fx_leg and not operation.pvp_available:
         # Not a hold — the materiality threshold already halved upstream
         # per FED-AMD-001 SII.C. But the resolver must record that the FX

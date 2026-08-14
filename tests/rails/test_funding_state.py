@@ -273,16 +273,16 @@ def test_projection_is_deterministic() -> None:
     assert a.disposition is b.disposition
 
 
-@pytest.mark.parametrize(
-    "finality",
-    [
-        FinalityClass.GROSS_FINAL,
-        FinalityClass.DEFERRED_NET,
-        FinalityClass.LEDGER_FINAL,
-        FinalityClass.CORRESPONDENT_DEPENDENT,
-    ],
-)
+@pytest.mark.parametrize("finality", list(FinalityClass))
 def test_every_finality_class_yields_a_disposition(finality: FinalityClass) -> None:
+    """Derived from the enum, not from a hand-copied list.
+
+    The hand-copied form of this test would have passed silently when
+    DETERMINATION_DEPENDENT was added, which is precisely the failure an
+    exhaustiveness test exists to prevent. Parametrising over
+    ``list(FinalityClass)`` makes the next enum addition break the build
+    until somebody decides what it means here.
+    """
     p = project_funding(_inputs(finality_class=finality))
     assert isinstance(p.disposition, FundingDisposition)
 
