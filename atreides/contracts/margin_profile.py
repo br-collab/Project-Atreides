@@ -36,8 +36,13 @@ class ProfileStatus(StrEnum):
     """
 
     UNVERIFIED = "UNVERIFIED"
+    """Nobody has populated this entry. The default and the safe state: consumers treat every field
+    as absent rather than as a default."""
     POPULATED = "POPULATED"
+    """Populated from a venue publication or an entitled document, and carrying the citation."""
     SUPERSEDED = "SUPERSEDED"
+    """Populated, and since replaced. Retained rather than deleted, because a decision taken against
+    the old figure has to remain explicable."""
 
 
 class DeterminabilityRegime(StrEnum):
@@ -74,9 +79,15 @@ class CollectionModel(StrEnum):
     """
 
     TRADITIONAL_HOURS_ONLY = "TRADITIONAL_HOURS_ONLY"
+    """The venue calls and collects only in traditional hours. Continuous trading against this model
+    is what produces an uncollectable exposure."""
     OPTIONAL_WEEKEND_POSTING = "OPTIONAL_WEEKEND_POSTING"
+    """Members may post at weekends; the venue does not require it."""
     REQUIRED_WEEKEND_POSTING = "REQUIRED_WEEKEND_POSTING"
+    """The venue requires weekend posting, so the collection window does not close over a
+    weekend."""
     UNKNOWN = "UNKNOWN"
+    """The collection model has not been read. Not the same as no weekend collection."""
 
 
 class RevocationAuthority(StrEnum):
@@ -89,6 +100,9 @@ class RevocationAuthority(StrEnum):
     """
 
     NONE_DISCLOSED = "NONE_DISCLOSED"
+    """No revocation authority disclosed. Note this currently conflates 'read and none found' with
+    'not read'; the status field is the disambiguator until this enum is brought into line with
+    the determination registry."""
 
     LIQUIDATION_AT_ADMINISTERED_PRICE = "LIQUIDATION_AT_ADMINISTERED_PRICE"
     """Exchange may liquidate positions and establish the settlement price.

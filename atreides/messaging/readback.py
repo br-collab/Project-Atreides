@@ -42,8 +42,14 @@ Every child of ``PaymentTransaction177`` is optional, so a schema-valid
 status report can identify no original message, no original transaction, and
 carry no status code at all. This is the same defect the canonical model
 already names in ``FinancialInstitutionIdentification23``, and the answer is
-the same: require what the business requires and refuse the rest, so an
-unusable message fails at the boundary rather than three layers in.
+the same: require what the business requires and refuse the rest.
+
+But refuse at the right granularity. A problem with **the document** means
+nothing in it can be trusted and raises. A problem with **one entry** means
+that one entry cannot be trusted, and is collected rather than raised,
+because a venue file carrying a thousand statuses of which one is malformed
+is a file with 999 usable statuses. Losing the batch over one bad record
+would be worst exactly when volume is highest.
 
 Architectural contract: PURE, NO I/O, NO CLOCK, AND NO SUBMISSION. Bytes
 arrive as an argument. Nothing here resubmits on any status - that is the
@@ -65,6 +71,7 @@ __all__ = [
     "DOCTRINE_VERSION",
     "MATCHED_STATUS_ORDER",
     "RECOGNISED_STATUS_CODES",
+    "MalformedEntry",
     "ReadbackBreak",
     "ReadbackBreakCode",
     "ReadbackMatch",
@@ -193,8 +200,11 @@ class ReadbackBreakCode(StrEnum):
     is how a system acknowledges the wrong payment."""
 
     AMOUNT_MISMATCH = "amount_mismatch"
+    """The venue echoed a settlement amount that differs from the instructed one."""
     CURRENCY_MISMATCH = "currency_mismatch"
+    """The venue echoed a currency that differs from the instructed one."""
     ACCEPTED_WITH_CHANGE = "accepted_with_change"
+    """The venue accepted on terms other than instructed. What settled is not what was governed."""
 
     STATUS_REGRESSION = "status_regression"
     """A terminal settled status followed by a non-settled one. Severe: a
@@ -207,6 +217,8 @@ class ReadbackBreakCode(StrEnum):
     duplicate or crossed message, a regression is usually real."""
 
     UNRECOGNIZED_STATUS_CODE = "unrecognized_status_code"
+    """A status code outside the recognised set. A code the framework cannot act on is not a benign
+    code."""
 
     REJECTED = "rejected"
     """An instruction that passed every gate, was prepared and submitted,
@@ -214,6 +226,8 @@ class ReadbackBreakCode(StrEnum):
     decision-of-record must carry rather than a quiet terminal state."""
 
     MALFORMED_STATUS_ENTRY = "malformed_status_entry"
+    """An entry that could not be read. Collected rather than raised, so one bad record does not
+    cost the rest of the file."""
 
     NO_READBACK = "no_readback"
     """Nothing came back. Not a defect in a message - the absence of one.
@@ -259,12 +273,33 @@ class StatusEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class MalformedEntry:
+    """A status entry that could not be read, kept rather than thrown away.
+
+    An entry this framework cannot use is still evidence that the venue sent
+    something about something. Discarding it would make the report look
+    smaller than it was, and a count that silently shrinks is worse than a
+    finding.
+    """
+
+    ordinal: int
+    reason: str
+    end_to_end_id: str | None = None
+    original_transaction_id: str | None = None
+    status_code: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class StatusReport:
     """A parsed ``pacs.002``.
 
     ``original_message_id`` is the group-level key. It is optional because a
     venue may report transaction statuses with no group block at all, and
     refusing that would refuse messages that are usable.
+
+    ``malformed`` carries the entries that could not be read. See
+    :func:`parse_status_report` for why they are collected rather than
+    raised.
     """
 
     message_id: str
@@ -274,6 +309,16 @@ class StatusReport:
     original_message_name_id: str | None
     group_status_code: str | None
     entries: tuple[StatusEntry, ...]
+    malformed: tuple[MalformedEntry, ...] = ()
+
+    @property
+    def entry_count(self) -> int:
+        """Every transaction block the venue sent, readable or not.
+
+        The number to reconcile against when asking "did we account for
+        everything in this file".
+        """
+        return len(self.entries) + len(self.malformed)
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,6 +353,57 @@ def _localname(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
 
+def _namespace_of(element: ET.Element) -> str:
+    tag = element.tag
+    return tag[1:].rsplit("}", 1)[0] if tag.startswith("{") else ""
+
+
+def _find_payload(root: ET.Element) -> ET.Element | None:
+    """Locate the status report wherever it sits in the document.
+
+    **Not necessarily at the root.** Real messages arrive wrapped: a
+    proprietary envelope carrying a business application header, an XML
+    signature, and the ISO payload as one child among several. That
+    envelope is outside the standard, so the standard says nothing about
+    what it is called.
+
+    An earlier version of this parser required a ``Document`` root in a
+    pacs.002 namespace, and refused published third-party messages whose ISO
+    payload was perfectly well-formed and correctly namespaced. That failure
+    would have read as "the sender is non-conformant" when the sender was
+    not - the worst kind of integration bug, because it points the
+    investigation at the wrong party.
+
+    So the payload is found by its own element name and validated by its own
+    namespace. Whatever surrounds it is somebody else's envelope and is not
+    this parser's business.
+    """
+    if _localname(root.tag) == _ROOT_ELEMENT:
+        return root
+    for element in root.iter():
+        if _localname(element.tag) == _ROOT_ELEMENT:
+            return element
+    return None
+
+
+def _payload_namespace(report_el: ET.Element) -> str:
+    """The ISO namespace governing the payload.
+
+    Read from the payload element, or from its first child where the
+    envelope has claimed the payload element's own namespace - which happens
+    in practice, and is legal, because the wrapper declares a default
+    namespace and the ISO content carries an explicit prefix.
+    """
+    own = _namespace_of(report_el)
+    if _PACS002_NS.match(own):
+        return own
+    for child in report_el:
+        child_ns = _namespace_of(child)
+        if _PACS002_NS.match(child_ns):
+            return child_ns
+    return own
+
+
 def _find(parent: ET.Element, name: str) -> ET.Element | None:
     for child in parent:
         if _localname(child.tag) == name:
@@ -332,39 +428,56 @@ def _text(parent: ET.Element | None, name: str) -> str | None:
 def parse_status_report(xml_bytes: bytes) -> StatusReport:
     """Parse a ``pacs.002`` status report.
 
-    Requires, over and above schema validity:
+    **Document-level problems raise. Entry-level problems do not.**
 
-    - The document root is the expected message. A ``pacs.008`` in a
-      ``pacs.002`` slot is refused rather than parsed for whatever happens
-      to match.
-    - The namespace is read from the document rather than assumed, so a
-      venue on a different minor version is a parse question rather than a
-      silent zero-match.
-    - Every status entry carries a code and at least one identifier. An
-      entry with neither is not a status report about anything.
+    That distinction is the whole design of this function, and getting it
+    wrong is expensive in exactly the conditions this module exists for. A
+    venue file carrying a thousand statuses, one of which is malformed, is a
+    file with 999 usable statuses. Raising on the first bad record would
+    cost an operator the other 999, and malformed records are most likely
+    precisely when volume is highest and the desk can least afford to lose
+    the batch.
+
+    So the boundary is: a problem with **the document** means nothing in it
+    can be trusted, and raises. A problem with **one entry** means that
+    entry cannot be trusted, and is collected into ``malformed`` for
+    :func:`reconcile` to surface as a break.
+
+    Raises (document-level):
+
+    - Not well-formed XML. Nothing can be read.
+    - The root is not the expected message. A ``pacs.008`` in a ``pacs.002``
+      slot is refused rather than parsed for whatever happens to match.
+    - The namespace is not a ``pacs.002`` namespace. It is read from the
+      document rather than assumed, so a venue on a different minor version
+      is a parse question rather than a silent zero-match.
+    - The group header carries no ``MsgId`` or no ``CreDtTm``. Without them
+      the file cannot be identified or ordered against any other file.
+
+    Collected (entry-level):
+
+    - No ``TxSts``. The schema permits it; a status report with no status is
+      not a report about anything.
+    - No original identifier at all. Schema-valid and unusable: it reports a
+      status about nothing identifiable.
     """
     try:
         root = ET.fromstring(xml_bytes)
     except ET.ParseError as exc:
         raise ReadbackParseError(f"not well-formed XML: {exc}") from exc
 
-    if _localname(root.tag) != "Document":
+    report_el = _find_payload(root)
+    if report_el is None:
         raise ReadbackParseError(
-            f"expected a Document root, got {_localname(root.tag)!r}"
+            f"no {_ROOT_ELEMENT} element anywhere in the document; this is not "
+            f"a payment status report"
         )
 
-    namespace = root.tag[1:].rsplit("}", 1)[0] if root.tag.startswith("{") else ""
+    namespace = _payload_namespace(report_el)
     if not _PACS002_NS.match(namespace):
         raise ReadbackParseError(
             f"namespace {namespace!r} is not a pacs.002 namespace; refusing to "
             f"parse a message of one definition as another"
-        )
-
-    report_el = _find(root, _ROOT_ELEMENT)
-    if report_el is None:
-        raise ReadbackParseError(
-            f"no {_ROOT_ELEMENT} element; the namespace says pacs.002 and the "
-            f"body does not"
         )
 
     grp_hdr = _find(report_el, "GrpHdr")
@@ -376,23 +489,40 @@ def parse_status_report(xml_bytes: bytes) -> StatusReport:
     grp_info = _find(report_el, "OrgnlGrpInfAndSts")
 
     entries: list[StatusEntry] = []
-    for tx in _findall(report_el, "TxInfAndSts"):
+    malformed: list[MalformedEntry] = []
+    for ordinal, tx in enumerate(_findall(report_el, "TxInfAndSts")):
         code = _text(tx, "TxSts")
         e2e = _text(tx, "OrgnlEndToEndId")
         tx_id = _text(tx, "OrgnlTxId")
         uetr = _text(tx, "OrgnlUETR")
 
         if code is None:
-            raise ReadbackParseError(
-                "a status entry carries no TxSts. The schema permits this and "
-                "the business cannot use it: a status report with no status is "
-                "not a report about anything"
+            malformed.append(
+                MalformedEntry(
+                    ordinal=ordinal,
+                    reason=(
+                        "carries no TxSts. The schema permits this and the "
+                        "business cannot use it: a status report with no "
+                        "status is not a report about anything"
+                    ),
+                    end_to_end_id=e2e,
+                    original_transaction_id=tx_id,
+                )
             )
+            continue
         if e2e is None and tx_id is None and uetr is None:
-            raise ReadbackParseError(
-                "a status entry carries no original identifier. Schema-valid "
-                "and unusable: it reports a status about nothing identifiable"
+            malformed.append(
+                MalformedEntry(
+                    ordinal=ordinal,
+                    reason=(
+                        "carries no original identifier. Schema-valid and "
+                        "unusable: it reports a status about nothing "
+                        "identifiable"
+                    ),
+                    status_code=code,
+                )
             )
+            continue
 
         amount, currency = _echoed_amount(tx)
         entries.append(
@@ -417,6 +547,7 @@ def parse_status_report(xml_bytes: bytes) -> StatusReport:
         original_message_name_id=_text(grp_info, "OrgnlMsgNmId"),
         group_status_code=_text(grp_info, "GrpSts"),
         entries=tuple(entries),
+        malformed=tuple(malformed),
     )
 
 
@@ -483,6 +614,21 @@ def reconcile(
         if report.original_message_id is not None
         else None
     )
+
+    # Unreadable entries first, so a file that was partially usable still
+    # accounts for every block the venue sent. Reporting only what parsed
+    # would make the file look smaller than it was.
+    for bad in report.malformed:
+        breaks.append(
+            ReadbackBreak(
+                ReadbackBreakCode.MALFORMED_STATUS_ENTRY,
+                f"status entry {bad.ordinal} {bad.reason}. The rest of the "
+                f"file was reconciled; this entry was not",
+                end_to_end_id=bad.end_to_end_id,
+                original_message_id=report.original_message_id,
+                status_code=bad.status_code,
+            )
+        )
 
     for entry in report.entries:
         e2e = entry.end_to_end_id

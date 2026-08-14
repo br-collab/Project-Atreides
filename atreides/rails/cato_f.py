@@ -92,27 +92,42 @@ class GateDecision(StrEnum):
     """Gate disposition. Mirrors Cato's PROCEED / HOLD / ESCALATE."""
 
     PROCEED = "PROCEED"
+    """Cleared. The operation may be released."""
     HOLD = "HOLD"
+    """Stopped pending a condition changing. Not an escalation and not a failure."""
     ESCALATE = "ESCALATE"
+    """Routed to human authority. The gate declines to decide."""
 
 
 class CashRail(StrEnum):
     """The cash-rail universe per AUR-CUSTODY-CASH-001 Section III."""
 
     FEDWIRE = "fedwire"
+    """US real-time gross settlement for large-value payments. Gross-final."""
     CHIPS = "chips"
+    """US privately operated netting system for large-value payments. Deferred-net."""
     FEDNOW = "fednow"
+    """US instant payment rail, 24/7/365, gross-final, subject to a value cap."""
     NSS_DTC_NSCC = "nss_dtc_nscc"
+    """Net settlement service carrying depository and clearing-corporation net obligations."""
     FICC_GSD_FUNDS_ONLY = "ficc_gsd_funds_only"
+    """The funds-only leg of government securities clearing."""
     CORRESPONDENT = "correspondent"
+    """Settlement on the books of an intermediary bank. The only rail whose finality the originator
+    cannot observe."""
     TOKENIZED_DEPOSIT = "tokenized_deposit"
+    """Commercial bank money on a distributed ledger. Ledger-final."""
     REGULATED_STABLECOIN = "regulated_stablecoin"
+    """Regulated payment stablecoin. Ledger-final."""
     # Reserved placeholder. ALWAYS present in rail state, NEVER removed.
     # Mirrors the Cato `fed_l1` invariant exactly: when wholesale
     # tokenized settlement infrastructure ships, the rail-state shape
     # does not change — only the status field flips. Rail addition is a
     # doctrine non-event by design (CASH-001 Section III).
     PORTS_WHOLESALE = "ports_wholesale"
+    """Reserved placeholder for wholesale tokenized settlement infrastructure. Always present in
+    rail state and never removed, so that its arrival flips a status field rather than changing
+    the shape of the record."""
 
 
 # DETERMINATION_DEPENDENT is deliberately absent from this table and its
@@ -138,23 +153,47 @@ class ReasonCode(StrEnum):
     """Reason codes. One per check in Section V.B plus the PROCEED case."""
 
     SYSTEMIC_STRESS_ESCALATE = "SYSTEMIC_STRESS_ESCALATE"
+    """Systemic stress above the escalation band. Routed to human authority."""
     MATERIAL_MAGNITUDE_QUORUM_UNAVAILABLE = "MATERIAL_MAGNITUDE_QUORUM_UNAVAILABLE"
+    """Material by magnitude, so quorum authority is required, and quorum is architecturally
+    unavailable. Holds by doctrine; pretending otherwise would be theatre."""
     UNFUNDED_AT_SETTLEMENT_INSTANT = "UNFUNDED_AT_SETTLEMENT_INSTANT"
+    """The projected position is below the obligation. No rail selection remedies an unfunded
+    position."""
     RISK_CONTROL_BREACH = "RISK_CONTROL_BREACH"
+    """Net-debit-cap headroom exhausted or clearing fund deficient. A hard control, independent of
+    position."""
     BROAD_STRESS_HOLD = "BROAD_STRESS_HOLD"
+    """Systemic stress above the hold band but below escalation."""
     NO_RAIL_IN_WINDOW = "NO_RAIL_IN_WINDOW"
+    """No rail is open and reachable in the settlement window. Hold to the next window rather than
+    routing to a closed rail."""
     UNRESOLVABLE_FINALITY = "UNRESOLVABLE_FINALITY"
+    """A correspondent chain whose finality state cannot be established. Unknown finality is not
+    acceptable finality."""
     DETERMINATION_PENDING = "DETERMINATION_PENDING"
+    """A contingent obligation whose outcome has not been determined. The instruction is premature,
+    not unsafe."""
     UNASSESSED_REVOCATION_AUTHORITY = "UNASSESSED_REVOCATION_AUTHORITY"
+    """Determined, and nobody has read whether the venue may cancel and return funds. Closed by
+    populating the registry, not by a market action."""
     CLEARED = "CLEARED"
+    """No check fired. A rail is recommended."""
     GATE_UNAVAILABLE = "GATE_UNAVAILABLE"
+    """The gate could not be consulted. The absent-gate default is HOLD."""
 
 
 class RailStatus(StrEnum):
     AVAILABLE = "available"
+    """Open and reachable."""
     CLOSED = "closed"
+    """Not operating in this window."""
     DEGRADED = "degraded"
+    """Operating with reduced capability. Not usable, because partial availability is not
+    availability for a settlement decision."""
     NOT_YET_ISSUED = "not_yet_issued"
+    """The infrastructure does not exist yet. Distinct from CLOSED, which describes something that
+    exists and is shut."""
 
 
 @dataclass(frozen=True, slots=True)

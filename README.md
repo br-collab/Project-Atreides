@@ -60,7 +60,7 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**1,028 tests · 99% coverage · MIT licensed.**
+**1,088 tests · 99% coverage · MIT licensed.**
 
 ---
 
@@ -86,6 +86,10 @@ land in the same decision-of-record.
 ---
 
 ## Where to start reading
+
+Run **`python3 tools/pipeline_probe.py`** to see twelve scenarios go end to end -
+funding, gate, emitted artifact, readback, break surface - each replayed twice and
+compared byte for byte. `--json` makes runs diffable across days.
 
 Two reference documents sit under `docs/` for anyone reviewing this cold:
 **[`DATA-DICTIONARY.md`](docs/DATA-DICTIONARY.md)**, generated from the models and

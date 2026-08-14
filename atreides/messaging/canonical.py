@@ -39,9 +39,9 @@ from atreides.rails.cato_f import CashRail
 
 __all__ = [
     "BICFI_PATTERN",
+    "RAIL_SETTLEMENT_METHOD",
     "CashLegInstruction",
     "FinancialInstitution",
-    "RAIL_SETTLEMENT_METHOD",
     "SettlementMethod",
     "settlement_method_for_rail",
 ]
@@ -64,9 +64,13 @@ class SettlementMethod(StrEnum):
     """
 
     INSTRUCTED_AGENT = "INDA"
+    """INDA. Settlement on the books of the instructed agent."""
     INSTRUCTING_AGENT = "INGA"
+    """INGA. Settlement on the books of the instructing agent."""
     COVER = "COVE"
+    """COVE. A separate cover payment carries the funds."""
     CLEARING_SYSTEM = "CLRG"
+    """CLRG. Settlement through a clearing system."""
 
 
 #: Maps CATO-F's rail selection onto the settlement method the message must

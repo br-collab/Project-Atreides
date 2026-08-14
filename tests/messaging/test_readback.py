@@ -179,23 +179,28 @@ def test_a_usable_report_parses() -> None:
     assert report.entries[0].status is SettlementStatus.SETTLED
 
 
-def test_entry_without_a_status_code_is_refused() -> None:
+def test_entry_without_a_status_code_is_collected_not_raised() -> None:
     """Schema-valid and unusable: a status report with no status is not a
-    report about anything."""
-    with pytest.raises(ReadbackParseError, match="carries no TxSts"):
-        parse_status_report(_report(tx_blocks=_tx_block(status=None)))
+    report about anything. That is an entry-level problem, so it is collected
+    rather than raised - see the partial-batch tests below for why."""
+    report = parse_status_report(_report(tx_blocks=_tx_block(status=None)))
+    assert report.entries == ()
+    assert len(report.malformed) == 1
+    assert "carries no TxSts" in report.malformed[0].reason
 
 
-def test_entry_without_any_identifier_is_refused() -> None:
-    with pytest.raises(ReadbackParseError, match="no original identifier"):
-        parse_status_report(
-            _report(tx_blocks=_tx_block(end_to_end_id=None, tx_id=None))
-        )
+def test_entry_without_any_identifier_is_collected_not_raised() -> None:
+    report = parse_status_report(
+        _report(tx_blocks=_tx_block(end_to_end_id=None, tx_id=None))
+    )
+    assert report.entries == ()
+    assert "no original identifier" in report.malformed[0].reason
 
 
 def test_a_different_message_definition_is_refused_by_namespace() -> None:
     """A pacs.008 in a pacs.002 slot is refused rather than parsed for
-    whatever happens to match."""
+    whatever happens to match. The namespace check now runs against the
+    payload rather than the root, and still refuses."""
     with pytest.raises(ReadbackParseError, match=r"not a pacs\.002 namespace"):
         parse_status_report(
             _report(namespace="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.14")
@@ -216,9 +221,11 @@ def test_malformed_xml_is_refused() -> None:
         parse_status_report(b"<Document>")
 
 
-def test_wrong_root_element_is_refused() -> None:
-    with pytest.raises(ReadbackParseError, match="expected a Document root"):
-        parse_status_report(f'<FIToFIPmtStsRpt xmlns="{NS}"/>'.encode())
+def test_a_document_with_no_status_report_in_it_is_refused() -> None:
+    """Refused by the absence of the payload, not by the shape of whatever
+    wraps it."""
+    with pytest.raises(ReadbackParseError, match="not a payment status report"):
+        parse_status_report(f'<Document xmlns="{NS}"><Nothing/></Document>'.encode())
 
 
 def test_group_header_must_carry_its_identifiers() -> None:
@@ -562,10 +569,10 @@ def test_a_break_with_no_detail_is_rejected() -> None:
 
 
 def test_a_pacs002_namespace_with_the_wrong_body_is_refused() -> None:
-    """The namespace says one thing and the body says another. Trusting
-    either alone is how a parser reports on a message it never read."""
+    """A pacs.002 namespace on a document containing no status report is
+    still not a status report. The payload decides, not the wrapper."""
     xml = f'<Document xmlns="{NS}"><SomethingElse/></Document>'
-    with pytest.raises(ReadbackParseError, match="the body does not"):
+    with pytest.raises(ReadbackParseError, match="not a payment status report"):
         parse_status_report(xml.encode())
 
 
@@ -589,3 +596,207 @@ def test_an_empty_original_transaction_reference_echoes_nothing() -> None:
     report = parse_status_report(_report(tx_blocks=bad))
     assert report.entries[0].echoed_amount is None
     assert report.entries[0].echoed_currency is None
+
+
+# ---------------------------------------------------------------------------
+# Partial batches - one bad record must not cost the file
+# ---------------------------------------------------------------------------
+
+
+def test_one_malformed_entry_does_not_cost_the_rest_of_the_file() -> None:
+    """The reason the document/entry boundary exists.
+
+    A venue file carrying a thousand statuses, one of which is malformed, is
+    a file with 999 usable statuses. Raising on the first bad record would
+    cost the operator the other 999, and malformed records are most likely
+    precisely when volume is highest and the desk can least afford to lose
+    the batch.
+    """
+    report = parse_status_report(
+        _report(
+            original_message_id=None,
+            tx_blocks="\n".join(
+                [
+                    _tx_block(end_to_end_id="E2E-A", status="ACSC"),
+                    _tx_block(end_to_end_id="E2E-BAD", status=None),
+                    _tx_block(end_to_end_id="E2E-B", status="ACSC"),
+                ]
+            ),
+        )
+    )
+    assert [e.end_to_end_id for e in report.entries] == ["E2E-A", "E2E-B"]
+    assert len(report.malformed) == 1
+
+
+def test_the_good_entries_in_a_partial_batch_still_reconcile() -> None:
+    match = ingest_readback(
+        _report(
+            original_message_id=None,
+            tx_blocks="\n".join(
+                [
+                    _tx_block(end_to_end_id="E2E-A", status="ACSC"),
+                    _tx_block(end_to_end_id="E2E-BAD", status=None),
+                    _tx_block(end_to_end_id="E2E-B", status="ACSC"),
+                ]
+            ),
+        ),
+        (
+            _instruction(message_id="MSG-A", end_to_end_id="E2E-A"),
+            _instruction(message_id="MSG-B", end_to_end_id="E2E-B"),
+        ),
+    )
+    assert match.settled_ids == ("E2E-A", "E2E-B")
+
+
+def test_a_malformed_entry_still_surfaces_as_a_break() -> None:
+    """Collected is not forgiven. The entry did not parse and somebody has
+    to know that."""
+    match = ingest_readback(
+        _report(
+            original_message_id=None,
+            tx_blocks="\n".join(
+                [
+                    _tx_block(end_to_end_id="E2E-A", status="ACSC"),
+                    _tx_block(end_to_end_id="E2E-BAD", status=None),
+                ]
+            ),
+        ),
+        (_instruction(message_id="MSG-A", end_to_end_id="E2E-A"),),
+    )
+    (found,) = [
+        b for b in match.breaks if b.code is ReadbackBreakCode.MALFORMED_STATUS_ENTRY
+    ]
+    assert "E2E-BAD" == found.end_to_end_id
+    assert "the rest of the file was reconciled" in found.detail.lower()
+    assert match.clean is False
+
+
+def test_the_file_accounts_for_every_block_the_venue_sent() -> None:
+    """A count that silently shrinks is worse than a finding."""
+    report = parse_status_report(
+        _report(
+            original_message_id=None,
+            tx_blocks="\n".join(
+                [
+                    _tx_block(end_to_end_id="E2E-A"),
+                    _tx_block(status=None, end_to_end_id="E2E-BAD"),
+                    _tx_block(end_to_end_id=None, tx_id=None),
+                ]
+            ),
+        )
+    )
+    assert report.entry_count == 3
+    assert len(report.entries) == 1
+    assert len(report.malformed) == 2
+
+
+def test_the_ordinal_locates_the_bad_record_in_the_file() -> None:
+    """An operator has to find it in the original to fix it."""
+    report = parse_status_report(
+        _report(
+            original_message_id=None,
+            tx_blocks="\n".join(
+                [
+                    _tx_block(end_to_end_id="E2E-A"),
+                    _tx_block(end_to_end_id="E2E-B"),
+                    _tx_block(end_to_end_id="E2E-BAD", status=None),
+                ]
+            ),
+        )
+    )
+    assert report.malformed[0].ordinal == 2
+
+
+def test_document_level_problems_still_raise() -> None:
+    """A problem with the document means nothing in it can be trusted."""
+    with pytest.raises(ReadbackParseError, match="not well-formed"):
+        parse_status_report(b"<Document>")
+
+
+def test_a_file_of_nothing_but_bad_records_parses_to_no_entries() -> None:
+    """Still not an exception. The file was readable; its contents were not,
+    and that is a finding about a thousand payments rather than about a
+    file."""
+    report = parse_status_report(
+        _report(
+            original_message_id=None,
+            tx_blocks="\n".join(_tx_block(status=None) for _ in range(3)),
+        )
+    )
+    assert report.entries == ()
+    assert len(report.malformed) == 3
+
+
+# ---------------------------------------------------------------------------
+# Messages somebody else actually sent
+# ---------------------------------------------------------------------------
+
+THIRD_PARTY = (
+    pathlib.Path(__file__).resolve().parents[1]
+    / "fixtures"
+    / "third_party"
+    / "issettled"
+)
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "pacs.002.001.11-payment-tdso.xml",
+        "pacs.002.001.11-payment-tdsa.xml",
+        "pacs.002.001.11-redeem-tdsa.xml",
+    ],
+)
+def test_a_real_third_party_status_report_parses(filename: str) -> None:
+    """These are not messages this framework would have written, which is
+    the entire reason they are held.
+
+    Each sits inside a proprietary envelope alongside a business application
+    header and an XML signature. The pacs.002 payload is not the document
+    root, and the payload element itself carries the envelope's namespace
+    while its children carry the ISO one. The first version of this parser
+    refused all three - and would have reported a conformant sender as
+    non-conformant, which points an investigation at the wrong party.
+    """
+    report = parse_status_report((THIRD_PARTY / filename).read_bytes())
+    assert report.namespace.startswith("urn:iso:std:iso:20022:tech:xsd:pacs.002")
+    assert report.message_id
+    assert len(report.entries) == 1
+    assert report.malformed == ()
+
+
+def test_a_real_status_code_classifies_without_special_casing() -> None:
+    """RCVD and ACTC arrive from a live implementation and land in the
+    recognised set with no per-venue handling."""
+    report = parse_status_report(
+        (THIRD_PARTY / "pacs.002.001.11-payment-tdso.xml").read_bytes()
+    )
+    assert report.entries[0].status is SettlementStatus.RECEIVED
+
+
+def test_a_proprietary_reason_code_is_carried_not_interpreted() -> None:
+    """The reason code in these files is a four-digit proprietary value, not
+    an ISO external code. It is recorded verbatim; nothing here pretends to
+    know what it means."""
+    report = parse_status_report(
+        (THIRD_PARTY / "pacs.002.001.11-payment-tdso.xml").read_bytes()
+    )
+    assert report.entries[0].reason_codes == ("0202",)
+
+
+def test_an_unknown_third_party_status_is_unsolicited_not_a_parse_error() -> None:
+    """A real message about an instruction this framework never prepared is
+    exactly the unsolicited case, and it should reconcile to that rather
+    than fail to parse."""
+    match = ingest_readback(
+        (THIRD_PARTY / "pacs.002.001.11-payment-tdso.xml").read_bytes(), ()
+    )
+    assert [b.code for b in match.breaks] == [ReadbackBreakCode.UNSOLICITED_STATUS]
+
+
+def test_the_vendored_fixtures_carry_their_licence() -> None:
+    """Apache 2.0 requires the notice to travel with the files."""
+    assert (THIRD_PARTY / "LICENSE").exists()
+    notice = (THIRD_PARTY / "NOTICE.md").read_text()
+    assert "Apache License 2.0" in notice
+    assert "github.com/issettled" in notice

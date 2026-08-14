@@ -364,8 +364,8 @@ def test_a_settled_position_carries_no_open_fail_findings() -> None:
 
 
 def test_a_fail_across_a_record_date_breaks() -> None:
-    """Entitlement does not disappear because delivery did. It becomes a
-    claim, and a claim nobody raised is a loss nobody recorded."""
+    """The condition published guidance names: eligible and settled balances
+    diverge where position moved after record-date capture."""
     r = settle_net_position(
         _position(),
         _profile(),
@@ -375,9 +375,10 @@ def test_a_fail_across_a_record_date_breaks() -> None:
     (found,) = [
         b
         for b in r.breaks
-        if b.code is SecuritiesBreakCode.UNSETTLED_ACROSS_RECORD_DATE
+        if b.code is SecuritiesBreakCode.ELIGIBLE_SETTLED_DIVERGENCE
     ]
-    assert "becomes a claim" in found.detail
+    assert "pending receipt (fail long)" in found.detail
+    assert "does not state the outcome" in found.detail
 
 
 def test_a_ratio_event_without_restatement_breaks() -> None:
@@ -432,7 +433,7 @@ def test_corporate_action_findings_attach_to_partials_too() -> None:
         spans_record_date=True,
     )
     assert r.disposition is CNSDisposition.PARTIAL_ALLOCATION
-    assert SecuritiesBreakCode.UNSETTLED_ACROSS_RECORD_DATE in {
+    assert SecuritiesBreakCode.ELIGIBLE_SETTLED_DIVERGENCE in {
         b.code for b in r.breaks
     }
 
@@ -525,3 +526,75 @@ def test_not_novated_is_representable_and_is_not_a_fail() -> None:
 def test_market_id_is_required() -> None:
     with pytest.raises(ValueError, match="market_id is required"):
         MarketProfile(market_id="")
+
+
+# ---------------------------------------------------------------------------
+# Record-date balances: published vocabulary, no computed outcome
+# ---------------------------------------------------------------------------
+
+
+def test_record_date_position_records_divergence_without_asserting_an_outcome() -> None:
+    """Every field name traces to published depository vocabulary. There is
+    no entitlement field and there will not be one."""
+    from atreides.rails.cns import RecordDatePosition
+
+    pos = RecordDatePosition(
+        security_id="SEC-A",
+        eligible_balance=D("1000"),
+        settlement_balance=D("400"),
+        pending_receipt_balance=D("600"),
+        provenance="Depository corporate-action usage guidance",
+    )
+    assert pos.diverges is True
+    assert pos.divergence == D("600")
+    assert not hasattr(pos, "entitlement")
+
+
+def test_matching_balances_do_not_diverge() -> None:
+    from atreides.rails.cns import RecordDatePosition
+
+    pos = RecordDatePosition(
+        security_id="SEC-A",
+        eligible_balance=D("1000"),
+        settlement_balance=D("1000"),
+    )
+    assert pos.diverges is False
+    assert pos.divergence == D("0")
+
+
+def test_lottery_and_voluntary_balances_are_representable() -> None:
+    """Obligated balance for partial calls, uncovered protect for voluntary
+    events. Both are named in the guidance and both were absent from the
+    first cut of this module."""
+    from atreides.rails.cns import RecordDatePosition
+
+    pos = RecordDatePosition(
+        security_id="SEC-A",
+        eligible_balance=D("1000"),
+        settlement_balance=D("800"),
+        obligated_balance=D("200"),
+        uncovered_protect_balance=D("50"),
+    )
+    assert pos.obligated_balance == D("200")
+    assert pos.uncovered_protect_balance == D("50")
+
+
+def test_the_entitlement_refusal_is_stated_rather_than_implied() -> None:
+    """Published guidance carries the condition and not the treatment.
+    Computing an outcome here would present market practice as governance.
+    """
+    from atreides.rails.cns import absent_entitlement_treatment
+
+    text = absent_entitlement_treatment("SEC-A")
+    assert "is not computed" in text
+    assert "not published" in text
+    assert "presenting market practice as governance" in text or (
+        "present market practice as governance" in text
+    )
+
+
+def test_there_is_no_entitlement_computation_api() -> None:
+    assert not any(
+        name.startswith(("compute_entitlement", "allocate_entitlement", "cash_in_lieu"))
+        for name in dir(cns)
+    )

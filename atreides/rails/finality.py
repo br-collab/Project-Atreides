@@ -37,9 +37,22 @@ class FinalityClass(StrEnum):
     """
 
     GROSS_FINAL = "GROSS_FINAL"
+    """Irrevocable at the settlement instant, transaction by transaction. A
+    shortfall queues rather than fails, and re-issuing on that basis produces
+    a duplicate payment that cannot be reversed."""
+
     DEFERRED_NET = "DEFERRED_NET"
+    """Irrevocable at the end of a netting cycle. What settles is the
+    position at finality, not the position at instruction."""
+
     LEDGER_FINAL = "LEDGER_FINAL"
+    """Irrevocable at ledger commit. There is no queue on a ledger: funded
+    or not, at the instant."""
+
     CORRESPONDENT_DEPENDENT = "CORRESPONDENT_DEPENDENT"
+    """Finality is not observable to the originator. An epistemic state
+    rather than a mechanism, and the most dangerous of the four for exactly
+    that reason - the state is unknown rather than merely deferred."""
 
     DETERMINATION_DEPENDENT = "DETERMINATION_DEPENDENT"
     """Obligation-level only. The cash movement is irrevocable on its

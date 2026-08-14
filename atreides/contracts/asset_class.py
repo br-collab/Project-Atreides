@@ -78,16 +78,34 @@ class MajorAssetCategory(StrEnum):
     """
 
     TRADITIONAL_FINANCIAL_SECURITIES = "traditional_financial_securities"
+    """Equities, fixed income, FX, listed and OTC derivatives."""
     FUNDS_AND_POOLED_VEHICLES = "funds_and_pooled_vehicles"
+    """Mutual funds, ETFs, hedge funds, private equity and credit, real estate funds and other
+    alternatives."""
     PHYSICAL_AND_FINANCIAL_COMMODITIES = "physical_and_financial_commodities"
+    """Precious and base metals, energy, agricultural, carbon and environmental."""
     REAL_ESTATE_AND_REAL_ASSETS = "real_estate_and_real_assets"
+    """Direct interests, infrastructure and natural resources."""
     INSURANCE_AND_REINSURANCE = "insurance_and_reinsurance"
+    """Insurance-linked securities, insurance contracts held in custody, reinsurance interests."""
     INTELLECTUAL_PROPERTY_AND_ROYALTIES = "intellectual_property_and_royalties"
+    """Music, patent and other intellectual-property royalty streams."""
     TRADE_FINANCE_AND_RECEIVABLES = "trade_finance_and_receivables"
+    """Trade receivables and trade finance instruments."""
     TOKENIZED_REPRESENTATIONS = "tokenized_representations"
+    """A conventional asset with a token representation alongside it. Two records of one holding,
+    which is where the reconciliation obligation comes from and why this is a category rather
+    than an attribute."""
     NATIVE_DIGITAL_ASSETS = "native_digital_assets"
+    """Issued on a ledger with no off-ledger original. Loss is unrecoverable and final, so these
+    are reachable only on an inherent-safety surface."""
     ALTERNATIVE_AND_SPECIALTY_ASSETS = "alternative_and_specialty_assets"
+    """Holdings outside the enumerated categories that still require custody treatment.
+    Classified here rather than forced into a neighbouring category, so that the imprecision
+    is visible."""
     EMERGING = "emerging"
+    """The extension point. Present so that a new asset category is a registry entry rather than
+    a change to this enumeration."""
 
 
 class Representation(StrEnum):

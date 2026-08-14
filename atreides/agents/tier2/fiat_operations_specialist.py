@@ -39,12 +39,11 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime
 from decimal import Decimal
-from typing import Self
+from typing import Final, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atreides.agents.tier2.eligibility import EligibilityInputs, verify_eligibility
-from atreides.rails.cato_f import CatoFDecision, GateDecision
 from atreides.agents.tier2.outputs import (
     AGENT_CLASS_FIAT_OPERATIONS_SPECIALIST,
     AgentClass,
@@ -71,6 +70,7 @@ from atreides.contracts import (
     DSORLineageStub,
     InherentSafetySurface,
 )
+from atreides.rails.cato_f import CatoFDecision, GateDecision
 
 
 class MagnitudeThresholdPolicy(BaseModel):

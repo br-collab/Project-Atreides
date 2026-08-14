@@ -49,8 +49,8 @@ from typing import Final
 __all__ = [
     "BASE_ISO_20022",
     "DTCC_SETTLEMENT_PENDING",
-    "DepositoryProfile",
     "FEDWIRE_PENDING",
+    "DepositoryProfile",
 ]
 
 

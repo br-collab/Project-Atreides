@@ -129,9 +129,13 @@ class MarginDirection(StrEnum):
     """
 
     OWED_TO_VENUE = "owed_to_venue"
+    """The firm owes. A call is coming, or should be."""
     OWED_TO_FIRM = "owed_to_firm"
+    """The venue owes. A funding cost that is recoverable."""
     NEUTRAL = "neutral"
+    """Measured, and no cash consequence in either direction."""
     UNKNOWN = "unknown"
+    """Direction not established. The default where nobody assessed it."""
 
 
 class Observability(StrEnum):

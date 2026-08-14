@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**80 of 165 enumeration values (48%) state what they mean in
+**165 of 165 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -23,93 +23,9 @@ unattributed registry entry - and the guess will be made by whoever is
 furthest from the decision.
 
 <details>
-<summary>Values with no stated meaning (85)</summary>
+<summary>Values with no stated meaning (0)</summary>
 
-- `finality.FinalityClass.GROSS_FINAL`
-- `finality.FinalityClass.DEFERRED_NET`
-- `finality.FinalityClass.LEDGER_FINAL`
-- `finality.FinalityClass.CORRESPONDENT_DEPENDENT`
-- `cato_f.CashRail.FEDWIRE`
-- `cato_f.CashRail.CHIPS`
-- `cato_f.CashRail.FEDNOW`
-- `cato_f.CashRail.NSS_DTC_NSCC`
-- `cato_f.CashRail.FICC_GSD_FUNDS_ONLY`
-- `cato_f.CashRail.CORRESPONDENT`
-- `cato_f.CashRail.TOKENIZED_DEPOSIT`
-- `cato_f.CashRail.REGULATED_STABLECOIN`
-- `cato_f.CashRail.PORTS_WHOLESALE`
-- `cato_f.GateDecision.PROCEED`
-- `cato_f.GateDecision.HOLD`
-- `cato_f.GateDecision.ESCALATE`
-- `cato_f.RailStatus.AVAILABLE`
-- `cato_f.RailStatus.CLOSED`
-- `cato_f.RailStatus.DEGRADED`
-- `cato_f.RailStatus.NOT_YET_ISSUED`
-- `cato_f.ReasonCode.SYSTEMIC_STRESS_ESCALATE`
-- `cato_f.ReasonCode.MATERIAL_MAGNITUDE_QUORUM_UNAVAILABLE`
-- `cato_f.ReasonCode.UNFUNDED_AT_SETTLEMENT_INSTANT`
-- `cato_f.ReasonCode.RISK_CONTROL_BREACH`
-- `cato_f.ReasonCode.BROAD_STRESS_HOLD`
-- `cato_f.ReasonCode.NO_RAIL_IN_WINDOW`
-- `cato_f.ReasonCode.UNRESOLVABLE_FINALITY`
-- `cato_f.ReasonCode.DETERMINATION_PENDING`
-- `cato_f.ReasonCode.UNASSESSED_REVOCATION_AUTHORITY`
-- `cato_f.ReasonCode.CLEARED`
-- `cato_f.ReasonCode.GATE_UNAVAILABLE`
-- `funding_state.FundingDisposition.FUNDED`
-- `cns.CNSDisposition.SETTLED_IN_FULL`
-- `cns.SecuritiesBreakCode.FAIL_TO_DELIVER`
-- `cns.SecuritiesBreakCode.FAIL_TO_RECEIVE`
-- `cns.SecuritiesBreakCode.CLOSE_OUT_DEADLINE_PASSED`
-- `asset_class.MajorAssetCategory.TRADITIONAL_FINANCIAL_SECURITIES`
-- `asset_class.MajorAssetCategory.FUNDS_AND_POOLED_VEHICLES`
-- `asset_class.MajorAssetCategory.PHYSICAL_AND_FINANCIAL_COMMODITIES`
-- `asset_class.MajorAssetCategory.REAL_ESTATE_AND_REAL_ASSETS`
-- `asset_class.MajorAssetCategory.INSURANCE_AND_REINSURANCE`
-- `asset_class.MajorAssetCategory.INTELLECTUAL_PROPERTY_AND_ROYALTIES`
-- `asset_class.MajorAssetCategory.TRADE_FINANCE_AND_RECEIVABLES`
-- `asset_class.MajorAssetCategory.TOKENIZED_REPRESENTATIONS`
-- `asset_class.MajorAssetCategory.NATIVE_DIGITAL_ASSETS`
-- `asset_class.MajorAssetCategory.ALTERNATIVE_AND_SPECIALTY_ASSETS`
-- `asset_class.MajorAssetCategory.EMERGING`
-- `custody_object.CustodyObjectCategory.ORDINARY_SAFEKEEPING`
-- `custody_object.CustodyObjectCategory.PLEDGED_ASSET`
-- `custody_object.CustodyObjectCategory.SEPARATELY_MANAGED_ACCOUNT`
-- `custody_object.CustodyObjectCategory.TOKENIZED_SECURITY`
-- `custody_object.CustodyObjectCategory.NATIVE_DIGITAL_ASSET`
-- `custody_object.EncumbranceType.REPO`
-- `custody_object.EncumbranceType.SECURITIES_LENDING`
-- `custody_object.EncumbranceType.DERIVATIVE_MARGIN`
-- `custody_object.EncumbranceType.CREDIT_FACILITY`
-- `custody_object.EncumbranceType.PRIME_BROKERAGE_MARGIN`
-- `custody_object.EncumbranceType.CCP_MARGIN`
-- `custody_object.EncumbranceType.CENTRAL_BANK_FACILITY`
-- `custody_object.EncumbranceType.OTHER_SECURED_ARRANGEMENT`
-- `failure_mode.FailureModeClass.RA`
-- `failure_mode.FailureModeClass.RM`
-- `failure_mode.FailureModeClass.UR_R`
-- `failure_mode.FailureModeClass.UR_F`
-- `margin_impact.MarginDirection.OWED_TO_VENUE`
-- `margin_impact.MarginDirection.OWED_TO_FIRM`
-- `margin_impact.MarginDirection.NEUTRAL`
-- `margin_impact.MarginDirection.UNKNOWN`
-- `margin_profile.CollectionModel.TRADITIONAL_HOURS_ONLY`
-- `margin_profile.CollectionModel.OPTIONAL_WEEKEND_POSTING`
-- `margin_profile.CollectionModel.REQUIRED_WEEKEND_POSTING`
-- `margin_profile.CollectionModel.UNKNOWN`
-- `margin_profile.ProfileStatus.UNVERIFIED`
-- `margin_profile.ProfileStatus.POPULATED`
-- `margin_profile.ProfileStatus.SUPERSEDED`
-- `margin_profile.RevocationAuthority.NONE_DISCLOSED`
-- `canonical.SettlementMethod.INSTRUCTED_AGENT`
-- `canonical.SettlementMethod.INSTRUCTING_AGENT`
-- `canonical.SettlementMethod.COVER`
-- `canonical.SettlementMethod.CLEARING_SYSTEM`
-- `readback.ReadbackBreakCode.AMOUNT_MISMATCH`
-- `readback.ReadbackBreakCode.CURRENCY_MISMATCH`
-- `readback.ReadbackBreakCode.ACCEPTED_WITH_CHANGE`
-- `readback.ReadbackBreakCode.UNRECOGNIZED_STATUS_CODE`
-- `readback.ReadbackBreakCode.MALFORMED_STATUS_ENTRY`
+
 
 </details>
 
@@ -192,10 +108,10 @@ Finality classes per AUR-CUSTODY-CASH-001 Section IV.
 
 | Value | Meaning |
 | --- | --- |
-| `GROSS_FINAL` |  |
-| `DEFERRED_NET` |  |
-| `LEDGER_FINAL` |  |
-| `CORRESPONDENT_DEPENDENT` |  |
+| `GROSS_FINAL` | Irrevocable at the settlement instant, transaction by transaction. A shortfall queues rather than fails, and re-issuing on that basis produces a duplicate payment that cannot be reversed. |
+| `DEFERRED_NET` | Irrevocable at the end of a netting cycle. What settles is the position at finality, not the position at instruction. |
+| `LEDGER_FINAL` | Irrevocable at ledger commit. There is no queue on a ledger: funded or not, at the instant. |
+| `CORRESPONDENT_DEPENDENT` | Finality is not observable to the originator. An epistemic state rather than a mechanism, and the most dangerous of the four for exactly that reason - the state is unknown rather than merely deferred. |
 | `DETERMINATION_DEPENDENT` | Obligation-level only. The cash movement is irrevocable on its rail's own terms, and the venue retains authority to cancel the contract and return the funds, so the value can still be taken back for reasons the rail knows nothing about. NEVER appears in ``RAIL_FINALITY``; supplying it as a rail's class is a caller error and is refused rather than guessed at. |
 
 ### `atreides.rails.cato_f`
@@ -206,15 +122,15 @@ The cash-rail universe per AUR-CUSTODY-CASH-001 Section III.
 
 | Value | Meaning |
 | --- | --- |
-| `fedwire` |  |
-| `chips` |  |
-| `fednow` |  |
-| `nss_dtc_nscc` |  |
-| `ficc_gsd_funds_only` |  |
-| `correspondent` |  |
-| `tokenized_deposit` |  |
-| `regulated_stablecoin` |  |
-| `ports_wholesale` |  |
+| `fedwire` | US real-time gross settlement for large-value payments. Gross-final. |
+| `chips` | US privately operated netting system for large-value payments. Deferred-net. |
+| `fednow` | US instant payment rail, 24/7/365, gross-final, subject to a value cap. |
+| `nss_dtc_nscc` | Net settlement service carrying depository and clearing-corporation net obligations. |
+| `ficc_gsd_funds_only` | The funds-only leg of government securities clearing. |
+| `correspondent` | Settlement on the books of an intermediary bank. The only rail whose finality the originator cannot observe. |
+| `tokenized_deposit` | Commercial bank money on a distributed ledger. Ledger-final. |
+| `regulated_stablecoin` | Regulated payment stablecoin. Ledger-final. |
+| `ports_wholesale` | Reserved placeholder for wholesale tokenized settlement infrastructure. Always present in rail state and never removed, so that its arrival flips a status field rather than changing the shape of the record. |
 
 #### `CatoFDecision`
 
@@ -250,9 +166,9 @@ Gate disposition. Mirrors Cato's PROCEED / HOLD / ESCALATE.
 
 | Value | Meaning |
 | --- | --- |
-| `PROCEED` |  |
-| `HOLD` |  |
-| `ESCALATE` |  |
+| `PROCEED` | Cleared. The operation may be released. |
+| `HOLD` | Stopped pending a condition changing. Not an escalation and not a failure. |
+| `ESCALATE` | Routed to human authority. The gate declines to decide. |
 
 #### `OperationContext`
 
@@ -289,10 +205,10 @@ Per-rail operational state. Supplied by the caller's refresh loop.
 
 | Value | Meaning |
 | --- | --- |
-| `available` |  |
-| `closed` |  |
-| `degraded` |  |
-| `not_yet_issued` |  |
+| `available` | Open and reachable. |
+| `closed` | Not operating in this window. |
+| `degraded` | Operating with reduced capability. Not usable, because partial availability is not availability for a settlement decision. |
+| `not_yet_issued` | The infrastructure does not exist yet. Distinct from CLOSED, which describes something that exists and is shut. |
 
 #### `ReasonCode` (enumeration)
 
@@ -300,17 +216,17 @@ Reason codes. One per check in Section V.B plus the PROCEED case.
 
 | Value | Meaning |
 | --- | --- |
-| `SYSTEMIC_STRESS_ESCALATE` |  |
-| `MATERIAL_MAGNITUDE_QUORUM_UNAVAILABLE` |  |
-| `UNFUNDED_AT_SETTLEMENT_INSTANT` |  |
-| `RISK_CONTROL_BREACH` |  |
-| `BROAD_STRESS_HOLD` |  |
-| `NO_RAIL_IN_WINDOW` |  |
-| `UNRESOLVABLE_FINALITY` |  |
-| `DETERMINATION_PENDING` |  |
-| `UNASSESSED_REVOCATION_AUTHORITY` |  |
-| `CLEARED` |  |
-| `GATE_UNAVAILABLE` |  |
+| `SYSTEMIC_STRESS_ESCALATE` | Systemic stress above the escalation band. Routed to human authority. |
+| `MATERIAL_MAGNITUDE_QUORUM_UNAVAILABLE` | Material by magnitude, so quorum authority is required, and quorum is architecturally unavailable. Holds by doctrine; pretending otherwise would be theatre. |
+| `UNFUNDED_AT_SETTLEMENT_INSTANT` | The projected position is below the obligation. No rail selection remedies an unfunded position. |
+| `RISK_CONTROL_BREACH` | Net-debit-cap headroom exhausted or clearing fund deficient. A hard control, independent of position. |
+| `BROAD_STRESS_HOLD` | Systemic stress above the hold band but below escalation. |
+| `NO_RAIL_IN_WINDOW` | No rail is open and reachable in the settlement window. Hold to the next window rather than routing to a closed rail. |
+| `UNRESOLVABLE_FINALITY` | A correspondent chain whose finality state cannot be established. Unknown finality is not acceptable finality. |
+| `DETERMINATION_PENDING` | A contingent obligation whose outcome has not been determined. The instruction is premature, not unsafe. |
+| `UNASSESSED_REVOCATION_AUTHORITY` | Determined, and nobody has read whether the venue may cancel and return funds. Closed by populating the registry, not by a market action. |
+| `CLEARED` | No check fired. A rail is recommended. |
+| `GATE_UNAVAILABLE` | The gate could not be consulted. The absent-gate default is HOLD. |
 
 ### `atreides.rails.funding_state`
 
@@ -331,7 +247,7 @@ What will happen to this cash leg on funding grounds.
 
 | Value | Meaning |
 | --- | --- |
-| `funded` |  |
+| `funded` | The committed position covers the obligation. |
 | `funded_qualified` | Funded, and the obligation is DETERMINATION_DEPENDENT: the venue may still cancel the contract and return the funds. The settlement completes and the money is not yet the firm's to spend. Kept distinct from FUNDED for the same reason WILL_QUEUE is kept distinct from WILL_FAIL - an operator who treats a qualified receipt as free cash has taken an unpriced exposure to a venue's emergency authority. |
 | `will_queue` | Gross-final rail, short at the settlement instant, but funding arrives before the window closes. NOT a failure — see module docstring. |
 | `will_fail` | Short, and funding does not arrive in the window. |
@@ -430,7 +346,7 @@ What happened to one net position at settlement.
 
 | Value | Meaning |
 | --- | --- |
-| `settled_in_full` |  |
+| `settled_in_full` | The whole net position moved. |
 | `partial_allocation` | Some of the position moved. The ordinary case in a netted system, not an exception path, and kept out of both neighbours because a model whose success state is all-or-nothing classifies a normal day as a failure. |
 | `failed_to_deliver` | The member owes securities it did not deliver. Carries a close-out obligation where the market imposes one. |
 | `failed_to_receive` | The member is owed securities it did not receive. Same event from the other side, different remedy, and not the negative of the above. |
@@ -499,6 +415,21 @@ The outcome for one net position, with the evidence behind it.
 | `rationale` | `str` | `''` |
 | `doctrine_version` | `str` | `'AUR-CUSTODY-EQUITY-001-draft-v0.1'` |
 
+#### `RecordDatePosition`
+
+Balances at a corporate-action record date, in the published vocabulary.
+
+| Field | Type | Default |
+| --- | --- | --- |
+| `security_id` | `str` | required |
+| `eligible_balance` | `Decimal` | required |
+| `settlement_balance` | `Decimal` | required |
+| `pending_delivery_balance` | `Decimal` | `Decimal('0')` |
+| `pending_receipt_balance` | `Decimal` | `Decimal('0')` |
+| `obligated_balance` | `Decimal` | `Decimal('0')` |
+| `uncovered_protect_balance` | `Decimal` | `Decimal('0')` |
+| `provenance` | `str \| None` | `None` |
+
 #### `SecuritiesBreak`
 
 SecuritiesBreak(code: 'SecuritiesBreakCode', detail: 'str', security_id: 'str \| None' = None)
@@ -515,12 +446,12 @@ Break taxonomy for the equities rail.
 
 | Value | Meaning |
 | --- | --- |
-| `fail_to_deliver` |  |
-| `fail_to_receive` |  |
+| `fail_to_deliver` | The member owes securities it did not deliver. |
+| `fail_to_receive` | The member is owed securities it did not receive. |
 | `partial_with_unexplained_allocation` | A partial allocation on a market that does not publish its allocation rule. The member cannot explain why it received what it received, and the framework will not manufacture an explanation. |
 | `close_out_deadline_unreadable` | An open fail on a market whose close-out rules have not been read. Closed by populating the registry, not by any market action. |
-| `close_out_deadline_passed` |  |
-| `unsettled_across_record_date` | A fail spanning a corporate-action record date. Entitlement does not disappear because delivery did; it becomes a claim, and a claim nobody raised is a loss nobody recorded. |
+| `close_out_deadline_passed` | An open fail is past the market's published close-out deadline. |
+| `eligible_settled_divergence` | An open position at a corporate-action record date, so the eligible balance and the settled balance are not the same number. This is the condition published depository guidance names and carries - as an eligible-versus-settlement position distinction, and as pending delivery and pending receipt balances riding on the entitlement and confirmation messages. What that guidance does NOT state is the entitlement treatment: which side ends up owed what. So the framework records the divergence and refuses to compute the outcome. See :func:`absent_entitlement_treatment`. |
 | `quantity_not_restated` | A ratio-changing corporate action occurred and the open quantity was not restated. The fail is now denominated in shares that no longer exist in that form. |
 | `outcome_not_reported` | No settlement outcome was reported for the position. Fail-safe: not a settled position. |
 
@@ -550,17 +481,17 @@ The ten major categories enumerated in AUR-CUSTODY-001 v1.0 Section III, plus an
 
 | Value | Meaning |
 | --- | --- |
-| `traditional_financial_securities` |  |
-| `funds_and_pooled_vehicles` |  |
-| `physical_and_financial_commodities` |  |
-| `real_estate_and_real_assets` |  |
-| `insurance_and_reinsurance` |  |
-| `intellectual_property_and_royalties` |  |
-| `trade_finance_and_receivables` |  |
-| `tokenized_representations` |  |
-| `native_digital_assets` |  |
-| `alternative_and_specialty_assets` |  |
-| `emerging` |  |
+| `traditional_financial_securities` | Equities, fixed income, FX, listed and OTC derivatives. |
+| `funds_and_pooled_vehicles` | Mutual funds, ETFs, hedge funds, private equity and credit, real estate funds and other alternatives. |
+| `physical_and_financial_commodities` | Precious and base metals, energy, agricultural, carbon and environmental. |
+| `real_estate_and_real_assets` | Direct interests, infrastructure and natural resources. |
+| `insurance_and_reinsurance` | Insurance-linked securities, insurance contracts held in custody, reinsurance interests. |
+| `intellectual_property_and_royalties` | Music, patent and other intellectual-property royalty streams. |
+| `trade_finance_and_receivables` | Trade receivables and trade finance instruments. |
+| `tokenized_representations` | A conventional asset with a token representation alongside it. Two records of one holding, which is where the reconciliation obligation comes from and why this is a category rather than an attribute. |
+| `native_digital_assets` | Issued on a ledger with no off-ledger original. Loss is unrecoverable and final, so these are reachable only on an inherent-safety surface. |
+| `alternative_and_specialty_assets` | Holdings outside the enumerated categories that still require custody treatment. Classified here rather than forced into a neighbouring category, so that the imprecision is visible. |
+| `emerging` | The extension point. Present so that a new asset category is a registry entry rather than a change to this enumeration. |
 
 #### `Representation` (enumeration)
 
@@ -580,11 +511,11 @@ The five custody object categories per AUR-CUSTODY-001 v1.0 Section IV.
 
 | Value | Meaning |
 | --- | --- |
-| `ordinary_safekeeping` |  |
-| `pledged_asset` |  |
-| `separately_managed_account` |  |
-| `tokenized_security` |  |
-| `native_digital_asset` |  |
+| `ordinary_safekeeping` | Held for the client, unencumbered. |
+| `pledged_asset` | Encumbered in favour of a counterparty. The encumbrance is a first-class attribute, not a flag. |
+| `separately_managed_account` | Held in a segregated account managed on the client's behalf. |
+| `tokenized_security` | A conventional security with a token representation. Two records of one asset, which is where the reconciliation obligation comes from. |
+| `native_digital_asset` | Issued on a ledger with no off-ledger original. Key compromise is unrecoverable and final. |
 
 #### `Encumbrance`
 
@@ -603,14 +534,14 @@ Types of encumbrance on a pledged asset.
 
 | Value | Meaning |
 | --- | --- |
-| `repo` |  |
-| `securities_lending` |  |
-| `derivative_margin` |  |
-| `credit_facility` |  |
-| `prime_brokerage_margin` |  |
-| `ccp_margin` |  |
-| `central_bank_facility` |  |
-| `other_secured_arrangement` |  |
+| `repo` | Sale and repurchase. Title moves; the economic exposure does not. |
+| `securities_lending` | Lent against collateral, with recall risk running back to the lender. |
+| `derivative_margin` | Posted against a derivative exposure. |
+| `credit_facility` | Pledged to secure a lending facility. |
+| `prime_brokerage_margin` | Held under a prime-brokerage margin arrangement, including rehypothecation rights where granted. |
+| `ccp_margin` | Posted to a central counterparty. Recoverability depends on the CCP's own default arrangements, which are not observable from the participant seat. |
+| `central_bank_facility` | Pledged to a central bank facility. |
+| `other_secured_arrangement` | An encumbrance outside the enumerated types. Recorded as unclassified rather than mapped to the nearest neighbour, because a wrong classification is worse than an admitted one. |
 
 #### `NativeDigitalAssetObject`
 
@@ -676,10 +607,10 @@ Four-class custody-specific failure-mode taxonomy.
 
 | Value | Meaning |
 | --- | --- |
-| `RA` |  |
-| `RM` |  |
-| `UR-R` |  |
-| `UR-F` |  |
+| `RA` | Recoverable automatically. The system detects and recovers with no human action, and lineage is continuous across the event. |
+| `RM` | Recoverable manually. The system detects and a human must act. Lineage may carry a flagged gap. |
+| `UR-R` | Unrecoverable by the custody operation, but externally reversible - insurance, indemnification, mutualised loss-sharing - so economic exposure is bounded. |
+| `UR-F` | Unrecoverable and final. No mechanism undoes it and exposure is the full loss. Must not be reachable on an inherent-safety surface. |
 
 ### `atreides.contracts.margin_impact`
 
@@ -700,10 +631,10 @@ Which way the money goes.
 
 | Value | Meaning |
 | --- | --- |
-| `owed_to_venue` |  |
-| `owed_to_firm` |  |
-| `neutral` |  |
-| `unknown` |  |
+| `owed_to_venue` | The firm owes. A call is coming, or should be. |
+| `owed_to_firm` | The venue owes. A funding cost that is recoverable. |
+| `neutral` | Measured, and no cash consequence in either direction. |
+| `unknown` | Direction not established. The default where nobody assessed it. |
 
 #### `MarginDisposition` (enumeration)
 
@@ -769,10 +700,10 @@ When the venue can actually call and collect margin.
 
 | Value | Meaning |
 | --- | --- |
-| `TRADITIONAL_HOURS_ONLY` |  |
-| `OPTIONAL_WEEKEND_POSTING` |  |
-| `REQUIRED_WEEKEND_POSTING` |  |
-| `UNKNOWN` |  |
+| `TRADITIONAL_HOURS_ONLY` | The venue calls and collects only in traditional hours. Continuous trading against this model is what produces an uncollectable exposure. |
+| `OPTIONAL_WEEKEND_POSTING` | Members may post at weekends; the venue does not require it. |
+| `REQUIRED_WEEKEND_POSTING` | The venue requires weekend posting, so the collection window does not close over a weekend. |
+| `UNKNOWN` | The collection model has not been read. Not the same as no weekend collection. |
 
 #### `DeterminabilityRegime` (enumeration)
 
@@ -791,9 +722,9 @@ Population state of a registry entry.
 
 | Value | Meaning |
 | --- | --- |
-| `UNVERIFIED` |  |
-| `POPULATED` |  |
-| `SUPERSEDED` |  |
+| `UNVERIFIED` | Nobody has populated this entry. The default and the safe state: consumers treat every field as absent rather than as a default. |
+| `POPULATED` | Populated from a venue publication or an entitled document, and carrying the citation. |
+| `SUPERSEDED` | Populated, and since replaced. Retained rather than deleted, because a decision taken against the old figure has to remain explicable. |
 
 #### `ResponsivenessObservation`
 
@@ -812,7 +743,7 @@ Whether and how the venue may alter an outcome after determination.
 
 | Value | Meaning |
 | --- | --- |
-| `NONE_DISCLOSED` |  |
+| `NONE_DISCLOSED` | No revocation authority disclosed. Note this currently conflates 'read and none found' with 'not read'; the status field is the disambiguator until this enum is brought into line with the determination registry. |
 | `LIQUIDATION_AT_ADMINISTERED_PRICE` | Exchange may liquidate positions and establish the settlement price. Settlement still occurs and finality holds; the value was administered. |
 | `CANCELLATION_AND_RETURN_OF_FUNDS` | Exchange may cancel the contract and return funds. Finality itself is reversed rather than the value being set. |
 
@@ -959,10 +890,10 @@ The four values of ISO 20022 ``SettlementMethod1Code``.
 
 | Value | Meaning |
 | --- | --- |
-| `INDA` |  |
-| `INGA` |  |
-| `COVE` |  |
-| `CLRG` |  |
+| `INDA` | INDA. Settlement on the books of the instructed agent. |
+| `INGA` | INGA. Settlement on the books of the instructing agent. |
+| `COVE` | COVE. A separate cover payment carries the funds. |
+| `CLRG` | CLRG. Settlement through a clearing system. |
 
 ### `atreides.messaging.profile`
 
@@ -1000,6 +931,18 @@ A prepared, schema-valid instruction package for human submission.
 
 ### `atreides.messaging.readback`
 
+#### `MalformedEntry`
+
+A status entry that could not be read, kept rather than thrown away.
+
+| Field | Type | Default |
+| --- | --- | --- |
+| `ordinal` | `int` | required |
+| `reason` | `str` | required |
+| `end_to_end_id` | `str \| None` | `None` |
+| `original_transaction_id` | `str \| None` | `None` |
+| `status_code` | `str \| None` | `None` |
+
 #### `ReadbackBreak`
 
 One finding from a readback, with the evidence behind it.
@@ -1020,14 +963,14 @@ Why a readback did not reconcile cleanly.
 | --- | --- |
 | `unsolicited_status` | Status for an instruction this framework never prepared. The most interesting class here: Atreides never submits, so either the venue misrouted a message or a payment left the firm outside the governed path. The second is a governance failure no other surface can detect, and it is detectable here as a direct consequence of the no-submission constraint rather than in spite of it. |
 | `identifier_disagreement` | Message and end-to-end identifiers resolve to different prepared instructions. The framework does not pick; silently preferring one key is how a system acknowledges the wrong payment. |
-| `amount_mismatch` |  |
-| `currency_mismatch` |  |
-| `accepted_with_change` |  |
+| `amount_mismatch` | The venue echoed a settlement amount that differs from the instructed one. |
+| `currency_mismatch` | The venue echoed a currency that differs from the instructed one. |
+| `accepted_with_change` | The venue accepted on terms other than instructed. What settled is not what was governed. |
 | `status_regression` | A terminal settled status followed by a non-settled one. Severe: a settlement the record shows as complete is being reported as not complete. |
 | `status_conflict` | Two different statuses at the same progression level. Distinguished from a regression because the remedy differs - a conflict is usually a duplicate or crossed message, a regression is usually real. |
-| `unrecognized_status_code` |  |
+| `unrecognized_status_code` | A status code outside the recognised set. A code the framework cannot act on is not a benign code. |
 | `rejected` | An instruction that passed every gate, was prepared and submitted, and did not settle. Needs no investigation and is still an event the decision-of-record must carry rather than a quiet terminal state. |
-| `malformed_status_entry` |  |
+| `malformed_status_entry` | An entry that could not be read. Collected rather than raised, so one bad record does not cost the rest of the file. |
 | `no_readback` | Nothing came back. Not a defect in a message - the absence of one. Distinct from every other code here because there is no venue assertion to disagree with, and because the wrong response to it is the one that produces duplicate payments. |
 
 #### `ReadbackMatch`
@@ -1085,5 +1028,6 @@ A parsed ``pacs.002``.
 | `original_message_name_id` | `str \| None` | required |
 | `group_status_code` | `str \| None` | required |
 | `entries` | `tuple[StatusEntry, ...]` | required |
+| `malformed` | `tuple[MalformedEntry, ...]` | `()` |
 
 ---

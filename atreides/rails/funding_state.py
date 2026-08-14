@@ -76,6 +76,7 @@ class FundingDisposition(StrEnum):
     """What will happen to this cash leg on funding grounds."""
 
     FUNDED = "funded"
+    """The committed position covers the obligation."""
     #: Funded, and the obligation is DETERMINATION_DEPENDENT: the venue may
     #: still cancel the contract and return the funds. The settlement
     #: completes and the money is not yet the firm's to spend. Kept

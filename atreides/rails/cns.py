@@ -39,6 +39,27 @@ disposition set separates full settlement from partial allocation from a
 true fail, and partial allocation carries the residual rather than being
 folded into either neighbour.
 
+CORPORATE ACTIONS: THE CONDITION IS PUBLISHED, THE TREATMENT IS NOT
+-------------------------------------------------------------------
+Depository corporate-action usage guidance describes the open-position
+problem in detail. It separates an eligible position from a settlement
+position, states that the two diverge where position moved after record-date
+capture, and carries pending-delivery and pending-receipt balances - fails
+short and fails long - on the movement advice and the movement confirmation.
+Lottery events get an obligated balance; voluntary events get an uncovered
+protect balance.
+
+It does not state the entitlement treatment. No rule for how an entitlement
+is allocated when delivery has not occurred by the record date, and no
+mention of due bills or claims at all.
+
+So :class:`RecordDatePosition` adopts that vocabulary exactly and
+:func:`absent_entitlement_treatment` refuses to go further. Computing an
+outcome here would be inventing market practice and presenting it as
+governance, which is the same error as reverse-engineering an undisclosed
+margin methodology and worse, because it would produce a number somebody
+might act on.
+
 DIRECTION IS NOT SYMMETRIC
 --------------------------
 A fail to deliver and a fail to receive are the same event from opposite
@@ -62,6 +83,7 @@ from atreides.rails.finality import FinalityClass
 
 __all__ = [
     "DOCTRINE_VERSION",
+    "NO_ENTITLEMENT_COMPUTATION_API",
     "NO_TRADE_LEVEL_FAIL_API",
     "CNSDisposition",
     "CloseOutRegime",
@@ -69,8 +91,10 @@ __all__ = [
     "MarketProfile",
     "NetPosition",
     "NetSettlementResult",
+    "RecordDatePosition",
     "SecuritiesBreak",
     "SecuritiesBreakCode",
+    "absent_entitlement_treatment",
     "absent_market_profile",
     "absent_trade_attribution",
     "close_out_deadline",
@@ -206,6 +230,7 @@ class CNSDisposition(StrEnum):
     """What happened to one net position at settlement."""
 
     SETTLED_IN_FULL = "settled_in_full"
+    """The whole net position moved."""
 
     PARTIAL_ALLOCATION = "partial_allocation"
     """Some of the position moved. The ordinary case in a netted system, not
@@ -280,11 +305,65 @@ class FailPosition:
     restated_by_corporate_action: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class RecordDatePosition:
+    """Balances at a corporate-action record date, in the published vocabulary.
+
+    Every field name here traces to a term used in depository corporate-action
+    usage guidance rather than to one this framework invented. That is the
+    seam rule: adopt the standard's language where the standard speaks, and
+    keep this framework's language for the decision layer, which the guidance
+    does not address.
+
+    The object holds balances and asserts no outcome. There is no
+    ``entitlement`` field and there will not be one - see
+    :func:`absent_entitlement_treatment`.
+    """
+
+    security_id: str
+
+    #: The balance the event is calculated against.
+    eligible_balance: Decimal
+    #: The balance actually settled. Normally equal to eligible, and not
+    #: equal where position moved after record-date capture.
+    settlement_balance: Decimal
+
+    #: Fails short. Carried on the movement advice and confirmation.
+    pending_delivery_balance: Decimal = Decimal(0)
+    #: Fails long. Same.
+    pending_receipt_balance: Decimal = Decimal(0)
+
+    #: Lottery and partial-call events: the called quantity that exceeds the
+    #: settled position and must be returned.
+    obligated_balance: Decimal = Decimal(0)
+    #: Voluntary events: protect instructions not covered by delivery.
+    uncovered_protect_balance: Decimal = Decimal(0)
+
+    #: Provenance for the guidance this profile of balances was populated
+    #: against. Same discipline as every other registry here.
+    provenance: str | None = None
+
+    @property
+    def diverges(self) -> bool:
+        """True where the eligible and settled balances are not the same.
+
+        The condition the guidance names. Not itself a finding about who is
+        owed what.
+        """
+        return self.eligible_balance != self.settlement_balance
+
+    @property
+    def divergence(self) -> Decimal:
+        return self.eligible_balance - self.settlement_balance
+
+
 class SecuritiesBreakCode(StrEnum):
     """Break taxonomy for the equities rail."""
 
     FAIL_TO_DELIVER = "fail_to_deliver"
+    """The member owes securities it did not deliver."""
     FAIL_TO_RECEIVE = "fail_to_receive"
+    """The member is owed securities it did not receive."""
 
     PARTIAL_WITH_UNEXPLAINED_ALLOCATION = "partial_with_unexplained_allocation"
     """A partial allocation on a market that does not publish its allocation
@@ -296,11 +375,19 @@ class SecuritiesBreakCode(StrEnum):
     Closed by populating the registry, not by any market action."""
 
     CLOSE_OUT_DEADLINE_PASSED = "close_out_deadline_passed"
+    """An open fail is past the market's published close-out deadline."""
 
-    UNSETTLED_ACROSS_RECORD_DATE = "unsettled_across_record_date"
-    """A fail spanning a corporate-action record date. Entitlement does not
-    disappear because delivery did; it becomes a claim, and a claim nobody
-    raised is a loss nobody recorded."""
+    ELIGIBLE_SETTLED_DIVERGENCE = "eligible_settled_divergence"
+    """An open position at a corporate-action record date, so the eligible
+    balance and the settled balance are not the same number.
+
+    This is the condition published depository guidance names and carries -
+    as an eligible-versus-settlement position distinction, and as pending
+    delivery and pending receipt balances riding on the entitlement and
+    confirmation messages. What that guidance does NOT state is the
+    entitlement treatment: which side ends up owed what. So the framework
+    records the divergence and refuses to compute the outcome. See
+    :func:`absent_entitlement_treatment`."""
 
     QUANTITY_NOT_RESTATED = "quantity_not_restated"
     """A ratio-changing corporate action occurred and the open quantity was
@@ -581,13 +668,18 @@ def _open_fail_breaks(
         )
 
     if spans_record_date:
+        side = "pending receipt (fail long)" if position.is_receive else (
+            "pending delivery (fail short)"
+        )
         out.append(
             SecuritiesBreak(
-                SecuritiesBreakCode.UNSETTLED_ACROSS_RECORD_DATE,
-                f"{position.security_id} was unsettled across a corporate "
-                f"action record date. Entitlement does not disappear because "
-                f"delivery did - it becomes a claim, and a claim nobody "
-                f"raised is a loss nobody recorded",
+                SecuritiesBreakCode.ELIGIBLE_SETTLED_DIVERGENCE,
+                f"{position.security_id} was open across a corporate action "
+                f"record date, so the eligible balance and the settled "
+                f"balance diverge by {residual.quantity} on the {side} side. "
+                f"The entitlement treatment is not computed here - published "
+                f"depository guidance carries this condition and does not "
+                f"state the outcome",
                 position.security_id,
             )
         )
@@ -632,6 +724,46 @@ def absent_trade_attribution(security_id: str) -> str:
     )
 
 
-#: Kept as a module-level marker so a reader searching for trade-level fail
-#: handling finds the refusal rather than an absence.
+def absent_entitlement_treatment(security_id: str) -> str:
+    """Why this module will not compute who is owed what across a record date.
+
+    Published depository usage guidance for corporate actions carries the
+    *condition* in detail. It distinguishes an eligible position from a
+    settlement position, states plainly that the two can diverge where
+    position moved after record-date capture, and rides pending-delivery and
+    pending-receipt balances - fails short and fails long - on the movement
+    preliminary advice and the movement confirmation. For lottery events it
+    carries an obligated balance for the case where the called quantity
+    exceeds the settled one, and for voluntary events an uncovered protect
+    balance.
+
+    What that guidance does not state is the **treatment**: no rule for how
+    an entitlement is allocated when delivery has not occurred by the record
+    date. Due bills and claims are not mentioned at all. The material
+    describes the shape of the problem and leaves the adjustment to
+    processes outside the messages.
+
+    So this framework records the divergence, names both sides, and stops.
+    Computing an entitlement outcome here would be inventing market practice
+    and presenting it as governance - the same error as reverse-engineering
+    an undisclosed margin methodology, and worse, because it would produce a
+    number somebody might act on.
+
+    Named and exported, and returning a sentence rather than a value, for
+    the same reason as :func:`absent_trade_attribution`.
+    """
+    return (
+        f"Entitlement treatment for the open position in {security_id} is not "
+        f"computed. The eligible-versus-settled divergence is recorded and "
+        f"both sides are named; the allocation rule is not published in the "
+        f"depository usage guidance this framework consumes, and inventing "
+        f"one would present market practice as governance "
+        f"(AUR-CUSTODY-EQUITY-001 draft)."
+    )
+
+
+#: Kept as module-level markers so a reader searching for trade-level fail
+#: handling or for entitlement computation finds the refusal rather than an
+#: absence.
 NO_TRADE_LEVEL_FAIL_API: Final[bool] = True
+NO_ENTITLEMENT_COMPUTATION_API: Final[bool] = True
