@@ -520,3 +520,8 @@ def test_not_novated_is_representable_and_is_not_a_fail() -> None:
     )
     assert r.is_fail is False
     assert r.completed is False
+
+
+def test_market_id_is_required() -> None:
+    with pytest.raises(ValueError, match="market_id is required"):
+        MarketProfile(market_id="")

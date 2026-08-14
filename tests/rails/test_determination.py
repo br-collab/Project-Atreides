@@ -537,3 +537,8 @@ def test_no_test_asserts_a_venue_will_or_will_not_exercise_its_authority() -> No
     than a gap. Doctrine: CASH-001 SIV, determination dependence.
     """
     assert not hasattr(DeterminationProfile, "probability_of_revocation")
+
+
+def test_venue_id_is_required() -> None:
+    with pytest.raises(ValueError, match="venue_id is required"):
+        DeterminationProfile(venue_id="")

@@ -60,7 +60,7 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**793 tests · 99% coverage · MIT licensed.**
+**1,024 tests · 99% coverage · MIT licensed.**
 
 ---
 

@@ -101,9 +101,9 @@ from atreides.rails.finality import FinalityClass
 
 __all__ = [
     "DOCTRINE_VERSION",
-    "RevocationForm",
     "DeterminationOutcome",
     "DeterminationProfile",
+    "RevocationForm",
     "absent_determination_profile",
     "classify_determination",
     "obligation_finality_class",

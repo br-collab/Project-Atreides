@@ -38,7 +38,7 @@ Status: v0.1 — doctrine-first implementation. Creates no authority.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 from typing import Final
@@ -51,22 +51,22 @@ from atreides.rails.finality import FinalityClass
 
 __all__ = [
     "DOCTRINE_VERSION",
-    "CashRail",
-    "FinalityClass",
-    "GateDecision",
-    "ReasonCode",
-    "RailStatus",
-    "RailState",
-    "FundingState",
-    "OperationContext",
-    "CatoFDecision",
-    "RAIL_FINALITY",
+    "GOLDEN_VECTORS",
     "OFR_ESCALATE_THRESHOLD",
     "OFR_HOLD_THRESHOLD",
     "OFR_STRESS_PREFERENCE_THRESHOLD",
-    "evaluate",
+    "RAIL_FINALITY",
+    "CashRail",
+    "CatoFDecision",
+    "FinalityClass",
+    "FundingState",
+    "GateDecision",
+    "OperationContext",
+    "RailState",
+    "RailStatus",
+    "ReasonCode",
     "absent_gate_decision",
-    "GOLDEN_VECTORS",
+    "evaluate",
 ]
 
 DOCTRINE_VERSION: Final[str] = "AUR-CUSTODY-CASH-001-v0.2"

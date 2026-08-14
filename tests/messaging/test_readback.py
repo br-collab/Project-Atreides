@@ -552,3 +552,40 @@ def test_no_function_here_resubmits() -> None:
         name.startswith(("resubmit", "retry", "reissue"))
         for name in readback_module.__all__
     )
+
+
+def test_a_break_with_no_detail_is_rejected() -> None:
+    from atreides.messaging.readback import ReadbackBreak
+
+    with pytest.raises(ValueError, match="not a finding"):
+        ReadbackBreak(ReadbackBreakCode.REJECTED, "")
+
+
+def test_a_pacs002_namespace_with_the_wrong_body_is_refused() -> None:
+    """The namespace says one thing and the body says another. Trusting
+    either alone is how a parser reports on a message it never read."""
+    xml = f'<Document xmlns="{NS}"><SomethingElse/></Document>'
+    with pytest.raises(ReadbackParseError, match="the body does not"):
+        parse_status_report(xml.encode())
+
+
+def test_an_unparseable_echoed_amount_is_recorded_as_absent() -> None:
+    """The document is otherwise usable. Refusing the whole message over one
+    unparseable field would be less honest than having nothing to compare."""
+    bad = _tx_block().replace(
+        "    </TxInfAndSts>",
+        '      <OrgnlTxRef><IntrBkSttlmAmt Ccy="USD">not-a-number'
+        "</IntrBkSttlmAmt></OrgnlTxRef>\n    </TxInfAndSts>",
+    )
+    report = parse_status_report(_report(tx_blocks=bad))
+    assert report.entries[0].echoed_amount is None
+
+
+def test_an_empty_original_transaction_reference_echoes_nothing() -> None:
+    bad = _tx_block().replace(
+        "    </TxInfAndSts>",
+        "      <OrgnlTxRef/>\n    </TxInfAndSts>",
+    )
+    report = parse_status_report(_report(tx_blocks=bad))
+    assert report.entries[0].echoed_amount is None
+    assert report.entries[0].echoed_currency is None

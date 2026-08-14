@@ -592,3 +592,12 @@ def test_no_test_asserts_a_predicted_margin_figure() -> None:
     """
     assert not hasattr(MarginImpact, "predict_margin")
     assert not any("predict" in name for name in MarginImpact.model_fields)
+
+
+def test_the_sort_key_is_the_priority_rank() -> None:
+    """Two names for one function, so a call site can read as what it is
+    doing rather than as what the function is called."""
+    from atreides.contracts.margin_impact import margin_sort_key
+
+    m = _impact()
+    assert margin_sort_key(m) == margin_priority_rank(m)
