@@ -214,7 +214,7 @@ def _render_module(module_name: str) -> str:
 def _persistence_section() -> str:
     # Local: `atreides` is not importable until the sys.path bootstrap above
     # has run, which happens after the module-level import block.
-    from atreides.dsor import store  # noqa: PLC0415
+    from atreides.dsor import store
 
     ddl = store._CREATE_TABLE.strip()
     index = store._CREATE_PARTIAL_INDEX.strip()

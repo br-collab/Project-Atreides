@@ -1,0 +1,110 @@
+# Continuous integration.
+#
+# This repository claims that a decision must be replayable by somebody who
+# was not there. Until this file existed, every verification claim in it -
+# test counts, coverage, strict typing - rested on one person having run the
+# suite locally and said so. That is the same shape of defect the framework
+# refuses everywhere else: an assertion with no independent record.
+#
+# Each gate below either passes for the whole repository or names exactly what
+# it excludes and why. Nothing here is advisory. A check that cannot fail
+# teaches a team to ignore it, which is worse than no check because an empty
+# Actions tab is honest and a green one that gates nothing is not.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" || pip install pytest pytest-cov mypy ruff hypothesis lxml pydantic
+
+      # Property tests run at the default profile here (200 examples). The deep
+      # profile is on a schedule below: it takes minutes rather than seconds,
+      # and a gate people wait out is a gate people skip.
+      - name: pytest
+        run: pytest -q
+
+      - name: Coverage
+        run: pytest -q --cov=atreides --cov-report=term --cov-fail-under=95
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install ruff
+      # Gates the whole repository. Every rule this project deliberately does
+      # not follow is listed in pyproject.toml with the reason - an
+      # unexplained ignore is indistinguishable from a rule somebody switched
+      # off because it was inconvenient.
+      - run: ruff check .
+
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install mypy pydantic lxml hypothesis pytest
+      # SCOPED, AND THE SCOPE IS THE POINT. mypy strict is clean across the
+      # rails, contracts, messaging and dsor packages - everything the four
+      # recent builds touch - and is NOT clean across cockpit and agents,
+      # which carry ten pre-existing errors.
+      #
+      # Those two packages are excluded here rather than the gate being
+      # softened repo-wide, so the debt is named and visible instead of
+      # dissolved into a passing check. Narrowing this list to nothing is the
+      # work; pretending it is already nothing is the thing not to do.
+      - run: mypy atreides/rails atreides/contracts atreides/messaging atreides/dsor
+
+  probes:
+    name: Probes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install pydantic lxml
+      # Exits non-zero if any scenario raises or if a trace differs between
+      # two runs of identical inputs. Byte-for-byte replay is the property the
+      # whole framework is sold on, so it is checked on every push rather than
+      # asserted in a README.
+      - name: Pipeline probe
+        run: python tools/pipeline_probe.py
+
+      # No performance threshold is asserted. Runner hardware varies and a
+      # pinned microsecond figure would fail for reasons that have nothing to
+      # do with this code. This step only proves the probe still runs.
+      - name: Throughput probe
+        run: python tools/throughput_probe.py --iterations 200

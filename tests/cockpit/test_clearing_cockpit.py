@@ -19,11 +19,12 @@ SettlementOperationsAnalyst.)
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
 
+from atreides.agents.tier1.outputs import SettlementKind, SettlementRail
 from atreides.cockpit import (
     BreakLeg,
     ClearingCockpit,
@@ -32,10 +33,9 @@ from atreides.cockpit import (
     PackageDisposition,
     PortalRegime,
 )
-from atreides.agents.tier1.outputs import SettlementKind, SettlementRail
 from atreides.contracts.dsor_stub import CAOMTier
 
-SETTLE_DATE = datetime(2026, 7, 16, tzinfo=timezone.utc)
+SETTLE_DATE = datetime(2026, 7, 16, tzinfo=UTC)
 
 
 def _capture(cockpit, *, regime=PortalRegime.CCP, clean=True, notional=Decimal("1000000"),
@@ -263,7 +263,11 @@ def test_instruction_package_is_never_a_submission():
 
 def test_no_credential_field_anywhere_on_models():
     from atreides.cockpit.clearing_cockpit import (
-        CockpitTasking, InstructionPackage as IP, PortalReadback,
+        CockpitTasking,
+        PortalReadback,
+    )
+    from atreides.cockpit.clearing_cockpit import (
+        InstructionPackage as IP,
     )
     for model in (CockpitTasking, IP, PortalReadback):
         fields = set(model.model_fields)

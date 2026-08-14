@@ -15,7 +15,7 @@ class TestFailureModeClassMembership:
 
     def test_taxonomy_has_exactly_four_classes(self) -> None:
         # Doctrinally fixed at four per AUR-CUSTODY-001 v1.0 Section VIII.
-        assert len(FailureModeClass) == 4  # noqa: PLR2004
+        assert len(FailureModeClass) == 4
 
     def test_ra_is_recoverable_automatic(self) -> None:
         assert FailureModeClass.RA.value == "RA"

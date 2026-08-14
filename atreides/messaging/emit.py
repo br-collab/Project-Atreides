@@ -19,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, cast
 from xml.etree import ElementTree as ET
 
 from atreides.messaging.canonical import CashLegInstruction, FinancialInstitution
@@ -112,7 +112,10 @@ def emit_business_application_header(
     if profile.business_service is not None:
         ET.SubElement(hdr, "BizSvc").text = profile.business_service
     ET.SubElement(hdr, "CreDt").text = _iso_datetime(instruction.created_at)
-    return ET.tostring(hdr, encoding="utf-8", xml_declaration=True)
+    # ``ET.tostring`` is stubbed as returning Any across its encoding
+    # overloads; it returns bytes for every encoding except "unicode".
+    # Cast rather than loosen the signature - the caller needs bytes.
+    return cast(bytes, ET.tostring(hdr, encoding="utf-8", xml_declaration=True))
 
 
 def emit_fi_credit_transfer(
@@ -149,7 +152,7 @@ def emit_fi_credit_transfer(
     _fi_element(tx, "Dbtr", instruction.debtor)
     _fi_element(tx, "Cdtr", instruction.creditor)
 
-    return ET.tostring(doc, encoding="utf-8", xml_declaration=True)
+    return cast(bytes, ET.tostring(doc, encoding="utf-8", xml_declaration=True))
 
 
 def emit_instruction_artifact(

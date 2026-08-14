@@ -21,7 +21,7 @@ class TestSurfaceCoverage:
 
     def test_at_least_twenty_surfaces_declared(self) -> None:
         # Per AUR-CUSTODY-001 v1.0 Section IX wording: "twenty-plus".
-        assert len(InherentSafetySurface) >= 20  # noqa: PLR2004
+        assert len(InherentSafetySurface) >= 20
 
     def test_every_surface_has_a_side(self) -> None:
         # No surface may be undeclared on the FIAT/digital parity axis.

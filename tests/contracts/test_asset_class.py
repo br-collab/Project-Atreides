@@ -19,7 +19,7 @@ class TestMajorCategoryCoverage:
     def test_eleven_categories_total(self) -> None:
         # Ten doctrinal categories + EMERGING = eleven enum members per
         # AUR-CUSTODY-001 v1.0 Section III.
-        assert len(MajorAssetCategory) == 11  # noqa: PLR2004
+        assert len(MajorAssetCategory) == 11
 
     def test_emerging_category_present(self) -> None:
         # Per Section III "Emerging and Future Asset Categories" — the
