@@ -60,7 +60,7 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**1,088 tests · 99% coverage · MIT licensed.**
+**1,130 tests · 99% coverage · MIT licensed.**
 
 ---
 
@@ -86,6 +86,11 @@ land in the same decision-of-record.
 ---
 
 ## Where to start reading
+
+**`pytest --hypothesis-profile=deep tests/test_properties.py`** attacks the
+doctrine directly: thirty-two invariants - a queue is never a failure, netting
+conserves quantity, unknown exposure outranks known cost, an unread rulebook
+never reads as clean - checked against inputs nobody chose.
 
 Run **`python3 tools/pipeline_probe.py`** to see twelve scenarios go end to end -
 funding, gate, emitted artifact, readback, break surface - each replayed twice and
