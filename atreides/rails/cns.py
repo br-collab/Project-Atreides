@@ -91,14 +91,17 @@ __all__ = [
     "MarketProfile",
     "NetPosition",
     "NetSettlementResult",
+    "ProcessingDateRule",
     "RecordDatePosition",
     "SecuritiesBreak",
     "SecuritiesBreakCode",
     "absent_entitlement_treatment",
     "absent_market_profile",
+    "absent_processing_date",
     "absent_trade_attribution",
     "close_out_deadline",
     "net_positions",
+    "processing_date_offset",
     "settle_net_position",
 ]
 
@@ -131,6 +134,48 @@ class CloseOutRegime(StrEnum):
     carried on the profile, in the market's own units."""
 
 
+class ProcessingDateRule(StrEnum):
+    """How a market fixes the business date a trade is processed for.
+
+    A settlement cycle is an integer of business days. That integer answers
+    "how long after the processing date does this settle", and it silently
+    assumes the answer to a prior question: **which business date is the
+    processing date.** In a market that trades within one session per day,
+    the two questions collapse into one and the assumption is free.
+
+    Extended-hours US equities separated them. The SEC order approving
+    NSCC's 24x5 clearing defines a Trade Processing Date - the business date
+    a trade is expected to clear for - and fixes its boundary with a Good
+    Night Message sent by each market around midnight. Trades submitted
+    before it are processed for that business date; trades after it roll to
+    the next.
+
+    So a trade at 11:58 PM and a trade at 12:02 AM can carry different
+    processing dates, and which one applies is **not derivable from the
+    timestamp**. It depends on when the market sent its message. An integer
+    cycle cannot express that, and a framework that stores only the integer
+    will compute a settlement date that is right most nights and wrong on
+    the nights that matter.
+
+    This enumeration therefore records how the boundary is fixed, and the
+    cycle integer becomes meaningful only once the processing date is known.
+    """
+
+    NOT_ASSESSED = "not_assessed"
+    """Nobody has read how this market fixes its processing date. NOT the
+    same as a fixed cycle, and defaulting to a fixed cycle is the specific
+    error this member exists to prevent."""
+
+    FIXED_CYCLE_FROM_TRADE_DATE = "fixed_cycle_from_trade_date"
+    """Read, and the processing date is the trade date. The settlement cycle
+    counts from the trade date directly and a timestamp is sufficient."""
+
+    SESSION_CLOSURE_MESSAGE = "session_closure_message"
+    """Read, and the processing date is fixed by a message the market sends
+    at the close of a session rather than by a clock. A timestamp alone does
+    not establish which business date a trade clears for."""
+
+
 @dataclass(frozen=True, slots=True)
 class MarketProfile:
     """One securities market's settlement characteristics.
@@ -144,11 +189,26 @@ class MarketProfile:
 
     market_id: str
 
-    #: Settlement cycle in business days from trade date. ``None`` where
-    #: unread. Recorded rather than assumed: markets have moved cycles
-    #: recently and in different years, and a hardcoded value would be
-    #: silently wrong for whichever market moved last.
+    #: Settlement cycle in business days **from the processing date**.
+    #: ``None`` where unread. Recorded rather than assumed: markets have
+    #: moved cycles recently and in different years, and a hardcoded value
+    #: would be silently wrong for whichever market moved last.
+    #:
+    #: Read this together with ``processing_date_rule``. On a market that
+    #: fixes its processing date by a session-closure message, this integer
+    #: does not on its own yield a settlement date - see
+    #: :func:`absent_processing_date`.
     settlement_cycle_days: int | None = None
+
+    #: How this market fixes the business date a trade is processed for.
+    #: Separate from the cycle because the cycle counts *from* that date and
+    #: cannot establish it.
+    processing_date_rule: ProcessingDateRule = ProcessingDateRule.NOT_ASSESSED
+    #: Under SESSION_CLOSURE_MESSAGE, the market's own name for the message
+    #: that closes the session - "Good Night Message" at NSCC. Carried in
+    #: the market's language rather than normalised, because an operator
+    #: chasing a rolled processing date searches for the market's term.
+    session_closure_message: str | None = None
 
     close_out_regime: CloseOutRegime = CloseOutRegime.NOT_ASSESSED
     #: Business days from the settlement date by which an open fail must be
@@ -170,6 +230,12 @@ class MarketProfile:
             object.__setattr__(
                 self, "close_out_regime", CloseOutRegime(self.close_out_regime)
             )
+        if not isinstance(self.processing_date_rule, ProcessingDateRule):
+            object.__setattr__(
+                self,
+                "processing_date_rule",
+                ProcessingDateRule(self.processing_date_rule),
+            )
 
         if not self.market_id:
             raise ValueError("market_id is required")
@@ -182,10 +248,12 @@ class MarketProfile:
         if not assessed and (
             self.close_out_deadline_days is not None
             or self.settlement_cycle_days is not None
+            or self.processing_date_rule is not ProcessingDateRule.NOT_ASSESSED
         ):
             raise ValueError(
-                "a NOT_ASSESSED profile may not state a settlement cycle or a "
-                "close-out deadline; you cannot record a rule you have not read"
+                "a NOT_ASSESSED profile may not state a settlement cycle, a "
+                "close-out deadline or a processing-date rule; you cannot "
+                "record a rule you have not read"
             )
         if (
             self.close_out_regime is CloseOutRegime.MANDATORY_DEADLINE
@@ -203,6 +271,37 @@ class MarketProfile:
                 "close_out_deadline_days is meaningful only under "
                 "MANDATORY_DEADLINE"
             )
+        message_determined = (
+            self.processing_date_rule is ProcessingDateRule.SESSION_CLOSURE_MESSAGE
+        )
+        if message_determined and not self.session_closure_message:
+            raise ValueError(
+                "SESSION_CLOSURE_MESSAGE requires the message to be named; an "
+                "operator reconciling a rolled processing date needs the "
+                "market's own term for it, not a flag"
+            )
+        if self.session_closure_message and not message_determined:
+            raise ValueError(
+                "session_closure_message is meaningful only under "
+                "SESSION_CLOSURE_MESSAGE"
+            )
+
+
+    @property
+    def settlement_date_follows_from_trade_date(self) -> bool:
+        """True only where a trade timestamp is sufficient to date settlement.
+
+        False under NOT_ASSESSED as well as under SESSION_CLOSURE_MESSAGE,
+        and deliberately so: "we have not read how this market fixes its
+        processing date" must not read the same as "the trade date is the
+        processing date". That collapse is the whole defect this field was
+        added to close.
+        """
+        return (
+            self.processing_date_rule
+            is ProcessingDateRule.FIXED_CYCLE_FROM_TRADE_DATE
+            and self.settlement_cycle_days is not None
+        )
 
 
 def absent_market_profile(market_id: str) -> MarketProfile:
@@ -231,6 +330,29 @@ def close_out_deadline(
         return None
     assert profile.close_out_deadline_days is not None  # enforced in __post_init__
     return settlement_date_offset_days + profile.close_out_deadline_days
+
+
+def processing_date_offset(
+    profile: MarketProfile, position: NetPosition
+) -> int | None:
+    """Business-date offset, from trade date, this position clears for.
+
+    Returns ``0`` on a market whose processing date is the trade date, the
+    offset the market assigned on a market that fixes the date by message,
+    and ``None`` wherever the date is not established - including where
+    nobody has read the market's rule.
+
+    ``None`` is returned for two different reasons and the function does not
+    distinguish them, on the same discipline as :func:`close_out_deadline`:
+    a caller that treats "the market has not sent its message yet" and "we
+    never read how this market works" as the same condition has a bug the
+    profile exists to surface rather than to smooth over.
+    """
+    if profile.processing_date_rule is ProcessingDateRule.FIXED_CYCLE_FROM_TRADE_DATE:
+        return 0
+    if profile.processing_date_rule is ProcessingDateRule.SESSION_CLOSURE_MESSAGE:
+        return position.assigned_processing_date_offset_days
+    return None
 
 
 class CNSDisposition(StrEnum):
@@ -284,6 +406,17 @@ class NetPosition:
     #: the record's sake and NEVER used to attribute an outcome back to any
     #: of them - see :func:`absent_trade_attribution`.
     constituent_trade_count: int = 0
+
+    #: On a market that fixes its processing date by a session-closure
+    #: message, the business-date offset the market actually assigned this
+    #: position, as reported by the market. ``None`` means the market has
+    #: not told us - which on such a market is a live unknown, not a
+    #: default - and ``None`` is also the correct value on a fixed-cycle
+    #: market, where the trade date is the processing date and nothing needs
+    #: to be assigned. The profile distinguishes those two cases; this field
+    #: deliberately does not, because a field that encoded the difference
+    #: would let a caller answer the question without reading the profile.
+    assigned_processing_date_offset_days: int | None = None
 
     @property
     def is_receive(self) -> bool:
@@ -401,6 +534,16 @@ class SecuritiesBreakCode(StrEnum):
     not restated. The fail is now denominated in shares that no longer
     exist in that form."""
 
+    PROCESSING_DATE_NOT_ESTABLISHED = "processing_date_not_established"
+    """The market fixes its processing date by a session-closure message and
+    no processing date has been reported for this position.
+
+    The settlement offset the position carries was derived from a trade
+    timestamp, and on this market a timestamp does not establish a business
+    date. The offset is therefore an assumption wearing the shape of a
+    record. Closed by the market reporting the date, not by anything the
+    member can do. See :func:`absent_processing_date`."""
+
     OUTCOME_NOT_REPORTED = "outcome_not_reported"
     """No settlement outcome was reported for the position. Fail-safe: not
     a settled position."""
@@ -456,6 +599,7 @@ def net_positions(
     market_id: str,
     settlement_date_offset_days: int,
     novated: bool = True,
+    assigned_processing_date_offset_days: int | None = None,
 ) -> tuple[NetPosition, ...]:
     """Net a set of ``(security_id, signed_quantity)`` trades into positions.
 
@@ -466,6 +610,12 @@ def net_positions(
     flagged as un-novated. A trade that did not enter the netting system has
     no net position by definition, and manufacturing one so the shape looks
     familiar would assert a settlement mechanism that does not occur.
+
+    ``assigned_processing_date_offset_days`` is passed through unchanged to
+    every position produced. It is a value the market reported, so it is
+    supplied rather than derived; leaving it ``None`` on a market that fixes
+    its processing date by message is a live unknown and
+    :func:`settle_net_position` says so.
     """
     if not novated:
         return ()
@@ -483,6 +633,9 @@ def net_positions(
             settlement_date_offset_days=settlement_date_offset_days,
             market_id=market_id,
             constituent_trade_count=counts[security_id],
+            assigned_processing_date_offset_days=(
+                assigned_processing_date_offset_days
+            ),
         )
         for security_id in sorted(totals)
     )
@@ -509,6 +662,31 @@ def settle_net_position(
     Check order is doctrine, not optimisation.
     """
     breaks: list[SecuritiesBreak] = []
+
+    # 0. Is the date this position clears for even established? Asked before
+    #    anything about allocation, and attached to every outcome including
+    #    a full settlement, because "it settled" and "it settled on the date
+    #    we assumed" are different assertions and only the first is
+    #    observable here. A fully settled position on the wrong side of a
+    #    session-closure boundary is still a reconciliation break the next
+    #    morning.
+    if (
+        profile.processing_date_rule is ProcessingDateRule.SESSION_CLOSURE_MESSAGE
+        and position.assigned_processing_date_offset_days is None
+    ):
+        breaks.append(
+            SecuritiesBreak(
+                SecuritiesBreakCode.PROCESSING_DATE_NOT_ESTABLISHED,
+                f"{position.security_id}: market {profile.market_id} fixes its "
+                f"processing date by "
+                f"{profile.session_closure_message or 'a session-closure message'} "
+                f"and has reported none for this position. The "
+                f"{position.settlement_date_offset_days}-day settlement offset "
+                f"carried here was derived from a timestamp, which on this "
+                f"market does not establish a business date",
+                position.security_id,
+            )
+        )
 
     def build(
         disposition: CNSDisposition,
@@ -704,6 +882,36 @@ def _open_fail_breaks(
         )
 
     return out
+
+
+def absent_processing_date(market_id: str, message_name: str | None = None) -> str:
+    """Why this module will not date a settlement it cannot date.
+
+    On a market that fixes its processing date with a session-closure
+    message, the business date a trade clears for is established by the
+    arrival of that message and not by the trade's own timestamp. Two trades
+    four minutes apart across midnight can clear for different business
+    dates, and no amount of arithmetic on the timestamps recovers which.
+
+    A settlement cycle expressed as an integer of business days answers the
+    question *after* this one. Applying it to an unestablished processing
+    date produces a settlement date that looks computed, carries no
+    qualification, and is wrong on exactly the trades an extended session
+    was introduced to enable.
+
+    Named and exported, and returning a sentence rather than a date, for the
+    same reason as :func:`absent_trade_attribution`: the answer is a refusal
+    and a refusal belongs in one auditable place.
+    """
+    named = message_name or "a session-closure message"
+    return (
+        f"No processing date for market {market_id}. This market fixes the "
+        f"business date a trade clears for by {named} rather than by a clock, "
+        f"and none has been reported. The settlement cycle counts from that "
+        f"date and cannot establish it, so no settlement date is derived "
+        f"here. This is an unknown with a name, not a missing field "
+        f"(AUR-CUSTODY-EQUITY-001 draft)."
+    )
 
 
 def absent_trade_attribution(security_id: str) -> str:

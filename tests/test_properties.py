@@ -26,6 +26,7 @@ somewhere in the corpus, restated in a form a machine can attack:
 - Unknown exposure outranks known cost.
 - Time moves a determination in one direction only.
 - Silence is never settlement, and never failure.
+- A date the market never fixed is never derived from a clock.
 
 A failure in this file is worth more than a failure anywhere else in the
 suite, because it means a sentence in the doctrine is false rather than a
@@ -73,7 +74,10 @@ from atreides.rails.cns import (
     CloseOutRegime,
     CNSDisposition,
     MarketProfile,
+    ProcessingDateRule,
+    SecuritiesBreakCode,
     net_positions,
+    processing_date_offset,
     settle_net_position,
 )
 from atreides.rails.determination import (
@@ -566,6 +570,65 @@ def test_an_unreported_outcome_is_never_a_settlement(quantity: Decimal) -> None:
     )
     assert result.disposition is CNSDisposition.INDETERMINATE
     assert result.completed is False
+
+
+@SETTINGS
+@given(money, st.one_of(st.none(), money), st.integers(0, 5))
+def test_a_message_determined_date_is_never_derived_from_a_clock(
+    quantity: Decimal, allocated: Decimal | None, offset: int
+) -> None:
+    """On a market that fixes its processing date by a session-closure
+    message, no combination of quantity, allocation or settlement offset
+    produces a processing date. The date arrives from the market or it does
+    not arrive - the framework never computes its way to one."""
+    position = net_positions(
+        (("SEC-A", quantity),),
+        market_id="X",
+        settlement_date_offset_days=offset,
+    )[0]
+    profile = MarketProfile(
+        market_id="X",
+        settlement_cycle_days=1,
+        close_out_regime=CloseOutRegime.MANDATORY_DEADLINE,
+        close_out_deadline_days=3,
+        processing_date_rule=ProcessingDateRule.SESSION_CLOSURE_MESSAGE,
+        session_closure_message="property test message",
+        provenance="property test",
+    )
+    assert processing_date_offset(profile, position) is None
+    result = settle_net_position(position, profile, allocated_quantity=allocated)
+    assert SecuritiesBreakCode.PROCESSING_DATE_NOT_ESTABLISHED in {
+        b.code for b in result.breaks
+    }
+
+
+@SETTINGS
+@given(
+    st.sampled_from(list(ProcessingDateRule)),
+    st.one_of(st.none(), st.integers(0, 5)),
+)
+def test_only_a_read_fixed_cycle_dates_settlement_from_the_trade_date(
+    rule: ProcessingDateRule, cycle: int | None
+) -> None:
+    """An unread rule must never read the same as a fixed cycle. This is the
+    collapse the field was added to prevent, asserted over every combination
+    rather than the two somebody wrote a test for."""
+    profile = MarketProfile(
+        market_id="X",
+        settlement_cycle_days=cycle,
+        close_out_regime=CloseOutRegime.NONE_PUBLISHED,
+        processing_date_rule=rule,
+        session_closure_message=(
+            "property test message"
+            if rule is ProcessingDateRule.SESSION_CLOSURE_MESSAGE
+            else None
+        ),
+        provenance="property test",
+    )
+    expected = (
+        rule is ProcessingDateRule.FIXED_CYCLE_FROM_TRADE_DATE and cycle is not None
+    )
+    assert profile.settlement_date_follows_from_trade_date is expected
 
 
 # --------------------------------------------------------------------------

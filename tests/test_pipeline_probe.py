@@ -91,3 +91,36 @@ def test_nothing_the_probe_emits_is_a_submission() -> None:
         artifact = trace.get("artifact")
         if artifact:
             assert artifact["is_submission"] is False
+
+
+def test_the_extended_hours_scenario_holds_three_answers_at_once() -> None:
+    """The condition the extended-hours signal memo describes, asserted end
+    to end because it is the seam three modules meet at and each of them
+    could be individually right while the combination is wrong.
+
+    Unobserved, still collectable, and clearing for a business date nobody
+    has established. Collapse any one of those into another and the record
+    says something false.
+    """
+    trace, _ = pipeline_probe.run("extended-hours")
+
+    # 1. Unobserved, and not misreported as uncollectable.
+    assert trace["margin"]["disposition"] == "indeterminate"
+    assert trace["margin"]["observability"] == "unobservable"
+    assert trace["margin"]["delta_amount"] is None
+    assert trace["venue_monitoring"]["resolved_to_call_window_closed"] is False
+
+    # 2. Still inside the unknown band, above every known cost.
+    assert trace["margin"]["escalates"] is True
+    assert trace["margin"]["priority_rank"] < 60
+
+    # 3. The shares moved and the date they moved for is still open.
+    assert trace["equity"]["settlement"]["disposition"] == "settled_in_full"
+    assert trace["equity"]["position"]["processing_date_offset"] is None
+    assert (
+        trace["equity"]["position"]["settlement_date_follows_from_trade_date"]
+        is False
+    )
+    assert "processing_date_not_established" in {
+        b["code"] for b in trace["equity"]["breaks"]
+    }

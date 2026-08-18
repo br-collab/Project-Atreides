@@ -69,6 +69,45 @@ class DeterminabilityRegime(StrEnum):
     downstream disposition is INDETERMINATE."""
 
 
+class MonitoringModel(StrEnum):
+    """When the venue can *see* an exposure, as distinct from when it can
+    collect against one.
+
+    Added because a market forced the distinction into the open. Extended
+    US equity trading runs a night session while the clearing corporation's
+    intraday exposure monitoring covers a narrower window, and the
+    corporation says so in its own SEC filing: monitoring runs on a
+    15-minute basis between stated hours, and it "is currently working to
+    expand its 15-minute monitoring capability beyond the current hours."
+
+    That is not a closed collection window. The exposure rolls into a
+    start-of-day call that will be made, so it is fully collectable. What is
+    absent is observation, and conflating the two would have this framework
+    reporting an uncollectable exposure where none exists.
+
+    So this enumeration answers a different question from
+    :class:`CollectionModel`, and the two are recorded separately for the
+    same reason disposition and observability are separate axes on a margin
+    assessment.
+    """
+
+    NOT_ASSESSED = "NOT_ASSESSED"
+    """Nobody has read the venue's monitoring arrangements. Not the same as
+    a venue that monitors continuously, and the remedy is research."""
+
+    CONTINUOUS = "CONTINUOUS"
+    """The venue observes exposures across its whole trading day."""
+
+    BOUNDED_WINDOW = "BOUNDED_WINDOW"
+    """The venue observes on a stated cycle within stated hours, and trading
+    occurs outside them. The interval is carried alongside; the gap between
+    that interval and the trading session is the exposure this class exists
+    to make visible."""
+
+    NONE_PUBLISHED = "NONE_PUBLISHED"
+    """Read, and the venue publishes no monitoring arrangement at all."""
+
+
 class CollectionModel(StrEnum):
     """When the venue can actually call and collect margin.
 
@@ -180,6 +219,17 @@ class VenueMarginProfile(BaseModel):
 
     determinability: DeterminabilityRegime = DeterminabilityRegime.UNDISCLOSED
     collection_model: CollectionModel = CollectionModel.UNKNOWN
+
+    #: When the venue can SEE an exposure. Separate from collection because
+    #: a venue can observe continuously and collect daily, or trade
+    #: continuously and observe only within stated hours - and the second
+    #: case is now the largest equity market in the US for part of each
+    #: night.
+    monitoring_model: MonitoringModel = MonitoringModel.NOT_ASSESSED
+    #: Under BOUNDED_WINDOW, the hours the monitoring cycle covers, in the
+    #: venue's own stated terms. Free text rather than a parsed interval:
+    #: venues state this in prose and parsing it would be inference.
+    monitoring_window: str | None = None
     revocation_authority: RevocationAuthority = RevocationAuthority.NONE_DISCLOSED
 
     eligible_collateral: tuple[CollateralEligibility, ...] = ()
@@ -219,6 +269,34 @@ class VenueMarginProfile(BaseModel):
                 )
         return self
 
+    @model_validator(mode="after")
+    def _monitoring_window_requires_a_bounded_model(self) -> VenueMarginProfile:
+        bounded = self.monitoring_model is MonitoringModel.BOUNDED_WINDOW
+        if self.monitoring_window is not None and not bounded:
+            raise ValueError(
+                "monitoring_window is meaningful only under BOUNDED_WINDOW; "
+                "a venue that monitors continuously has no window to state"
+            )
+        if bounded and not self.monitoring_window:
+            raise ValueError(
+                "BOUNDED_WINDOW must state the window it is bounded to; the "
+                "gap between that window and the trading session IS the "
+                "finding, and it cannot be computed from a bare flag"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _monitoring_assertion_requires_population(self) -> VenueMarginProfile:
+        if (
+            self.status is ProfileStatus.UNVERIFIED
+            and self.monitoring_model is not MonitoringModel.NOT_ASSESSED
+        ):
+            raise ValueError(
+                "an UNVERIFIED profile may not assert a monitoring model "
+                "(AUR-CUSTODY-MARGIN-001 sec. 4)"
+            )
+        return self
+
     @property
     def figure_may_be_trusted_absolutely(self) -> bool:
         """True only where margin is deterministic at the venue.
@@ -248,6 +326,7 @@ __all__ = [
     "CollateralEligibility",
     "CollectionModel",
     "DeterminabilityRegime",
+    "MonitoringModel",
     "ProfileStatus",
     "ResponsivenessObservation",
     "RevocationAuthority",
