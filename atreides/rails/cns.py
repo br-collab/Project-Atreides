@@ -164,6 +164,13 @@ class MarketProfile:
     provenance: str | None = None
 
     def __post_init__(self) -> None:
+        # Coerce at the boundary - see DeterminationProfile for the reasoning.
+        # An exported profile that cannot be read back in is not portable.
+        if not isinstance(self.close_out_regime, CloseOutRegime):
+            object.__setattr__(
+                self, "close_out_regime", CloseOutRegime(self.close_out_regime)
+            )
+
         if not self.market_id:
             raise ValueError("market_id is required")
         assessed = self.close_out_regime is not CloseOutRegime.NOT_ASSESSED

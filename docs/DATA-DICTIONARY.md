@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**165 of 165 enumeration values (100%) state what they mean in
+**170 of 170 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -625,6 +625,18 @@ When the venue can actually call and collect.
 | `closes_at_offset_seconds` | `int \| None` | no |  |
 | `reopens_at_offset_seconds` | `int \| None` | no |  |
 
+#### `IndeterminacyReason` (enumeration)
+
+Why a margin state is not observable.
+
+| Value | Meaning |
+| --- | --- |
+| `not_applicable` | The disposition is not INDETERMINATE. Nothing here applies. |
+| `unspecified` | Indeterminate, and nobody has said why. Ranks first within the group: the break cannot even be routed, and triage is both the fastest action available and the one that unblocks every other. |
+| `unreconciled_position` | The position itself is not reconciled. An operations task, closeable today, and the most likely of the three to be masking real exposure. |
+| `unread_venue_profile` | No profile has been populated for the venue. A research task: closed by reading an entitled document, not by any market action, and not closeable inside the day. |
+| `venue_publishes_nothing` | The venue was assessed and discloses no margin methodology on any standard basis. Ranks last within the group because there is no work item - it is a standing condition and a risk acceptance already taken. Distinct from UNREAD_VENUE_PROFILE for exactly the reason NOT_ASSESSED is distinct from NONE_DISCLOSED everywhere else in this framework. |
+
 #### `MarginDirection` (enumeration)
 
 Which way the money goes.
@@ -663,6 +675,7 @@ The margin consequence of one break, with the evidence behind it.
 | `delta_amount` | `decimal.Decimal \| None` | no |  |
 | `delta_currency` | `str \| None` | no |  |
 | `materiality_threshold` | `decimal.Decimal \| None` | no |  |
+| `indeterminacy` | `IndeterminacyReason` | no |  |
 | `venue` | `str \| None` | no |  |
 | `methodology` | `str \| None` | no |  |
 | `collateral_finality_class` | `rails.finality.FinalityClass \| None` | no |  |

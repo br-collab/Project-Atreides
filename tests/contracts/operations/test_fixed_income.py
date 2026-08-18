@@ -106,7 +106,7 @@ class TestRepoTermRule:
             transaction_type=FixedIncomeTransactionType.REPO_TERM,
             repo_term_days=14,
         )
-        assert op.repo_term_days == 14  # noqa: PLR2004
+        assert op.repo_term_days == 14
 
     def test_zero_term_days_rejected(
         self,

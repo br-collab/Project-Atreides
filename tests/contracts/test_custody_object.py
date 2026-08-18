@@ -60,7 +60,7 @@ def _eth_asset() -> AssetClass:
 class TestCategoryCoverage:
     def test_five_categories_enumerated(self) -> None:
         # Per AUR-CUSTODY-001 v1.0 Section IV — five categories.
-        assert len(CustodyObjectCategory) == 5  # noqa: PLR2004
+        assert len(CustodyObjectCategory) == 5
 
 
 class TestOrdinarySafekeeping:

@@ -686,7 +686,7 @@ class FIATOperationsSpecialist:
     # picture per CUS Section VII Step 1.
     # ------------------------------------------------------------------
 
-    def _check_material_magnitude(  # noqa: PLR0911 — one return per trigger / dimension is the clearest dispatch.
+    def _check_material_magnitude(
         self,
         *,
         request: PathSelectionRequest,

@@ -42,6 +42,7 @@ from hypothesis import strategies as st
 
 from atreides.contracts.margin_impact import (
     CallWindow,
+    IndeterminacyReason,
     MarginDirection,
     MarginDisposition,
     MarginImpact,
@@ -600,6 +601,16 @@ def margin_impacts(draw):
     return MarginImpact(
         disposition=disposition,
         direction=direction,
+        indeterminacy=(
+            draw(
+                st.sampled_from(
+                    [r for r in IndeterminacyReason
+                     if r is not IndeterminacyReason.NOT_APPLICABLE]
+                )
+            )
+            if disposition is MarginDisposition.INDETERMINATE
+            else IndeterminacyReason.NOT_APPLICABLE
+        ),
         observability=(
             Observability.OBSERVED
             if quantified
@@ -649,6 +660,7 @@ def test_unknown_exposure_always_outranks_known_cost(
         direction=MarginDirection.UNKNOWN,
         observability=Observability.UNOBSERVABLE,
         collateral_observability=Observability.UNOBSERVABLE,
+        indeterminacy=IndeterminacyReason.VENUE_PUBLISHES_NOTHING,
         venue=venue_a,
         basis="property test",
     )

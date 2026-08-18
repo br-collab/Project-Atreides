@@ -5,18 +5,25 @@ package. Every output in the walkthrough is produced by this script.
 
     python docs/walkthrough_demo.py
 """
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 
+from atreides.messaging import (
+    CashLegInstruction,
+    FinancialInstitution,
+    emit_instruction_artifact,
+    settlement_method_for_rail,
+)
 from atreides.rails.cato_f import (
-    CashRail, FinalityClass, GateDecision, OperationContext,
-    RailState, RailStatus, absent_gate_decision, evaluate,
+    CashRail,
+    FinalityClass,
+    OperationContext,
+    RailState,
+    RailStatus,
+    absent_gate_decision,
+    evaluate,
 )
 from atreides.rails.funding_state import CashFlow, FundingInputs, project_funding
-from atreides.messaging import (
-    CashLegInstruction, FinancialInstitution,
-    emit_instruction_artifact, settlement_method_for_rail,
-)
 
 D, T0 = Decimal, datetime(2026, 8, 3, 14, 30, tzinfo=UTC)
 line = lambda t: print(f"\n{'='*66}\n{t}\n{'='*66}")

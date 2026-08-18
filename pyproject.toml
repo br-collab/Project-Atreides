@@ -44,7 +44,38 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "PL", "RUF"]
-ignore = ["PLR0913"]  # too-many-arguments — Pydantic models legitimately have many fields
+
+# Every entry here is a deliberate house decision, recorded with its reason.
+# An unexplained ignore is indistinguishable from a rule somebody switched off
+# because it was inconvenient - the same distinction this framework draws
+# between NOT_ASSESSED and NONE_DISCLOSED everywhere else.
+ignore = [
+    # Pydantic models legitimately have many fields.
+    "PLR0913",
+    "PLR0917",
+    # Gate and model check ladders return early, once per doctrine check. The
+    # ordering IS the doctrine (CASH-001 SV.B), so collapsing the returns to
+    # satisfy a counter would obscure the thing the code exists to express.
+    "PLR0911",
+    # Deliberate function-local imports: breaking an import cycle at the one
+    # place a value is needed, and the sys.path bootstrap in tools/ which must
+    # run before the package is importable. Each carries a comment saying so.
+    "PLC0415",
+    # Test assertions on domain quantities. Extracting "expected 3 trades" to a
+    # named constant makes the assertion harder to read, not easier.
+    "PLR2004",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Recorded debt rather than silent passes. These predate the current test
+# conventions and should be narrowed to the specific exception each one means;
+# they are listed here so the gap is visible in review rather than discovered.
+"tests/cockpit/test_clearing_cockpit.py" = ["B017", "N817"]
+"tests/messaging/test_emit.py" = ["B017"]
+"tests/rails/test_cato_f.py" = ["B017"]
+"atreides/cockpit/clearing_cockpit.py" = ["N818"]
+"atreides/agents/tier1/investigation_outputs.py" = ["RUF007"]
+"docs/walkthrough_demo.py" = ["E731"]
 
 [tool.mypy]
 python_version = "3.11"

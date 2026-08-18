@@ -80,8 +80,8 @@ class TestThresholdDefaults:
     def test_constants_match_doctrine_default(self) -> None:
         # The constants are part of the contract surface — agents
         # depend on the named default.
-        assert DEFAULT_THRESHOLD_N == 3  # noqa: PLR2004
-        assert DEFAULT_THRESHOLD_M == 5  # noqa: PLR2004
+        assert DEFAULT_THRESHOLD_N == 3
+        assert DEFAULT_THRESHOLD_M == 5
 
 
 class TestThresholdValidation:
@@ -370,13 +370,13 @@ class TestCeremonyStepCoverage:
     def test_six_steps_enumerated(self) -> None:
         # Per AUR-CUSTODY-001 v1.0 Section VII signature ceremony
         # protocol — six steps.
-        assert len(CeremonyStep) == 6  # noqa: PLR2004
+        assert len(CeremonyStep) == 6
 
 
 class TestCeremonyStateCoverage:
     def test_five_states_enumerated(self) -> None:
         # PENDING / IN_PROGRESS / COMPLETED / FAILED / ESCALATED.
-        assert len(CeremonyState) == 5  # noqa: PLR2004
+        assert len(CeremonyState) == 5
 
 
 class TestImmutability:

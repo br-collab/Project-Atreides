@@ -1,0 +1,51 @@
+# Nightly deep property hunt.
+#
+# The deep Hypothesis profile runs 2,000 examples per property and takes
+# minutes rather than seconds - roughly eleven and a half on one developer
+# machine. That is too long for a per-push gate: a check people wait out is a
+# check people learn to skip, and a skipped check reads as coverage while
+# providing none.
+#
+# So it runs here instead, where nobody is waiting. This is the mode that
+# hunts rather than confirms, and the properties most likely to catch
+# something are the two conservation laws - netting conserves quantity, and
+# allocated plus residual is what was owed - because those break silently
+# under a future optimisation and their failure would mean something
+# reconciles to nothing.
+
+name: Nightly
+
+on:
+  schedule:
+    # 04:00 UTC daily.
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  deep-properties:
+    name: Property hunt (2,000 examples)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install pytest hypothesis pydantic lxml
+
+      - name: Deep property run
+        run: pytest --hypothesis-profile=deep tests/test_properties.py -q
+
+      # A counterexample is the entire value of a failed run and it does not
+      # survive a re-run: Hypothesis prints a minimal failing case and a
+      # @seed(...) that reproduces it exactly. Keep the database so a failure
+      # can be reproduced rather than merely reported.
+      - name: Preserve the example database
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hypothesis-examples
+          path: .hypothesis/
+          if-no-files-found: ignore
+          retention-days: 30

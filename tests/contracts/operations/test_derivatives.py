@@ -147,4 +147,4 @@ class TestAllocationRule:
             contract_identifier="ISDA-67890",
             allocation_account_ids=("ACC-1", "ACC-2", "ACC-3"),
         )
-        assert len(op.allocation_account_ids or ()) == 3  # noqa: PLR2004
+        assert len(op.allocation_account_ids or ()) == 3

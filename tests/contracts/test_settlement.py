@@ -34,7 +34,7 @@ class TestKindEnumeration:
 
     def test_eleven_methods_enumerated(self) -> None:
         # Eleven canonical methods per AUR-CUSTODY-001 v1.0 Section V.
-        assert len(SettlementMethodKind) == 11  # noqa: PLR2004
+        assert len(SettlementMethodKind) == 11
 
     @pytest.mark.parametrize(
         "value",
