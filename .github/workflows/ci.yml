@@ -108,3 +108,12 @@ jobs:
       # do with this code. This step only proves the probe still runs.
       - name: Throughput probe
         run: python tools/throughput_probe.py --iterations 200
+
+      # NOT run with --strict, deliberately. The stress probe currently
+      # reports fifteen findings; gating on zero would mean either deleting
+      # the findings or leaving CI red forever, and both teach a team to
+      # ignore the check. What IS gated is drift: tests/test_stress_probe.py
+      # pins the verdict tally, so a fixed defect or a new one fails the
+      # suite and has to be accounted for in review.
+      - name: Stress probe
+        run: python tools/stress_probe.py
