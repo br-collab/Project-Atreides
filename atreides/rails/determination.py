@@ -206,6 +206,16 @@ class DeterminationProfile:
     provenance: str | None = None
 
     def __post_init__(self) -> None:
+        # Coerce at the boundary. A profile reconstructed from exported JSON
+        # arrives with a plain string where an enum member belongs, and every
+        # check below compares members by identity. Without this the
+        # portability commitment in AUR-REGISTRY-PORTABILITY-001 is false:
+        # what comes out cannot be read back in.
+        if not isinstance(self.revocation_form, RevocationForm):
+            object.__setattr__(
+                self, "revocation_form", RevocationForm(self.revocation_form)
+            )
+
         if not self.venue_id:
             raise ValueError("venue_id is required")
 

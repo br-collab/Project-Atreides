@@ -64,6 +64,7 @@ from atreides.rails.finality import FinalityClass
 __all__ = [
     "DOCTRINE_VERSION",
     "CallWindow",
+    "IndeterminacyReason",
     "MarginDirection",
     "MarginDisposition",
     "MarginImpact",
@@ -136,6 +137,54 @@ class MarginDirection(StrEnum):
     """Measured, and no cash consequence in either direction."""
     UNKNOWN = "unknown"
     """Direction not established. The default where nobody assessed it."""
+
+
+class IndeterminacyReason(StrEnum):
+    """Why a margin state is not observable.
+
+    Exists because of a collision found by measurement rather than by
+    reading: every venue profile ships flagged, so an unassessed break
+    resolves to INDETERMINATE by the fail-safe, INDETERMINATE carried a
+    single priority rank, and a queue of five hundred unassessed breaks
+    therefore had no ordering at all. The fail-safe default and the
+    prioritisation rule were each correct in isolation and degenerate
+    together.
+
+    Sub-ranking does NOT repair the shipped state, and claiming otherwise
+    would be the second mistake. Where nobody has assessed anything there is
+    no information to order by, and inventing one would be worse than a flat
+    queue. What this does is give triage somewhere to put its answer, so the
+    queue orders itself as soon as a human looks - and makes the flatness
+    diagnosable rather than invisible.
+
+    The three substantive reasons carry three different remedies, which is
+    the whole justification for separating them: a research task, an
+    operations task, and a risk acceptance already taken.
+    """
+
+    NOT_APPLICABLE = "not_applicable"
+    """The disposition is not INDETERMINATE. Nothing here applies."""
+
+    UNSPECIFIED = "unspecified"
+    """Indeterminate, and nobody has said why. Ranks first within the group:
+    the break cannot even be routed, and triage is both the fastest action
+    available and the one that unblocks every other."""
+
+    UNRECONCILED_POSITION = "unreconciled_position"
+    """The position itself is not reconciled. An operations task, closeable
+    today, and the most likely of the three to be masking real exposure."""
+
+    UNREAD_VENUE_PROFILE = "unread_venue_profile"
+    """No profile has been populated for the venue. A research task: closed
+    by reading an entitled document, not by any market action, and not
+    closeable inside the day."""
+
+    VENUE_PUBLISHES_NOTHING = "venue_publishes_nothing"
+    """The venue was assessed and discloses no margin methodology on any
+    standard basis. Ranks last within the group because there is no work
+    item - it is a standing condition and a risk acceptance already taken.
+    Distinct from UNREAD_VENUE_PROFILE for exactly the reason NOT_ASSESSED is
+    distinct from NONE_DISCLOSED everywhere else in this framework."""
 
 
 class Observability(StrEnum):
@@ -237,6 +286,10 @@ class MarginImpact(BaseModel):
     #: for every firm, so the assessment records which one it used.
     materiality_threshold: Decimal | None = Field(default=None, ge=Decimal("0"))
 
+    #: Why the margin state is not observable. Meaningful only where the
+    #: disposition is INDETERMINATE; validated below.
+    indeterminacy: IndeterminacyReason = IndeterminacyReason.NOT_APPLICABLE
+
     venue: str | None = None
     #: The methodology as the venue discloses it, never as this framework
     #: computes it.
@@ -327,6 +380,24 @@ class MarginImpact(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _indeterminacy_reason_matches_disposition(self) -> MarginImpact:
+        indeterminate = self.disposition is MarginDisposition.INDETERMINATE
+        applicable = self.indeterminacy is not IndeterminacyReason.NOT_APPLICABLE
+        if applicable and not indeterminate:
+            raise ValueError(
+                f"indeterminacy={self.indeterminacy.value} is meaningful only "
+                f"where the disposition is INDETERMINATE, got "
+                f"{self.disposition.value}"
+            )
+        if indeterminate and not applicable:
+            raise ValueError(
+                "an INDETERMINATE assessment must say why it is "
+                "indeterminate; UNSPECIFIED is a valid answer and NOT_APPLICABLE "
+                "is not, because the three reasons carry three different remedies"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _indeterminate_asserts_no_figure(self) -> MarginImpact:
         if (
             self.disposition is MarginDisposition.INDETERMINATE
@@ -381,6 +452,7 @@ class MarginImpact(BaseModel):
 
 def absent_margin_assessment(
     reason: str = "no margin assessment was made",
+    indeterminacy: IndeterminacyReason = IndeterminacyReason.UNSPECIFIED,
 ) -> MarginImpact:
     """The fail-safe default: INDETERMINATE, never NO_MARGIN_EFFECT.
 
@@ -399,6 +471,7 @@ def absent_margin_assessment(
         direction=MarginDirection.UNKNOWN,
         observability=Observability.UNOBSERVABLE,
         collateral_observability=Observability.UNOBSERVABLE,
+        indeterminacy=indeterminacy,
         basis=(
             f"{reason}. Absent-assessment default is INDETERMINATE, never "
             f"NO_MARGIN_EFFECT (AUR-CUSTODY-MARGIN-001 sec. 6)."
@@ -414,17 +487,34 @@ def absent_margin_assessment(
 #: in this table because their rank depends on the call window, which is a
 #: property of the assessment rather than of the disposition - see
 #: :func:`margin_priority_rank`.
+# Ranks are spaced by ten so a group can be sub-ranked without renumbering
+# its neighbours. Relative order is unchanged from the first version; only
+# the scale moved, and no test that compares two ranks is affected.
 _BASE_RANK: Final[dict[MarginDisposition, int]] = {
-    MarginDisposition.CALL_WINDOW_CLOSED: 2,
-    MarginDisposition.INDETERMINATE: 3,
-    MarginDisposition.METHODOLOGY_DEPENDENT: 4,
-    MarginDisposition.OVER_COLLATERALIZED: 6,
-    MarginDisposition.WITHIN_TOLERANCE: 7,
-    MarginDisposition.NO_MARGIN_EFFECT: 8,
+    MarginDisposition.CALL_WINDOW_CLOSED: 20,
+    MarginDisposition.INDETERMINATE: 30,
+    MarginDisposition.METHODOLOGY_DEPENDENT: 40,
+    MarginDisposition.OVER_COLLATERALIZED: 60,
+    MarginDisposition.WITHIN_TOLERANCE: 70,
+    MarginDisposition.NO_MARGIN_EFFECT: 80,
 }
 
-_UNDER_IN_CYCLE: Final[int] = 1
-_UNDER_OUT_OF_CYCLE: Final[int] = 5
+_UNDER_IN_CYCLE: Final[int] = 10
+_UNDER_OUT_OF_CYCLE: Final[int] = 50
+
+#: Offsets within the INDETERMINATE band. Same principle as the outer
+#: ordering: priority tracks what can be acted upon and how fast. A break
+#: nobody has classified leads, because triage is the fastest action
+#: available and it unblocks everything behind it. A venue that publishes
+#: nothing trails, because there is no work item at all - it is a standing
+#: condition somebody already accepted.
+_INDETERMINACY_OFFSET: Final[dict[IndeterminacyReason, int]] = {
+    IndeterminacyReason.UNSPECIFIED: 0,
+    IndeterminacyReason.UNRECONCILED_POSITION: 1,
+    IndeterminacyReason.UNREAD_VENUE_PROFILE: 2,
+    IndeterminacyReason.VENUE_PUBLISHES_NOTHING: 3,
+    IndeterminacyReason.NOT_APPLICABLE: 0,
+}
 
 
 def margin_priority_rank(impact: MarginImpact) -> int:
@@ -454,6 +544,10 @@ def margin_priority_rank(impact: MarginImpact) -> int:
         window = impact.call_window
         in_cycle = window is not None and window.is_open
         return _UNDER_IN_CYCLE if in_cycle else _UNDER_OUT_OF_CYCLE
+    if impact.disposition is MarginDisposition.INDETERMINATE:
+        return _BASE_RANK[impact.disposition] + _INDETERMINACY_OFFSET[
+            impact.indeterminacy
+        ]
     return _BASE_RANK[impact.disposition]
 
 

@@ -17,6 +17,7 @@ from pydantic import ValidationError
 
 from atreides.contracts.margin_impact import (
     CallWindow,
+    IndeterminacyReason,
     MarginDirection,
     MarginDisposition,
     MarginImpact,
@@ -205,6 +206,7 @@ def test_indeterminate_direction_is_unconstrained() -> None:
         disposition=MarginDisposition.INDETERMINATE,
         direction=MarginDirection.OWED_TO_VENUE,
         observability=Observability.UNOBSERVABLE,
+        indeterminacy=IndeterminacyReason.UNSPECIFIED,
         delta_amount=None,
         delta_currency=None,
     )
@@ -310,6 +312,7 @@ def test_indeterminate_with_a_delta_is_rejected() -> None:
             disposition=MarginDisposition.INDETERMINATE,
             direction=MarginDirection.UNKNOWN,
             observability=Observability.UNOBSERVABLE,
+            indeterminacy=IndeterminacyReason.UNSPECIFIED,
         )
 
 
@@ -377,7 +380,7 @@ def test_determination_dependent_obligation_is_representable_here() -> None:
 
 def test_in_cycle_call_leads() -> None:
     in_cycle = _impact(call_window=_open_window())
-    assert margin_priority_rank(in_cycle) == 1
+    assert margin_priority_rank(in_cycle) == 10
 
 
 def test_call_window_closed_outranks_indeterminate() -> None:
@@ -436,6 +439,11 @@ def test_every_disposition_has_a_rank(disposition: MarginDisposition) -> None:
             _shut_window()
             if disposition is MarginDisposition.CALL_WINDOW_CLOSED
             else None
+        ),
+        indeterminacy=(
+            IndeterminacyReason.UNSPECIFIED
+            if disposition is MarginDisposition.INDETERMINATE
+            else IndeterminacyReason.NOT_APPLICABLE
         ),
     )
     assert isinstance(margin_priority_rank(m), int)
@@ -601,3 +609,107 @@ def test_the_sort_key_is_the_priority_rank() -> None:
 
     m = _impact()
     assert margin_sort_key(m) == margin_priority_rank(m)
+
+
+# ---------------------------------------------------------------------------
+# Why it is indeterminate, and what that does to the queue
+# ---------------------------------------------------------------------------
+
+
+def _indeterminate(reason: IndeterminacyReason) -> MarginImpact:
+    return absent_margin_assessment("volume test", reason)
+
+
+def test_an_indeterminate_assessment_must_say_why() -> None:
+    """UNSPECIFIED is a valid answer. NOT_APPLICABLE is not, because the
+    reasons carry three different remedies and a break that names none of
+    them cannot be routed to anybody."""
+    with pytest.raises(ValidationError, match="must say why it is"):
+        _impact(
+            disposition=MarginDisposition.INDETERMINATE,
+            direction=MarginDirection.UNKNOWN,
+            observability=Observability.UNOBSERVABLE,
+            delta_amount=None,
+            delta_currency=None,
+            indeterminacy=IndeterminacyReason.NOT_APPLICABLE,
+        )
+
+
+def test_a_reason_on_a_determinate_disposition_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="meaningful only where"):
+        _impact(indeterminacy=IndeterminacyReason.UNREAD_VENUE_PROFILE)
+
+
+def test_the_indeterminate_band_now_has_an_internal_order() -> None:
+    """The defect this exists to fix: five hundred unassessed breaks used to
+    share one rank, so the queue had no ordering in the state the framework
+    actually ships in."""
+    ranks = [
+        margin_priority_rank(_indeterminate(r))
+        for r in (
+            IndeterminacyReason.UNSPECIFIED,
+            IndeterminacyReason.UNRECONCILED_POSITION,
+            IndeterminacyReason.UNREAD_VENUE_PROFILE,
+            IndeterminacyReason.VENUE_PUBLISHES_NOTHING,
+        )
+    ]
+    assert ranks == sorted(ranks)
+    assert len(set(ranks)) == 4
+
+
+def test_triage_leads_the_indeterminate_band() -> None:
+    """A break nobody has classified cannot be routed to anybody, and triage
+    is both the fastest action available and the one that unblocks the
+    rest."""
+    unspecified = margin_priority_rank(_indeterminate(IndeterminacyReason.UNSPECIFIED))
+    for other in (
+        IndeterminacyReason.UNRECONCILED_POSITION,
+        IndeterminacyReason.UNREAD_VENUE_PROFILE,
+        IndeterminacyReason.VENUE_PUBLISHES_NOTHING,
+    ):
+        assert unspecified < margin_priority_rank(_indeterminate(other))
+
+
+def test_a_standing_condition_trails_every_work_item() -> None:
+    """A venue that publishes nothing is a risk acceptance already taken.
+    There is no work item, so it must not sit above breaks that have one."""
+    standing = margin_priority_rank(
+        _indeterminate(IndeterminacyReason.VENUE_PUBLISHES_NOTHING)
+    )
+    for actionable in (
+        IndeterminacyReason.UNSPECIFIED,
+        IndeterminacyReason.UNRECONCILED_POSITION,
+        IndeterminacyReason.UNREAD_VENUE_PROFILE,
+    ):
+        assert standing > margin_priority_rank(_indeterminate(actionable))
+
+
+def test_the_whole_indeterminate_band_still_outranks_every_known_cost() -> None:
+    """Sub-ranking must not leak across the band boundary. Unknown exposure
+    outranks known cost, and the least urgent unknown still beats the most
+    urgent known one."""
+    worst_unknown = margin_priority_rank(
+        _indeterminate(IndeterminacyReason.VENUE_PUBLISHES_NOTHING)
+    )
+    over = _impact(
+        disposition=MarginDisposition.OVER_COLLATERALIZED,
+        direction=MarginDirection.OWED_TO_FIRM,
+    )
+    assert worst_unknown < margin_priority_rank(over)
+
+
+def test_sub_ranking_does_not_repair_a_wholly_unassessed_queue() -> None:
+    """Stated as a test because the honest limit matters more than the fix.
+
+    Where nobody has assessed anything, every break is UNSPECIFIED and the
+    queue is still flat. That is correct: there is no information to order
+    by, and manufacturing one would be worse than a flat queue. What changed
+    is that triage now has somewhere to put its answer.
+    """
+    queue = tuple(absent_margin_assessment(f"break {i}") for i in range(50))
+    assert len({margin_priority_rank(m) for m in queue}) == 1
+    triaged = queue[:1] + tuple(
+        absent_margin_assessment(f"break {i}", IndeterminacyReason.UNREAD_VENUE_PROFILE)
+        for i in range(1, 50)
+    )
+    assert len({margin_priority_rank(m) for m in triaged}) == 2
