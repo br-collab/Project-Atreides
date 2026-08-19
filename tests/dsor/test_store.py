@@ -239,3 +239,58 @@ class TestReplayReturnType:
         record = mem_store.append(escalation_output, dtg=dtg)
         replayed = mem_store.replay(record.record_id)
         assert isinstance(replayed, EscalationRequired)
+
+
+# ---------------------------------------------------------------------------
+# A correction must correct something that exists
+# ---------------------------------------------------------------------------
+
+
+def test_a_correction_pointing_at_nothing_is_refused(
+    mem_store: DSORStore, routing_decision_output: RoutingDecision
+) -> None:
+    """The append-only guarantee is a partial unique index that exempts any
+    record with a non-null ``correction_of``. Nothing checked the pointer
+    resolved, so any random UUID bought that exemption: a second original for
+    an operation could be appended by claiming to correct a record that never
+    existed. The store's only integrity control was defeated by a bad value
+    rather than by an attack.
+    """
+    mem_store.append(routing_decision_output)
+    with pytest.raises(DSORRecordNotFoundError, match="does not resolve"):
+        mem_store.append(routing_decision_output, correction_of=uuid4())
+
+
+def test_the_refusal_names_the_pointer_rather_than_the_constraint(
+    mem_store: DSORStore, routing_decision_output: RoutingDecision
+) -> None:
+    """A caller passing a stale identifier needs to be told that, not handed
+    a violation about append-only records they did not violate."""
+    mem_store.append(routing_decision_output)
+    missing = uuid4()
+    with pytest.raises(DSORRecordNotFoundError) as excinfo:
+        mem_store.append(routing_decision_output, correction_of=missing)
+    assert str(missing) in str(excinfo.value)
+
+
+def test_a_genuine_correction_still_appends(
+    mem_store: DSORStore, routing_decision_output: RoutingDecision
+) -> None:
+    original = mem_store.append(routing_decision_output)
+    corrected = mem_store.append(
+        routing_decision_output, correction_of=original.record_id
+    )
+    assert corrected.correction_of == original.record_id
+    assert mem_store.replay(original.record_id) is not None
+
+
+def test_a_dangling_correction_cannot_smuggle_in_a_second_original(
+    mem_store: DSORStore, routing_decision_output: RoutingDecision
+) -> None:
+    """The consequence, asserted directly: without the resolution check, this
+    is how the append-only constraint was bypassed."""
+    mem_store.append(routing_decision_output)
+    with pytest.raises(DSORRecordNotFoundError):
+        mem_store.append(routing_decision_output, correction_of=uuid4())
+    with pytest.raises(DSORAppendOnlyError):
+        mem_store.append(routing_decision_output)

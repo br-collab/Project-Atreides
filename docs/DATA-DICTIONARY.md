@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**181 of 181 enumeration values (100%) state what they mean in
+**182 of 182 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -470,6 +470,7 @@ Break taxonomy for the equities rail.
 | `eligible_settled_divergence` | An open position at a corporate-action record date, so the eligible balance and the settled balance are not the same number. This is the condition published depository guidance names and carries - as an eligible-versus-settlement position distinction, and as pending delivery and pending receipt balances riding on the entitlement and confirmation messages. What that guidance does NOT state is the entitlement treatment: which side ends up owed what. So the framework records the divergence and refuses to compute the outcome. See :func:`absent_entitlement_treatment`. |
 | `quantity_not_restated` | A ratio-changing corporate action occurred and the open quantity was not restated. The fail is now denominated in shares that no longer exist in that form. |
 | `processing_date_not_established` | The market fixes its processing date by a session-closure message and no processing date has been reported for this position. The settlement offset the position carries was derived from a trade timestamp, and on this market a timestamp does not establish a business date. The offset is therefore an assumption wearing the shape of a record. Closed by the market reporting the date, not by anything the member can do. See :func:`absent_processing_date`. |
+| `allocation_against_flat_position` | The venue reported a movement in a security this member had netted to zero. Either the member's book is wrong - a trade booked to the wrong side, a wrong-CUSIP capture, a trade never captured at all - or the venue allocated against a position that does not exist. Both are serious and the framework cannot tell them apart from the participant seat, so it records the disagreement rather than resolving it. The disposition stays FLAT because the net position genuinely is flat. What changes is that the day no longer reads clean. |
 | `outcome_not_reported` | No settlement outcome was reported for the position. Fail-safe: not a settled position. |
 
 ---

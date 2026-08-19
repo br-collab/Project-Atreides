@@ -999,26 +999,33 @@ def e1_3() -> tuple[str, str]:
 
 
 @case("E2", "E2.1", "A margin figure asserted far above its own materiality threshold",
-      "a WITHIN_TOLERANCE assessment must be consistent with the threshold it records",
+      "whether WITHIN_TOLERANCE is checked against the tolerance it records",
       "SPEC-MARGIN-AWARE-BREAKS S12")
 def e2_1() -> tuple[str, str]:
+    try:
+        impact = MarginImpact(
+            disposition=MarginDisposition.WITHIN_TOLERANCE,
+            direction=MarginDirection.NEUTRAL,
+            observability=Observability.OBSERVED,
+            collateral_observability=Observability.OBSERVED,
+            delta_amount=D("1000000000"),
+            delta_currency="USD",
+            materiality_threshold=D("1"),
+            basis="poisoned assessment",
+        )
+    except Exception as exc:
+        return HELD, (
+            f"refused at construction: {type(exc).__name__}. A delta above "
+            f"its own recorded threshold can no longer be labelled within "
+            f"tolerance, so a poisoned or mis-triaged figure cannot sink to "
+            f"the bottom of the break queue."
+        )
     from atreides.contracts.margin_impact import margin_priority_rank
 
-    impact = MarginImpact(
-        disposition=MarginDisposition.WITHIN_TOLERANCE,
-        direction=MarginDirection.NEUTRAL,
-        observability=Observability.OBSERVED,
-        collateral_observability=Observability.OBSERVED,
-        delta_amount=D("1000000000"),
-        delta_currency="USD",
-        materiality_threshold=D("1"),
-        basis="poisoned assessment",
-    )
-    ok = impact.escalates
-    return (HELD if ok else BROKE), (
+    return BROKE, (
         f"delta={impact.delta_amount} threshold={impact.materiality_threshold} "
-        f"escalates={impact.escalates} rank={margin_priority_rank(impact)} "
-        f"(the threshold is recorded and never compared to the delta)"
+        f"escalates={impact.escalates} rank={margin_priority_rank(impact)}. "
+        f"The threshold is recorded and never compared to the delta."
     )
 
 

@@ -841,3 +841,73 @@ def test_sub_ranking_does_not_repair_a_wholly_unassessed_queue() -> None:
         for i in range(1, 50)
     )
     assert len({margin_priority_rank(m) for m in triaged}) == 2
+
+
+# ---------------------------------------------------------------------------
+# WITHIN_TOLERANCE must actually be within it
+# ---------------------------------------------------------------------------
+
+
+def test_a_delta_above_its_own_threshold_is_refused() -> None:
+    """The one contradiction this model's own disposition name asserts, and
+    the only cross-field check it was missing. A billion against a threshold
+    of one used to construct, report escalates=False, and sort to the bottom
+    of the queue."""
+    with pytest.raises(ValidationError, match="asserts a delta below"):
+        _impact(
+            disposition=MarginDisposition.WITHIN_TOLERANCE,
+            direction=MarginDirection.NEUTRAL,
+            delta_amount=D("1000000000"),
+            delta_currency="USD",
+            materiality_threshold=D("1"),
+        )
+
+
+def test_a_delta_below_its_threshold_is_accepted() -> None:
+    impact = _impact(
+        disposition=MarginDisposition.WITHIN_TOLERANCE,
+        direction=MarginDirection.NEUTRAL,
+        delta_amount=D("12"),
+        delta_currency="USD",
+        materiality_threshold=D("50000"),
+    )
+    assert impact.escalates is False
+
+
+def test_a_delta_exactly_at_the_threshold_is_within_it() -> None:
+    """Stated rather than left to a reader: the boundary is inclusive, on the
+    same reasoning as every other threshold in this framework."""
+    impact = _impact(
+        disposition=MarginDisposition.WITHIN_TOLERANCE,
+        direction=MarginDirection.NEUTRAL,
+        delta_amount=D("500"),
+        delta_currency="USD",
+        materiality_threshold=D("500"),
+    )
+    assert impact.disposition is MarginDisposition.WITHIN_TOLERANCE
+
+
+def test_the_magnitude_is_compared_not_the_sign() -> None:
+    """A large negative delta is as material as a large positive one."""
+    with pytest.raises(ValidationError, match="asserts a delta below"):
+        _impact(
+            disposition=MarginDisposition.WITHIN_TOLERANCE,
+            direction=MarginDirection.NEUTRAL,
+            delta_amount=D("-1000000"),
+            delta_currency="USD",
+            materiality_threshold=D("100"),
+        )
+
+
+def test_an_unfigured_tolerance_assessment_is_left_alone() -> None:
+    """The guarded half of the comparison. Where no delta was supplied there
+    is nothing to compare, and inventing one would be worse than not
+    checking."""
+    impact = _impact(
+        disposition=MarginDisposition.WITHIN_TOLERANCE,
+        direction=MarginDirection.NEUTRAL,
+        delta_amount=None,
+        delta_currency=None,
+        materiality_threshold=D("50000"),
+    )
+    assert impact.delta_amount is None

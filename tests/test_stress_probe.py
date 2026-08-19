@@ -41,10 +41,13 @@ import stress_probe  # noqa: E402
 #: the determination divergence, because AWAITING_DETERMINATION produces an
 #: INDETERMINATE disposition. H5.4 HELD -> HELD with a different expectation:
 #: +inf is now named unusable rather than escalated as observed stress.
+#:
+#: 19 Aug 2026, later: the four MEDIUM findings closed too. H7.4, E5.6,
+#: E2.1 and E7.3 all moved BROKE -> HELD. Eight findings remain, all LOW.
 EXPECTED = {
-    "HELD": 24,
+    "HELD": 28,
     "BY_DESIGN": 15,
-    "BROKE": 12,
+    "BROKE": 8,
     "NO_TARGET": 9,
 }
 

@@ -165,9 +165,46 @@ class DSORStore:
                 non-correction record for ``output.operation_id`` already
                 exists, or if a ``record_id`` collision occurs (vanishingly
                 unlikely with uuid4 but enforced by the PRIMARY KEY).
+            DSORRecordNotFoundError: If ``correction_of`` is set and does not
+                resolve to a record in this store. A non-resolving pointer
+                would exempt the new record from the append-only constraint,
+                so it is refused rather than stored.
         """
         if dtg is None:
             dtg = datetime.now(tz=UTC)
+
+        # A correction must correct something that exists.
+        #
+        # The append-only guarantee is a partial unique index over
+        # ``(operation_id) WHERE correction_of IS NULL``, so a record with a
+        # non-null ``correction_of`` is exempt from it. Nothing checked that
+        # the pointer resolved, which meant any random UUID bought that
+        # exemption: a second "original" for an operation could be appended
+        # by claiming to correct a record that never existed, and the only
+        # integrity control this store has was defeated by a bad value rather
+        # than by an attack.
+        #
+        # Checked here rather than by a foreign key because the message
+        # matters. A caller who passes a stale identifier needs to be told
+        # that, not handed a constraint violation about append-only records
+        # they did not violate.
+        if correction_of is not None:
+            row = self._conn.execute(
+                "SELECT 1 FROM dsor_records WHERE record_id = ?",
+                (str(correction_of),),
+            ).fetchone()
+            if row is None:
+                raise DSORRecordNotFoundError(
+                    f"correction_of={correction_of!s} does not resolve to a "
+                    f"record in this store. A correction chain that points at "
+                    f"nothing is not a chain, and a non-resolving pointer "
+                    f"would exempt this record from the append-only "
+                    f"constraint (AUR-CANONICAL-001 v1.6 Axiom 4)."
+                )
+            if correction_of == getattr(output, "record_id", None):
+                raise DSORAppendOnlyError(
+                    "a record may not correct itself"
+                )
 
         record = DSORRecord.assemble(output, dtg=dtg, correction_of=correction_of)
         payload = output.model_dump_json()

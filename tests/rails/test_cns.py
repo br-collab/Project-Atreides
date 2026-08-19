@@ -771,3 +771,78 @@ def test_there_is_no_entitlement_computation_api() -> None:
         name.startswith(("compute_entitlement", "allocate_entitlement", "cash_in_lieu"))
         for name in dir(cns)
     )
+
+
+# ---------------------------------------------------------------------------
+# A movement reported against a flat position
+#
+# The stress probe's best finding: this branch discarded the venue's figure
+# and returned a clean day. It is the same error OUTCOME_NOT_REPORTED exists
+# to prevent, running the other way - there the framework refuses to infer
+# settlement from silence, here it was inferring silence from a settlement it
+# had been told about.
+# ---------------------------------------------------------------------------
+
+
+def test_a_reported_allocation_against_a_flat_position_is_a_break() -> None:
+    position = net_positions(
+        (("SEC-A", D("100")), ("SEC-A", D("-100"))),
+        market_id="XCLR",
+        settlement_date_offset_days=1,
+    )[0]
+    result = settle_net_position(position, _profile(), allocated_quantity=D("50"))
+    assert result.disposition is CNSDisposition.FLAT
+    codes = {b.code for b in result.breaks}
+    assert SecuritiesBreakCode.ALLOCATION_AGAINST_FLAT_POSITION in codes
+
+
+def test_the_venues_figure_is_not_discarded() -> None:
+    """It was overwritten with zero in the result object, so the number the
+    venue reported did not survive anywhere in the record."""
+    position = net_positions(
+        (("SEC-A", D("100")), ("SEC-A", D("-100"))),
+        market_id="XCLR",
+        settlement_date_offset_days=1,
+    )[0]
+    result = settle_net_position(position, _profile(), allocated_quantity=D("50"))
+    assert result.allocated_quantity == D("50")
+
+
+def test_a_disputed_flat_day_is_not_a_completed_day() -> None:
+    position = net_positions(
+        (("SEC-A", D("100")), ("SEC-A", D("-100"))),
+        market_id="XCLR",
+        settlement_date_offset_days=1,
+    )[0]
+    result = settle_net_position(position, _profile(), allocated_quantity=D("50"))
+    assert result.completed is False
+
+
+def test_an_undisputed_flat_position_still_completes_cleanly() -> None:
+    """The fix must not turn every netted-out security into a break."""
+    position = net_positions(
+        (("SEC-A", D("100")), ("SEC-A", D("-100"))),
+        market_id="XCLR",
+        settlement_date_offset_days=1,
+    )[0]
+    result = settle_net_position(position, _profile(), allocated_quantity=D("0"))
+    assert result.disposition is CNSDisposition.FLAT
+    assert result.completed is True
+    assert result.breaks == ()
+
+
+def test_the_break_names_both_sides_of_the_disagreement() -> None:
+    position = net_positions(
+        (("SEC-A", D("100")), ("SEC-A", D("-100"))),
+        market_id="XCLR",
+        settlement_date_offset_days=1,
+    )[0]
+    result = settle_net_position(position, _profile(), allocated_quantity=D("50"))
+    detail = next(
+        b.detail
+        for b in result.breaks
+        if b.code is SecuritiesBreakCode.ALLOCATION_AGAINST_FLAT_POSITION
+    )
+    assert "50" in detail
+    assert "zero" in detail
+    assert "cannot say which" in detail

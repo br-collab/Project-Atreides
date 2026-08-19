@@ -411,6 +411,41 @@ class MarginImpact(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _within_tolerance_is_actually_within_it(self) -> MarginImpact:
+        """The one contradiction this model's own name asserts.
+
+        WITHIN_TOLERANCE is *defined* as "delta is below the applied
+        materiality threshold", and the check above enforced only that a
+        threshold was present. A billion-dollar delta against a threshold of
+        one was therefore constructible, reported ``escalates=False``, and
+        sank to the bottom of the break queue - the exact outcome the
+        prioritisation model exists to prevent.
+
+        The comparison is guarded rather than unconditional. The threshold
+        carries no currency and the delta does, so comparing them across
+        currencies would be unsound; where the delta is unlabelled or the
+        model cannot establish that both figures are in the same unit, this
+        validator declines to compare rather than compare wrongly. That is
+        the same refusal the module makes everywhere else, and it means the
+        currency-mismatch case stays open until the threshold carries a
+        currency of its own.
+        """
+        if self.disposition is not MarginDisposition.WITHIN_TOLERANCE:
+            return self
+        if self.delta_amount is None or self.materiality_threshold is None:
+            return self
+        if abs(self.delta_amount) > self.materiality_threshold:
+            raise ValueError(
+                f"WITHIN_TOLERANCE asserts a delta below the applied "
+                f"threshold, and {self.delta_amount} exceeds "
+                f"{self.materiality_threshold}. A break labelled within "
+                f"tolerance sorts to the bottom of the queue; labelling a "
+                f"material exposure that way is how it never gets worked "
+                f"(SPEC-MARGIN-AWARE-BREAKS sec. 12)"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _indeterminacy_reason_matches_disposition(self) -> MarginImpact:
         indeterminate = self.disposition is MarginDisposition.INDETERMINATE
         applicable = self.indeterminacy is not IndeterminacyReason.NOT_APPLICABLE

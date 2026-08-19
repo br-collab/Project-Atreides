@@ -544,6 +544,19 @@ class SecuritiesBreakCode(StrEnum):
     record. Closed by the market reporting the date, not by anything the
     member can do. See :func:`absent_processing_date`."""
 
+    ALLOCATION_AGAINST_FLAT_POSITION = "allocation_against_flat_position"
+    """The venue reported a movement in a security this member had netted to
+    zero.
+
+    Either the member's book is wrong - a trade booked to the wrong side, a
+    wrong-CUSIP capture, a trade never captured at all - or the venue
+    allocated against a position that does not exist. Both are serious and
+    the framework cannot tell them apart from the participant seat, so it
+    records the disagreement rather than resolving it.
+
+    The disposition stays FLAT because the net position genuinely is flat.
+    What changes is that the day no longer reads clean."""
+
     OUTCOME_NOT_REPORTED = "outcome_not_reported"
     """No settlement outcome was reported for the position. Fail-safe: not
     a settled position."""
@@ -581,12 +594,23 @@ class NetSettlementResult:
 
     @property
     def completed(self) -> bool:
-        """True only for a full settlement or a flat position.
+        """True only for a full settlement or a flat position, and only where
+        nothing is disputed.
 
         A partial allocation is deliberately excluded even though something
-        moved, because the residual is a live obligation and treating the
-        day as done is how a residual gets dropped.
+        moved, because the residual is a live obligation and treating the day
+        as done is how a residual gets dropped.
+
+        A flat position carrying an allocation the venue reported is excluded
+        for the same reason in a different direction: the position is flat and
+        the venue says otherwise, and a day with an unexplained movement in it
+        is not a completed day.
         """
+        if any(
+            b.code is SecuritiesBreakCode.ALLOCATION_AGAINST_FLAT_POSITION
+            for b in self.breaks
+        ):
+            return False
         return self.disposition in {
             CNSDisposition.SETTLED_IN_FULL,
             CNSDisposition.FLAT,
@@ -721,13 +745,46 @@ def settle_net_position(
         )
 
     # 2. Flat. Trades netted out; nothing settles and nothing failed.
+    #
+    #    A movement reported against a flat position is not nothing. This
+    #    branch used to discard `allocated_quantity` and return FLAT with a
+    #    hardcoded zero, so a venue-reported allocation in a security the
+    #    firm had netted out vanished: no break, completed True, and a stock
+    #    record quietly one movement out of line with the depository until
+    #    the next reconciliation or a buy-in.
+    #
+    #    That is the same error the OUTCOME_NOT_REPORTED check two lines
+    #    above exists to prevent, running the other way: there the framework
+    #    refuses to infer settlement from silence, and here it was inferring
+    #    silence from a settlement it had been told about.
     if position.quantity == 0:
+        if allocated_quantity != 0:
+            breaks.append(
+                SecuritiesBreak(
+                    SecuritiesBreakCode.ALLOCATION_AGAINST_FLAT_POSITION,
+                    f"the venue reported an allocation of {allocated_quantity} "
+                    f"in {position.security_id}, and this member's net "
+                    f"position in it is zero across "
+                    f"{position.constituent_trade_count} trades. One of the "
+                    f"two records is wrong and this framework cannot say "
+                    f"which; it will not discard the venue's figure to make "
+                    f"the day read clean",
+                    position.security_id,
+                )
+            )
         return build(
             CNSDisposition.FLAT,
-            Decimal(0),
+            allocated_quantity,
             None,
             f"Net position in {position.security_id} is zero across "
-            f"{position.constituent_trade_count} trades. Netted out.",
+            f"{position.constituent_trade_count} trades. Netted out."
+            + (
+                f" The venue nonetheless reported an allocation of "
+                f"{allocated_quantity}; recorded as a break rather than "
+                f"discarded."
+                if allocated_quantity != 0
+                else ""
+            ),
         )
 
     outstanding = position.quantity - allocated_quantity
