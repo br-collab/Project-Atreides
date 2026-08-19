@@ -569,13 +569,38 @@ def h3_4() -> tuple[str, str]:
 
 
 @case("H4", "H4.1", "Counterparty credit deterioration",
-      "a counterparty rating, exposure or credit input",
-      "no doctrine section - the field does not exist")
+      "whether counterparty standing reaches the settlement decision",
+      "CASH-001 SV.B check 2b")
 def h4_1() -> tuple[str, str]:
-    return NO_TARGET, (
-        "There is no counterparty field on OperationContext, FundingInputs or "
-        "FundingState. The cockpit carries counterparty_id as an opaque string "
-        "that no gate reads. Counterparty stress cannot be expressed as input."
+    from atreides.rails.cato_f import Counterparty, CounterpartyStanding
+
+    results = {}
+    for standing in CounterpartyStanding:
+        assessed = standing is not CounterpartyStanding.NOT_ASSESSED
+        cp = Counterparty(
+            counterparty_id="CP-1",
+            standing=standing,
+            provenance="credit file" if assessed else None,
+            assessed_age_seconds=3600 if assessed else None,
+        )
+        d = evaluate(
+            operation=_op(counterparty=cp),
+            funding=_funded(),
+            rails=_rails(),
+            ofr_stlfsi4=0.0,
+        )
+        results[standing.value] = f"{d.decision.value}/{d.reason_code.value}"
+    stopped = all(
+        not results[s].startswith("PROCEED")
+        for s in ("not_assessed", "under_review", "suspended", "defaulted")
+    )
+    proceeds_when_clean = results["in_good_standing"].startswith("PROCEED")
+    ok = stopped and proceeds_when_clean
+    return (HELD if ok else BROKE), (
+        "; ".join(f"{k}={v}" for k, v in results.items())
+        + ". Consumed, never derived: the framework holds no credit model. "
+        "Supplying a counterparty can only make the gate stricter, so the "
+        "field is never an incentive to omit."
     )
 
 
@@ -686,15 +711,36 @@ def h5_2() -> tuple[str, str]:
 
 
 @case("H5", "H5.3", "The stress reading is six months stale",
-      "a staleness, as-of or provenance constraint on market data",
-      "no doctrine section - no timestamp exists on any gate input")
+      "a staleness bound on market data",
+      "CASH-001 SV.B check 0b, the freshness policy")
 def h5_3() -> tuple[str, str]:
-    return NO_TARGET, (
-        "No input to evaluate() carries an as_of, observed_at, source or "
-        "max_age field. RailState is documented as supplied by 'the caller's "
-        "refresh loop' and has no timestamp. A reading from six months ago is "
-        "accepted with the same standing as one from this second and the "
-        "record cannot tell them apart."
+    from atreides.rails.cato_f import FreshnessPolicy
+
+    policy = FreshnessPolicy(max_stress_reading_age_seconds=3600)
+    six_months = 60 * 60 * 24 * 182
+    d = evaluate(
+        operation=_op(),
+        funding=_funded(),
+        rails=_rails(),
+        ofr_stlfsi4=0.0,
+        stress_reading_age_seconds=six_months,
+        freshness_policy=policy,
+    )
+    unknown = evaluate(
+        operation=_op(),
+        funding=_funded(),
+        rails=_rails(),
+        ofr_stlfsi4=0.0,
+        freshness_policy=policy,
+    )
+    ok = d.decision.value == "HOLD" and unknown.decision.value == "HOLD"
+    return (HELD if ok else BROKE), (
+        f"six months old -> {d.decision.value}/{d.reason_code.value}; age "
+        f"never recorded -> {unknown.decision.value}/"
+        f"{unknown.reason_code.value}. Policed only where a policy is stated: "
+        f"a caller that states none is not policed and the checks tuple says "
+        f"so, which is a weaker guarantee than a default bound and a more "
+        f"honest one than a bound nobody chose."
     )
 
 
@@ -1144,14 +1190,43 @@ def e3_1() -> tuple[str, str]:
 
 
 @case("E3", "E3.2", "Escalation delivery under load",
-      "a router, queue, notifier or acknowledgement path",
-      "EscalationRequired carries an escalation_tier")
+      "whether an escalation nobody read is distinguishable from a worked one",
+      "AUR-CUSTODY-ESCALATION-001 draft: raising is not delivering")
 def e3_2() -> tuple[str, str]:
-    return NO_TARGET, (
-        "escalation_tier is a label on an object, not a destination. There is "
-        "no router, no queue, no notifier and no acknowledgement. An "
-        "escalation 'goes to' store.append() - a row in SQLite. Whether a "
-        "human ever sees it is outside this framework entirely."
+    from atreides.escalation import (
+        Escalation,
+        EscalationRegister,
+        EscalationState,
+    )
+
+    register = EscalationRegister()
+    for i in range(500):
+        register.raise_escalation(
+            Escalation(
+                escalation_id=f"E-{i:04d}",
+                operation_id=uuid.UUID(int=i),
+                raised_at_offset_seconds=0,
+                reason="stress-probe escalation",
+                routed_to="credit-desk",
+                acknowledge_by_offset_seconds=900,
+            )
+        )
+    register.acknowledge("E-0000", by="j.doe", at_offset_seconds=100)
+    unacked = register.unacknowledged(as_of_offset_seconds=1000)
+    overdue = register.overdue(as_of_offset_seconds=1000)
+    worked = register.state("E-0000", as_of_offset_seconds=1000)
+    ok = (
+        len(unacked) == 499
+        and len(overdue) == 499
+        and worked is EscalationState.ACKNOWLEDGED
+    )
+    return (HELD if ok else BROKE), (
+        f"500 raised, 1 acknowledged -> {len(unacked)} unacknowledged, "
+        f"{len(overdue)} overdue, and the worked one reads "
+        f"{worked.value}. An unread escalation is now a different artifact "
+        f"from a worked one, which it was not. Still no transport: this "
+        f"holds the state of a delivery and refuses to hold the mechanism, "
+        f"so what it buys is that the absence is measurable."
     )
 
 

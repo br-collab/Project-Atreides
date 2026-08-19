@@ -17,7 +17,10 @@ from atreides.rails.cato_f import (
     OFR_STRESS_PREFERENCE_THRESHOLD,
     CashRail,
     CatoFDecision,
+    Counterparty,
+    CounterpartyStanding,
     FinalityClass,
+    FreshnessPolicy,
     FundingState,
     GateDecision,
     OperationContext,
@@ -413,13 +416,15 @@ def test_zero_stress_does_not_fire_the_band() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _serviceable_op(notional: str = "5000000") -> OperationContext:
-    return OperationContext(
-        notional=Decimal(notional),
-        currency="USD",
-        is_material=False,
-        is_lvps_material=False,
-    )
+def _serviceable_op(notional: str = "5000000", **kw: object) -> OperationContext:
+    base: dict[str, object] = {
+        "notional": Decimal(notional),
+        "currency": "USD",
+        "is_material": False,
+        "is_lvps_material": False,
+    }
+    base.update(kw)
+    return OperationContext(**base)  # type: ignore[arg-type]
 
 
 def _deep_funding(obligation: str = "5000000") -> FundingState:
@@ -639,3 +644,294 @@ def test_a_hand_built_funding_state_still_asserts_its_position() -> None:
         Decimal("100000000000"), Decimal("5000000"), Decimal("100000000000"), True
     )
     assert state.position_is_assertable is True
+
+
+# ---------------------------------------------------------------------------
+# Tier A: freshness and counterparty standing
+#
+# Two of the nine scenario families the stress probe had to report as
+# NO_TARGET. They were NO_TARGET because there was no field to attack, not
+# because the framework handled them.
+# ---------------------------------------------------------------------------
+
+
+def _fresh_rails() -> dict[CashRail, RailState]:
+    return {
+        CashRail.FEDWIRE: RailState(
+            CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200, None, 60
+        )
+    }
+
+
+_POLICY = FreshnessPolicy(
+    max_stress_reading_age_seconds=3600,
+    max_rail_state_age_seconds=300,
+    max_counterparty_assessment_age_seconds=86400,
+)
+
+
+# -- freshness -------------------------------------------------------------
+
+
+def test_with_no_policy_nothing_is_policed() -> None:
+    """Stated rather than hidden: with no policy a reading from six months
+    ago is accepted with the same standing as one from this second. The
+    default preserves every existing caller, and the record says the check
+    did not run."""
+    decision = evaluate(
+        operation=_serviceable_op("1000000"),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.decision is GateDecision.PROCEED
+    assert ("freshness_policy", "not_stated") in decision.checks_evaluated
+
+
+def test_a_stale_stress_reading_holds() -> None:
+    decision = evaluate(
+        operation=_serviceable_op("1000000"),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+        stress_reading_age_seconds=99_999,
+        freshness_policy=_POLICY,
+    )
+    assert decision.decision is GateDecision.HOLD
+    assert decision.reason_code is ReasonCode.MARKET_DATA_STALE
+    assert "99999s old" in decision.rationale
+
+
+def test_an_unknown_age_fails_a_stated_policy() -> None:
+    """The NOT_ASSESSED rule applied to time. A firm that has decided
+    freshness matters has not decided it matters only where the measurement
+    is convenient."""
+    decision = evaluate(
+        operation=_serviceable_op("1000000"),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+        freshness_policy=_POLICY,
+    )
+    assert decision.decision is GateDecision.HOLD
+    assert decision.reason_code is ReasonCode.MARKET_DATA_STALE
+    assert "never established" in decision.rationale
+
+
+def test_a_fresh_reading_under_a_policy_proceeds() -> None:
+    decision = evaluate(
+        operation=_serviceable_op("1000000"),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+        stress_reading_age_seconds=60,
+        freshness_policy=_POLICY,
+    )
+    assert decision.decision is GateDecision.PROCEED
+    assert ("freshness_policy", "stated") in decision.checks_evaluated
+
+
+def test_a_stale_rail_state_holds() -> None:
+    """A rail recorded as open an hour ago is not a rail known to be open
+    now."""
+    decision = evaluate(
+        operation=_serviceable_op("1000000"),
+        funding=_deep_funding("1000000"),
+        rails={
+            CashRail.FEDWIRE: RailState(
+                CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200, None, 7200
+            )
+        },
+        ofr_stlfsi4=0.0,
+        stress_reading_age_seconds=60,
+        freshness_policy=_POLICY,
+    )
+    assert decision.decision is GateDecision.HOLD
+    assert decision.reason_code is ReasonCode.MARKET_DATA_STALE
+    assert "fedwire" in decision.rationale
+
+
+def test_the_stale_rail_reported_does_not_depend_on_dict_order() -> None:
+    """Determinism, on the same reasoning as the rail ladder."""
+    stale = {
+        CashRail.CHIPS: RailState(CashRail.CHIPS, RailStatus.AVAILABLE, 7200, None, 9999),
+        CashRail.FEDWIRE: RailState(
+            CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200, None, 9999
+        ),
+    }
+    reordered = dict(reversed(list(stale.items())))
+    first = evaluate(
+        operation=_serviceable_op("1000000"),
+        funding=_deep_funding("1000000"),
+        rails=stale,
+        ofr_stlfsi4=0.0,
+        stress_reading_age_seconds=60,
+        freshness_policy=_POLICY,
+    )
+    second = evaluate(
+        operation=_serviceable_op("1000000"),
+        funding=_deep_funding("1000000"),
+        rails=reordered,
+        ofr_stlfsi4=0.0,
+        stress_reading_age_seconds=60,
+        freshness_policy=_POLICY,
+    )
+    assert first.rationale == second.rationale
+
+
+def test_a_policy_that_polices_nothing_polices_nothing() -> None:
+    empty = FreshnessPolicy()
+    assert empty.polices_anything is False
+    decision = evaluate(
+        operation=_serviceable_op("1000000"),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+        freshness_policy=empty,
+    )
+    assert decision.decision is GateDecision.PROCEED
+
+
+def test_a_non_positive_freshness_bound_is_refused() -> None:
+    with pytest.raises(ValueError, match="must be positive"):
+        FreshnessPolicy(max_stress_reading_age_seconds=0)
+
+
+# -- counterparty ----------------------------------------------------------
+
+
+def _cp(standing: CounterpartyStanding, age: int | None = 3600) -> Counterparty:
+    assessed = standing is not CounterpartyStanding.NOT_ASSESSED
+    return Counterparty(
+        counterparty_id="CP-1",
+        standing=standing,
+        provenance="credit file, 19 Aug 2026" if assessed else None,
+        assessed_age_seconds=age if assessed else None,
+    )
+
+
+def test_no_counterparty_is_recorded_rather_than_assumed() -> None:
+    """A gate that cannot tell 'no counterparty risk' from 'nobody mentioned
+    a counterparty' is recording nothing useful about either."""
+    decision = evaluate(
+        operation=_serviceable_op("1000000"),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.decision is GateDecision.PROCEED
+    assert ("counterparty_standing", "not_supplied") in decision.checks_evaluated
+
+
+def test_a_named_counterparty_with_no_standing_holds() -> None:
+    """Naming one and leaving its standing unread is not the same as having
+    no counterparty."""
+    decision = evaluate(
+        operation=_serviceable_op(
+            "1000000", counterparty=_cp(CounterpartyStanding.NOT_ASSESSED)
+        ),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.decision is GateDecision.HOLD
+    assert decision.reason_code is ReasonCode.COUNTERPARTY_UNASSESSED
+
+
+@pytest.mark.parametrize(
+    "standing",
+    [CounterpartyStanding.SUSPENDED, CounterpartyStanding.DEFAULTED],
+)
+def test_a_counterparty_out_of_good_standing_holds(
+    standing: CounterpartyStanding,
+) -> None:
+    decision = evaluate(
+        operation=_serviceable_op("1000000", counterparty=_cp(standing)),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.decision is GateDecision.HOLD
+    assert decision.reason_code is ReasonCode.COUNTERPARTY_NOT_IN_GOOD_STANDING
+
+
+def test_a_counterparty_under_review_escalates_rather_than_holds() -> None:
+    """A review means somebody is already looking, and this operation is
+    evidence for them rather than a decision the gate should take alone."""
+    decision = evaluate(
+        operation=_serviceable_op(
+            "1000000", counterparty=_cp(CounterpartyStanding.UNDER_REVIEW)
+        ),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.decision is GateDecision.ESCALATE
+    assert decision.reason_code is ReasonCode.COUNTERPARTY_UNDER_REVIEW
+
+
+def test_a_counterparty_in_good_standing_proceeds() -> None:
+    decision = evaluate(
+        operation=_serviceable_op(
+            "1000000", counterparty=_cp(CounterpartyStanding.IN_GOOD_STANDING)
+        ),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.decision is GateDecision.PROCEED
+    assert ("counterparty_standing", "in_good_standing") in decision.checks_evaluated
+
+
+def test_counterparty_is_asked_before_funding() -> None:
+    """The prior question. Whether the money is there does not arise if the
+    answer to 'should we be facing them' is no, and asking in the other order
+    would hold a defaulted name for a reason that was never the point."""
+    decision = evaluate(
+        operation=_serviceable_op(
+            "1000000", counterparty=_cp(CounterpartyStanding.DEFAULTED)
+        ),
+        funding=FundingState(Decimal("0"), Decimal("1000000"), Decimal("0"), False),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.reason_code is ReasonCode.COUNTERPARTY_NOT_IN_GOOD_STANDING
+
+
+def test_a_stale_counterparty_assessment_holds() -> None:
+    decision = evaluate(
+        operation=_serviceable_op(
+            "1000000", counterparty=_cp(CounterpartyStanding.IN_GOOD_STANDING, age=10**7)
+        ),
+        funding=_deep_funding("1000000"),
+        rails=_fresh_rails(),
+        ofr_stlfsi4=0.0,
+        stress_reading_age_seconds=60,
+        freshness_policy=_POLICY,
+    )
+    assert decision.decision is GateDecision.HOLD
+    assert decision.reason_code is ReasonCode.MARKET_DATA_STALE
+    assert "CP-1" in decision.rationale
+
+
+def test_an_assessed_standing_requires_provenance() -> None:
+    with pytest.raises(ValueError, match="requires provenance"):
+        Counterparty(
+            counterparty_id="CP-1", standing=CounterpartyStanding.IN_GOOD_STANDING
+        )
+
+
+def test_an_unassessed_counterparty_may_not_carry_an_assessment_date() -> None:
+    with pytest.raises(ValueError, match="no assessment to date"):
+        Counterparty(counterparty_id="CP-1", assessed_age_seconds=60)
+
+
+def test_a_counterparty_standing_round_trips_from_a_plain_string() -> None:
+    """Portability: an exported profile that cannot be read back in is not
+    portable, and enum members arrive from JSON as plain strings."""
+    coerced = Counterparty(
+        counterparty_id="CP-1",
+        standing="in_good_standing",  # type: ignore[arg-type]
+        provenance="credit file",
+    )
+    assert coerced.standing is CounterpartyStanding.IN_GOOD_STANDING

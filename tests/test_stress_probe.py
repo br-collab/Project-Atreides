@@ -44,11 +44,16 @@ import stress_probe  # noqa: E402
 #:
 #: 19 Aug 2026, later: the four MEDIUM findings closed too. H7.4, E5.6,
 #: E2.1 and E7.3 all moved BROKE -> HELD. Eight findings remain, all LOW.
+#:
+#: 19 Aug 2026, Tier A: three families that had nothing to attack now do.
+#: H5.3 (market-data staleness), H4.1 (counterparty standing) and E3.2
+#: (escalation delivery) moved NO_TARGET -> HELD. NO_TARGET falls from
+#: nine to six, and that number only moves by building something.
 EXPECTED = {
-    "HELD": 28,
+    "HELD": 31,
     "BY_DESIGN": 15,
     "BROKE": 8,
-    "NO_TARGET": 9,
+    "NO_TARGET": 6,
 }
 
 

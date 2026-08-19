@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**182 of 182 enumeration values (100%) state what they mean in
+**191 of 191 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -149,6 +149,39 @@ Gate output per AUR-CUSTODY-CASH-001 Section V.D.
 | `dsor_lineage_uri` | `str \| None` | `None` |
 | `obligation_finality_class` | `FinalityClass \| None` | `None` |
 
+#### `Counterparty`
+
+Who is on the other side, and what is known about them.
+
+| Field | Type | Default |
+| --- | --- | --- |
+| `counterparty_id` | `str` | required |
+| `standing` | `CounterpartyStanding` | `<CounterpartyStanding.NOT_ASSESSED: 'not_assessed'>` |
+| `assessed_age_seconds` | `int \| None` | `None` |
+| `provenance` | `str \| None` | `None` |
+
+#### `CounterpartyStanding` (enumeration)
+
+Whether this firm should be facing this counterparty at all.
+
+| Value | Meaning |
+| --- | --- |
+| `not_assessed` | Nobody has established this counterparty's standing. The remedy is an assessment; the gate holds until there is one. |
+| `in_good_standing` | Assessed, and nothing prevents facing them. |
+| `under_review` | Assessed, and a review is open. Escalates: a human is already looking and this operation is evidence for them. |
+| `suspended` | New business with this counterparty is stopped, by this firm's own decision or by a venue's. |
+| `defaulted` | The counterparty has defaulted. Nothing routine proceeds. |
+
+#### `FreshnessPolicy`
+
+How old a load-bearing input may be before it stops being evidence.
+
+| Field | Type | Default |
+| --- | --- | --- |
+| `max_stress_reading_age_seconds` | `int \| None` | `None` |
+| `max_rail_state_age_seconds` | `int \| None` | `None` |
+| `max_counterparty_assessment_age_seconds` | `int \| None` | `None` |
+
 #### `FundingState`
 
 Intraday funding state per AUR-CUSTODY-CASH-001 Section VII.
@@ -188,6 +221,7 @@ The operation under evaluation.
 | `tokenized_deposit_supported` | `bool` | `False` |
 | `within_business_hours` | `bool` | `True` |
 | `determination_outcome` | `DeterminationOutcome` | `<DeterminationOutcome.NOT_APPLICABLE: 'not_applicable'>` |
+| `counterparty` | `Counterparty \| None` | `None` |
 
 #### `RailState`
 
@@ -199,6 +233,7 @@ Per-rail operational state. Supplied by the caller's refresh loop.
 | `status` | `RailStatus` | required |
 | `seconds_to_cutoff` | `int \| None` | `None` |
 | `value_cap` | `Decimal \| None` | `None` |
+| `observed_age_seconds` | `int \| None` | `None` |
 
 #### `RailStatus` (enumeration)
 
@@ -226,6 +261,10 @@ Reason codes. One per check in Section V.B plus the PROCEED case.
 | `UNRESOLVABLE_FINALITY` | A correspondent chain whose finality state cannot be established. Unknown finality is not acceptable finality. |
 | `DETERMINATION_PENDING` | A contingent obligation whose outcome has not been determined. The instruction is premature, not unsafe. |
 | `UNASSESSED_REVOCATION_AUTHORITY` | Determined, and nobody has read whether the venue may cancel and return funds. Closed by populating the registry, not by a market action. |
+| `MARKET_DATA_STALE` | A load-bearing input is older than the freshness policy allows, or its age was never established. Both conditions produce this code and the rationale distinguishes them, on the discipline this framework applies to every registry: "we read it an hour ago" and "nobody recorded when we read it" carry the same conservative treatment and completely different remedies. Fires only where a freshness policy was supplied. A caller that states no policy is not policed, and the decision record says so rather than implying a check that did not run. |
+| `COUNTERPARTY_UNASSESSED` | A counterparty was named and nobody has established its standing. Distinct from no counterparty at all. Naming one and leaving its standing unread is the unread-rulebook condition: closed by an assessment, not by a market action. |
+| `COUNTERPARTY_NOT_IN_GOOD_STANDING` | The counterparty is suspended or in default. Whether to face them is the question, and it is answered before whether the leg can be funded. |
+| `COUNTERPARTY_UNDER_REVIEW` | The counterparty is under review. Escalates rather than holds: a review means a human is already looking, and this operation is evidence they need rather than a decision this gate should take without them. |
 | `STRESS_READING_UNUSABLE` | The systemic-stress reading is not a usable number, so no statement about market stress can be made from it. Deliberately NOT the escalate code. SYSTEMIC_STRESS_ESCALATE asserts that stress was observed above a band; a NaN or an infinity asserts nothing except that the feed is broken. Naming the two differently is the same discipline the registries apply between NOT_ASSESSED and NONE_DISCLOSED: "we could not read it" and "we read it and it says X" carry the same conservative treatment and completely different remedies. Holds rather than escalates because HOLD is this framework's default everywhere evidence is absent, including the absent-gate default. The trade-off is stated rather than hidden: an operator who wants a broken feed to page somebody must route on this code, because the gate will not manufacture a stress finding it does not have. |
 | `FUNDING_INDETERMINATE` | The funding model declined to assert the position, so the gate has no funded state to check. Distinct from UNFUNDED_AT_SETTLEMENT_INSTANT, which asserts that the position is short. This code asserts nothing about the position at all - the projection reached a state where the model refuses to say, and a refusal must not be converted into a number on the way to this gate. |
 | `CLEARED` | No check fired. A rail is recommended. |

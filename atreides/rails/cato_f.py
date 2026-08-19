@@ -59,7 +59,10 @@ __all__ = [
     "RAIL_FINALITY",
     "CashRail",
     "CatoFDecision",
+    "Counterparty",
+    "CounterpartyStanding",
     "FinalityClass",
+    "FreshnessPolicy",
     "FundingState",
     "GateDecision",
     "OperationContext",
@@ -178,6 +181,31 @@ class ReasonCode(StrEnum):
     UNASSESSED_REVOCATION_AUTHORITY = "UNASSESSED_REVOCATION_AUTHORITY"
     """Determined, and nobody has read whether the venue may cancel and return funds. Closed by
     populating the registry, not by a market action."""
+    MARKET_DATA_STALE = "MARKET_DATA_STALE"
+    """A load-bearing input is older than the freshness policy allows, or its
+    age was never established.
+
+    Both conditions produce this code and the rationale distinguishes them, on
+    the discipline this framework applies to every registry: "we read it an
+    hour ago" and "nobody recorded when we read it" carry the same
+    conservative treatment and completely different remedies.
+
+    Fires only where a freshness policy was supplied. A caller that states no
+    policy is not policed, and the decision record says so rather than
+    implying a check that did not run."""
+    COUNTERPARTY_UNASSESSED = "COUNTERPARTY_UNASSESSED"
+    """A counterparty was named and nobody has established its standing.
+
+    Distinct from no counterparty at all. Naming one and leaving its standing
+    unread is the unread-rulebook condition: closed by an assessment, not by a
+    market action."""
+    COUNTERPARTY_NOT_IN_GOOD_STANDING = "COUNTERPARTY_NOT_IN_GOOD_STANDING"
+    """The counterparty is suspended or in default. Whether to face them is
+    the question, and it is answered before whether the leg can be funded."""
+    COUNTERPARTY_UNDER_REVIEW = "COUNTERPARTY_UNDER_REVIEW"
+    """The counterparty is under review. Escalates rather than holds: a review
+    means a human is already looking, and this operation is evidence they need
+    rather than a decision this gate should take without them."""
     STRESS_READING_UNUSABLE = "STRESS_READING_UNUSABLE"
     """The systemic-stress reading is not a usable number, so no statement
     about market stress can be made from it.
@@ -233,6 +261,12 @@ class RailState:
     seconds_to_cutoff: int | None = None
     # Value cap where the rail imposes one (FedNow). None means uncapped.
     value_cap: Decimal | None = None
+    # How long ago this status was observed, in seconds before the evaluation
+    # instant. None means the age was never recorded. A rail marked AVAILABLE
+    # an hour ago is not the same evidence as one marked AVAILABLE this
+    # second, and before this field existed the record could not tell them
+    # apart. Policed only where a FreshnessPolicy is supplied.
+    observed_age_seconds: int | None = None
 
     @property
     def usable(self) -> bool:
@@ -287,6 +321,159 @@ class FundingState:
         return self.projected_funded_position >= self.net_obligation
 
 
+class CounterpartyStanding(StrEnum):
+    """Whether this firm should be facing this counterparty at all.
+
+    Consumed, never derived. The framework holds no credit model and will not
+    acquire one: standing is established by whatever function a firm already
+    has for the purpose, and recorded here so that a settlement decision can
+    be explained against it afterwards.
+
+    NOT_ASSESSED is kept distinct from IN_GOOD_STANDING for the reason it is
+    kept distinct everywhere else in this corpus: "we checked and they are
+    fine" and "nobody checked" carry the same conservative treatment and
+    completely different remedies, and collapsing them lets an unassessed
+    counterparty pass as a cleared one.
+    """
+
+    NOT_ASSESSED = "not_assessed"
+    """Nobody has established this counterparty's standing. The remedy is an
+    assessment; the gate holds until there is one."""
+    IN_GOOD_STANDING = "in_good_standing"
+    """Assessed, and nothing prevents facing them."""
+    UNDER_REVIEW = "under_review"
+    """Assessed, and a review is open. Escalates: a human is already looking
+    and this operation is evidence for them."""
+    SUSPENDED = "suspended"
+    """New business with this counterparty is stopped, by this firm's own
+    decision or by a venue's."""
+    DEFAULTED = "defaulted"
+    """The counterparty has defaulted. Nothing routine proceeds."""
+
+
+@dataclass(frozen=True, slots=True)
+class Counterparty:
+    """Who is on the other side, and what is known about them.
+
+    Optional on an operation. ``None`` means this framework was not told,
+    which is recorded on the decision rather than treated as an assessment: a
+    gate that cannot tell "no counterparty risk" from "nobody mentioned a
+    counterparty" is recording nothing useful about either.
+
+    Supplying a counterparty makes the gate stricter, never more permissive.
+    That is deliberate. The field exists so a firm can bring its own credit
+    process to bear, and a field that could only relax a decision would be an
+    invitation to omit it.
+    """
+
+    counterparty_id: str
+    standing: CounterpartyStanding = CounterpartyStanding.NOT_ASSESSED
+    #: How long ago the standing was established, in seconds before the
+    #: evaluation instant. Supplied by the caller because this module reads no
+    #: clock. ``None`` means the age was never recorded, which a freshness
+    #: policy treats as stale.
+    assessed_age_seconds: int | None = None
+    provenance: str | None = None
+
+    def __post_init__(self) -> None:
+        # Coerce at the boundary, as every other registry here does. An
+        # exported profile that cannot be read back in is not portable.
+        if not isinstance(self.standing, CounterpartyStanding):
+            object.__setattr__(self, "standing", CounterpartyStanding(self.standing))
+        if not self.counterparty_id:
+            raise ValueError("counterparty_id is required")
+        if (
+            self.standing is not CounterpartyStanding.NOT_ASSESSED
+            and not self.provenance
+        ):
+            raise ValueError(
+                "an assessed counterparty standing requires provenance; an "
+                "unattributed assessment is indistinguishable from a guess"
+            )
+        if (
+            self.standing is CounterpartyStanding.NOT_ASSESSED
+            and self.assessed_age_seconds is not None
+        ):
+            raise ValueError(
+                "an unassessed counterparty has no assessment to date; "
+                "assessed_age_seconds is meaningful only once a standing has "
+                "been established"
+            )
+        if self.assessed_age_seconds is not None and self.assessed_age_seconds < 0:
+            raise ValueError("assessed_age_seconds may not be negative")
+
+
+@dataclass(frozen=True, slots=True)
+class FreshnessPolicy:
+    """How old a load-bearing input may be before it stops being evidence.
+
+    WHY THIS IS A POLICY AND NOT A CONSTANT
+    ---------------------------------------
+    Every bound here is a firm's operational decision, not a property of the
+    market. A firm consuming a weekly stress series and a firm consuming an
+    intraday one need different answers, and a default baked into this module
+    would be wrong for whichever of them did not write it.
+
+    WHY AN UNKNOWN AGE FAILS
+    ------------------------
+    Where a policy is supplied and an age is not, the input is treated as
+    stale. That is the same rule as NOT_ASSESSED everywhere else: a firm that
+    has decided freshness matters has not decided it matters only when the
+    measurement is convenient. A caller unwilling to supply ages should supply
+    no policy, and the record will say the check did not run.
+
+    WHY NO POLICY IS THE DEFAULT
+    ----------------------------
+    So that adding this does not silently hold every operation for every
+    existing caller. The cost is stated rather than hidden: with no policy, a
+    stress reading from six months ago is accepted with the same standing as
+    one from this second, and nothing in the record distinguishes them. That
+    was the condition the stress probe found and could not attack, because
+    there was no field to attack it through.
+    """
+
+    max_stress_reading_age_seconds: int | None = None
+    max_rail_state_age_seconds: int | None = None
+    max_counterparty_assessment_age_seconds: int | None = None
+
+    def __post_init__(self) -> None:
+        for name in (
+            "max_stress_reading_age_seconds",
+            "max_rail_state_age_seconds",
+            "max_counterparty_assessment_age_seconds",
+        ):
+            value = getattr(self, name)
+            if value is not None and value <= 0:
+                raise ValueError(f"{name} must be positive where it is stated")
+
+    @property
+    def polices_anything(self) -> bool:
+        return any(
+            v is not None
+            for v in (
+                self.max_stress_reading_age_seconds,
+                self.max_rail_state_age_seconds,
+                self.max_counterparty_assessment_age_seconds,
+            )
+        )
+
+
+def _staleness(age_seconds: int | None, maximum: int | None) -> tuple[bool, str]:
+    """Whether an input fails a freshness bound, and why in the record's words.
+
+    Returns the reason string in both directions, so the decision can say
+    "checked and fresh" as well as "stale" - a check that only speaks when it
+    fires is indistinguishable from a check that did not run.
+    """
+    if maximum is None:
+        return False, "not policed"
+    if age_seconds is None:
+        return True, "age never established"
+    if age_seconds > maximum:
+        return True, f"{age_seconds}s old against a {maximum}s bound"
+    return False, f"{age_seconds}s old within a {maximum}s bound"
+
+
 @dataclass(frozen=True, slots=True)
 class OperationContext:
     """The operation under evaluation.
@@ -319,6 +506,10 @@ class OperationContext:
     # the obligation is not contingent, which is true of every instrument
     # the framework handled before this class existed.
     determination_outcome: DeterminationOutcome = DeterminationOutcome.NOT_APPLICABLE
+    #: Who is on the other side. ``None`` means this framework was not
+    #: told, and the decision records that rather than treating it as an
+    #: assessment.
+    counterparty: Counterparty | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -487,6 +678,8 @@ def evaluate(
     rails: dict[CashRail, RailState],
     ofr_stlfsi4: float,
     dsor_lineage_uri: str | None = None,
+    stress_reading_age_seconds: int | None = None,
+    freshness_policy: FreshnessPolicy | None = None,
 ) -> CatoFDecision:
     """Evaluate the cash leg. Deterministic, pure, replayable.
 
@@ -507,6 +700,24 @@ def evaluate(
         ("is_fx_leg", str(operation.is_fx_leg)),
         ("pvp_available", str(operation.pvp_available)),
         ("determination_outcome", operation.determination_outcome.value),
+        ("position_is_assertable", str(funding.position_is_assertable)),
+        # Recorded whether or not it was supplied. An omission that leaves no
+        # trace in the record is indistinguishable from a check that passed,
+        # and this framework's whole claim is that a reader who was not there
+        # can tell the difference.
+        (
+            "counterparty_standing",
+            operation.counterparty.standing.value
+            if operation.counterparty is not None
+            else "not_supplied",
+        ),
+        (
+            "freshness_policy",
+            "stated"
+            if freshness_policy is not None and freshness_policy.polices_anything
+            else "not_stated",
+        ),
+        ("stress_reading_age_seconds", str(stress_reading_age_seconds)),
     ]
     snapshot = _snapshot_funding(funding)
     obligation_class = obligation_finality_class(operation.determination_outcome)
@@ -551,6 +762,60 @@ def evaluate(
             f"calm market (CASH-001 SV.E).",
         )
 
+    # 0b. Is the evidence recent enough to be evidence?
+    #
+    #     This module reads no clock, so ages arrive as values the caller
+    #     supplies. Policed only where a policy was stated: a caller that
+    #     states no policy is not policed, and the checks tuple records that
+    #     rather than implying a check that did not run.
+    #
+    #     An unknown age fails a stated policy. That is the NOT_ASSESSED rule
+    #     applied to time: a firm that has decided freshness matters has not
+    #     decided it matters only where the measurement is convenient.
+    if freshness_policy is not None and freshness_policy.polices_anything:
+        stress_stale, stress_why = _staleness(
+            stress_reading_age_seconds,
+            freshness_policy.max_stress_reading_age_seconds,
+        )
+        if stress_stale:
+            return _decide(
+                GateDecision.HOLD,
+                ReasonCode.MARKET_DATA_STALE,
+                f"The systemic-stress reading is not current enough to be "
+                f"evidence: {stress_why}. A reading whose age is unknown is "
+                f"treated as stale where a freshness policy exists, on the "
+                f"same discipline as an unread rulebook (CASH-001 SV.E).",
+            )
+
+        for rail_id, state in sorted(rails.items(), key=lambda kv: kv[0].value):
+            rail_stale, rail_why = _staleness(
+                state.observed_age_seconds,
+                freshness_policy.max_rail_state_age_seconds,
+            )
+            if rail_stale:
+                return _decide(
+                    GateDecision.HOLD,
+                    ReasonCode.MARKET_DATA_STALE,
+                    f"Rail state for {rail_id.value} is not current enough to "
+                    f"be evidence: {rail_why}. A rail recorded as open an "
+                    f"hour ago is not a rail known to be open now "
+                    f"(CASH-001 SV.B.6).",
+                )
+
+        if operation.counterparty is not None:
+            cp_stale, cp_why = _staleness(
+                operation.counterparty.assessed_age_seconds,
+                freshness_policy.max_counterparty_assessment_age_seconds,
+            )
+            if cp_stale:
+                return _decide(
+                    GateDecision.HOLD,
+                    ReasonCode.MARKET_DATA_STALE,
+                    f"The standing assessment for counterparty "
+                    f"{operation.counterparty.counterparty_id} is not current "
+                    f"enough to be evidence: {cp_why}.",
+                )
+
     # 1. Systemic stress — escalate to human authority.
     if ofr_stlfsi4 > OFR_ESCALATE_THRESHOLD:
         return _decide(
@@ -573,6 +838,51 @@ def evaluate(
             "under CAOM-001. HOLD and surface a CAOM-transition trigger "
             "(FED-001 SVII, CASH-001 SV.B.2).",
         )
+
+    # 2b. Should this firm be facing this counterparty at all?
+    #
+    #     Asked before the funding checks because it is the prior question.
+    #     Whether the money is there does not arise if the answer to "should
+    #     we be trading with them" is no, and a gate that asked in the other
+    #     order would produce a funded, cleared decision against a defaulted
+    #     name and then hold it for a reason that was never the point.
+    #
+    #     Skipped entirely where no counterparty was supplied. That is the
+    #     honest maximum: the framework cannot police a field it was never
+    #     given, and the checks tuple records `counterparty=not_supplied` so
+    #     the omission is visible in the replay rather than absent from it.
+    if operation.counterparty is not None:
+        standing = operation.counterparty.standing
+        cp_id = operation.counterparty.counterparty_id
+        if standing is CounterpartyStanding.NOT_ASSESSED:
+            return _decide(
+                GateDecision.HOLD,
+                ReasonCode.COUNTERPARTY_UNASSESSED,
+                f"Counterparty {cp_id} was named and no standing has been "
+                f"established for it. Naming a counterparty and leaving its "
+                f"standing unread is not the same as having no counterparty; "
+                f"closed by an assessment, not by a market action.",
+            )
+        if standing is CounterpartyStanding.UNDER_REVIEW:
+            return _decide(
+                GateDecision.ESCALATE,
+                ReasonCode.COUNTERPARTY_UNDER_REVIEW,
+                f"Counterparty {cp_id} is under review. Routed to human "
+                f"authority rather than held: a review means somebody is "
+                f"already looking, and this operation is evidence for them "
+                f"rather than a decision this gate should take without them.",
+            )
+        if standing in {
+            CounterpartyStanding.SUSPENDED,
+            CounterpartyStanding.DEFAULTED,
+        }:
+            return _decide(
+                GateDecision.HOLD,
+                ReasonCode.COUNTERPARTY_NOT_IN_GOOD_STANDING,
+                f"Counterparty {cp_id} is {standing.value}. Nothing routine "
+                f"proceeds against a name in that state, and no rail choice "
+                f"or funding position changes that.",
+            )
 
     # 3a. The funding model refused to assert this position.
     #
