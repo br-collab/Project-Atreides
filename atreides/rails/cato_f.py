@@ -38,6 +38,7 @@ Status: v0.1 — doctrine-first implementation. Creates no authority.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
@@ -177,6 +178,30 @@ class ReasonCode(StrEnum):
     UNASSESSED_REVOCATION_AUTHORITY = "UNASSESSED_REVOCATION_AUTHORITY"
     """Determined, and nobody has read whether the venue may cancel and return funds. Closed by
     populating the registry, not by a market action."""
+    STRESS_READING_UNUSABLE = "STRESS_READING_UNUSABLE"
+    """The systemic-stress reading is not a usable number, so no statement
+    about market stress can be made from it.
+
+    Deliberately NOT the escalate code. SYSTEMIC_STRESS_ESCALATE asserts that
+    stress was observed above a band; a NaN or an infinity asserts nothing
+    except that the feed is broken. Naming the two differently is the same
+    discipline the registries apply between NOT_ASSESSED and NONE_DISCLOSED:
+    "we could not read it" and "we read it and it says X" carry the same
+    conservative treatment and completely different remedies.
+
+    Holds rather than escalates because HOLD is this framework's default
+    everywhere evidence is absent, including the absent-gate default. The
+    trade-off is stated rather than hidden: an operator who wants a broken
+    feed to page somebody must route on this code, because the gate will not
+    manufacture a stress finding it does not have."""
+    FUNDING_INDETERMINATE = "FUNDING_INDETERMINATE"
+    """The funding model declined to assert the position, so the gate has no
+    funded state to check.
+
+    Distinct from UNFUNDED_AT_SETTLEMENT_INSTANT, which asserts that the
+    position is short. This code asserts nothing about the position at all -
+    the projection reached a state where the model refuses to say, and a
+    refusal must not be converted into a number on the way to this gate."""
     CLEARED = "CLEARED"
     """No check fired. A rail is recommended."""
     GATE_UNAVAILABLE = "GATE_UNAVAILABLE"
@@ -233,8 +258,32 @@ class FundingState:
     net_debit_cap_headroom: Decimal
     clearing_fund_sufficient: bool
 
+    #: Whether the position above is an assertion the funding model was
+    #: willing to make.
+    #:
+    #: The funding model has states in which it explicitly refuses to say
+    #: whether a position is funded - a correspondent-dependent leg, an
+    #: obligation awaiting determination. Before this field existed, that
+    #: refusal died at this boundary: the projection carried a disposition of
+    #: INDETERMINATE and handed the gate four scalars, one of which happened
+    #: to be a large number, and the gate read a large number as funded.
+    #:
+    #: Defaults to True because constructing this object by hand IS the
+    #: assertion - a caller who builds a funding state is saying "this is the
+    #: position." Only ``FundingProjection.to_gate_input()`` has a refusal to
+    #: carry, and only it sets this False.
+    position_is_assertable: bool = True
+
     @property
     def is_funded(self) -> bool:
+        """Whether the position covers the obligation.
+
+        Answers only the arithmetic. A caller must read
+        ``position_is_assertable`` first: where the model refused to assert
+        the position, this property is comparing two numbers one of which
+        means nothing. The gate does exactly that, in check 3a, before it
+        reaches check 3.
+        """
         return self.projected_funded_position >= self.net_obligation
 
 
@@ -313,12 +362,25 @@ def _snapshot_funding(funding: FundingState) -> tuple[tuple[str, str], ...]:
     )
 
 
+def _serviceable(state: RailState, operation: OperationContext) -> bool:
+    """Whether a rail can actually carry this operation right now.
+
+    Usability and capacity are different questions and the gate needs both.
+    Keeping them in one named predicate means check 6 and the rail ladder
+    cannot drift apart again - the defect this function was extracted to
+    close was precisely that they had.
+    """
+    if not state.usable:
+        return False
+    return state.value_cap is None or operation.notional <= state.value_cap
+
+
 def _recommend_rail(
     *,
     operation: OperationContext,
     rails: dict[CashRail, RailState],
     ofr_stlfsi4: float,
-) -> tuple[CashRail, str]:
+) -> tuple[CashRail, str] | None:
     """Deterministic rail ladder per AUR-CUSTODY-CASH-001 Section V.C.
 
     Evaluated in order; first applicable rule wins. Applied only on the
@@ -394,18 +456,28 @@ def _recommend_rail(
     if (chosen := _prefer([CashRail.FEDWIRE])) is not None:
         return chosen, "Default rail (CASH-001 SV.C.6)."
 
-    # Fall through to any usable rail; check 6 in evaluate() guarantees
-    # at least one exists by this point.
-    for rail, state in usable.items():
+    # Fall through to any rail that can actually carry this operation.
+    #
+    # Deterministic despite iterating a caller-supplied dict: sorted by rail
+    # identifier, so two callers passing the same rails in different order
+    # get the same recommendation. Insertion order was the previous
+    # behaviour and it quietly made the gate's replay claim conditional on
+    # how the caller happened to build a dictionary.
+    for rail in sorted(usable, key=lambda r: r.value):
         if rail is CashRail.PORTS_WHOLESALE:
             continue
-        if state.value_cap is not None and operation.notional > state.value_cap:
+        if not _serviceable(usable[rail], operation):
             continue
-        return rail, "Sole usable rail within the settlement window."
+        return rail, "Sole serviceable rail within the settlement window."
 
-    raise AssertionError(
-        "unreachable: check 6 guarantees a usable rail before the ladder runs"
-    )
+    # Reached only where check 6 was bypassed. It previously raised an
+    # AssertionError here, on the reasoning that check 6 made this
+    # unreachable — and check 6 did not, because it tested usability and
+    # this loop tests capacity. Returning None lets the caller hold with a
+    # named reason instead of dying without a decision record. An
+    # "unreachable" assertion inside a governance gate is the wrong failure
+    # mode even when the reasoning behind it is right.
+    return None
 
 
 def evaluate(
@@ -457,6 +529,28 @@ def evaluate(
             obligation_finality_class=obligation_class,
         )
 
+    # 0. Is the stress reading a number at all?
+    #
+    #    Every stress comparison below is a `>` or a `>=`, and every
+    #    comparison against NaN is False. So a broken feed does not fail one
+    #    check - it silently satisfies all of them, skips the escalate band,
+    #    skips the hold band, skips the stress rail preference, and clears.
+    #    The most permissive outcome in the gate was reachable by the single
+    #    most likely upstream defect, which is the definition of fail-open.
+    #
+    #    Asked first because every check that follows depends on it.
+    if not math.isfinite(ofr_stlfsi4):
+        return _decide(
+            GateDecision.HOLD,
+            ReasonCode.STRESS_READING_UNUSABLE,
+            f"Systemic-stress reading {ofr_stlfsi4!r} is not a finite number, "
+            f"so no statement about market stress can be made from it. Every "
+            f"stress band below is a comparison, and a non-finite value "
+            f"satisfies none of them - which would clear the gate rather than "
+            f"hold it. The absence of a reading is a state with a name, not a "
+            f"calm market (CASH-001 SV.E).",
+        )
+
     # 1. Systemic stress — escalate to human authority.
     if ofr_stlfsi4 > OFR_ESCALATE_THRESHOLD:
         return _decide(
@@ -478,6 +572,25 @@ def evaluate(
             "authority is required and is architecturally unavailable "
             "under CAOM-001. HOLD and surface a CAOM-transition trigger "
             "(FED-001 SVII, CASH-001 SV.B.2).",
+        )
+
+    # 3a. The funding model refused to assert this position.
+    #
+    #     Placed before the funded check rather than inside it, because the
+    #     two say different things and collapsing them would lose the one
+    #     that matters. "Short" is a finding about the position. "The model
+    #     would not say" is a finding about the evidence, and it has a
+    #     different remedy: resolve the correspondent chain or the pending
+    #     determination, not fund the account.
+    if not funding.position_is_assertable:
+        return _decide(
+            GateDecision.HOLD,
+            ReasonCode.FUNDING_INDETERMINATE,
+            "The funding model declined to assert the settlement-instant "
+            "position, so there is no funded state to check. A refusal that "
+            "arrives here as a number is a refusal that was thrown away in "
+            "transit; this gate will not read one as evidence of funding "
+            "(CASH-001 SVII).",
         )
 
     # 3. Unfunded — no rail choice remedies an unfunded position.
@@ -510,18 +623,36 @@ def evaluate(
             f"settlement-system stress (CASH-001 SV.B.5, Cato parity band).",
         )
 
-    # 6. Timing infeasible — no rail open and reachable in the window.
+    # 6. Timing infeasible — no rail open, reachable, AND able to carry
+    #    this operation within the window.
+    #
+    #    Capacity is part of this check rather than a ladder detail. It was
+    #    not, and the consequence was a gate that raised an AssertionError
+    #    reading "unreachable: check 6 guarantees a usable rail": check 6
+    #    proved usability, the ladder additionally required capacity, and
+    #    usability does not imply capacity. A single available rail with a
+    #    value cap below the notional — the ordinary off-hours large-value
+    #    case, since FedNow ships with a cap — reached an assertion instead
+    #    of a decision, and an assertion is not a governance outcome.
+    #
+    #    Skipped where the rail is determined by depository linkage rather
+    #    than selected, because there is nothing to choose among; that path
+    #    is validated in the ladder.
+    #
     #    PORTS_WHOLESALE is excluded: it is a reserved placeholder and is
     #    never a usable rail until the infrastructure ships.
-    if not any(
-        state.usable for rail, state in rails.items() if rail is not CashRail.PORTS_WHOLESALE
+    if operation.depository_linked_rail is None and not any(
+        _serviceable(state, operation)
+        for rail, state in rails.items()
+        if rail is not CashRail.PORTS_WHOLESALE
     ):
         return _decide(
             GateDecision.HOLD,
             ReasonCode.NO_RAIL_IN_WINDOW,
-            "No cash rail is open and reachable within the required "
-            "settlement window. Hold to the next window rather than "
-            "routing to a closed rail (CASH-001 SV.B.6).",
+            f"No cash rail is open, reachable, and able to carry "
+            f"{operation.notional} within the required settlement window. "
+            f"Hold to the next window rather than routing to a closed rail "
+            f"or to one that cannot carry the operation (CASH-001 SV.B.6).",
         )
 
     # 7. Unresolvable finality on a correspondent chain. Unknown finality
@@ -567,9 +698,23 @@ def evaluate(
         )
 
     # 10. Cleared — recommend a rail.
-    rail, ladder_rationale = _recommend_rail(
+    selection = _recommend_rail(
         operation=operation, rails=rails, ofr_stlfsi4=ofr_stlfsi4
     )
+    if selection is None:
+        # The ladder found nothing serviceable. Reachable only where check 6
+        # was skipped for a depository-linked operation whose linked rail
+        # cannot carry it. Hold with the check-6 reason, because that is
+        # what the condition is.
+        return _decide(
+            GateDecision.HOLD,
+            ReasonCode.NO_RAIL_IN_WINDOW,
+            f"The rail ladder found no rail able to carry "
+            f"{operation.notional} within the settlement window. Hold rather "
+            f"than recommend a rail that cannot carry the operation "
+            f"(CASH-001 SV.B.6).",
+        )
+    rail, ladder_rationale = selection
 
     rationale = ladder_rationale
     if operation.determination_outcome in {

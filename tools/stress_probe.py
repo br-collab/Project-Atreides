@@ -699,14 +699,31 @@ def h5_3() -> tuple[str, str]:
 
 
 @case("H5", "H5.4", "Positive infinity on the stress feed",
-      "an unbounded stress reading must escalate",
-      "CASH-001 SV.B check 1")
+      "whether a non-finite reading is treated as an observation",
+      "CASH-001 SV.B check 0")
 def h5_4() -> tuple[str, str]:
     d = evaluate(
         operation=_op(), funding=_funded(), rails=_rails(), ofr_stlfsi4=float("inf")
     )
-    ok = d.decision.value == "ESCALATE"
-    return (HELD if ok else BROKE), f"ofr=+inf -> {d.decision.value}/{d.reason_code.value}"
+    ok = d.decision.value == "HOLD" and (
+        d.reason_code.value == "STRESS_READING_UNUSABLE"
+    )
+    # CHANGED DELIBERATELY when the NaN defect was fixed. Positive infinity
+    # previously produced ESCALATE / SYSTEMIC_STRESS_ESCALATE, which is
+    # conservative but says something false: it asserts that systemic stress
+    # was observed above a band. Infinity is not a stress observation, it is
+    # a broken feed, and manufacturing a finding from it is the same error
+    # this corpus refuses everywhere else.
+    #
+    # The trade-off is real and is stated rather than buried: ESCALATE routes
+    # to a human and HOLD does not. An operator who wants a broken feed to
+    # page somebody routes on STRESS_READING_UNUSABLE. The gate will not
+    # invent a market condition to get their attention.
+    return (HELD if ok else BROKE), (
+        f"ofr=+inf -> {d.decision.value}/{d.reason_code.value}. Named as an "
+        f"unusable reading rather than escalated as observed stress: infinity "
+        f"is a broken feed, not a market condition."
+    )
 
 
 # ===========================================================================

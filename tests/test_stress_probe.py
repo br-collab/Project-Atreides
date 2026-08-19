@@ -29,13 +29,22 @@ sys.path.insert(0, str(REPO / "tools"))
 
 import stress_probe  # noqa: E402
 
-#: Verdicts as of the run that produced STRESS-TEST-REPORT. Update deliberately,
-#: with the reason, never to make the suite green.
+#: Verdicts as of the current run. Update deliberately, with the reason,
+#: never to make the suite green.
+#:
+#: 19 Aug 2026: the three HIGH findings were fixed, and this test caught the
+#: change - which is what it is for. H1.3 CRASHED -> HELD (check 6 now tests
+#: capacity, and the ladder returns None rather than asserting). H5.1
+#: BROKE -> HELD (a non-finite stress reading is named and held). H2.3
+#: BROKE -> HELD (the funding model's refusal now travels with the numbers).
+#: E5.3 BY_DESIGN -> HELD, unplanned: propagating the disposition also closed
+#: the determination divergence, because AWAITING_DETERMINATION produces an
+#: INDETERMINATE disposition. H5.4 HELD -> HELD with a different expectation:
+#: +inf is now named unusable rather than escalated as observed stress.
 EXPECTED = {
-    "HELD": 20,
-    "BY_DESIGN": 16,
-    "BROKE": 14,
-    "CRASHED": 1,
+    "HELD": 24,
+    "BY_DESIGN": 15,
+    "BROKE": 12,
     "NO_TARGET": 9,
 }
 

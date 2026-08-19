@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**179 of 179 enumeration values (100%) state what they mean in
+**181 of 181 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -159,6 +159,7 @@ Intraday funding state per AUR-CUSTODY-CASH-001 Section VII.
 | `net_obligation` | `Decimal` | required |
 | `net_debit_cap_headroom` | `Decimal` | required |
 | `clearing_fund_sufficient` | `bool` | required |
+| `position_is_assertable` | `bool` | `True` |
 
 #### `GateDecision` (enumeration)
 
@@ -225,6 +226,8 @@ Reason codes. One per check in Section V.B plus the PROCEED case.
 | `UNRESOLVABLE_FINALITY` | A correspondent chain whose finality state cannot be established. Unknown finality is not acceptable finality. |
 | `DETERMINATION_PENDING` | A contingent obligation whose outcome has not been determined. The instruction is premature, not unsafe. |
 | `UNASSESSED_REVOCATION_AUTHORITY` | Determined, and nobody has read whether the venue may cancel and return funds. Closed by populating the registry, not by a market action. |
+| `STRESS_READING_UNUSABLE` | The systemic-stress reading is not a usable number, so no statement about market stress can be made from it. Deliberately NOT the escalate code. SYSTEMIC_STRESS_ESCALATE asserts that stress was observed above a band; a NaN or an infinity asserts nothing except that the feed is broken. Naming the two differently is the same discipline the registries apply between NOT_ASSESSED and NONE_DISCLOSED: "we could not read it" and "we read it and it says X" carry the same conservative treatment and completely different remedies. Holds rather than escalates because HOLD is this framework's default everywhere evidence is absent, including the absent-gate default. The trade-off is stated rather than hidden: an operator who wants a broken feed to page somebody must route on this code, because the gate will not manufacture a stress finding it does not have. |
+| `FUNDING_INDETERMINATE` | The funding model declined to assert the position, so the gate has no funded state to check. Distinct from UNFUNDED_AT_SETTLEMENT_INSTANT, which asserts that the position is short. This code asserts nothing about the position at all - the projection reached a state where the model refuses to say, and a refusal must not be converted into a number on the way to this gate. |
 | `CLEARED` | No check fired. A rail is recommended. |
 | `GATE_UNAVAILABLE` | The gate could not be consulted. The absent-gate default is HOLD. |
 

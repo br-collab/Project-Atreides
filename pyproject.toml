@@ -57,6 +57,12 @@ ignore = [
     # ordering IS the doctrine (CASH-001 SV.B), so collapsing the returns to
     # satisfy a counter would obscure the thing the code exists to express.
     "PLR0911",
+    # Same reason, branch count rather than return count. The gate grew two
+    # checks when the stress-reading and funding-refusal defects were fixed,
+    # and the alternative to exceeding the counter was to merge two doctrine
+    # checks that say different things - which is how the funding refusal got
+    # lost in the first place.
+    "PLR0912",
     # Deliberate function-local imports: breaking an import cycle at the one
     # place a value is needed, and the sys.path bootstrap in tools/ which must
     # run before the package is importable. Each carries a comment saying so.

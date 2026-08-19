@@ -402,3 +402,240 @@ def test_zero_stress_does_not_fire_the_band() -> None:
         ofr_stlfsi4=0.0,
     )
     assert d.recommended_rail is CashRail.TOKENIZED_DEPOSIT
+
+
+# ---------------------------------------------------------------------------
+# The three stress findings, closed
+#
+# Each of these reproduces a defect the adversarial probe found on 18 Aug 2026
+# and asserts the behaviour that replaced it. The shape was the same in all
+# three: a refusal this framework computes correctly, dropped at a boundary.
+# ---------------------------------------------------------------------------
+
+
+def _serviceable_op(notional: str = "5000000") -> OperationContext:
+    return OperationContext(
+        notional=Decimal(notional),
+        currency="USD",
+        is_material=False,
+        is_lvps_material=False,
+    )
+
+
+def _deep_funding(obligation: str = "5000000") -> FundingState:
+    return FundingState(
+        Decimal("100000000000"), Decimal(obligation), Decimal("100000000000"), True
+    )
+
+
+# -- F1: capacity is part of check 6, and the ladder never asserts ----------
+
+
+def test_a_capped_sole_rail_holds_rather_than_raising() -> None:
+    """The defect: check 6 proved usability, the ladder additionally required
+    capacity, and the code asserted that usability implied capacity. It does
+    not. FedNow ships with a value cap, so a single-rail off-hours window
+    above that cap reached an AssertionError instead of a decision - and an
+    assertion is not a governance outcome, because it leaves no record.
+    """
+    rails = {
+        CashRail.FEDNOW: RailState(
+            CashRail.FEDNOW, RailStatus.AVAILABLE, 7200, Decimal("1000000")
+        )
+    }
+    decision = evaluate(
+        operation=_serviceable_op(),
+        funding=_deep_funding(),
+        rails=rails,
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.decision is GateDecision.HOLD
+    assert decision.reason_code is ReasonCode.NO_RAIL_IN_WINDOW
+    assert "5000000" in decision.rationale
+
+
+def test_a_capped_rail_is_still_used_when_the_operation_fits() -> None:
+    """The fix must not turn a capped rail into an unusable one."""
+    rails = {
+        CashRail.FEDNOW: RailState(
+            CashRail.FEDNOW, RailStatus.AVAILABLE, 7200, Decimal("1000000")
+        )
+    }
+    decision = evaluate(
+        operation=_serviceable_op("500000"),
+        funding=_deep_funding("500000"),
+        rails=rails,
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.decision is GateDecision.PROCEED
+    assert decision.recommended_rail is CashRail.FEDNOW
+
+
+def test_the_rail_ladder_has_no_unreachable_assertion() -> None:
+    """A deliberate absence, marked so a reader finds the refusal.
+
+    The ladder returns None where nothing is serviceable and the caller
+    holds. Reintroducing an assertion here would restore a failure mode that
+    produces no decision record.
+    """
+    import inspect
+
+    from atreides.rails import cato_f
+
+    source = inspect.getsource(cato_f._recommend_rail)
+    # The comment explaining why the assertion was removed mentions it by
+    # name, so test the executable lines rather than the prose.
+    code = "\n".join(
+        line for line in source.splitlines() if not line.strip().startswith("#")
+    )
+    assert "raise AssertionError" not in code
+
+
+def test_rail_fallback_does_not_depend_on_caller_dict_ordering() -> None:
+    """Replay is the framework's central claim and it was conditional on how
+    a caller happened to build a dictionary."""
+    a = {
+        CashRail.CHIPS: RailState(CashRail.CHIPS, RailStatus.AVAILABLE, 7200),
+        CashRail.NSS_DTC_NSCC: RailState(
+            CashRail.NSS_DTC_NSCC, RailStatus.AVAILABLE, 7200
+        ),
+    }
+    b = {
+        CashRail.NSS_DTC_NSCC: RailState(
+            CashRail.NSS_DTC_NSCC, RailStatus.AVAILABLE, 7200
+        ),
+        CashRail.CHIPS: RailState(CashRail.CHIPS, RailStatus.AVAILABLE, 7200),
+    }
+    first = evaluate(
+        operation=_serviceable_op(), funding=_deep_funding(), rails=a, ofr_stlfsi4=0.0
+    )
+    second = evaluate(
+        operation=_serviceable_op(), funding=_deep_funding(), rails=b, ofr_stlfsi4=0.0
+    )
+    assert first.recommended_rail is second.recommended_rail
+
+
+# -- F2: a stress reading must be a number before it is compared -----------
+
+
+@pytest.mark.parametrize("reading", [float("nan"), float("inf"), float("-inf")])
+def test_a_non_finite_stress_reading_is_named_and_held(reading: float) -> None:
+    """The defect: every stress band is a comparison, and every comparison
+    against NaN is False. So a broken feed did not fail one check - it
+    satisfied all of them, skipped the escalate band, skipped the hold band,
+    skipped the stress rail preference, and cleared. The most permissive
+    outcome in the gate was reachable by the single most likely upstream
+    defect.
+    """
+    decision = evaluate(
+        operation=_serviceable_op(),
+        funding=_deep_funding(),
+        rails={CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200)},
+        ofr_stlfsi4=reading,
+    )
+    assert decision.decision is GateDecision.HOLD
+    assert decision.reason_code is ReasonCode.STRESS_READING_UNUSABLE
+    assert not decision.proceeds
+    assert decision.recommended_rail is None
+
+
+def test_an_unusable_reading_is_not_reported_as_observed_stress() -> None:
+    """The distinction the new code exists to draw, and the one that made
+    +inf change behaviour.
+
+    SYSTEMIC_STRESS_ESCALATE asserts that stress was observed above a band.
+    Infinity is a broken feed, not a market condition, and manufacturing an
+    observation from it is the error this corpus refuses everywhere else.
+    The cost is stated in the reason code's docstring: an operator who wants
+    a broken feed to page somebody routes on this code.
+    """
+    decision = evaluate(
+        operation=_serviceable_op(),
+        funding=_deep_funding(),
+        rails={CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200)},
+        ofr_stlfsi4=float("inf"),
+    )
+    assert decision.reason_code is not ReasonCode.SYSTEMIC_STRESS_ESCALATE
+
+
+def test_finite_readings_are_unaffected_by_the_new_check() -> None:
+    rails = {CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200)}
+    for reading, expected in (
+        (-1.0, GateDecision.PROCEED),
+        (0.0, GateDecision.PROCEED),
+        (0.5, GateDecision.PROCEED),
+        (0.6, GateDecision.HOLD),
+        (1.0, GateDecision.HOLD),
+        (1.5, GateDecision.ESCALATE),
+    ):
+        decision = evaluate(
+            operation=_serviceable_op(),
+            funding=_deep_funding(),
+            rails=rails,
+            ofr_stlfsi4=reading,
+        )
+        assert decision.decision is expected, reading
+
+
+# -- F3: the funding model's refusal travels with its numbers -------------
+
+
+def test_a_position_the_model_refused_to_assert_is_not_read_as_funded() -> None:
+    """The defect: FundingState carries four scalars and no disposition, so a
+    projection that explicitly declined to call the position funded handed
+    the gate a large number and the gate read a large number as funded.
+    """
+    decision = evaluate(
+        operation=_serviceable_op(),
+        funding=FundingState(
+            Decimal("100000000000"),
+            Decimal("5000000"),
+            Decimal("100000000000"),
+            True,
+            position_is_assertable=False,
+        ),
+        rails={CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200)},
+        ofr_stlfsi4=0.0,
+    )
+    assert decision.decision is GateDecision.HOLD
+    assert decision.reason_code is ReasonCode.FUNDING_INDETERMINATE
+
+
+def test_a_refused_position_is_distinct_from_a_short_one() -> None:
+    """Two different findings with two different remedies. Collapsing them
+    would lose the one that matters: 'short' is about the position, 'the
+    model would not say' is about the evidence, and you do not fix the second
+    by funding the account.
+    """
+    rails = {CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200)}
+    short = evaluate(
+        operation=_serviceable_op(),
+        funding=FundingState(Decimal("0"), Decimal("5000000"), Decimal("0"), True),
+        rails=rails,
+        ofr_stlfsi4=0.0,
+    )
+    refused = evaluate(
+        operation=_serviceable_op(),
+        funding=FundingState(
+            Decimal("100000000000"),
+            Decimal("5000000"),
+            Decimal("100000000000"),
+            True,
+            position_is_assertable=False,
+        ),
+        rails=rails,
+        ofr_stlfsi4=0.0,
+    )
+    assert short.reason_code is ReasonCode.UNFUNDED_AT_SETTLEMENT_INSTANT
+    assert refused.reason_code is ReasonCode.FUNDING_INDETERMINATE
+    assert short.reason_code is not refused.reason_code
+
+
+def test_a_hand_built_funding_state_still_asserts_its_position() -> None:
+    """Constructing this object by hand IS the assertion. The default must
+    not turn every existing caller into a hold.
+    """
+    state = FundingState(
+        Decimal("100000000000"), Decimal("5000000"), Decimal("100000000000"), True
+    )
+    assert state.position_is_assertable is True
