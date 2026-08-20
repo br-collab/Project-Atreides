@@ -1,6 +1,6 @@
 [project]
 name = "atreides"
-version = "0.3.0"
+version = "0.3.2"
 description = "Aureon Asset Services — doctrine-native institutional governance framework"
 authors = [{name = "Guillermo Ravelo", email = "bill@ravelostrategicsolutions.com"}]
 readme = "README.md"
