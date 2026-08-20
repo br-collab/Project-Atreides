@@ -214,12 +214,32 @@ class FundingProjection:
         gate holds on it, which is correct: an operation that cannot settle
         *at the instant* should not be released, even though it will
         eventually settle if left alone.
+
+        THE REFUSAL TRAVELS WITH THE NUMBERS
+        ------------------------------------
+        This model has states in which it declines to assert the position at
+        all: a correspondent-dependent leg, an obligation awaiting
+        determination. ``FundingState`` carries four scalars and no
+        disposition, so before ``position_is_assertable`` existed, that
+        refusal died here. An INDETERMINATE projection over a well-funded
+        account handed the gate a large number, the gate compared two numbers,
+        and an operation the model had explicitly refused to call funded
+        cleared.
+
+        The failure had the shape this framework refuses everywhere else: not
+        a wrong answer, but a correct refusal converted into a value on the
+        way to the next component. A boundary is exactly where a refusal is
+        most likely to be dropped, because a boundary is where the rich type
+        becomes the narrow one.
         """
         return FundingState(
             projected_funded_position=self.projected_position_at_settlement,
             net_obligation=self.obligation,
             net_debit_cap_headroom=self.net_debit_cap_headroom,
             clearing_fund_sufficient=self.clearing_fund_sufficient,
+            position_is_assertable=(
+                self.disposition is not FundingDisposition.INDETERMINATE
+            ),
         )
 
 

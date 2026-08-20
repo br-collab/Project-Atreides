@@ -16,6 +16,7 @@ from atreides.contracts.margin_profile import (
     CollateralEligibility,
     CollectionModel,
     DeterminabilityRegime,
+    MonitoringModel,
     ProfileStatus,
     ResponsivenessObservation,
     RevocationAuthority,
@@ -265,6 +266,97 @@ def test_identical_inputs_produce_identical_profiles() -> None:
 def test_unknown_field_is_rejected() -> None:
     with pytest.raises(ValidationError):
         VenueMarginProfile(venue_id="VENUE_A", predicted_margin=Decimal("1000"))  # type: ignore[call-arg]
+
+
+# --------------------------------------------------------------------------
+# Monitoring: when the venue can SEE, as distinct from when it can collect
+# --------------------------------------------------------------------------
+
+
+def test_monitoring_is_unassessed_by_default() -> None:
+    """The safe state, and NOT the same as a venue that watches
+    continuously. Defaulting to CONTINUOUS would let every unread venue read
+    as one that observes everything."""
+    assert absent_margin_profile("VENUE_A").monitoring_model is (
+        MonitoringModel.NOT_ASSESSED
+    )
+    assert absent_margin_profile("VENUE_A").monitoring_window is None
+
+
+def test_a_bounded_window_may_be_recorded_with_its_hours() -> None:
+    profile = VenueMarginProfile(
+        venue_id="VENUE_A",
+        status=ProfileStatus.POPULATED,
+        monitoring_model=MonitoringModel.BOUNDED_WINDOW,
+        monitoring_window="15-minute cycle, 06:00-23:00 venue local time",
+        provenance=CITATION,
+    )
+    assert profile.monitoring_window is not None
+
+
+def test_a_bounded_window_without_its_hours_is_refused() -> None:
+    """The gap between the monitoring window and the trading session IS the
+    finding. A bare flag cannot produce it."""
+    with pytest.raises(ValidationError, match="must state the window"):
+        VenueMarginProfile(
+            venue_id="VENUE_A",
+            status=ProfileStatus.POPULATED,
+            monitoring_model=MonitoringModel.BOUNDED_WINDOW,
+            provenance=CITATION,
+        )
+
+
+def test_hours_may_not_be_recorded_against_an_unbounded_model() -> None:
+    with pytest.raises(ValidationError, match="meaningful only under BOUNDED_WINDOW"):
+        VenueMarginProfile(
+            venue_id="VENUE_A",
+            status=ProfileStatus.POPULATED,
+            monitoring_model=MonitoringModel.CONTINUOUS,
+            monitoring_window="06:00-23:00",
+            provenance=CITATION,
+        )
+
+
+def test_an_unverified_profile_may_not_assert_a_monitoring_model() -> None:
+    """Same discipline as every other field here: an entry nobody populated
+    cannot carry a claim about the venue."""
+    with pytest.raises(ValidationError, match="UNVERIFIED profile"):
+        VenueMarginProfile(
+            venue_id="VENUE_A",
+            monitoring_model=MonitoringModel.CONTINUOUS,
+        )
+
+
+def test_monitoring_and_collection_are_separate_axes() -> None:
+    """The condition the extended-hours signal memo turned up: a venue can
+    collect on traditional hours only and still monitor on a bounded cycle,
+    and those two facts answer different questions. Collapsing them would
+    have the framework report an uncollectable exposure where the position
+    rolls into a start-of-day call that will be made."""
+    profile = VenueMarginProfile(
+        venue_id="VENUE_A",
+        status=ProfileStatus.POPULATED,
+        collection_model=CollectionModel.TRADITIONAL_HOURS_ONLY,
+        monitoring_model=MonitoringModel.BOUNDED_WINDOW,
+        monitoring_window="15-minute cycle, 06:00-23:00 venue local time",
+        provenance=CITATION,
+    )
+    assert profile.collection_model is CollectionModel.TRADITIONAL_HOURS_ONLY
+    assert profile.monitoring_model is MonitoringModel.BOUNDED_WINDOW
+
+
+def test_nothing_published_is_distinct_from_nothing_read() -> None:
+    """The distinction this framework draws everywhere. A venue that
+    publishes no monitoring arrangement was read; a NOT_ASSESSED one was
+    not, and the remedies are different."""
+    assert MonitoringModel.NONE_PUBLISHED is not MonitoringModel.NOT_ASSESSED
+    read = VenueMarginProfile(
+        venue_id="VENUE_A",
+        status=ProfileStatus.POPULATED,
+        monitoring_model=MonitoringModel.NONE_PUBLISHED,
+        provenance=CITATION,
+    )
+    assert read.monitoring_window is None
 
 
 # --------------------------------------------------------------------------

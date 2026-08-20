@@ -24,11 +24,19 @@ from atreides.contracts.margin_impact import (
     Observability,
     absent_margin_assessment,
     margin_impact_for_clearing_fund_deficiency,
+    margin_impact_outside_monitoring_window,
     margin_priority_rank,
     raises_quorum_question,
     sort_by_margin_consequence,
 )
-from atreides.contracts.margin_profile import CollectionModel
+from atreides.contracts.margin_profile import (
+    CollectionModel,
+    DeterminabilityRegime,
+    MonitoringModel,
+    ProfileStatus,
+    VenueMarginProfile,
+    absent_margin_profile,
+)
 from atreides.rails.finality import FinalityClass
 
 D = Decimal
@@ -684,6 +692,126 @@ def test_a_standing_condition_trails_every_work_item() -> None:
         assert standing > margin_priority_rank(_indeterminate(actionable))
 
 
+# ---------------------------------------------------------------------------
+# Seen versus collected: the extended-hours condition
+#
+# A venue can clear through a session it does not observe on its intraday
+# cycle. The exposure is real, accruing, and fully collectable at the next
+# start of day. The framework's job is to hold all three of those at once
+# without turning any of them into the others.
+# ---------------------------------------------------------------------------
+
+
+def _bounded_venue(**kw: object) -> VenueMarginProfile:
+    base: dict[str, object] = {
+        "venue_id": "CCP-EQ",
+        "status": ProfileStatus.POPULATED,
+        "model_type": "Portfolio VaR with discretionary add-ons",
+        "determinability": DeterminabilityRegime.DISCRETIONARY,
+        "collection_model": CollectionModel.TRADITIONAL_HOURS_ONLY,
+        "monitoring_model": MonitoringModel.BOUNDED_WINDOW,
+        "monitoring_window": "15-minute cycle, 06:00-23:00 venue local time",
+        "provenance": "Venue clearing rulebook, intraday risk monitoring",
+    }
+    base.update(kw)
+    return VenueMarginProfile(**base)  # type: ignore[arg-type]
+
+
+def test_a_monitoring_gap_is_not_a_closed_call_window() -> None:
+    """The distinction the whole addition rests on. CALL_WINDOW_CLOSED says
+    the exposure is quantified and nobody can collect it. Here the exposure
+    is not quantified and collection is unaffected - the position rolls into
+    a start-of-day call that will be made. Returning CALL_WINDOW_CLOSED
+    would report an uncollectable exposure where none exists."""
+    impact = margin_impact_outside_monitoring_window(profile=_bounded_venue())
+    assert impact.disposition is not MarginDisposition.CALL_WINDOW_CLOSED
+    assert impact.disposition is MarginDisposition.INDETERMINATE
+    assert impact.call_window is None
+
+
+def test_a_monitoring_gap_asserts_no_exposure_figure() -> None:
+    """Asserting a known exposure on an unobservable basis is the exact
+    combination the model refuses elsewhere. This constructor must not be
+    the back door into it."""
+    impact = margin_impact_outside_monitoring_window(profile=_bounded_venue())
+    assert impact.observability is Observability.UNOBSERVABLE
+    assert impact.delta_amount is None
+    assert impact.direction is MarginDirection.UNKNOWN
+
+
+def test_the_firms_own_collateral_stays_observable() -> None:
+    """What the firm posted is a fact about the firm. Only the requirement
+    moving against it is unobservable, and recording both as unobservable
+    would overstate the gap."""
+    impact = margin_impact_outside_monitoring_window(profile=_bounded_venue())
+    assert impact.collateral_observability is Observability.OBSERVED
+
+
+def test_the_window_comes_from_the_profile_and_not_the_call_site() -> None:
+    impact = margin_impact_outside_monitoring_window(profile=_bounded_venue())
+    assert "06:00-23:00 venue local time" in impact.basis
+    assert impact.venue == "CCP-EQ"
+
+
+def test_an_unread_venue_cannot_claim_a_monitoring_gap() -> None:
+    """The refusal that keeps this honest. An unread monitoring arrangement
+    is a research task - UNREAD_VENUE_PROFILE - and letting it return a
+    monitoring-gap assessment would have an unread venue present as an
+    assessed one."""
+    with pytest.raises(ValueError, match="UNREAD_VENUE_PROFILE"):
+        margin_impact_outside_monitoring_window(
+            profile=absent_margin_profile("CCP-EQ")
+        )
+
+
+def test_a_continuously_monitored_venue_cannot_claim_a_monitoring_gap() -> None:
+    with pytest.raises(ValueError, match="monitoring is known to be bounded"):
+        margin_impact_outside_monitoring_window(
+            profile=_bounded_venue(
+                monitoring_model=MonitoringModel.CONTINUOUS,
+                monitoring_window=None,
+            )
+        )
+
+
+def test_a_monitoring_gap_still_outranks_every_known_cost() -> None:
+    """Sub-ranking must not leak across the band boundary. The least urgent
+    unknown still beats the most urgent known one."""
+    impact = margin_impact_outside_monitoring_window(profile=_bounded_venue())
+    known = _impact(
+        disposition=MarginDisposition.UNDER_COLLATERALIZED,
+        direction=MarginDirection.OWED_TO_VENUE,
+    )
+    assert margin_priority_rank(impact) < margin_priority_rank(known)
+
+
+def test_a_scheduled_wait_ranks_below_every_reason_that_names_work() -> None:
+    """The debatable ordering, asserted so the debate is visible. Every
+    other reason in the band names something somebody could start now; this
+    one names a wait that ends at an hour the venue has published."""
+    scheduled = margin_priority_rank(
+        _indeterminate(IndeterminacyReason.OUTSIDE_MONITORING_WINDOW)
+    )
+    for other in (
+        IndeterminacyReason.UNSPECIFIED,
+        IndeterminacyReason.UNRECONCILED_POSITION,
+        IndeterminacyReason.UNREAD_VENUE_PROFILE,
+        IndeterminacyReason.VENUE_PUBLISHES_NOTHING,
+    ):
+        assert scheduled > margin_priority_rank(_indeterminate(other))
+
+
+def test_every_indeterminacy_reason_has_a_distinct_rank() -> None:
+    """The defect the sub-rank exists to fix does not come back one member
+    at a time."""
+    ranks = [
+        margin_priority_rank(_indeterminate(r))
+        for r in IndeterminacyReason
+        if r is not IndeterminacyReason.NOT_APPLICABLE
+    ]
+    assert len(set(ranks)) == len(ranks)
+
+
 def test_the_whole_indeterminate_band_still_outranks_every_known_cost() -> None:
     """Sub-ranking must not leak across the band boundary. Unknown exposure
     outranks known cost, and the least urgent unknown still beats the most
@@ -713,3 +841,73 @@ def test_sub_ranking_does_not_repair_a_wholly_unassessed_queue() -> None:
         for i in range(1, 50)
     )
     assert len({margin_priority_rank(m) for m in triaged}) == 2
+
+
+# ---------------------------------------------------------------------------
+# WITHIN_TOLERANCE must actually be within it
+# ---------------------------------------------------------------------------
+
+
+def test_a_delta_above_its_own_threshold_is_refused() -> None:
+    """The one contradiction this model's own disposition name asserts, and
+    the only cross-field check it was missing. A billion against a threshold
+    of one used to construct, report escalates=False, and sort to the bottom
+    of the queue."""
+    with pytest.raises(ValidationError, match="asserts a delta below"):
+        _impact(
+            disposition=MarginDisposition.WITHIN_TOLERANCE,
+            direction=MarginDirection.NEUTRAL,
+            delta_amount=D("1000000000"),
+            delta_currency="USD",
+            materiality_threshold=D("1"),
+        )
+
+
+def test_a_delta_below_its_threshold_is_accepted() -> None:
+    impact = _impact(
+        disposition=MarginDisposition.WITHIN_TOLERANCE,
+        direction=MarginDirection.NEUTRAL,
+        delta_amount=D("12"),
+        delta_currency="USD",
+        materiality_threshold=D("50000"),
+    )
+    assert impact.escalates is False
+
+
+def test_a_delta_exactly_at_the_threshold_is_within_it() -> None:
+    """Stated rather than left to a reader: the boundary is inclusive, on the
+    same reasoning as every other threshold in this framework."""
+    impact = _impact(
+        disposition=MarginDisposition.WITHIN_TOLERANCE,
+        direction=MarginDirection.NEUTRAL,
+        delta_amount=D("500"),
+        delta_currency="USD",
+        materiality_threshold=D("500"),
+    )
+    assert impact.disposition is MarginDisposition.WITHIN_TOLERANCE
+
+
+def test_the_magnitude_is_compared_not_the_sign() -> None:
+    """A large negative delta is as material as a large positive one."""
+    with pytest.raises(ValidationError, match="asserts a delta below"):
+        _impact(
+            disposition=MarginDisposition.WITHIN_TOLERANCE,
+            direction=MarginDirection.NEUTRAL,
+            delta_amount=D("-1000000"),
+            delta_currency="USD",
+            materiality_threshold=D("100"),
+        )
+
+
+def test_an_unfigured_tolerance_assessment_is_left_alone() -> None:
+    """The guarded half of the comparison. Where no delta was supplied there
+    is nothing to compare, and inventing one would be worse than not
+    checking."""
+    impact = _impact(
+        disposition=MarginDisposition.WITHIN_TOLERANCE,
+        direction=MarginDirection.NEUTRAL,
+        delta_amount=None,
+        delta_currency=None,
+        materiality_threshold=D("50000"),
+    )
+    assert impact.delta_amount is None

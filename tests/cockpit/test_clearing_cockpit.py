@@ -275,3 +275,109 @@ def test_no_credential_field_anywhere_on_models():
             key in f for f in fields
             for key in ("credential", "password", "secret", "token", "entitlement")
         )
+
+
+# ---------------------------------------------------------------------------
+# Break tickets must carry the figures that produced them
+# ---------------------------------------------------------------------------
+
+
+def test_every_break_leg_has_a_detail_key() -> None:
+    """Exhaustiveness, so adding a leg without its key fails here rather than
+    shipping a blank ticket. The previous derivation - splitting the member
+    value on the first underscore - worked for two legs and silently failed
+    for the other two."""
+    from atreides.cockpit.clearing_cockpit import _DETAIL_KEY, BreakLeg
+
+    assert set(_DETAIL_KEY) == set(BreakLeg)
+
+
+def test_a_clearing_fund_ticket_carries_the_deficit() -> None:
+    from atreides.cockpit.clearing_cockpit import BreakLeg
+
+    cockpit = ClearingCockpit()
+    tasking = cockpit.capture_tasking(
+        regime=PortalRegime.CCP,
+        rail=SettlementRail.FICC_GSD_DVP,
+        settlement_kind=SettlementKind.DVP,
+        counterparty_id="CP-1",
+        settlement_date=datetime(2026, 8, 20, tzinfo=UTC),
+        authority_id="OP-1",
+        net_delivery_quantity=Decimal("1000"),
+        net_payment_amount=Decimal("1000000"),
+        ficc_published_net_delivery=Decimal("1000"),
+    )
+    gate = cockpit.run_validation_gates(tasking)
+    package = cockpit.emit_instruction_package(tasking, gate)
+    readback = cockpit.ingest_portal_readback(
+        operation_id=tasking.operation_id,
+        regime=PortalRegime.CCP,
+        clearing_fund_deficit=Decimal("2500000"),
+    )
+    recon = cockpit.reconcile_expected_actual(package, readback)
+    tickets = cockpit.raise_break(recon, uuid.uuid4())
+    ticket = next(t for t in tickets if t.leg is BreakLeg.CLEARING_FUND)
+    assert "2500000" in ticket.detail
+
+
+def test_a_net_obligation_ticket_carries_expected_and_actual() -> None:
+    from atreides.cockpit.clearing_cockpit import BreakLeg
+
+    cockpit = ClearingCockpit()
+    tasking = cockpit.capture_tasking(
+        regime=PortalRegime.CCP,
+        rail=SettlementRail.FICC_GSD_DVP,
+        settlement_kind=SettlementKind.DVP,
+        counterparty_id="CP-1",
+        settlement_date=datetime(2026, 8, 20, tzinfo=UTC),
+        authority_id="OP-1",
+        net_delivery_quantity=Decimal("1000"),
+        net_payment_amount=Decimal("1000000"),
+        ficc_published_net_delivery=Decimal("1000"),
+    )
+    gate = cockpit.run_validation_gates(tasking)
+    package = cockpit.emit_instruction_package(tasking, gate)
+    readback = cockpit.ingest_portal_readback(
+        operation_id=tasking.operation_id,
+        regime=PortalRegime.CCP,
+        ccp_net_obligation=Decimal("999999"),
+    )
+    recon = cockpit.reconcile_expected_actual(package, readback)
+    tickets = cockpit.raise_break(recon, uuid.uuid4())
+    ticket = next(t for t in tickets if t.leg is BreakLeg.NET_OBLIGATION)
+    assert "1000000" in ticket.detail
+    assert "999999" in ticket.detail
+
+
+def test_no_break_ticket_reaches_the_workbench_empty() -> None:
+    """The general form. A well-formed ticket with no figures in it is worse
+    than no ticket, because it looks worked."""
+    cockpit = ClearingCockpit()
+    tasking = cockpit.capture_tasking(
+        regime=PortalRegime.CCP,
+        rail=SettlementRail.FICC_GSD_DVP,
+        settlement_kind=SettlementKind.DVP,
+        counterparty_id="CP-1",
+        settlement_date=datetime(2026, 8, 20, tzinfo=UTC),
+        authority_id="OP-1",
+        net_delivery_quantity=Decimal("1000"),
+        net_payment_amount=Decimal("1000000"),
+        ficc_published_net_delivery=Decimal("1000"),
+        intraday_credit_limit=Decimal("10000000"),
+        intraday_credit_current_usage=Decimal("1000"),
+    )
+    gate = cockpit.run_validation_gates(tasking)
+    package = cockpit.emit_instruction_package(tasking, gate)
+    readback = cockpit.ingest_portal_readback(
+        operation_id=tasking.operation_id,
+        regime=PortalRegime.CCP,
+        position_balance=Decimal("900"),
+        clearing_fund_deficit=Decimal("2500000"),
+        ccp_net_obligation=Decimal("999999"),
+        intraday_credit_usage=Decimal("10000000"),
+    )
+    recon = cockpit.reconcile_expected_actual(package, readback)
+    tickets = cockpit.raise_break(recon, uuid.uuid4())
+    assert len(tickets) == 4
+    for ticket in tickets:
+        assert ticket.detail != "{}", ticket.leg.value

@@ -58,7 +58,11 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from atreides.contracts.margin_profile import CollectionModel
+from atreides.contracts.margin_profile import (
+    CollectionModel,
+    MonitoringModel,
+    VenueMarginProfile,
+)
 from atreides.rails.finality import FinalityClass
 
 __all__ = [
@@ -71,6 +75,7 @@ __all__ = [
     "Observability",
     "absent_margin_assessment",
     "margin_impact_for_clearing_fund_deficiency",
+    "margin_impact_outside_monitoring_window",
     "margin_priority_rank",
     "margin_sort_key",
     "raises_quorum_question",
@@ -157,9 +162,10 @@ class IndeterminacyReason(StrEnum):
     queue orders itself as soon as a human looks - and makes the flatness
     diagnosable rather than invisible.
 
-    The three substantive reasons carry three different remedies, which is
-    the whole justification for separating them: a research task, an
-    operations task, and a risk acceptance already taken.
+    The substantive reasons carry different remedies, which is the whole
+    justification for separating them: an operations task, a research task,
+    a risk acceptance already taken, and - since a market forced the case
+    into the open - a wait with a stated end time.
     """
 
     NOT_APPLICABLE = "not_applicable"
@@ -181,10 +187,35 @@ class IndeterminacyReason(StrEnum):
 
     VENUE_PUBLISHES_NOTHING = "venue_publishes_nothing"
     """The venue was assessed and discloses no margin methodology on any
-    standard basis. Ranks last within the group because there is no work
-    item - it is a standing condition and a risk acceptance already taken.
-    Distinct from UNREAD_VENUE_PROFILE for exactly the reason NOT_ASSESSED is
-    distinct from NONE_DISCLOSED everywhere else in this framework."""
+    standard basis. There is no work item - it is a standing condition and a
+    risk acceptance already taken. Distinct from UNREAD_VENUE_PROFILE for
+    exactly the reason NOT_ASSESSED is distinct from NONE_DISCLOSED
+    everywhere else in this framework."""
+
+    OUTSIDE_MONITORING_WINDOW = "outside_monitoring_window"
+    """The venue publishes a methodology and monitors on a stated cycle, and
+    this exposure accrued outside the hours that cycle covers.
+
+    Added for a condition that is now real rather than hypothetical: US
+    equity clearing extended to a night session while the clearing
+    corporation's intraday monitoring stayed inside narrower hours, so a
+    position can be novated, guaranteed and growing while the venue's own
+    observation is silent. See ``MonitoringModel.BOUNDED_WINDOW``.
+
+    **This is not an uncollectable exposure.** The position rolls into the
+    next start-of-day call, which will be made. What is absent is
+    observation, and conflating that with a closed collection window would
+    have the framework report an exposure nobody can collect where in fact
+    somebody will.
+
+    Ranks last within the group, which is the debatable part and is stated
+    rather than hidden. The case for last: every other reason names work
+    somebody could start now, and this one names a wait that ends at an hour
+    the venue has published. The case against, which loses: the exposure is
+    live and accruing, and burying it under a standing condition risks it
+    being read as inert. It loses because rank orders *attention*, nothing
+    at 3am changes the outcome, and the break does not disappear - it
+    reprices itself the moment the window opens."""
 
 
 class Observability(StrEnum):
@@ -380,6 +411,41 @@ class MarginImpact(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _within_tolerance_is_actually_within_it(self) -> MarginImpact:
+        """The one contradiction this model's own name asserts.
+
+        WITHIN_TOLERANCE is *defined* as "delta is below the applied
+        materiality threshold", and the check above enforced only that a
+        threshold was present. A billion-dollar delta against a threshold of
+        one was therefore constructible, reported ``escalates=False``, and
+        sank to the bottom of the break queue - the exact outcome the
+        prioritisation model exists to prevent.
+
+        The comparison is guarded rather than unconditional. The threshold
+        carries no currency and the delta does, so comparing them across
+        currencies would be unsound; where the delta is unlabelled or the
+        model cannot establish that both figures are in the same unit, this
+        validator declines to compare rather than compare wrongly. That is
+        the same refusal the module makes everywhere else, and it means the
+        currency-mismatch case stays open until the threshold carries a
+        currency of its own.
+        """
+        if self.disposition is not MarginDisposition.WITHIN_TOLERANCE:
+            return self
+        if self.delta_amount is None or self.materiality_threshold is None:
+            return self
+        if abs(self.delta_amount) > self.materiality_threshold:
+            raise ValueError(
+                f"WITHIN_TOLERANCE asserts a delta below the applied "
+                f"threshold, and {self.delta_amount} exceeds "
+                f"{self.materiality_threshold}. A break labelled within "
+                f"tolerance sorts to the bottom of the queue; labelling a "
+                f"material exposure that way is how it never gets worked "
+                f"(SPEC-MARGIN-AWARE-BREAKS sec. 12)"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _indeterminacy_reason_matches_disposition(self) -> MarginImpact:
         indeterminate = self.disposition is MarginDisposition.INDETERMINATE
         applicable = self.indeterminacy is not IndeterminacyReason.NOT_APPLICABLE
@@ -513,6 +579,7 @@ _INDETERMINACY_OFFSET: Final[dict[IndeterminacyReason, int]] = {
     IndeterminacyReason.UNRECONCILED_POSITION: 1,
     IndeterminacyReason.UNREAD_VENUE_PROFILE: 2,
     IndeterminacyReason.VENUE_PUBLISHES_NOTHING: 3,
+    IndeterminacyReason.OUTSIDE_MONITORING_WINDOW: 4,
     IndeterminacyReason.NOT_APPLICABLE: 0,
 }
 
@@ -614,6 +681,65 @@ def margin_impact_for_clearing_fund_deficiency(
             f"{requirement} at {venue}. Both figures supplied by the venue; "
             f"no methodology was applied here "
             f"(AUR-CUSTODY-MARGIN-001 sec. 3, SPEC sec. 9)."
+        ),
+    )
+
+
+def margin_impact_outside_monitoring_window(
+    *,
+    profile: VenueMarginProfile,
+    exposure_note: str = "",
+) -> MarginImpact:
+    """Render an exposure accrued outside a venue's monitoring hours.
+
+    The condition: the venue clears through a session it does not observe on
+    its intraday cycle. The position is novated and guaranteed, the exposure
+    is accruing, and the venue's own monitoring is silent until the window
+    reopens.
+
+    **What this deliberately does not return.** Not ``CALL_WINDOW_CLOSED``,
+    because the collection mechanism is not shut - the position rolls into
+    the next start-of-day call and that call will be made. Not
+    ``UNDER_COLLATERALIZED``, because asserting a known exposure on an
+    unobservable basis is exactly the combination the model refuses. What is
+    absent here is observation, and the assessment says so and nothing more.
+
+    The window is taken from the profile rather than from an argument, so
+    the hours cannot be asserted at a call site. A venue whose monitoring
+    arrangement has not been read raises instead of returning: that state is
+    ``UNREAD_VENUE_PROFILE``, it is a research task rather than a market
+    condition, and returning a monitoring-gap assessment for it would let an
+    unread venue present as an assessed one.
+    """
+    if profile.monitoring_model is not MonitoringModel.BOUNDED_WINDOW:
+        raise ValueError(
+            f"a monitoring-window assessment requires a venue whose "
+            f"monitoring is known to be bounded; {profile.venue_id} is "
+            f"{profile.monitoring_model.value}. An unread arrangement is "
+            f"UNREAD_VENUE_PROFILE, not a market condition "
+            f"(AUR-CUSTODY-MARGIN-001 sec. 4)"
+        )
+    window = profile.monitoring_window  # required under BOUNDED_WINDOW
+    note = f" {exposure_note.strip()}" if exposure_note.strip() else ""
+    return MarginImpact(
+        disposition=MarginDisposition.INDETERMINATE,
+        direction=MarginDirection.UNKNOWN,
+        observability=Observability.UNOBSERVABLE,
+        # The firm's own posted collateral is a fact about the firm and is
+        # observable throughout. Only the requirement moving against it is
+        # not, and recording both as unobservable would overstate the gap.
+        collateral_observability=Observability.OBSERVED,
+        indeterminacy=IndeterminacyReason.OUTSIDE_MONITORING_WINDOW,
+        venue=profile.venue_id,
+        methodology=profile.model_type,
+        basis=(
+            f"Exposure accrued outside {profile.venue_id}'s stated monitoring "
+            f"hours ({window}). The venue clears through this session and "
+            f"does not observe it on its intraday cycle, so no figure is "
+            f"available at this hour. Collection is unaffected: the position "
+            f"rolls into the next start-of-day requirement.{note} "
+            f"(AUR-CUSTODY-MARGIN-001 sec. 6; window from the venue margin "
+            f"profile registry, not from this call site.)"
         ),
     )
 

@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**170 of 170 enumeration values (100%) state what they mean in
+**191 of 191 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -149,6 +149,39 @@ Gate output per AUR-CUSTODY-CASH-001 Section V.D.
 | `dsor_lineage_uri` | `str \| None` | `None` |
 | `obligation_finality_class` | `FinalityClass \| None` | `None` |
 
+#### `Counterparty`
+
+Who is on the other side, and what is known about them.
+
+| Field | Type | Default |
+| --- | --- | --- |
+| `counterparty_id` | `str` | required |
+| `standing` | `CounterpartyStanding` | `<CounterpartyStanding.NOT_ASSESSED: 'not_assessed'>` |
+| `assessed_age_seconds` | `int \| None` | `None` |
+| `provenance` | `str \| None` | `None` |
+
+#### `CounterpartyStanding` (enumeration)
+
+Whether this firm should be facing this counterparty at all.
+
+| Value | Meaning |
+| --- | --- |
+| `not_assessed` | Nobody has established this counterparty's standing. The remedy is an assessment; the gate holds until there is one. |
+| `in_good_standing` | Assessed, and nothing prevents facing them. |
+| `under_review` | Assessed, and a review is open. Escalates: a human is already looking and this operation is evidence for them. |
+| `suspended` | New business with this counterparty is stopped, by this firm's own decision or by a venue's. |
+| `defaulted` | The counterparty has defaulted. Nothing routine proceeds. |
+
+#### `FreshnessPolicy`
+
+How old a load-bearing input may be before it stops being evidence.
+
+| Field | Type | Default |
+| --- | --- | --- |
+| `max_stress_reading_age_seconds` | `int \| None` | `None` |
+| `max_rail_state_age_seconds` | `int \| None` | `None` |
+| `max_counterparty_assessment_age_seconds` | `int \| None` | `None` |
+
 #### `FundingState`
 
 Intraday funding state per AUR-CUSTODY-CASH-001 Section VII.
@@ -159,6 +192,7 @@ Intraday funding state per AUR-CUSTODY-CASH-001 Section VII.
 | `net_obligation` | `Decimal` | required |
 | `net_debit_cap_headroom` | `Decimal` | required |
 | `clearing_fund_sufficient` | `bool` | required |
+| `position_is_assertable` | `bool` | `True` |
 
 #### `GateDecision` (enumeration)
 
@@ -187,6 +221,7 @@ The operation under evaluation.
 | `tokenized_deposit_supported` | `bool` | `False` |
 | `within_business_hours` | `bool` | `True` |
 | `determination_outcome` | `DeterminationOutcome` | `<DeterminationOutcome.NOT_APPLICABLE: 'not_applicable'>` |
+| `counterparty` | `Counterparty \| None` | `None` |
 
 #### `RailState`
 
@@ -198,6 +233,7 @@ Per-rail operational state. Supplied by the caller's refresh loop.
 | `status` | `RailStatus` | required |
 | `seconds_to_cutoff` | `int \| None` | `None` |
 | `value_cap` | `Decimal \| None` | `None` |
+| `observed_age_seconds` | `int \| None` | `None` |
 
 #### `RailStatus` (enumeration)
 
@@ -225,6 +261,12 @@ Reason codes. One per check in Section V.B plus the PROCEED case.
 | `UNRESOLVABLE_FINALITY` | A correspondent chain whose finality state cannot be established. Unknown finality is not acceptable finality. |
 | `DETERMINATION_PENDING` | A contingent obligation whose outcome has not been determined. The instruction is premature, not unsafe. |
 | `UNASSESSED_REVOCATION_AUTHORITY` | Determined, and nobody has read whether the venue may cancel and return funds. Closed by populating the registry, not by a market action. |
+| `MARKET_DATA_STALE` | A load-bearing input is older than the freshness policy allows, or its age was never established. Both conditions produce this code and the rationale distinguishes them, on the discipline this framework applies to every registry: "we read it an hour ago" and "nobody recorded when we read it" carry the same conservative treatment and completely different remedies. Fires only where a freshness policy was supplied. A caller that states no policy is not policed, and the decision record says so rather than implying a check that did not run. |
+| `COUNTERPARTY_UNASSESSED` | A counterparty was named and nobody has established its standing. Distinct from no counterparty at all. Naming one and leaving its standing unread is the unread-rulebook condition: closed by an assessment, not by a market action. |
+| `COUNTERPARTY_NOT_IN_GOOD_STANDING` | The counterparty is suspended or in default. Whether to face them is the question, and it is answered before whether the leg can be funded. |
+| `COUNTERPARTY_UNDER_REVIEW` | The counterparty is under review. Escalates rather than holds: a review means a human is already looking, and this operation is evidence they need rather than a decision this gate should take without them. |
+| `STRESS_READING_UNUSABLE` | The systemic-stress reading is not a usable number, so no statement about market stress can be made from it. Deliberately NOT the escalate code. SYSTEMIC_STRESS_ESCALATE asserts that stress was observed above a band; a NaN or an infinity asserts nothing except that the feed is broken. Naming the two differently is the same discipline the registries apply between NOT_ASSESSED and NONE_DISCLOSED: "we could not read it" and "we read it and it says X" carry the same conservative treatment and completely different remedies. Holds rather than escalates because HOLD is this framework's default everywhere evidence is absent, including the absent-gate default. The trade-off is stated rather than hidden: an operator who wants a broken feed to page somebody must route on this code, because the gate will not manufacture a stress finding it does not have. |
+| `FUNDING_INDETERMINATE` | The funding model declined to assert the position, so the gate has no funded state to check. Distinct from UNFUNDED_AT_SETTLEMENT_INSTANT, which asserts that the position is short. This code asserts nothing about the position at all - the projection reached a state where the model refuses to say, and a refusal must not be converted into a number on the way to this gate. |
 | `CLEARED` | No check fired. A rail is recommended. |
 | `GATE_UNAVAILABLE` | The gate could not be consulted. The absent-gate default is HOLD. |
 
@@ -384,6 +426,8 @@ One securities market's settlement characteristics.
 | --- | --- | --- |
 | `market_id` | `str` | required |
 | `settlement_cycle_days` | `int \| None` | `None` |
+| `processing_date_rule` | `ProcessingDateRule` | `<ProcessingDateRule.NOT_ASSESSED: 'not_assessed'>` |
+| `session_closure_message` | `str \| None` | `None` |
 | `close_out_regime` | `CloseOutRegime` | `<CloseOutRegime.NOT_ASSESSED: 'not_assessed'>` |
 | `close_out_deadline_days` | `int \| None` | `None` |
 | `allocation_rule_published` | `bool` | `False` |
@@ -400,6 +444,7 @@ One member's net obligation in one security after novation and netting.
 | `settlement_date_offset_days` | `int` | required |
 | `market_id` | `str` | required |
 | `constituent_trade_count` | `int` | `0` |
+| `assigned_processing_date_offset_days` | `int \| None` | `None` |
 
 #### `NetSettlementResult`
 
@@ -414,6 +459,16 @@ The outcome for one net position, with the evidence behind it.
 | `breaks` | `tuple[SecuritiesBreak, ...]` | `()` |
 | `rationale` | `str` | `''` |
 | `doctrine_version` | `str` | `'AUR-CUSTODY-EQUITY-001-draft-v0.1'` |
+
+#### `ProcessingDateRule` (enumeration)
+
+How a market fixes the business date a trade is processed for.
+
+| Value | Meaning |
+| --- | --- |
+| `not_assessed` | Nobody has read how this market fixes its processing date. NOT the same as a fixed cycle, and defaulting to a fixed cycle is the specific error this member exists to prevent. |
+| `fixed_cycle_from_trade_date` | Read, and the processing date is the trade date. The settlement cycle counts from the trade date directly and a timestamp is sufficient. |
+| `session_closure_message` | Read, and the processing date is fixed by a message the market sends at the close of a session rather than by a clock. A timestamp alone does not establish which business date a trade clears for. |
 
 #### `RecordDatePosition`
 
@@ -453,6 +508,8 @@ Break taxonomy for the equities rail.
 | `close_out_deadline_passed` | An open fail is past the market's published close-out deadline. |
 | `eligible_settled_divergence` | An open position at a corporate-action record date, so the eligible balance and the settled balance are not the same number. This is the condition published depository guidance names and carries - as an eligible-versus-settlement position distinction, and as pending delivery and pending receipt balances riding on the entitlement and confirmation messages. What that guidance does NOT state is the entitlement treatment: which side ends up owed what. So the framework records the divergence and refuses to compute the outcome. See :func:`absent_entitlement_treatment`. |
 | `quantity_not_restated` | A ratio-changing corporate action occurred and the open quantity was not restated. The fail is now denominated in shares that no longer exist in that form. |
+| `processing_date_not_established` | The market fixes its processing date by a session-closure message and no processing date has been reported for this position. The settlement offset the position carries was derived from a trade timestamp, and on this market a timestamp does not establish a business date. The offset is therefore an assumption wearing the shape of a record. Closed by the market reporting the date, not by anything the member can do. See :func:`absent_processing_date`. |
+| `allocation_against_flat_position` | The venue reported a movement in a security this member had netted to zero. Either the member's book is wrong - a trade booked to the wrong side, a wrong-CUSIP capture, a trade never captured at all - or the venue allocated against a position that does not exist. Both are serious and the framework cannot tell them apart from the participant seat, so it records the disagreement rather than resolving it. The disposition stays FLAT because the net position genuinely is flat. What changes is that the day no longer reads clean. |
 | `outcome_not_reported` | No settlement outcome was reported for the position. Fail-safe: not a settled position. |
 
 ---
@@ -635,7 +692,8 @@ Why a margin state is not observable.
 | `unspecified` | Indeterminate, and nobody has said why. Ranks first within the group: the break cannot even be routed, and triage is both the fastest action available and the one that unblocks every other. |
 | `unreconciled_position` | The position itself is not reconciled. An operations task, closeable today, and the most likely of the three to be masking real exposure. |
 | `unread_venue_profile` | No profile has been populated for the venue. A research task: closed by reading an entitled document, not by any market action, and not closeable inside the day. |
-| `venue_publishes_nothing` | The venue was assessed and discloses no margin methodology on any standard basis. Ranks last within the group because there is no work item - it is a standing condition and a risk acceptance already taken. Distinct from UNREAD_VENUE_PROFILE for exactly the reason NOT_ASSESSED is distinct from NONE_DISCLOSED everywhere else in this framework. |
+| `venue_publishes_nothing` | The venue was assessed and discloses no margin methodology on any standard basis. There is no work item - it is a standing condition and a risk acceptance already taken. Distinct from UNREAD_VENUE_PROFILE for exactly the reason NOT_ASSESSED is distinct from NONE_DISCLOSED everywhere else in this framework. |
+| `outside_monitoring_window` | The venue publishes a methodology and monitors on a stated cycle, and this exposure accrued outside the hours that cycle covers. Added for a condition that is now real rather than hypothetical: US equity clearing extended to a night session while the clearing corporation's intraday monitoring stayed inside narrower hours, so a position can be novated, guaranteed and growing while the venue's own observation is silent. See ``MonitoringModel.BOUNDED_WINDOW``. **This is not an uncollectable exposure.** The position rolls into the next start-of-day call, which will be made. What is absent is observation, and conflating that with a closed collection window would have the framework report an exposure nobody can collect where in fact somebody will. Ranks last within the group, which is the debatable part and is stated rather than hidden. The case for last: every other reason names work somebody could start now, and this one names a wait that ends at an hour the venue has published. The case against, which loses: the exposure is live and accruing, and burying it under a standing condition risks it being read as inert. It loses because rank orders *attention*, nothing at 3am changes the outcome, and the break does not disappear - it reprices itself the moment the window opens. |
 
 #### `MarginDirection` (enumeration)
 
@@ -729,6 +787,17 @@ How knowable a venue's margin figure is from outside the venue.
 | `DISCRETIONARY` | Risk model with judgment add-ons or intraday discretion. Not derivable; a supplied figure must be taken as given or refused. |
 | `UNDISCLOSED` | Venue publishes no methodology on any standard basis. The correct downstream disposition is INDETERMINATE. |
 
+#### `MonitoringModel` (enumeration)
+
+When the venue can *see* an exposure, as distinct from when it can collect against one.
+
+| Value | Meaning |
+| --- | --- |
+| `NOT_ASSESSED` | Nobody has read the venue's monitoring arrangements. Not the same as a venue that monitors continuously, and the remedy is research. |
+| `CONTINUOUS` | The venue observes exposures across its whole trading day. |
+| `BOUNDED_WINDOW` | The venue observes on a stated cycle within stated hours, and trading occurs outside them. The interval is carried alongside; the gap between that interval and the trading session is the exposure this class exists to make visible. |
+| `NONE_PUBLISHED` | Read, and the venue publishes no monitoring arrangement at all. |
+
 #### `ProfileStatus` (enumeration)
 
 Population state of a registry entry.
@@ -773,6 +842,8 @@ Margin characteristics of one venue, as disclosed by that venue.
 | `addon_logic` | `str \| None` | no |  |
 | `determinability` | `DeterminabilityRegime` | no |  |
 | `collection_model` | `CollectionModel` | no |  |
+| `monitoring_model` | `MonitoringModel` | no |  |
+| `monitoring_window` | `str \| None` | no |  |
 | `revocation_authority` | `RevocationAuthority` | no |  |
 | `eligible_collateral` | `tuple` | no |  |
 | `responsiveness` | `tuple` | no |  |

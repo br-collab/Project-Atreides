@@ -38,6 +38,7 @@ Status: v0.1 — doctrine-first implementation. Creates no authority.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
@@ -58,7 +59,10 @@ __all__ = [
     "RAIL_FINALITY",
     "CashRail",
     "CatoFDecision",
+    "Counterparty",
+    "CounterpartyStanding",
     "FinalityClass",
+    "FreshnessPolicy",
     "FundingState",
     "GateDecision",
     "OperationContext",
@@ -177,6 +181,55 @@ class ReasonCode(StrEnum):
     UNASSESSED_REVOCATION_AUTHORITY = "UNASSESSED_REVOCATION_AUTHORITY"
     """Determined, and nobody has read whether the venue may cancel and return funds. Closed by
     populating the registry, not by a market action."""
+    MARKET_DATA_STALE = "MARKET_DATA_STALE"
+    """A load-bearing input is older than the freshness policy allows, or its
+    age was never established.
+
+    Both conditions produce this code and the rationale distinguishes them, on
+    the discipline this framework applies to every registry: "we read it an
+    hour ago" and "nobody recorded when we read it" carry the same
+    conservative treatment and completely different remedies.
+
+    Fires only where a freshness policy was supplied. A caller that states no
+    policy is not policed, and the decision record says so rather than
+    implying a check that did not run."""
+    COUNTERPARTY_UNASSESSED = "COUNTERPARTY_UNASSESSED"
+    """A counterparty was named and nobody has established its standing.
+
+    Distinct from no counterparty at all. Naming one and leaving its standing
+    unread is the unread-rulebook condition: closed by an assessment, not by a
+    market action."""
+    COUNTERPARTY_NOT_IN_GOOD_STANDING = "COUNTERPARTY_NOT_IN_GOOD_STANDING"
+    """The counterparty is suspended or in default. Whether to face them is
+    the question, and it is answered before whether the leg can be funded."""
+    COUNTERPARTY_UNDER_REVIEW = "COUNTERPARTY_UNDER_REVIEW"
+    """The counterparty is under review. Escalates rather than holds: a review
+    means a human is already looking, and this operation is evidence they need
+    rather than a decision this gate should take without them."""
+    STRESS_READING_UNUSABLE = "STRESS_READING_UNUSABLE"
+    """The systemic-stress reading is not a usable number, so no statement
+    about market stress can be made from it.
+
+    Deliberately NOT the escalate code. SYSTEMIC_STRESS_ESCALATE asserts that
+    stress was observed above a band; a NaN or an infinity asserts nothing
+    except that the feed is broken. Naming the two differently is the same
+    discipline the registries apply between NOT_ASSESSED and NONE_DISCLOSED:
+    "we could not read it" and "we read it and it says X" carry the same
+    conservative treatment and completely different remedies.
+
+    Holds rather than escalates because HOLD is this framework's default
+    everywhere evidence is absent, including the absent-gate default. The
+    trade-off is stated rather than hidden: an operator who wants a broken
+    feed to page somebody must route on this code, because the gate will not
+    manufacture a stress finding it does not have."""
+    FUNDING_INDETERMINATE = "FUNDING_INDETERMINATE"
+    """The funding model declined to assert the position, so the gate has no
+    funded state to check.
+
+    Distinct from UNFUNDED_AT_SETTLEMENT_INSTANT, which asserts that the
+    position is short. This code asserts nothing about the position at all -
+    the projection reached a state where the model refuses to say, and a
+    refusal must not be converted into a number on the way to this gate."""
     CLEARED = "CLEARED"
     """No check fired. A rail is recommended."""
     GATE_UNAVAILABLE = "GATE_UNAVAILABLE"
@@ -208,6 +261,12 @@ class RailState:
     seconds_to_cutoff: int | None = None
     # Value cap where the rail imposes one (FedNow). None means uncapped.
     value_cap: Decimal | None = None
+    # How long ago this status was observed, in seconds before the evaluation
+    # instant. None means the age was never recorded. A rail marked AVAILABLE
+    # an hour ago is not the same evidence as one marked AVAILABLE this
+    # second, and before this field existed the record could not tell them
+    # apart. Policed only where a FreshnessPolicy is supplied.
+    observed_age_seconds: int | None = None
 
     @property
     def usable(self) -> bool:
@@ -233,9 +292,186 @@ class FundingState:
     net_debit_cap_headroom: Decimal
     clearing_fund_sufficient: bool
 
+    #: Whether the position above is an assertion the funding model was
+    #: willing to make.
+    #:
+    #: The funding model has states in which it explicitly refuses to say
+    #: whether a position is funded - a correspondent-dependent leg, an
+    #: obligation awaiting determination. Before this field existed, that
+    #: refusal died at this boundary: the projection carried a disposition of
+    #: INDETERMINATE and handed the gate four scalars, one of which happened
+    #: to be a large number, and the gate read a large number as funded.
+    #:
+    #: Defaults to True because constructing this object by hand IS the
+    #: assertion - a caller who builds a funding state is saying "this is the
+    #: position." Only ``FundingProjection.to_gate_input()`` has a refusal to
+    #: carry, and only it sets this False.
+    position_is_assertable: bool = True
+
     @property
     def is_funded(self) -> bool:
+        """Whether the position covers the obligation.
+
+        Answers only the arithmetic. A caller must read
+        ``position_is_assertable`` first: where the model refused to assert
+        the position, this property is comparing two numbers one of which
+        means nothing. The gate does exactly that, in check 3a, before it
+        reaches check 3.
+        """
         return self.projected_funded_position >= self.net_obligation
+
+
+class CounterpartyStanding(StrEnum):
+    """Whether this firm should be facing this counterparty at all.
+
+    Consumed, never derived. The framework holds no credit model and will not
+    acquire one: standing is established by whatever function a firm already
+    has for the purpose, and recorded here so that a settlement decision can
+    be explained against it afterwards.
+
+    NOT_ASSESSED is kept distinct from IN_GOOD_STANDING for the reason it is
+    kept distinct everywhere else in this corpus: "we checked and they are
+    fine" and "nobody checked" carry the same conservative treatment and
+    completely different remedies, and collapsing them lets an unassessed
+    counterparty pass as a cleared one.
+    """
+
+    NOT_ASSESSED = "not_assessed"
+    """Nobody has established this counterparty's standing. The remedy is an
+    assessment; the gate holds until there is one."""
+    IN_GOOD_STANDING = "in_good_standing"
+    """Assessed, and nothing prevents facing them."""
+    UNDER_REVIEW = "under_review"
+    """Assessed, and a review is open. Escalates: a human is already looking
+    and this operation is evidence for them."""
+    SUSPENDED = "suspended"
+    """New business with this counterparty is stopped, by this firm's own
+    decision or by a venue's."""
+    DEFAULTED = "defaulted"
+    """The counterparty has defaulted. Nothing routine proceeds."""
+
+
+@dataclass(frozen=True, slots=True)
+class Counterparty:
+    """Who is on the other side, and what is known about them.
+
+    Optional on an operation. ``None`` means this framework was not told,
+    which is recorded on the decision rather than treated as an assessment: a
+    gate that cannot tell "no counterparty risk" from "nobody mentioned a
+    counterparty" is recording nothing useful about either.
+
+    Supplying a counterparty makes the gate stricter, never more permissive.
+    That is deliberate. The field exists so a firm can bring its own credit
+    process to bear, and a field that could only relax a decision would be an
+    invitation to omit it.
+    """
+
+    counterparty_id: str
+    standing: CounterpartyStanding = CounterpartyStanding.NOT_ASSESSED
+    #: How long ago the standing was established, in seconds before the
+    #: evaluation instant. Supplied by the caller because this module reads no
+    #: clock. ``None`` means the age was never recorded, which a freshness
+    #: policy treats as stale.
+    assessed_age_seconds: int | None = None
+    provenance: str | None = None
+
+    def __post_init__(self) -> None:
+        # Coerce at the boundary, as every other registry here does. An
+        # exported profile that cannot be read back in is not portable.
+        if not isinstance(self.standing, CounterpartyStanding):
+            object.__setattr__(self, "standing", CounterpartyStanding(self.standing))
+        if not self.counterparty_id:
+            raise ValueError("counterparty_id is required")
+        if (
+            self.standing is not CounterpartyStanding.NOT_ASSESSED
+            and not self.provenance
+        ):
+            raise ValueError(
+                "an assessed counterparty standing requires provenance; an "
+                "unattributed assessment is indistinguishable from a guess"
+            )
+        if (
+            self.standing is CounterpartyStanding.NOT_ASSESSED
+            and self.assessed_age_seconds is not None
+        ):
+            raise ValueError(
+                "an unassessed counterparty has no assessment to date; "
+                "assessed_age_seconds is meaningful only once a standing has "
+                "been established"
+            )
+        if self.assessed_age_seconds is not None and self.assessed_age_seconds < 0:
+            raise ValueError("assessed_age_seconds may not be negative")
+
+
+@dataclass(frozen=True, slots=True)
+class FreshnessPolicy:
+    """How old a load-bearing input may be before it stops being evidence.
+
+    WHY THIS IS A POLICY AND NOT A CONSTANT
+    ---------------------------------------
+    Every bound here is a firm's operational decision, not a property of the
+    market. A firm consuming a weekly stress series and a firm consuming an
+    intraday one need different answers, and a default baked into this module
+    would be wrong for whichever of them did not write it.
+
+    WHY AN UNKNOWN AGE FAILS
+    ------------------------
+    Where a policy is supplied and an age is not, the input is treated as
+    stale. That is the same rule as NOT_ASSESSED everywhere else: a firm that
+    has decided freshness matters has not decided it matters only when the
+    measurement is convenient. A caller unwilling to supply ages should supply
+    no policy, and the record will say the check did not run.
+
+    WHY NO POLICY IS THE DEFAULT
+    ----------------------------
+    So that adding this does not silently hold every operation for every
+    existing caller. The cost is stated rather than hidden: with no policy, a
+    stress reading from six months ago is accepted with the same standing as
+    one from this second, and nothing in the record distinguishes them. That
+    was the condition the stress probe found and could not attack, because
+    there was no field to attack it through.
+    """
+
+    max_stress_reading_age_seconds: int | None = None
+    max_rail_state_age_seconds: int | None = None
+    max_counterparty_assessment_age_seconds: int | None = None
+
+    def __post_init__(self) -> None:
+        for name in (
+            "max_stress_reading_age_seconds",
+            "max_rail_state_age_seconds",
+            "max_counterparty_assessment_age_seconds",
+        ):
+            value = getattr(self, name)
+            if value is not None and value <= 0:
+                raise ValueError(f"{name} must be positive where it is stated")
+
+    @property
+    def polices_anything(self) -> bool:
+        return any(
+            v is not None
+            for v in (
+                self.max_stress_reading_age_seconds,
+                self.max_rail_state_age_seconds,
+                self.max_counterparty_assessment_age_seconds,
+            )
+        )
+
+
+def _staleness(age_seconds: int | None, maximum: int | None) -> tuple[bool, str]:
+    """Whether an input fails a freshness bound, and why in the record's words.
+
+    Returns the reason string in both directions, so the decision can say
+    "checked and fresh" as well as "stale" - a check that only speaks when it
+    fires is indistinguishable from a check that did not run.
+    """
+    if maximum is None:
+        return False, "not policed"
+    if age_seconds is None:
+        return True, "age never established"
+    if age_seconds > maximum:
+        return True, f"{age_seconds}s old against a {maximum}s bound"
+    return False, f"{age_seconds}s old within a {maximum}s bound"
 
 
 @dataclass(frozen=True, slots=True)
@@ -270,6 +506,10 @@ class OperationContext:
     # the obligation is not contingent, which is true of every instrument
     # the framework handled before this class existed.
     determination_outcome: DeterminationOutcome = DeterminationOutcome.NOT_APPLICABLE
+    #: Who is on the other side. ``None`` means this framework was not
+    #: told, and the decision records that rather than treating it as an
+    #: assessment.
+    counterparty: Counterparty | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -313,12 +553,25 @@ def _snapshot_funding(funding: FundingState) -> tuple[tuple[str, str], ...]:
     )
 
 
+def _serviceable(state: RailState, operation: OperationContext) -> bool:
+    """Whether a rail can actually carry this operation right now.
+
+    Usability and capacity are different questions and the gate needs both.
+    Keeping them in one named predicate means check 6 and the rail ladder
+    cannot drift apart again - the defect this function was extracted to
+    close was precisely that they had.
+    """
+    if not state.usable:
+        return False
+    return state.value_cap is None or operation.notional <= state.value_cap
+
+
 def _recommend_rail(
     *,
     operation: OperationContext,
     rails: dict[CashRail, RailState],
     ofr_stlfsi4: float,
-) -> tuple[CashRail, str]:
+) -> tuple[CashRail, str] | None:
     """Deterministic rail ladder per AUR-CUSTODY-CASH-001 Section V.C.
 
     Evaluated in order; first applicable rule wins. Applied only on the
@@ -394,18 +647,28 @@ def _recommend_rail(
     if (chosen := _prefer([CashRail.FEDWIRE])) is not None:
         return chosen, "Default rail (CASH-001 SV.C.6)."
 
-    # Fall through to any usable rail; check 6 in evaluate() guarantees
-    # at least one exists by this point.
-    for rail, state in usable.items():
+    # Fall through to any rail that can actually carry this operation.
+    #
+    # Deterministic despite iterating a caller-supplied dict: sorted by rail
+    # identifier, so two callers passing the same rails in different order
+    # get the same recommendation. Insertion order was the previous
+    # behaviour and it quietly made the gate's replay claim conditional on
+    # how the caller happened to build a dictionary.
+    for rail in sorted(usable, key=lambda r: r.value):
         if rail is CashRail.PORTS_WHOLESALE:
             continue
-        if state.value_cap is not None and operation.notional > state.value_cap:
+        if not _serviceable(usable[rail], operation):
             continue
-        return rail, "Sole usable rail within the settlement window."
+        return rail, "Sole serviceable rail within the settlement window."
 
-    raise AssertionError(
-        "unreachable: check 6 guarantees a usable rail before the ladder runs"
-    )
+    # Reached only where check 6 was bypassed. It previously raised an
+    # AssertionError here, on the reasoning that check 6 made this
+    # unreachable — and check 6 did not, because it tested usability and
+    # this loop tests capacity. Returning None lets the caller hold with a
+    # named reason instead of dying without a decision record. An
+    # "unreachable" assertion inside a governance gate is the wrong failure
+    # mode even when the reasoning behind it is right.
+    return None
 
 
 def evaluate(
@@ -415,6 +678,8 @@ def evaluate(
     rails: dict[CashRail, RailState],
     ofr_stlfsi4: float,
     dsor_lineage_uri: str | None = None,
+    stress_reading_age_seconds: int | None = None,
+    freshness_policy: FreshnessPolicy | None = None,
 ) -> CatoFDecision:
     """Evaluate the cash leg. Deterministic, pure, replayable.
 
@@ -435,6 +700,24 @@ def evaluate(
         ("is_fx_leg", str(operation.is_fx_leg)),
         ("pvp_available", str(operation.pvp_available)),
         ("determination_outcome", operation.determination_outcome.value),
+        ("position_is_assertable", str(funding.position_is_assertable)),
+        # Recorded whether or not it was supplied. An omission that leaves no
+        # trace in the record is indistinguishable from a check that passed,
+        # and this framework's whole claim is that a reader who was not there
+        # can tell the difference.
+        (
+            "counterparty_standing",
+            operation.counterparty.standing.value
+            if operation.counterparty is not None
+            else "not_supplied",
+        ),
+        (
+            "freshness_policy",
+            "stated"
+            if freshness_policy is not None and freshness_policy.polices_anything
+            else "not_stated",
+        ),
+        ("stress_reading_age_seconds", str(stress_reading_age_seconds)),
     ]
     snapshot = _snapshot_funding(funding)
     obligation_class = obligation_finality_class(operation.determination_outcome)
@@ -457,6 +740,82 @@ def evaluate(
             obligation_finality_class=obligation_class,
         )
 
+    # 0. Is the stress reading a number at all?
+    #
+    #    Every stress comparison below is a `>` or a `>=`, and every
+    #    comparison against NaN is False. So a broken feed does not fail one
+    #    check - it silently satisfies all of them, skips the escalate band,
+    #    skips the hold band, skips the stress rail preference, and clears.
+    #    The most permissive outcome in the gate was reachable by the single
+    #    most likely upstream defect, which is the definition of fail-open.
+    #
+    #    Asked first because every check that follows depends on it.
+    if not math.isfinite(ofr_stlfsi4):
+        return _decide(
+            GateDecision.HOLD,
+            ReasonCode.STRESS_READING_UNUSABLE,
+            f"Systemic-stress reading {ofr_stlfsi4!r} is not a finite number, "
+            f"so no statement about market stress can be made from it. Every "
+            f"stress band below is a comparison, and a non-finite value "
+            f"satisfies none of them - which would clear the gate rather than "
+            f"hold it. The absence of a reading is a state with a name, not a "
+            f"calm market (CASH-001 SV.E).",
+        )
+
+    # 0b. Is the evidence recent enough to be evidence?
+    #
+    #     This module reads no clock, so ages arrive as values the caller
+    #     supplies. Policed only where a policy was stated: a caller that
+    #     states no policy is not policed, and the checks tuple records that
+    #     rather than implying a check that did not run.
+    #
+    #     An unknown age fails a stated policy. That is the NOT_ASSESSED rule
+    #     applied to time: a firm that has decided freshness matters has not
+    #     decided it matters only where the measurement is convenient.
+    if freshness_policy is not None and freshness_policy.polices_anything:
+        stress_stale, stress_why = _staleness(
+            stress_reading_age_seconds,
+            freshness_policy.max_stress_reading_age_seconds,
+        )
+        if stress_stale:
+            return _decide(
+                GateDecision.HOLD,
+                ReasonCode.MARKET_DATA_STALE,
+                f"The systemic-stress reading is not current enough to be "
+                f"evidence: {stress_why}. A reading whose age is unknown is "
+                f"treated as stale where a freshness policy exists, on the "
+                f"same discipline as an unread rulebook (CASH-001 SV.E).",
+            )
+
+        for rail_id, state in sorted(rails.items(), key=lambda kv: kv[0].value):
+            rail_stale, rail_why = _staleness(
+                state.observed_age_seconds,
+                freshness_policy.max_rail_state_age_seconds,
+            )
+            if rail_stale:
+                return _decide(
+                    GateDecision.HOLD,
+                    ReasonCode.MARKET_DATA_STALE,
+                    f"Rail state for {rail_id.value} is not current enough to "
+                    f"be evidence: {rail_why}. A rail recorded as open an "
+                    f"hour ago is not a rail known to be open now "
+                    f"(CASH-001 SV.B.6).",
+                )
+
+        if operation.counterparty is not None:
+            cp_stale, cp_why = _staleness(
+                operation.counterparty.assessed_age_seconds,
+                freshness_policy.max_counterparty_assessment_age_seconds,
+            )
+            if cp_stale:
+                return _decide(
+                    GateDecision.HOLD,
+                    ReasonCode.MARKET_DATA_STALE,
+                    f"The standing assessment for counterparty "
+                    f"{operation.counterparty.counterparty_id} is not current "
+                    f"enough to be evidence: {cp_why}.",
+                )
+
     # 1. Systemic stress — escalate to human authority.
     if ofr_stlfsi4 > OFR_ESCALATE_THRESHOLD:
         return _decide(
@@ -478,6 +837,70 @@ def evaluate(
             "authority is required and is architecturally unavailable "
             "under CAOM-001. HOLD and surface a CAOM-transition trigger "
             "(FED-001 SVII, CASH-001 SV.B.2).",
+        )
+
+    # 2b. Should this firm be facing this counterparty at all?
+    #
+    #     Asked before the funding checks because it is the prior question.
+    #     Whether the money is there does not arise if the answer to "should
+    #     we be trading with them" is no, and a gate that asked in the other
+    #     order would produce a funded, cleared decision against a defaulted
+    #     name and then hold it for a reason that was never the point.
+    #
+    #     Skipped entirely where no counterparty was supplied. That is the
+    #     honest maximum: the framework cannot police a field it was never
+    #     given, and the checks tuple records `counterparty=not_supplied` so
+    #     the omission is visible in the replay rather than absent from it.
+    if operation.counterparty is not None:
+        standing = operation.counterparty.standing
+        cp_id = operation.counterparty.counterparty_id
+        if standing is CounterpartyStanding.NOT_ASSESSED:
+            return _decide(
+                GateDecision.HOLD,
+                ReasonCode.COUNTERPARTY_UNASSESSED,
+                f"Counterparty {cp_id} was named and no standing has been "
+                f"established for it. Naming a counterparty and leaving its "
+                f"standing unread is not the same as having no counterparty; "
+                f"closed by an assessment, not by a market action.",
+            )
+        if standing is CounterpartyStanding.UNDER_REVIEW:
+            return _decide(
+                GateDecision.ESCALATE,
+                ReasonCode.COUNTERPARTY_UNDER_REVIEW,
+                f"Counterparty {cp_id} is under review. Routed to human "
+                f"authority rather than held: a review means somebody is "
+                f"already looking, and this operation is evidence for them "
+                f"rather than a decision this gate should take without them.",
+            )
+        if standing in {
+            CounterpartyStanding.SUSPENDED,
+            CounterpartyStanding.DEFAULTED,
+        }:
+            return _decide(
+                GateDecision.HOLD,
+                ReasonCode.COUNTERPARTY_NOT_IN_GOOD_STANDING,
+                f"Counterparty {cp_id} is {standing.value}. Nothing routine "
+                f"proceeds against a name in that state, and no rail choice "
+                f"or funding position changes that.",
+            )
+
+    # 3a. The funding model refused to assert this position.
+    #
+    #     Placed before the funded check rather than inside it, because the
+    #     two say different things and collapsing them would lose the one
+    #     that matters. "Short" is a finding about the position. "The model
+    #     would not say" is a finding about the evidence, and it has a
+    #     different remedy: resolve the correspondent chain or the pending
+    #     determination, not fund the account.
+    if not funding.position_is_assertable:
+        return _decide(
+            GateDecision.HOLD,
+            ReasonCode.FUNDING_INDETERMINATE,
+            "The funding model declined to assert the settlement-instant "
+            "position, so there is no funded state to check. A refusal that "
+            "arrives here as a number is a refusal that was thrown away in "
+            "transit; this gate will not read one as evidence of funding "
+            "(CASH-001 SVII).",
         )
 
     # 3. Unfunded — no rail choice remedies an unfunded position.
@@ -510,18 +933,36 @@ def evaluate(
             f"settlement-system stress (CASH-001 SV.B.5, Cato parity band).",
         )
 
-    # 6. Timing infeasible — no rail open and reachable in the window.
+    # 6. Timing infeasible — no rail open, reachable, AND able to carry
+    #    this operation within the window.
+    #
+    #    Capacity is part of this check rather than a ladder detail. It was
+    #    not, and the consequence was a gate that raised an AssertionError
+    #    reading "unreachable: check 6 guarantees a usable rail": check 6
+    #    proved usability, the ladder additionally required capacity, and
+    #    usability does not imply capacity. A single available rail with a
+    #    value cap below the notional — the ordinary off-hours large-value
+    #    case, since FedNow ships with a cap — reached an assertion instead
+    #    of a decision, and an assertion is not a governance outcome.
+    #
+    #    Skipped where the rail is determined by depository linkage rather
+    #    than selected, because there is nothing to choose among; that path
+    #    is validated in the ladder.
+    #
     #    PORTS_WHOLESALE is excluded: it is a reserved placeholder and is
     #    never a usable rail until the infrastructure ships.
-    if not any(
-        state.usable for rail, state in rails.items() if rail is not CashRail.PORTS_WHOLESALE
+    if operation.depository_linked_rail is None and not any(
+        _serviceable(state, operation)
+        for rail, state in rails.items()
+        if rail is not CashRail.PORTS_WHOLESALE
     ):
         return _decide(
             GateDecision.HOLD,
             ReasonCode.NO_RAIL_IN_WINDOW,
-            "No cash rail is open and reachable within the required "
-            "settlement window. Hold to the next window rather than "
-            "routing to a closed rail (CASH-001 SV.B.6).",
+            f"No cash rail is open, reachable, and able to carry "
+            f"{operation.notional} within the required settlement window. "
+            f"Hold to the next window rather than routing to a closed rail "
+            f"or to one that cannot carry the operation (CASH-001 SV.B.6).",
         )
 
     # 7. Unresolvable finality on a correspondent chain. Unknown finality
@@ -567,9 +1008,23 @@ def evaluate(
         )
 
     # 10. Cleared — recommend a rail.
-    rail, ladder_rationale = _recommend_rail(
+    selection = _recommend_rail(
         operation=operation, rails=rails, ofr_stlfsi4=ofr_stlfsi4
     )
+    if selection is None:
+        # The ladder found nothing serviceable. Reachable only where check 6
+        # was skipped for a depository-linked operation whose linked rail
+        # cannot carry it. Hold with the check-6 reason, because that is
+        # what the condition is.
+        return _decide(
+            GateDecision.HOLD,
+            ReasonCode.NO_RAIL_IN_WINDOW,
+            f"The rail ladder found no rail able to carry "
+            f"{operation.notional} within the settlement window. Hold rather "
+            f"than recommend a rail that cannot carry the operation "
+            f"(CASH-001 SV.B.6).",
+        )
+    rail, ladder_rationale = selection
 
     rationale = ladder_rationale
     if operation.determination_outcome in {

@@ -42,9 +42,18 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from atreides.contracts.margin_impact import (  # noqa: E402
+    MarginDisposition,
     absent_margin_assessment,
     margin_impact_for_clearing_fund_deficiency,
+    margin_impact_outside_monitoring_window,
     margin_priority_rank,
+)
+from atreides.contracts.margin_profile import (  # noqa: E402
+    CollectionModel,
+    DeterminabilityRegime,
+    MonitoringModel,
+    ProfileStatus,
+    VenueMarginProfile,
 )
 from atreides.messaging.canonical import (  # noqa: E402
     CashLegInstruction,
@@ -67,7 +76,9 @@ from atreides.rails.cato_f import (  # noqa: E402
 from atreides.rails.cns import (  # noqa: E402
     CloseOutRegime,
     MarketProfile,
+    ProcessingDateRule,
     net_positions,
+    processing_date_offset,
     settle_net_position,
 )
 from atreides.rails.determination import (  # noqa: E402
@@ -527,6 +538,102 @@ def scenario_equity_unreported() -> dict[str, object]:
     return {"equity": _equity(allocated=None)}
 
 
+def scenario_extended_hours_night_position() -> dict[str, object]:
+    """A night-session position: unobserved by the venue, fully collectable,
+    and clearing for a business date no message has yet fixed.
+
+    The condition SIGNAL-EXTENDED-HOURS-EQUITIES describes, run end to end.
+    Three things have to hold at once and each is a different module's
+    answer: the margin assessment must be INDETERMINATE rather than
+    CALL_WINDOW_CLOSED, because collection is unaffected; the break must
+    still rank inside the unknown band, above every known cost; and the
+    equity leg must refuse to treat the settlement offset it carries as a
+    record, because on this market a timestamp does not establish a business
+    date.
+    """
+    venue = VenueMarginProfile(
+        venue_id="CCP-EQ",
+        status=ProfileStatus.POPULATED,
+        model_type="Portfolio VaR with discretionary add-ons",
+        determinability=DeterminabilityRegime.DISCRETIONARY,
+        # Collection is unchanged by the night session. This is the field
+        # that would produce CALL_WINDOW_CLOSED if it were shut, and it is
+        # populated here precisely to show that it is not.
+        collection_model=CollectionModel.TRADITIONAL_HOURS_ONLY,
+        monitoring_model=MonitoringModel.BOUNDED_WINDOW,
+        monitoring_window="15-minute cycle, 06:00-23:00 venue local time",
+        provenance="Venue clearing rulebook, intraday risk monitoring section",
+    )
+
+    market = MarketProfile(
+        market_id="XCLR-EXT",
+        settlement_cycle_days=1,
+        close_out_regime=CloseOutRegime.MANDATORY_DEADLINE,
+        close_out_deadline_days=3,
+        allocation_rule_published=True,
+        processing_date_rule=ProcessingDateRule.SESSION_CLOSURE_MESSAGE,
+        session_closure_message="the session-closure message",
+        provenance="Market rulebook, extended-session processing provisions",
+    )
+
+    # Accumulated across the night session. No processing date has been
+    # assigned, which on this market means the business date is open.
+    position = net_positions(
+        (("SEC-N", D("4000")), ("SEC-N", D("-500"))),
+        market_id="XCLR-EXT",
+        settlement_date_offset_days=1,
+    )[0]
+    result = settle_net_position(position, market, allocated_quantity=D("3500"))
+
+    impact = margin_impact_outside_monitoring_window(
+        profile=venue,
+        exposure_note=(
+            f"Net position of {position.quantity} in {position.security_id} "
+            f"accumulated in the unmonitored session."
+        ),
+    )
+
+    trace: dict[str, object] = {
+        "venue_monitoring": {
+            "monitoring_model": venue.monitoring_model.value,
+            "monitoring_window": venue.monitoring_window,
+            "collection_model": venue.collection_model.value,
+            # Derived from what the assessment actually returned rather than
+            # asserted here. The whole point of the scenario is that this
+            # stays false: the venue cannot see the exposure and can still
+            # collect against it.
+            "resolved_to_call_window_closed": (
+                impact.disposition is MarginDisposition.CALL_WINDOW_CLOSED
+            ),
+        },
+        "equity": {
+            "position": {
+                "security_id": position.security_id,
+                "net_quantity": str(position.quantity),
+                "settlement_date_offset_days": (
+                    position.settlement_date_offset_days
+                ),
+                "processing_date_rule": market.processing_date_rule.value,
+                "processing_date_offset": processing_date_offset(market, position),
+                "settlement_date_follows_from_trade_date": (
+                    market.settlement_date_follows_from_trade_date
+                ),
+            },
+            "settlement": {
+                "disposition": result.disposition.value,
+                "allocated": str(result.allocated_quantity),
+                "residual": str(result.residual.quantity) if result.residual else None,
+                "completed": result.completed,
+            },
+            "breaks": [
+                {"code": b.code.value, "detail": b.detail} for b in result.breaks
+            ],
+        },
+    }
+    _margin(trace, impact)
+    return trace
+
+
 SCENARIOS = {
     "clean-cash": scenario_clean_cash,
     "queued": scenario_queued,
@@ -540,6 +647,7 @@ SCENARIOS = {
     "equity-partial-opaque": scenario_equity_partial_opaque,
     "equity-record-date": scenario_equity_record_date,
     "equity-unreported": scenario_equity_unreported,
+    "extended-hours": scenario_extended_hours_night_position,
 }
 
 

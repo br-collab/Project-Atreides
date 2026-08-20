@@ -140,6 +140,25 @@ class BreakLeg(StrEnum):
     NET_OBLIGATION = "net_obligation_break"
 
 
+#: Which key in a Reconciliation's ``detail`` carries each leg's figures.
+#:
+#: Stated as a table rather than derived from the member name. It was derived,
+#: with ``leg.value.split("_")[0]``, and that silently worked for two legs and
+#: silently failed for the other two: CLEARING_FUND became "clearing" against a
+#: key of "clearing_fund", and NET_OBLIGATION became "net" against
+#: "net_obligation". Both tickets reached the workbench well-formed and empty -
+#: and they are the two legs whose numbers are the entire point of the ticket.
+#:
+#: An exhaustiveness test asserts every member appears here, so adding a leg
+#: without its key fails the suite rather than shipping a blank ticket.
+_DETAIL_KEY: dict[BreakLeg, str] = {
+    BreakLeg.POSITION: "position",
+    BreakLeg.FUNDING: "funding",
+    BreakLeg.CLEARING_FUND: "clearing_fund",
+    BreakLeg.NET_OBLIGATION: "net_obligation",
+}
+
+
 # ---------------------------------------------------------------------------
 # Exceptions
 # ---------------------------------------------------------------------------
@@ -665,7 +684,7 @@ class ClearingCockpit:
                 operation_id=reconciliation.operation_id,
                 regime=reconciliation.regime,
                 leg=leg,
-                detail=json.dumps(reconciliation.detail.get(leg.value.split("_")[0], {})),
+                detail=json.dumps(reconciliation.detail.get(_DETAIL_KEY[leg], {})),
                 dsor_pre_trade_record_id=dsor_pre_trade_record_id,
                 raised_at=datetime.now(tz=UTC),
             )
