@@ -27,6 +27,7 @@ from atreides.rails.cato_f import (
     RailState,
     RailStatus,
     ReasonCode,
+    SettlementPerimeter,
     absent_gate_decision,
     evaluate,
 )
@@ -37,7 +38,7 @@ def _rails(**overrides: RailState) -> dict[CashRail, RailState]:
         CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200),
         CashRail.CHIPS: RailState(CashRail.CHIPS, RailStatus.AVAILABLE, 7200),
         CashRail.FEDNOW: RailState(
-            CashRail.FEDNOW, RailStatus.AVAILABLE, None, Decimal("1000000")
+            CashRail.FEDNOW, RailStatus.AVAILABLE, None, Decimal("10000000")
         ),
         CashRail.PORTS_WHOLESALE: RailState(
             CashRail.PORTS_WHOLESALE, RailStatus.NOT_YET_ISSUED
@@ -226,8 +227,12 @@ def test_ladder_off_hours_uses_fednow_within_cap() -> None:
 
 
 def test_ladder_off_hours_over_cap_does_not_use_fednow() -> None:
+    # Above the FedNow network limit, which the Federal Reserve raised from
+    # $1m to $10m effective November 2025. The fixture tracks the live limit
+    # so the case keeps describing a real condition rather than a historical
+    # one; the behaviour under test is unchanged.
     d = _eval(
-        operation=_op(within_business_hours=False, notional=Decimal("5000000"))
+        operation=_op(within_business_hours=False, notional=Decimal("50000000"))
     )
     assert d.recommended_rail is not CashRail.FEDNOW
 
@@ -443,6 +448,13 @@ def test_a_capped_sole_rail_holds_rather_than_raising() -> None:
     above that cap reached an AssertionError instead of a decision - and an
     assertion is not a governance outcome, because it leaves no record.
     """
+    # A $1m cap against a $5m notional. The FedNow NETWORK limit is $10m
+    # since November 2025, and participants retain the ability to set lower
+    # limits from their own risk parameters, so a capped-below-notional rail
+    # is still an ordinary condition rather than a historical one. The cap
+    # here is deliberately the participant's, not the network's: the defect
+    # under test is that usability was assumed to imply capacity, and that
+    # is independent of which number the cap happens to be.
     rails = {
         CashRail.FEDNOW: RailState(
             CashRail.FEDNOW, RailStatus.AVAILABLE, 7200, Decimal("1000000")
@@ -463,7 +475,7 @@ def test_a_capped_rail_is_still_used_when_the_operation_fits() -> None:
     """The fix must not turn a capped rail into an unusable one."""
     rails = {
         CashRail.FEDNOW: RailState(
-            CashRail.FEDNOW, RailStatus.AVAILABLE, 7200, Decimal("1000000")
+            CashRail.FEDNOW, RailStatus.AVAILABLE, 7200, Decimal("10000000")
         )
     }
     decision = evaluate(
@@ -935,3 +947,114 @@ def test_a_counterparty_standing_round_trips_from_a_plain_string() -> None:
         provenance="credit file",
     )
     assert coerced.standing is CounterpartyStanding.IN_GOOD_STANDING
+
+
+# ---------------------------------------------------------------------------
+# Settlement perimeter - whose book a ledger-final rail is final on.
+# ---------------------------------------------------------------------------
+
+
+def _ledger_only() -> dict[CashRail, RailState]:
+    """A window in which the only open rail is ledger-final."""
+    return {
+        CashRail.TOKENIZED_DEPOSIT: RailState(
+            CashRail.TOKENIZED_DEPOSIT, RailStatus.AVAILABLE
+        )
+    }
+
+
+def _off_hours(perimeter: SettlementPerimeter) -> CatoFDecision:
+    return evaluate(
+        operation=_op(
+            within_business_hours=False,
+            tokenized_deposit_supported=True,
+            settlement_perimeter=perimeter,
+        ),
+        funding=_funded(),
+        rails=_ledger_only(),
+        ofr_stlfsi4=0.0,
+    )
+
+
+def test_unassessed_perimeter_holds_off_hours_with_its_own_reason() -> None:
+    """An unread perimeter is not a favourable perimeter.
+
+    And it gets its own code. NO_RAIL_IN_WINDOW would tell an operator to
+    wait for a market that is already open, when the actual remedy is to
+    establish which side of the book the counterparty sits on.
+    """
+    d = _off_hours(SettlementPerimeter.NOT_ASSESSED)
+    assert d.decision is GateDecision.HOLD
+    assert d.reason_code is ReasonCode.SETTLEMENT_PERIMETER_UNASSESSED
+    assert d.recommended_rail is None
+
+
+def test_off_us_ledger_rail_is_not_continuously_available() -> None:
+    """Off-us, the leg depends on an interbank system that keeps hours.
+
+    Distinct from the unassessed case: here the perimeter IS known, and the
+    answer is that the rail cannot carry this operation in this window.
+    """
+    d = _off_hours(SettlementPerimeter.OFF_US)
+    assert d.decision is GateDecision.HOLD
+    assert d.reason_code is ReasonCode.NO_RAIL_IN_WINDOW
+
+
+def test_on_us_ledger_rail_clears_off_hours() -> None:
+    """On-us the transfer is a book entry, so the continuity claim holds."""
+    d = _off_hours(SettlementPerimeter.ON_US)
+    assert d.decision is GateDecision.PROCEED
+    assert d.recommended_rail is CashRail.TOKENIZED_DEPOSIT
+    assert d.finality_class is FinalityClass.LEDGER_FINAL
+    assert d.settlement_perimeter is SettlementPerimeter.ON_US
+
+
+def test_perimeter_is_not_policed_during_banking_hours() -> None:
+    """The interbank system underneath is open, so the perimeter is moot."""
+    d = evaluate(
+        operation=_op(
+            within_business_hours=True,
+            tokenized_deposit_supported=True,
+            settlement_perimeter=SettlementPerimeter.NOT_ASSESSED,
+        ),
+        funding=_funded(),
+        rails=_ledger_only(),
+        ofr_stlfsi4=0.0,
+    )
+    assert d.decision is GateDecision.PROCEED
+    assert d.recommended_rail is CashRail.TOKENIZED_DEPOSIT
+
+
+def test_perimeter_does_not_restrict_a_gross_final_rail() -> None:
+    """FedNow is 24/7/365 in central bank money regardless of who banks where.
+
+    The perimeter governs ledger-final rails only. Applying it more broadly
+    would hold operations the infrastructure can genuinely settle.
+    """
+    d = evaluate(
+        operation=_op(
+            within_business_hours=False,
+            notional=Decimal("500000"),
+            settlement_perimeter=SettlementPerimeter.NOT_ASSESSED,
+        ),
+        funding=_funded(),
+        rails={
+            CashRail.FEDNOW: RailState(
+                CashRail.FEDNOW, RailStatus.AVAILABLE, None, Decimal("10000000")
+            )
+        },
+        ofr_stlfsi4=0.0,
+    )
+    assert d.decision is GateDecision.PROCEED
+    assert d.recommended_rail is CashRail.FEDNOW
+
+
+def test_every_decision_records_the_perimeter() -> None:
+    """Recorded whether or not it was supplied, like counterparty standing.
+
+    An omission that leaves no trace is indistinguishable from a check that
+    passed.
+    """
+    d = _off_hours(SettlementPerimeter.NOT_ASSESSED)
+    assert d.settlement_perimeter is SettlementPerimeter.NOT_ASSESSED
+    assert ("settlement_perimeter", "NOT_ASSESSED") in d.checks_evaluated
