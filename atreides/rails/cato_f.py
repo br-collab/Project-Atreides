@@ -49,6 +49,7 @@ from atreides.rails.determination import (
     obligation_finality_class,
 )
 from atreides.rails.finality import FinalityClass
+from atreides.rails.perimeter import SettlementPerimeter, continuously_available
 
 __all__ = [
     "DOCTRINE_VERSION",
@@ -69,6 +70,7 @@ __all__ = [
     "RailState",
     "RailStatus",
     "ReasonCode",
+    "SettlementPerimeter",
     "absent_gate_decision",
     "evaluate",
 ]
@@ -193,6 +195,19 @@ class ReasonCode(StrEnum):
     Fires only where a freshness policy was supplied. A caller that states no
     policy is not policed, and the decision record says so rather than
     implying a check that did not run."""
+    SETTLEMENT_PERIMETER_UNASSESSED = "SETTLEMENT_PERIMETER_UNASSESSED"
+    """A ledger-final rail was the only way to carry this operation outside
+    banking hours, and nobody established whether the counterparty sits inside
+    the settling institution's book.
+
+    Ledger-final means final at ledger commit. It does not mean final on
+    everybody's ledger. On-us, the transfer is a book entry and is genuinely
+    continuous; off-us, it depends on an interbank system underneath that keeps
+    hours, and under the Federal Reserve's announced expansion the US dollar
+    interbank rail does not become continuous. Distinct from
+    NO_RAIL_IN_WINDOW: there the rails are shut, here a rail is open and the
+    claim made for it has not been substantiated. Closed by an assessment, not
+    by waiting for a window."""
     COUNTERPARTY_UNASSESSED = "COUNTERPARTY_UNASSESSED"
     """A counterparty was named and nobody has established its standing.
 
@@ -510,6 +525,12 @@ class OperationContext:
     #: told, and the decision records that rather than treating it as an
     #: assessment.
     counterparty: Counterparty | None = None
+    #: Which side of the settling institution's book the counterparty sits on.
+    #: Consumed, never derived - the same treatment as materiality,
+    #: eligibility and determination. NOT_ASSESSED is the default and fails
+    #: closed for ledger-final rails outside banking hours; see
+    #: `atreides.rails.perimeter`.
+    settlement_perimeter: SettlementPerimeter = SettlementPerimeter.NOT_ASSESSED
 
 
 @dataclass(frozen=True, slots=True)
@@ -537,6 +558,12 @@ class CatoFDecision:
     #: is always DETERMINATION_DEPENDENT and the record carries two classes
     #: at once: the money is final on its rail, the entitlement is not.
     obligation_finality_class: FinalityClass | None = None
+    #: Whose book a ledger-final rail was final on. Recorded beside the rail's
+    #: finality class rather than folded into it, so that records written
+    #: before this field existed remain readable and replayable, and records
+    #: written after can tell an on-us book entry apart from an inter-bank
+    #: movement that merely shares its finality class.
+    settlement_perimeter: SettlementPerimeter = SettlementPerimeter.NOT_ASSESSED
 
     @property
     def proceeds(self) -> bool:
@@ -563,7 +590,20 @@ def _serviceable(state: RailState, operation: OperationContext) -> bool:
     """
     if not state.usable:
         return False
-    return state.value_cap is None or operation.notional <= state.value_cap
+    if state.value_cap is not None and operation.notional > state.value_cap:
+        return False
+    # A ledger-final rail is continuously available only on-us. Outside
+    # banking hours an off-us or unassessed perimeter leaves the leg
+    # depending on an interbank system that is not open, so the rail is not
+    # serviceable for this operation even though it is open.
+    if not operation.within_business_hours:
+        return continuously_available(
+            is_ledger_final=(
+                RAIL_FINALITY.get(state.rail) is FinalityClass.LEDGER_FINAL
+            ),
+            perimeter=operation.settlement_perimeter,
+        )
+    return True
 
 
 def _recommend_rail(
@@ -638,9 +678,12 @@ def _recommend_rail(
         tokenized = _prefer([CashRail.TOKENIZED_DEPOSIT])
         if tokenized is not None:
             return tokenized, (
-                "Both counterparties support a tokenized-deposit rail and "
-                "the instrument is eligible; preferred on cost and 24/7 "
-                "grounds (CASH-001 SV.C.5)."
+                f"Both counterparties support a tokenized-deposit rail and "
+                f"the instrument is eligible; preferred on cost, and on "
+                f"continuous availability where the perimeter supports that "
+                f"claim (perimeter: "
+                f"{operation.settlement_perimeter.value}) "
+                f"(CASH-001 SV.C.5)."
             )
 
     # 6. Default.
@@ -701,6 +744,8 @@ def evaluate(
         ("pvp_available", str(operation.pvp_available)),
         ("determination_outcome", operation.determination_outcome.value),
         ("position_is_assertable", str(funding.position_is_assertable)),
+        ("settlement_perimeter", operation.settlement_perimeter.value),
+        ("within_business_hours", str(operation.within_business_hours)),
         # Recorded whether or not it was supplied. An omission that leaves no
         # trace in the record is indistinguishable from a check that passed,
         # and this framework's whole claim is that a reader who was not there
@@ -738,6 +783,7 @@ def evaluate(
             funding_state_snapshot=snapshot,
             dsor_lineage_uri=dsor_lineage_uri,
             obligation_finality_class=obligation_class,
+            settlement_perimeter=operation.settlement_perimeter,
         )
 
     # 0. Is the stress reading a number at all?
@@ -956,6 +1002,38 @@ def evaluate(
         for rail, state in rails.items()
         if rail is not CashRail.PORTS_WHOLESALE
     ):
+        # Why is there no serviceable rail? "Every rail is shut" and "a rail
+        # is open and we never established whose book it settles on" are
+        # different conditions with different remedies, and the second one
+        # is closed by an assessment rather than by waiting for a window.
+        # Reporting both as NO_RAIL_IN_WINDOW would send an operator to wait
+        # for a market that is already open.
+        if (
+            operation.settlement_perimeter is SettlementPerimeter.NOT_ASSESSED
+            and not operation.within_business_hours
+            and any(
+                RAIL_FINALITY.get(rail) is FinalityClass.LEDGER_FINAL
+                and state.usable
+                and (
+                    state.value_cap is None
+                    or operation.notional <= state.value_cap
+                )
+                for rail, state in rails.items()
+                if rail is not CashRail.PORTS_WHOLESALE
+            )
+        ):
+            return _decide(
+                GateDecision.HOLD,
+                ReasonCode.SETTLEMENT_PERIMETER_UNASSESSED,
+                f"A ledger-final rail is open and able to carry "
+                f"{operation.notional}, and nobody established whether the "
+                f"counterparty sits inside the settling institution's book. "
+                f"Ledger-final is continuous on-us and depends on an "
+                f"interbank system off-us, and outside banking hours that "
+                f"system is not open. Hold until the perimeter is assessed "
+                f"rather than routing on an availability claim this record "
+                f"cannot support (CASH-001 SV.B.6, SIV as extended).",
+            )
         return _decide(
             GateDecision.HOLD,
             ReasonCode.NO_RAIL_IN_WINDOW,
@@ -1102,7 +1180,7 @@ def _std_rails() -> dict[CashRail, RailState]:
         CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200),
         CashRail.CHIPS: RailState(CashRail.CHIPS, RailStatus.AVAILABLE, 7200),
         CashRail.FEDNOW: RailState(
-            CashRail.FEDNOW, RailStatus.AVAILABLE, None, Decimal("1000000")
+            CashRail.FEDNOW, RailStatus.AVAILABLE, None, Decimal("10000000")
         ),
         CashRail.PORTS_WHOLESALE: RailState(
             CashRail.PORTS_WHOLESALE, RailStatus.NOT_YET_ISSUED

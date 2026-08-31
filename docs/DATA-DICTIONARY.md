@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**191 of 191 enumeration values (100%) state what they mean in
+**192 of 192 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -148,6 +148,7 @@ Gate output per AUR-CUSTODY-CASH-001 Section V.D.
 | `doctrine_version` | `str` | `'AUR-CUSTODY-CASH-001-v0.2'` |
 | `dsor_lineage_uri` | `str \| None` | `None` |
 | `obligation_finality_class` | `FinalityClass \| None` | `None` |
+| `settlement_perimeter` | `SettlementPerimeter` | `<SettlementPerimeter.NOT_ASSESSED: 'NOT_ASSESSED'>` |
 
 #### `Counterparty`
 
@@ -222,6 +223,7 @@ The operation under evaluation.
 | `within_business_hours` | `bool` | `True` |
 | `determination_outcome` | `DeterminationOutcome` | `<DeterminationOutcome.NOT_APPLICABLE: 'not_applicable'>` |
 | `counterparty` | `Counterparty \| None` | `None` |
+| `settlement_perimeter` | `SettlementPerimeter` | `<SettlementPerimeter.NOT_ASSESSED: 'NOT_ASSESSED'>` |
 
 #### `RailState`
 
@@ -262,6 +264,7 @@ Reason codes. One per check in Section V.B plus the PROCEED case.
 | `DETERMINATION_PENDING` | A contingent obligation whose outcome has not been determined. The instruction is premature, not unsafe. |
 | `UNASSESSED_REVOCATION_AUTHORITY` | Determined, and nobody has read whether the venue may cancel and return funds. Closed by populating the registry, not by a market action. |
 | `MARKET_DATA_STALE` | A load-bearing input is older than the freshness policy allows, or its age was never established. Both conditions produce this code and the rationale distinguishes them, on the discipline this framework applies to every registry: "we read it an hour ago" and "nobody recorded when we read it" carry the same conservative treatment and completely different remedies. Fires only where a freshness policy was supplied. A caller that states no policy is not policed, and the decision record says so rather than implying a check that did not run. |
+| `SETTLEMENT_PERIMETER_UNASSESSED` | A ledger-final rail was the only way to carry this operation outside banking hours, and nobody established whether the counterparty sits inside the settling institution's book. Ledger-final means final at ledger commit. It does not mean final on everybody's ledger. On-us, the transfer is a book entry and is genuinely continuous; off-us, it depends on an interbank system underneath that keeps hours, and under the Federal Reserve's announced expansion the US dollar interbank rail does not become continuous. Distinct from NO_RAIL_IN_WINDOW: there the rails are shut, here a rail is open and the claim made for it has not been substantiated. Closed by an assessment, not by waiting for a window. |
 | `COUNTERPARTY_UNASSESSED` | A counterparty was named and nobody has established its standing. Distinct from no counterparty at all. Naming one and leaving its standing unread is the unread-rulebook condition: closed by an assessment, not by a market action. |
 | `COUNTERPARTY_NOT_IN_GOOD_STANDING` | The counterparty is suspended or in default. Whether to face them is the question, and it is answered before whether the leg can be funded. |
 | `COUNTERPARTY_UNDER_REVIEW` | The counterparty is under review. Escalates rather than holds: a review means a human is already looking, and this operation is evidence they need rather than a decision this gate should take without them. |
