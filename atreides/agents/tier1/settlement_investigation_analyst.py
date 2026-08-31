@@ -36,6 +36,7 @@ no network call, and consults no clock except the caller-supplied one.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from uuid import UUID
 
 from atreides.agents.tier1.investigation_outputs import (
     EXPECTED_SOURCES,
@@ -43,6 +44,7 @@ from atreides.agents.tier1.investigation_outputs import (
     EvidenceItem,
     EvidenceSource,
     EvidenceTimeline,
+    GapReason,
     InvestigationDiscrepancyCode,
     InvestigationEscalation,
     InvestigationOutput,
@@ -77,8 +79,8 @@ class SettlementInvestigationAnalyst:
     def run(
         self,
         *,
-        operation_id,
-        task_id,
+        operation_id: UUID,
+        task_id: UUID,
         lineage_stub: DSORLineageStub,
         observations: tuple[EvidenceItem, ...] | list[EvidenceItem],
         gaps: tuple[EvidenceGap, ...] | list[EvidenceGap] = (),
@@ -190,7 +192,7 @@ class SettlementInvestigationAnalyst:
         return tuple(
             EvidenceGap(
                 source=source,
-                reason="unavailable",  # type: ignore[arg-type]
+                reason=GapReason.UNAVAILABLE,
                 detail=(
                     f"Source {source.value!r} was neither observed nor "
                     f"declared as a gap; treated as unavailable rather than "
