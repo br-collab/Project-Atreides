@@ -334,8 +334,24 @@ inline so the code can be followed without it.
 
 ---
 
-## License
+## License and standing
 
 MIT License — Copyright (c) 2026 Guillermo Ravelo. See [LICENSE](LICENSE).
+
+This is academic work. It is produced on the capstone research track of the
+Columbia University M.S. Technology Management programme, the doctrine
+documents carry that framing on their own headers, and the status recorded
+throughout is pre-commercial. The code is released under MIT so the design can
+be read, criticised and reused; that grant covers this repository's own source
+and nothing else.
+
+Ravelo Strategic Solutions LLC is the author's separate advisory practice. It
+holds no interest in this repository, and no work here is performed for or
+funded by it. Where the two are ever brought together the relationship will be
+stated at that point rather than inferred from a shared surname.
+
+No third-party licensed data is used in, derived into, or distributed with this
+repository. Every input is either synthetic, doctrinal, or drawn from a public
+source that permits redistribution.
 
 *Guillermo "Bill" Ravelo · Columbia University M.S. Technology Management*
