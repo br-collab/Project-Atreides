@@ -539,7 +539,7 @@ class TestCrossAssetClassFlows:
             request, currency="USD"
         )
         assert isinstance(result, RoutingDecision)
-        assert result.recommendation.chosen_path == "correspondent_citi_ny_usd"
+        assert result.recommendation.chosen_path == "correspondent_usd_new_york"
         assert isinstance(result.recommendation.settlement_method, DvP3Settlement)
 
     def test_fund_subscription_routes_through_cash_sweep(

@@ -370,9 +370,9 @@ class TestPerDimensionQueries:
     ) -> None:
         paths = default_registry.find_correspondent_paths(currency="USD")
         ids = {p.path_id for p in paths}
-        assert "correspondent_citi_ny_usd" in ids
+        assert "correspondent_usd_new_york" in ids
         # Eur/Gbp correspondents should not match a USD query
-        assert "correspondent_deutsche_bank_eur" not in ids
+        assert "correspondent_eur_frankfurt" not in ids
 
     def test_find_correspondent_paths_eur(
         self,
@@ -380,7 +380,7 @@ class TestPerDimensionQueries:
     ) -> None:
         paths = default_registry.find_correspondent_paths(currency="EUR")
         ids = {p.path_id for p in paths}
-        assert ids == {"correspondent_deutsche_bank_eur"}
+        assert ids == {"correspondent_eur_frankfurt"}
 
     def test_find_correspondent_paths_unknown_currency(
         self,

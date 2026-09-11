@@ -350,8 +350,13 @@ holds no interest in this repository, and no work here is performed for or
 funded by it. Where the two are ever brought together the relationship will be
 stated at that point rather than inferred from a shared surname.
 
-No third-party licensed data is used in, derived into, or distributed with this
-repository. Every input is either synthetic, doctrinal, or drawn from a public
-source that permits redistribution.
+Data provenance is stated rather than implied. [DATA-PROVENANCE.md](DATA-PROVENANCE.md)
+accounts for every input this repository distributes or reads, with its source
+and licence, and gives the commands to re-run the audit. In short: the ISO 20022
+schemas and three Apache-2.0 sample messages are the only third-party material
+here, both redistributable; there is no market data, no security master and no
+licensed identifier anywhere; and no data licensed for academic or
+non-commercial use is used in, derived into, or distributed with this
+repository.
 
 *Guillermo "Bill" Ravelo · Columbia University M.S. Technology Management*

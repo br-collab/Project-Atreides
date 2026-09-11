@@ -46,11 +46,11 @@ def _instr(**kw) -> CashLegInstruction:
         "created_at": T0,
         "amount": Decimal("1000000.00"),
         "currency": "USD",
-        "debtor": FinancialInstitution("CHASUS33"),
-        "creditor": FinancialInstitution("BOFAUS3N"),
+        "debtor": FinancialInstitution("DDDDUS33"),
+        "creditor": FinancialInstitution("EEEEUS33"),
         "settlement_method": SettlementMethod.CLEARING_SYSTEM,
-        "sender": FinancialInstitution("CHASUS33"),
-        "receiver": FinancialInstitution("DTCYUS33"),
+        "sender": FinancialInstitution("DDDDUS33"),
+        "receiver": FinancialInstitution("FFFFUS33"),
     }
     base.update(kw)
     return CashLegInstruction(**base)  # type: ignore[arg-type]
@@ -81,7 +81,7 @@ class TestSchemaConformance:
     def test_optional_creditor_name_still_validates(self) -> None:
         doc = etree.fromstring(
             emit_fi_credit_transfer(
-                _instr(creditor=FinancialInstitution("BOFAUS3N", "Bank of America"))
+                _instr(creditor=FinancialInstitution("EEEEUS33", "Beneficiary Bank NA"))
             )
         )
         schema = _schema("pacs.009.001.13")
@@ -126,8 +126,8 @@ class TestDomainStricterThanSchema:
             FinancialInstitution("NOTABIC")
 
     def test_bicfi_accepts_both_8_and_11_character_forms(self) -> None:
-        assert FinancialInstitution("CHASUS33").bicfi == "CHASUS33"
-        assert FinancialInstitution("CHASUS33XXX").bicfi == "CHASUS33XXX"
+        assert FinancialInstitution("DDDDUS33").bicfi == "DDDDUS33"
+        assert FinancialInstitution("DDDDUS33XXX").bicfi == "DDDDUS33XXX"
 
     def test_message_id_bounded_to_max35text(self) -> None:
         with pytest.raises(ValueError, match="Max35Text"):
@@ -234,4 +234,4 @@ def test_emit_is_deterministic() -> None:
 
 def test_institution_name_bounded_to_max140text() -> None:
     with pytest.raises(ValueError, match="Max140Text"):
-        FinancialInstitution("CHASUS33", "X" * 141)
+        FinancialInstitution("DDDDUS33", "X" * 141)

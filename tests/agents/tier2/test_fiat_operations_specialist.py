@@ -815,7 +815,7 @@ class TestSelectCorrespondentBankingCoordination:
             currency="USD",
         )
         assert isinstance(result, RoutingDecision)
-        assert result.recommendation.chosen_path == "correspondent_citi_ny_usd"
+        assert result.recommendation.chosen_path == "correspondent_usd_new_york"
 
     def test_eligibility_failure_escalates(
         self,
