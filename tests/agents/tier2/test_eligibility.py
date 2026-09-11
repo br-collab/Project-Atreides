@@ -232,12 +232,12 @@ class TestEvidenceModels:
 
     def test_correspondent_compliance_constructs(self, check_time: datetime) -> None:
         e = CorrespondentBankComplianceEvidence(
-            correspondent_bic="CITIUS33",
+            correspondent_bic="AAAAUS33",
             attestation_id="att-1",
             attested_at=check_time - timedelta(days=1),
             expires_at=check_time + timedelta(days=364),
         )
-        assert e.correspondent_bic == "CITIUS33"
+        assert e.correspondent_bic == "AAAAUS33"
 
     def test_correspondent_bic_too_short_rejected(self, check_time: datetime) -> None:
         with pytest.raises(ValidationError):
@@ -290,9 +290,9 @@ class TestEligibilityInputs:
         inputs = EligibilityInputs(
             check_time=check_time,
             requires_correspondent_compliance=True,
-            expected_correspondent_bics=frozenset({"CITIUS33"}),
+            expected_correspondent_bics=frozenset({"AAAAUS33"}),
         )
-        assert "CITIUS33" in inputs.expected_correspondent_bics
+        assert "AAAAUS33" in inputs.expected_correspondent_bics
 
 
 # ---------------------------------------------------------------------------
@@ -501,10 +501,10 @@ class TestCorrespondentBankComplianceCheck:
         inputs = EligibilityInputs(
             check_time=check_time,
             requires_correspondent_compliance=True,
-            expected_correspondent_bics=frozenset({"CITIUS33", "DEUTDEFF"}),
+            expected_correspondent_bics=frozenset({"AAAAUS33", "BBBBDEFF"}),
             correspondent_compliance=(
-                _correspondent_current("CITIUS33", check_time),
-                _correspondent_current("DEUTDEFF", check_time),
+                _correspondent_current("AAAAUS33", check_time),
+                _correspondent_current("BBBBDEFF", check_time),
             ),
         )
         result = verify_eligibility(inputs)
@@ -517,14 +517,14 @@ class TestCorrespondentBankComplianceCheck:
         inputs = EligibilityInputs(
             check_time=check_time,
             requires_correspondent_compliance=True,
-            expected_correspondent_bics=frozenset({"CITIUS33", "DEUTDEFF"}),
-            correspondent_compliance=(_correspondent_current("CITIUS33", check_time),),
+            expected_correspondent_bics=frozenset({"AAAAUS33", "BBBBDEFF"}),
+            correspondent_compliance=(_correspondent_current("AAAAUS33", check_time),),
         )
         result = verify_eligibility(inputs)
         check = _check(result, EligibilityCheckKind.CORRESPONDENT_BANK_COMPLIANCE)
         assert not check.passed
         assert "missing" in (check.failure_reason or "")
-        assert "DEUTDEFF" in (check.failure_reason or "")
+        assert "BBBBDEFF" in (check.failure_reason or "")
 
     def test_fails_when_expected_bic_attestation_expired(
         self,
@@ -533,16 +533,16 @@ class TestCorrespondentBankComplianceCheck:
         inputs = EligibilityInputs(
             check_time=check_time,
             requires_correspondent_compliance=True,
-            expected_correspondent_bics=frozenset({"CITIUS33"}),
+            expected_correspondent_bics=frozenset({"AAAAUS33"}),
             correspondent_compliance=(
-                _correspondent_expired("CITIUS33", check_time),
+                _correspondent_expired("AAAAUS33", check_time),
             ),
         )
         result = verify_eligibility(inputs)
         check = _check(result, EligibilityCheckKind.CORRESPONDENT_BANK_COMPLIANCE)
         assert not check.passed
         assert "expired" in (check.failure_reason or "")
-        assert "CITIUS33" in (check.failure_reason or "")
+        assert "AAAAUS33" in (check.failure_reason or "")
 
 
 # ---------------------------------------------------------------------------
@@ -564,9 +564,9 @@ class TestVerifyEligibilityIntegration:
             ofac_screenings=(_ofac_clear("bo-pension-fund-x", check_time),),
             sanctions_screenings=(_sanctions_clear("bo-pension-fund-x", check_time),),
             requires_correspondent_compliance=True,
-            expected_correspondent_bics=frozenset({"CITIUS33"}),
+            expected_correspondent_bics=frozenset({"AAAAUS33"}),
             correspondent_compliance=(
-                _correspondent_current("CITIUS33", check_time),
+                _correspondent_current("AAAAUS33", check_time),
             ),
         )
         result = verify_eligibility(inputs)
@@ -607,7 +607,7 @@ class TestVerifyEligibilityIntegration:
             ofac_screenings=(),
             sanctions_screenings=(),
             requires_correspondent_compliance=True,
-            expected_correspondent_bics=frozenset({"CITIUS33"}),
+            expected_correspondent_bics=frozenset({"AAAAUS33"}),
             correspondent_compliance=(),
         )
         result = verify_eligibility(inputs)

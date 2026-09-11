@@ -207,8 +207,8 @@ The emitted document:
     <CdtTrfTxInf>
       <PmtId><EndToEndId>TSY-SETTL-000117</EndToEndId></PmtId>
       <IntrBkSttlmAmt Ccy="USD">1000000.00</IntrBkSttlmAmt>
-      <Dbtr><FinInstnId><BICFI>CHASUS33</BICFI>…</FinInstnId></Dbtr>
-      <Cdtr><FinInstnId><BICFI>BOFAUS3N</BICFI></FinInstnId></Cdtr>
+      <Dbtr><FinInstnId><BICFI>DDDDUS33</BICFI>…</FinInstnId></Dbtr>
+      <Cdtr><FinInstnId><BICFI>EEEEUS33</BICFI></FinInstnId></Cdtr>
     </CdtTrfTxInf>
   </FICdtTrf>
 </Document>

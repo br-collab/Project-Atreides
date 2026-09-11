@@ -608,41 +608,41 @@ def default_routing_tables() -> RoutingTables:
             # Per AUR-CUSTODY-001 v1.0 Section VI Dimension 2.
             # ---------------------------------------------------------
             ApprovedPath(
-                path_id="correspondent_citi_ny_usd",
+                path_id="correspondent_usd_new_york",
                 dimensions=frozenset(
                     {PathSelectionDimension.CORRESPONDENT_BANKING_COORDINATION}
                 ),
                 description=(
-                    "Citi New York USD correspondent — global "
+                    "A New York USD correspondent — the shape of a global "
                     "correspondent for USD international settlement "
                     "per AUR-CUSTODY-001 v1.0 Section VI Dimension 2."
                 ),
                 eligible_currencies=frozenset({"USD"}),
-                correspondent_bic="CITIUS33",
+                correspondent_bic="AAAAUS33",
             ),
             ApprovedPath(
-                path_id="correspondent_deutsche_bank_eur",
+                path_id="correspondent_eur_frankfurt",
                 dimensions=frozenset(
                     {PathSelectionDimension.CORRESPONDENT_BANKING_COORDINATION}
                 ),
                 description=(
-                    "Deutsche Bank Frankfurt EUR correspondent per "
+                    "A Frankfurt EUR correspondent per "
                     "AUR-CUSTODY-001 v1.0 Section VI Dimension 2."
                 ),
                 eligible_currencies=frozenset({"EUR"}),
-                correspondent_bic="DEUTDEFF",
+                correspondent_bic="BBBBDEFF",
             ),
             ApprovedPath(
-                path_id="correspondent_hsbc_london_gbp",
+                path_id="correspondent_gbp_london",
                 dimensions=frozenset(
                     {PathSelectionDimension.CORRESPONDENT_BANKING_COORDINATION}
                 ),
                 description=(
-                    "HSBC London GBP correspondent per "
+                    "A London GBP correspondent per "
                     "AUR-CUSTODY-001 v1.0 Section VI Dimension 2."
                 ),
                 eligible_currencies=frozenset({"GBP"}),
-                correspondent_bic="HBUKGB4B",
+                correspondent_bic="CCCCGB2L",
             ),
             # ---------------------------------------------------------
             # Dimension 3 — Cross-border FX leg coordination

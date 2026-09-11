@@ -17,7 +17,7 @@ v1.6 — Custody Operationalized · Asset-Services Workforce · Capstone Publica
 | Supersedes | Aureon Consolidated Canonical Doctrine v1.5.1 |
 | Author | Guillermo "Bill" Ravelo |
 | Document Class | Capstone Doctrine Publication |
-| Academic | Columbia University · M.S. Technology Management (Incoming, Dean's Fellowship) |
+| Academic | Columbia University · M.S. Technology Management (Enrolled, Dean's Fellowship) |
 | Doctrine Stack | Aureon Doctrine v1.6 · Cato (mixed: core v0.2.2 / cache v0.2.3) · CAOM-001 (this document) · AUR-CUSTODY-001 v1.0 (custody operational doctrine, delivered as v1.6 substantive addition) |
 | Live Deployment | Endowment Series I — Argus · $100M paper AUM (live deployment URL withheld) |
 | Status | Paper trading · approaching institutional testing · no real capital at risk |

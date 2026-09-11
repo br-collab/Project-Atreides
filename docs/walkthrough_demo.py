@@ -85,11 +85,11 @@ print(f"  rail {g.recommended_rail.value!r} -> SettlementMethod1Code {method.val
 instr = CashLegInstruction(
     message_id="AUR20260803000117", end_to_end_id="TSY-SETTL-000117",
     created_at=T0, amount=D("1000000.00"), currency="USD",
-    debtor=FinancialInstitution("CHASUS33", "Debtor Bank NA"),
-    creditor=FinancialInstitution("BOFAUS3N"),
+    debtor=FinancialInstitution("DDDDUS33", "Instructing Bank NA"),
+    creditor=FinancialInstitution("EEEEUS33"),
     settlement_method=method,
-    sender=FinancialInstitution("CHASUS33"),
-    receiver=FinancialInstitution("DTCYUS33"),
+    sender=FinancialInstitution("DDDDUS33"),
+    receiver=FinancialInstitution("FFFFUS33"),
     dsor_lineage_uri="dsor://operation/117",
 )
 art = emit_instruction_artifact(instr)

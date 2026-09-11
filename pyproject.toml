@@ -2,7 +2,7 @@
 name = "atreides"
 version = "0.3.2"
 description = "Aureon Asset Services — doctrine-native institutional governance framework"
-authors = [{name = "Guillermo Ravelo", email = "bill@ravelostrategicsolutions.com"}]
+authors = [{name = "Guillermo Ravelo", email = "gar2163@columbia.edu"}]
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}
