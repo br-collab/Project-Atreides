@@ -60,7 +60,7 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**1,186 tests · 99% coverage · MIT licensed.**
+**1,265 tests (1,025 functions, 240 parametrized cases) · 34 Hypothesis property invariants · 99% line coverage, whole package, no branch coverage · MIT**
 
 ---
 
@@ -88,7 +88,7 @@ land in the same decision-of-record.
 ## Where to start reading
 
 **`pytest --hypothesis-profile=deep tests/test_properties.py`** attacks the
-doctrine directly: thirty-two invariants - a queue is never a failure, netting
+doctrine directly: 34 invariants - a queue is never a failure, netting
 conserves quantity, unknown exposure outranks known cost, an unread rulebook
 never reads as clean - checked against inputs nobody chose.
 
@@ -299,7 +299,7 @@ one rather than assumed away.
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q          # 793 passed
+pytest -q          # 1265 passed
 ```
 
 Requires Python ≥ 3.11. Runtime dependency: `pydantic>=2.6`. `lxml` is
