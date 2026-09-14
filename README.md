@@ -250,17 +250,25 @@ contracts, and negative-path tests exist — not when a diagram does.
 ## Where this lands against the DTCC settlement transformation calendar
 
 Context for anyone evaluating relevance rather than architecture. DTCC's published
-[Settlement Transformation client roadmap](https://www.dtcc.com/-/media/Files/Downloads/Transformation/Settlement-Transformation-Client-Roadmap.pdf)
-puts the participant-side work on dates:
+Settlement Transformation Client Roadmap puts the participant-side work on dates:
 
 | Date | Milestone |
 | --- | --- |
 | 21 Jan 2026 | PSE connectivity testing begins |
 | 4 Mar 2026 | ISO 20022 Test Facility available — Deliver Orders, Payment Orders |
-| 6 Jul 2026 | Production connectivity testing; ISO input/output early adoption begins |
-| **30 Sep 2026** | **UAT / functional testing available in PSE**; reporting files available |
-| 13 Nov 2026 | Production availability — Settlement Transaction Manager |
+| 29 Apr 2026 | ISO 20022 Test Facility extended — Position Movement, Pledges, Collateral Loans |
+| 6 Jul 2026 | Production connectivity testing; ISO 20022 input/output UAT in PSE and early adoption begin |
+| **30 Sep 2026** | **UAT / functional testing available in PSE** — Settlement Transaction Manager, Partial Settlement, and settlement reporting (CSV through the SDX portal) |
+| 13 Nov 2026 | Production availability — ISO 20022 messaging (input/output) and settlement reporting |
+| Q3 2027 | Settlement Transaction Manager modernized application go-live; Partial Settlement go-live |
 | Q3 2027 | Modernized Inventory Management go-live; legacy interfaces decommissioned |
+
+*Source: DTCC, Settlement Transformation Client Roadmap, revision 2/2026, retrieved
+13 Sep 2026 from [dtcc.com/Initiatives/transformation](https://www.dtcc.com/Initiatives/transformation).
+Day-level dates are from the roadmap's timeline chart. DTCC's own note on the
+roadmap: "The changes outlined in this Roadmap may be subject to Regulatory review
+and approval, which could impact both the enhancement design and implementation
+timelines."*
 
 PSE is DTCC's participant test environment — in their words, a testing environment
 that facilitates user acceptance testing without impact on live activity.
