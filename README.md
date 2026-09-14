@@ -60,7 +60,7 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**1,186 tests · 99% coverage · MIT licensed.**
+**1,265 tests (1,025 functions, 240 parametrized cases) · 34 Hypothesis property invariants · 99% line coverage, whole package, no branch coverage · MIT**
 
 ---
 
@@ -88,7 +88,7 @@ land in the same decision-of-record.
 ## Where to start reading
 
 **`pytest --hypothesis-profile=deep tests/test_properties.py`** attacks the
-doctrine directly: thirty-two invariants - a queue is never a failure, netting
+doctrine directly: 34 invariants - a queue is never a failure, netting
 conserves quantity, unknown exposure outranks known cost, an unread rulebook
 never reads as clean - checked against inputs nobody chose.
 
@@ -153,6 +153,18 @@ exists to eliminate.
 | **Settlement Investigation Analyst** | `atreides/agents/tier1/settlement_investigation_analyst.py` | Reconstructs a break as a provenance-cited timeline across ten evidence sources. Infers nothing — cause ranking is a separate, bounded layer. |
 | **Typed custody contracts** | `atreides/contracts/` | Asset class, custody object, settlement method, failure mode, inherent safety, authority. |
 | **Decision record (DSOR)** | `atreides/dsor/` | Append-only, DTG-stamped, deterministic replay. |
+
+> **Naming — two gates called Cato.** `CATO-F` here
+> (`atreides/rails/cato_f.py`) is an in-process gate for the **cash**
+> settlement rail; it emits `PROCEED` / `HOLD` / `ESCALATE` with a rail and a
+> finality class. The gates in
+> [br-collab/Cato-FICC-MCP](https://github.com/br-collab/Cato-FICC-MCP)
+> (`cato_gate` for pre-settlement doctrine context, `get_atomic_settlement_gate`
+> for `PROCEED` / `HOLD` / `ESCALATE` plus a recommended chain) govern the
+> securities and tokenized settlement rail, and are separate public MCP tools.
+> The two are designed as counterparts and share the same OFR STLFSI4 stress
+> thresholds, but they are different components answering different questions
+> on different surfaces. Not interchangeable.
 
 ---
 
@@ -238,17 +250,25 @@ contracts, and negative-path tests exist — not when a diagram does.
 ## Where this lands against the DTCC settlement transformation calendar
 
 Context for anyone evaluating relevance rather than architecture. DTCC's published
-[Settlement Transformation client roadmap](https://www.dtcc.com/-/media/Files/Downloads/Transformation/Settlement-Transformation-Client-Roadmap.pdf)
-puts the participant-side work on dates:
+Settlement Transformation Client Roadmap puts the participant-side work on dates:
 
 | Date | Milestone |
 | --- | --- |
 | 21 Jan 2026 | PSE connectivity testing begins |
 | 4 Mar 2026 | ISO 20022 Test Facility available — Deliver Orders, Payment Orders |
-| 6 Jul 2026 | Production connectivity testing; ISO input/output early adoption begins |
-| **30 Sep 2026** | **UAT / functional testing available in PSE**; reporting files available |
-| 13 Nov 2026 | Production availability — Settlement Transaction Manager |
+| 29 Apr 2026 | ISO 20022 Test Facility extended — Position Movement, Pledges, Collateral Loans |
+| 6 Jul 2026 | Production connectivity testing; ISO 20022 input/output UAT in PSE and early adoption begin |
+| **30 Sep 2026** | **UAT / functional testing available in PSE** — Settlement Transaction Manager, Partial Settlement, and settlement reporting (CSV through the SDX portal) |
+| 13 Nov 2026 | Production availability — ISO 20022 messaging (input/output) and settlement reporting |
+| Q3 2027 | Settlement Transaction Manager modernized application go-live; Partial Settlement go-live |
 | Q3 2027 | Modernized Inventory Management go-live; legacy interfaces decommissioned |
+
+*Source: DTCC, Settlement Transformation Client Roadmap, revision 2/2026, retrieved
+13 Sep 2026 from [dtcc.com/Initiatives/transformation](https://www.dtcc.com/Initiatives/transformation).
+Day-level dates are from the roadmap's timeline chart. DTCC's own note on the
+roadmap: "The changes outlined in this Roadmap may be subject to Regulatory review
+and approval, which could impact both the enhancement design and implementation
+timelines."*
 
 PSE is DTCC's participant test environment — in their words, a testing environment
 that facilitates user acceptance testing without impact on live activity.
@@ -287,7 +307,7 @@ one rather than assumed away.
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q          # 793 passed
+pytest -q          # 1265 passed
 ```
 
 Requires Python ≥ 3.11. Runtime dependency: `pydantic>=2.6`. `lxml` is
