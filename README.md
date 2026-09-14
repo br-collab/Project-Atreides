@@ -154,6 +154,18 @@ exists to eliminate.
 | **Typed custody contracts** | `atreides/contracts/` | Asset class, custody object, settlement method, failure mode, inherent safety, authority. |
 | **Decision record (DSOR)** | `atreides/dsor/` | Append-only, DTG-stamped, deterministic replay. |
 
+> **Naming — two gates called Cato.** `CATO-F` here
+> (`atreides/rails/cato_f.py`) is an in-process gate for the **cash**
+> settlement rail; it emits `PROCEED` / `HOLD` / `ESCALATE` with a rail and a
+> finality class. The gates in
+> [br-collab/Cato-FICC-MCP](https://github.com/br-collab/Cato-FICC-MCP)
+> (`cato_gate` for pre-settlement doctrine context, `get_atomic_settlement_gate`
+> for `PROCEED` / `HOLD` / `ESCALATE` plus a recommended chain) govern the
+> securities and tokenized settlement rail, and are separate public MCP tools.
+> The two are designed as counterparts and share the same OFR STLFSI4 stress
+> thresholds, but they are different components answering different questions
+> on different surfaces. Not interchangeable.
+
 ---
 
 ## Four properties worth checking against the code
