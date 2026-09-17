@@ -75,7 +75,7 @@ C2 receives the escalation, assembles the unified picture per Axiom 6 (Escalatio
 
 | Framework | Article / Standard | What the agent supports |
 |---|---|---|
-| SR 11-7 | Tier 2 deterministic | Match logic is fully specifiable — deterministic, no judgment. |
+| National Institute of Standards and Technology AI Risk Management Framework (NIST AI RMF) 1.0 plus Aureon doctrine | Tier 2 deterministic | Match logic is fully specifiable — deterministic, no judgment. |
 | OCC 2023-17 | Third-party risk management | The agent operates against Verana's registered downstream system node set. |
 | BCBS 239 | Principle 3 — automated accuracy | Continuous reconciliation against downstream systems is the architectural implementation of automated, reconciled risk-data aggregation. |
 | DORA | Continuous monitoring | The continuous reconciliation cycle is the operational resilience requirement for cross-system state integrity. |

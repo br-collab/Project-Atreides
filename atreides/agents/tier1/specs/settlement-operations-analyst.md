@@ -97,7 +97,7 @@ C2 receives the escalation, assembles the unified picture per Axiom 6 (Escalatio
 
 | Framework | Article / Standard | What the agent supports |
 |---|---|---|
-| SR 11-7 | Tier 2 deterministic | The agent's zero-variance behavior satisfies Tier 2 model risk classification — deterministic, no judgment, fully specifiable. |
+| National Institute of Standards and Technology AI Risk Management Framework (NIST AI RMF) 1.0 plus Aureon doctrine | Tier 2 deterministic | The agent's zero-variance behavior satisfies Tier 2 model risk classification — deterministic, no judgment, fully specifiable. |
 | OCC 2023-17 | Third-party risk management | The agent operates against Verana's registered third-party node set (FICC, SWIFT, Fedwire counterparties). Pre-staged fallback enforced at the network layer. |
 | BCBS 239 | Principle 3 — automated accuracy | Settlement instruction generation is automated, reconciled against DSOR pre-trade records, and free of manual intervention on the primary path. |
 | DORA | RTO 15 minutes | The agent's escalation protocol surfaces primary-path failures within the recovery time objective for settlement operations. |

@@ -81,7 +81,7 @@ C2 receives the escalation, assembles the unified picture per Axiom 6 (Escalatio
 
 | Framework | Article / Standard | What the agent supports |
 |---|---|---|
-| SR 11-7 | Tier 2 deterministic | Report generation logic is fully specifiable — deterministic, no judgment. |
+| National Institute of Standards and Technology AI Risk Management Framework (NIST AI RMF) 1.0 plus Aureon doctrine | Tier 2 deterministic | Report generation logic is fully specifiable — deterministic, no judgment. |
 | OCC 2023-17 | Third-party risk management | The agent operates against Verana's registered regulatory submission endpoint set. |
 | BCBS 239 | Principle 3 — automated accuracy | Reports are generated automatically from DSOR records, not manually compiled. |
 | DORA | SLA compliance | Five-second alert thresholds on report generation timeliness satisfy the operational resilience requirement for regulatory reporting. |
