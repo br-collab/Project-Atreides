@@ -14,7 +14,7 @@ from uuid import UUID
 
 from cannae_kernel.canonical import Digest, canonical_bytes_of, digest_bytes
 from cannae_kernel.disposition import Disposition
-from cannae_kernel.ids import ObligationId
+from cannae_kernel.ids import LifecycleId, ObligationId
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 __all__ = [
@@ -76,6 +76,8 @@ class ObligationAcceptanceRecord(BaseModel):
     operation_id: UUID
     obligation_id: ObligationId
     obligation_version: int | None
+    #: The candidate's lifecycle, so the record can be journalled with it.
+    lifecycle_id: LifecycleId | None = None
     obligation_digest: Digest
     disposition: Disposition
     outcome: AcceptanceOutcome

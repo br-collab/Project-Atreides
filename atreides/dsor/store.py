@@ -17,7 +17,7 @@ Enforces AUR-CANONICAL-001 v1.6 Axiom 4 (immutable lineage) at two layers:
 Thread safety: ``check_same_thread=False`` is set; the caller is
 responsible for external synchronization under concurrent writes.
 
-The ``_output_adapter`` handles :data:`~atreides.dsor.record.AureonOutput` —
+The ``_output_adapter`` handles :data:`~atreides.dsor.record.SettlementDomainOutput` —
 the unified discriminated union of all agent output types. The ``kind``
 field on each output type serves as the discriminator.
 """
@@ -31,7 +31,7 @@ from uuid import UUID
 
 from pydantic import TypeAdapter
 
-from atreides.dsor.record import AureonOutput, DSORRecord
+from atreides.dsor.record import DSORRecord, SettlementDomainOutput
 
 # ---------------------------------------------------------------------------
 # Schema DDL — created once per connection; idempotent.
@@ -71,7 +71,7 @@ WHERE record_id = ?
 # Pydantic TypeAdapter for discriminated-union deserialization.
 # ---------------------------------------------------------------------------
 
-_output_adapter: TypeAdapter[AureonOutput] = TypeAdapter(AureonOutput)
+_output_adapter: TypeAdapter[SettlementDomainOutput] = TypeAdapter(SettlementDomainOutput)
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +142,7 @@ class DSORStore:
 
     def append(
         self,
-        output: AureonOutput,
+        output: SettlementDomainOutput,
         *,
         dtg: datetime | None = None,
         correction_of: UUID | None = None,
@@ -150,7 +150,7 @@ class DSORStore:
         """Append a new DSOR record for ``output``.
 
         Args:
-            output: The :data:`AureonOutput` to record.
+            output: The :data:`SettlementDomainOutput` to record.
             dtg: UTC DTG stamp. Defaults to ``datetime.now(UTC)``.
             correction_of: When set, this record corrects the existing
                 record with the given ``record_id``. The original is
@@ -233,7 +233,37 @@ class DSORStore:
 
         return record
 
-    def replay(self, record_id: UUID) -> AureonOutput:
+    def records(self) -> tuple[DSORRecord, ...]:
+        """Every record in the store, in the order it was appended. Read-only.
+
+        Reassembles each :class:`DSORRecord` with its stored ``record_id``, ``dtg``,
+        ``kind`` and ``correction_of``, so a journal can be rendered from the store
+        alone (ATR-I-12).
+        """
+        rows = self._conn.execute(
+            "SELECT record_id, dtg, kind, payload, correction_of FROM dsor_records ORDER BY rowid"
+        ).fetchall()
+        return tuple(
+            DSORRecord(
+                record_id=UUID(record_id),
+                dtg=datetime.fromisoformat(dtg),
+                kind=kind,
+                output=_output_adapter.validate_json(payload),
+                correction_of=None if correction_of is None else UUID(correction_of),
+            )
+            for record_id, dtg, kind, payload, correction_of in rows
+        )
+
+    def payload_bytes(self, record_id: UUID) -> bytes:
+        """The exact JSON bytes stored for ``record_id``, as appended."""
+        row = self._conn.execute(
+            "SELECT payload FROM dsor_records WHERE record_id = ?", (str(record_id),)
+        ).fetchone()
+        if row is None:
+            raise DSORRecordNotFoundError(record_id)
+        return str(row[0]).encode("utf-8")
+
+    def replay(self, record_id: UUID) -> SettlementDomainOutput:
         """Fetch and deserialize a DSOR record by ``record_id``.
 
         Two calls with the same ``record_id`` return byte-identical results
@@ -244,7 +274,7 @@ class DSORStore:
             record_id: The ``record_id`` of the record to fetch.
 
         Returns:
-            The :data:`AureonOutput` that was appended.
+            The :data:`SettlementDomainOutput` that was appended.
 
         Raises:
             DSORRecordNotFoundError: If ``record_id`` is not in the store.

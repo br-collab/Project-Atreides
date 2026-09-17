@@ -147,8 +147,7 @@ class TestAppendOnlyEnforcement:
             == routing_decision_output.model_dump_json()
         )
         assert (
-            mem_store.replay(r2.record_id).model_dump_json()
-            == escalation_output.model_dump_json()
+            mem_store.replay(r2.record_id).model_dump_json() == escalation_output.model_dump_json()
         )
 
 
@@ -277,9 +276,7 @@ def test_a_genuine_correction_still_appends(
     mem_store: DSORStore, routing_decision_output: RoutingDecision
 ) -> None:
     original = mem_store.append(routing_decision_output)
-    corrected = mem_store.append(
-        routing_decision_output, correction_of=original.record_id
-    )
+    corrected = mem_store.append(routing_decision_output, correction_of=original.record_id)
     assert corrected.correction_of == original.record_id
     assert mem_store.replay(original.record_id) is not None
 
