@@ -74,6 +74,7 @@ from atreides.agents.tier1.settlement_operations_analyst import (
 from atreides.contracts import DSORLineageStub
 from atreides.contracts.dsor_stub import CAOMTier
 from atreides.dsor import DSORStore
+from atreides.escalation import Escalation, EscalationRegister
 
 # Default material-magnitude threshold above which an operation is
 # quorum-required. The doctrine fixes no number (per-magnitude threshold
@@ -138,6 +139,10 @@ class BreakLeg(StrEnum):
     FUNDING = "funding_break"
     CLEARING_FUND = "clearing_fund_break"
     NET_OBLIGATION = "net_obligation_break"
+    RISK_CONTROL = "risk_control_break"
+    """The venue reported a risk-control breach (ATR-I-07). A break whether or
+    not every amount matches: a declared breach is a control failure in its own
+    right, not a discrepancy between two numbers."""
 
 
 #: Which key in a Reconciliation's ``detail`` carries each leg's figures.
@@ -156,7 +161,17 @@ _DETAIL_KEY: dict[BreakLeg, str] = {
     BreakLeg.FUNDING: "funding",
     BreakLeg.CLEARING_FUND: "clearing_fund",
     BreakLeg.NET_OBLIGATION: "net_obligation",
+    BreakLeg.RISK_CONTROL: "risk_control",
 }
+
+#: The readback word for a declared risk-control breach. Compared after
+#: stripping and upper-casing: a misspelt breach must still break, because the
+#: failure mode of guessing wrong here is a breach that closes clean.
+RISK_CONTROL_BREACHED = "BREACHED"
+
+
+def _is_risk_control_breach(status: str | None) -> bool:
+    return status is not None and status.strip().upper() == RISK_CONTROL_BREACHED
 
 
 # ---------------------------------------------------------------------------
@@ -310,6 +325,9 @@ class Reconciliation(_Frozen):
     matched: bool
     breaks: tuple[BreakLeg, ...] = ()
     detail: dict[str, dict[str, str]] = Field(default_factory=dict)
+    #: Escalations raised by this reconciliation, by id. A risk-control breach
+    #: raises one (ATR-I-07); see ``ClearingCockpit.escalations``.
+    escalation_ids: tuple[str, ...] = ()
 
 
 class BreakTicket(_Frozen):
@@ -351,8 +369,12 @@ class ClearingCockpit:
         halt_check: Callable[[], bool] | None = None,
         doctrine_version: str = "1.6",
         caom_mode: str = "CAOM-001",
+        escalation_register: EscalationRegister | None = None,
     ) -> None:
         self._store = dsor_store if dsor_store is not None else DSORStore(":memory:")
+        self._escalations = (
+            escalation_register if escalation_register is not None else EscalationRegister()
+        )
         self._analyst = SettlementOperationsAnalyst()
         self._threshold = material_magnitude_threshold
         self._halt_check = halt_check
@@ -664,6 +686,43 @@ class ClearingCockpit:
                 "limit": str(tasking.intraday_credit_limit),
             }
 
+        # RISK_CONTROL leg: a declared breach is a break regardless of amounts,
+        # and it escalates (ATR-I-07). Before Wave 2 the status was ingested
+        # and never read, so a breach with matching amounts closed clean.
+        escalation_ids: list[str] = []
+        if _is_risk_control_breach(readback.risk_control_status):
+            breaks.append(BreakLeg.RISK_CONTROL)
+            detail["risk_control"] = {"status": str(readback.risk_control_status)}
+            escalation = self._escalations.raise_escalation(
+                Escalation(
+                    escalation_id=(
+                        f"ESC-{str(readback.operation_id)[:8]}-risk_control-"
+                        f"{len(self._escalations) + 1}"
+                    ),
+                    operation_id=readback.operation_id,
+                    # The register reads no clock: offsets run from the
+                    # operation's capture, which both records carry.
+                    raised_at_offset_seconds=(
+                        int((readback.ingested_at - tasking.captured_at).total_seconds())
+                        if tasking is not None
+                        else 0
+                    ),
+                    reason=(
+                        f"Venue readback reports risk_control_status="
+                        f"{readback.risk_control_status!r} for operation "
+                        f"{readback.operation_id} ({readback.regime.value}). A declared "
+                        f"risk-control breach is a break even where every amount matches "
+                        f"(AUR-COCKPIT-001 SVII; ATR-I-07)."
+                    ),
+                    routed_to=(
+                        f"authority_tier:{tasking.authority_tier.value}"
+                        if tasking is not None
+                        else "authority_tier:unknown"
+                    ),
+                )
+            )
+            escalation_ids.append(escalation.escalation_id)
+
         # POSITION leg: readback position vs expected position (delivery qty).
         exp_pos = expected_position
         if exp_pos is None and expected.net_delivery_quantity is not None:
@@ -685,6 +744,7 @@ class ClearingCockpit:
             matched=not breaks,
             breaks=tuple(breaks),
             detail=detail,
+            escalation_ids=tuple(escalation_ids),
         )
         self._ledger_append(readback.operation_id, CycleBeat.RECONCILE, recon)
         return recon
@@ -724,6 +784,11 @@ class ClearingCockpit:
     def workbench(self) -> list[BreakTicket]:
         """Open break tickets routed to the workbench."""
         return list(self._workbench)
+
+    @property
+    def escalations(self) -> EscalationRegister:
+        """The register escalations raised by this cockpit are recorded in."""
+        return self._escalations
 
 
 __all__ = [
