@@ -97,7 +97,7 @@ jobs:
       # softened repo-wide, so the debt is named and visible instead of
       # dissolved into a passing check. Narrowing this list to nothing is the
       # work; pretending it is already nothing is the thing not to do.
-      - run: mypy atreides/rails atreides/contracts atreides/messaging atreides/dsor atreides/escalation
+      - run: mypy atreides/rails atreides/contracts atreides/messaging atreides/dsor atreides/escalation atreides/acceptance
 
   probes:
     name: Probes
