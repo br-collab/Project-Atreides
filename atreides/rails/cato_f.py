@@ -39,10 +39,16 @@ Status: v0.1 — doctrine-first implementation. Creates no authority.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 from typing import Final
+
+from cannae_kernel.disposition import Disposition
+from cannae_kernel.domains import Domain
+from cannae_kernel.halt import HaltContext, gate_under_halt
+from cannae_kernel.ids import ObligationId
 
 from atreides.rails.boundary import coerce_member, describe, unrecognised
 from atreides.rails.determination import (
@@ -54,6 +60,7 @@ from atreides.rails.perimeter import SettlementPerimeter, continuously_available
 
 __all__ = [
     "DOCTRINE_VERSION",
+    "GATE_SET_VERSION",
     "GOLDEN_VECTORS",
     "OFR_ESCALATE_THRESHOLD",
     "OFR_HOLD_THRESHOLD",
@@ -77,6 +84,13 @@ __all__ = [
 ]
 
 DOCTRINE_VERSION: Final[str] = "AUR-CUSTODY-CASH-001-v0.2"
+
+#: Version of the check set evaluate() runs, recorded on every decision so a
+#: replay can tell "same inputs, same gates" from "same inputs, newer gates".
+#: Wave 2 (W2A-1, W2A-3) added the unrecognised-input and halt checks.
+GATE_SET_VERSION: Final[str] = "cato-f-gates/0.3"
+
+_DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 # Stress thresholds are deliberately identical to Cato's OFR STLFSI4
 # bands. The cash leg and the securities leg respond to systemic stress
@@ -246,6 +260,10 @@ class ReasonCode(StrEnum):
     position is short. This code asserts nothing about the position at all -
     the projection reached a state where the model refuses to say, and a
     refusal must not be converted into a number on the way to this gate."""
+    HALT_ACTIVE = "HALT_ACTIVE"
+    """A halt covering Atreides is in effect (ATR-I-06). Checked before
+    anything else: under a declared halt no cash leg proceeds, whatever the
+    market and funding say."""
     INPUT_UNRECOGNISED = "INPUT_UNRECOGNISED"
     """An enum input did not match a member exactly (ATR-I-05). HOLD: the gate
     does not guess which branch a misspelt value meant."""
@@ -605,10 +623,49 @@ class CatoFDecision:
     #: written after can tell an on-us book entry apart from an inter-bank
     #: movement that merely shares its finality class.
     settlement_perimeter: SettlementPerimeter = SettlementPerimeter.NOT_ASSESSED
+    #: The obligation this decision governs (ATR-I-04): a kernel
+    #: ``ObligationId`` and the ``sha256:`` digest of the obligation as
+    #: evaluated. Both or neither. A decision without them is a valid gate
+    #: computation but is not bound to anything, and a consumer that needs to
+    #: act on it (a Tier 2 routing decision, the acceptance service) refuses
+    #: an unbound PROCEED.
+    obligation_id: str | None = None
+    obligation_digest: str | None = None
+    gate_set_version: str = GATE_SET_VERSION
+
+    def __post_init__(self) -> None:
+        # Coerce at the boundary (ATR-I-05): a decision that crossed JSON
+        # arrives with strings.
+        object.__setattr__(self, "decision", coerce_member(GateDecision, self.decision))
+        object.__setattr__(self, "reason_code", coerce_member(ReasonCode, self.reason_code))
+        if not isinstance(self.decision, GateDecision):
+            raise ValueError(f"unrecognised gate decision {self.decision!r}")
+        if not isinstance(self.reason_code, ReasonCode):
+            raise ValueError(f"unrecognised reason code {self.reason_code!r}")
+        # A PROCEED with no evaluated checks is a claim with no evidence
+        # (stress case H6.3). Refused at construction, on every path.
+        if self.decision is GateDecision.PROCEED and not self.checks_evaluated:
+            raise ValueError(
+                "a PROCEED decision must record the checks it evaluated; one with "
+                "none is not a gate decision (ATR-I-04)"
+            )
+        if (self.obligation_id is None) != (self.obligation_digest is None):
+            raise ValueError("obligation_id and obligation_digest are given together or not at all")
+        if self.obligation_id is not None:
+            object.__setattr__(self, "obligation_id", ObligationId(self.obligation_id))
+        if self.obligation_digest is not None and not _DIGEST.match(self.obligation_digest):
+            raise ValueError("obligation_digest must be 'sha256:' followed by 64 lower-case hex")
+        if not self.gate_set_version:
+            raise ValueError("gate_set_version is required")
 
     @property
     def proceeds(self) -> bool:
         return self.decision is GateDecision.PROCEED
+
+    @property
+    def bound(self) -> bool:
+        """Whether this decision names the obligation it governs."""
+        return self.obligation_id is not None
 
 
 def _snapshot_funding(funding: FundingState) -> tuple[tuple[str, str], ...]:
@@ -764,6 +821,9 @@ def evaluate(
     dsor_lineage_uri: str | None = None,
     stress_reading_age_seconds: int | None = None,
     freshness_policy: FreshnessPolicy | None = None,
+    obligation_id: str | None = None,
+    obligation_digest: str | None = None,
+    halt: HaltContext | None = None,
 ) -> CatoFDecision:
     """Evaluate the cash leg. Deterministic, pure, replayable.
 
@@ -771,7 +831,31 @@ def evaluate(
     The first condition met determines the decision — the ordering is
     doctrine, not an optimization, and must not be reordered without a
     doctrine change landing in both implementations.
+
+    ``obligation_id`` and ``obligation_digest`` bind the decision to the
+    obligation it governs (ATR-I-04). ``halt`` is the kernel halt context in
+    force; an active halt covering Atreides holds before any other check
+    (ATR-I-06).
     """
+    # A declared halt outranks every other input (ATR-I-06).
+    if halt is not None and gate_under_halt(halt, Domain.ATREIDES) is Disposition.BLOCK:
+        return CatoFDecision(
+            decision=GateDecision.HOLD,
+            reason_code=ReasonCode.HALT_ACTIVE,
+            recommended_rail=None,
+            finality_class=None,
+            rationale=(
+                f"Halt {halt.halt_id} (version {halt.version}) is active for Atreides: "
+                f"{halt.reason}. No cash leg proceeds under a declared halt, whatever "
+                f"the market and funding say (ATR-I-06)."
+            ),
+            checks_evaluated=(("halt", f"active:{halt.halt_id}:v{halt.version}"),),
+            funding_state_snapshot=_snapshot_funding(funding),
+            dsor_lineage_uri=dsor_lineage_uri,
+            obligation_id=obligation_id,
+            obligation_digest=obligation_digest,
+        )
+
     # Before any check reads an enum: an unrecognised input holds (ATR-I-05).
     # Every check below compares by identity, so a value that is not a member
     # would otherwise take whichever branch its absence leaves open.
@@ -795,9 +879,15 @@ def evaluate(
             checks_evaluated=values,
             funding_state_snapshot=_snapshot_funding(funding),
             dsor_lineage_uri=dsor_lineage_uri,
+            obligation_id=obligation_id,
+            obligation_digest=obligation_digest,
         )
 
     checks: list[tuple[str, str]] = [
+        (
+            "halt",
+            "not_supplied" if halt is None else f"inactive_or_out_of_scope:v{halt.version}",
+        ),
         ("ofr_stlfsi4", str(ofr_stlfsi4)),
         ("is_material", str(operation.is_material)),
         ("is_lvps_material", str(operation.is_lvps_material)),
@@ -850,6 +940,8 @@ def evaluate(
             dsor_lineage_uri=dsor_lineage_uri,
             obligation_finality_class=obligation_class,
             settlement_perimeter=operation.settlement_perimeter,
+            obligation_id=obligation_id,
+            obligation_digest=obligation_digest,
         )
 
     # 0. Is the stress reading a number at all?

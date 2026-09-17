@@ -78,6 +78,9 @@ CATO_F_PROCEED = CatoFDecision(
     rationale="Test fixture - gate cleared.",
     checks_evaluated=(("fixture", "True"),),
     funding_state_snapshot=(),
+    # Bound to an obligation: Tier 2 refuses an unbound PROCEED (ATR-I-04).
+    obligation_id="obl_01M2P20SY00000000000000001",
+    obligation_digest="sha256:" + "0" * 64,
 )
 
 _SHA256_HEX_LEN = 64
@@ -1686,9 +1689,7 @@ class TestMaterialMagnitudeRoutingPerDimension:
             jurisdiction="US",
         )
         assert isinstance(result, QuorumAuthorityRequired)
-        assert result.inherent_safety_surface is (
-            InherentSafetySurface.FIAT_SETTLEMENT_MATERIAL
-        )
+        assert result.inherent_safety_surface is (InherentSafetySurface.FIAT_SETTLEMENT_MATERIAL)
         assert result.operation_package.routing_recommendation is not None
 
     def test_dim_2_sanctioned_adjacency_routes_to_quorum(
@@ -1702,9 +1703,7 @@ class TestMaterialMagnitudeRoutingPerDimension:
             currency="USD",
         )
         assert isinstance(result, QuorumAuthorityRequired)
-        assert result.inherent_safety_surface is (
-            InherentSafetySurface.FIAT_SETTLEMENT_MATERIAL
-        )
+        assert result.inherent_safety_surface is (InherentSafetySurface.FIAT_SETTLEMENT_MATERIAL)
 
     def test_dim_3_amount_trigger_routes_to_quorum_with_fx_surface(
         self,
@@ -1717,9 +1716,7 @@ class TestMaterialMagnitudeRoutingPerDimension:
             currency_pair="USD/EUR",
         )
         assert isinstance(result, QuorumAuthorityRequired)
-        assert result.inherent_safety_surface is (
-            InherentSafetySurface.FX_BUNDLED_SETTLEMENT
-        )
+        assert result.inherent_safety_surface is (InherentSafetySurface.FX_BUNDLED_SETTLEMENT)
 
     def test_dim_4_sanctioned_adjacency_routes_to_quorum(
         self,
@@ -1896,8 +1893,11 @@ def _gate(decision: GateDecision, reason: ReasonCode) -> CatoFDecision:
         recommended_rail=None,
         finality_class=None,
         rationale="Test gate.",
-        checks_evaluated=(),
+        # A PROCEED must record its checks (ATR-I-04); the others may too.
+        checks_evaluated=(("fixture", "True"),),
         funding_state_snapshot=(),
+        obligation_id="obl_01M2P20SY00000000000000001",
+        obligation_digest="sha256:" + "0" * 64,
     )
 
 
@@ -1943,9 +1943,7 @@ class TestCashLegGateConsultation:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
-            cato_f_decision=_gate(
-                GateDecision.HOLD, ReasonCode.UNFUNDED_AT_SETTLEMENT_INSTANT
-            ),
+            cato_f_decision=_gate(GateDecision.HOLD, ReasonCode.UNFUNDED_AT_SETTLEMENT_INSTANT),
         )
         out = agent.select_multi_currency_rail_routing(request, currency="USD")
         assert isinstance(out, EscalationRequired)
@@ -1965,9 +1963,7 @@ class TestCashLegGateConsultation:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
-            cato_f_decision=_gate(
-                GateDecision.ESCALATE, ReasonCode.SYSTEMIC_STRESS_ESCALATE
-            ),
+            cato_f_decision=_gate(GateDecision.ESCALATE, ReasonCode.SYSTEMIC_STRESS_ESCALATE),
         )
         out = agent.select_multi_currency_rail_routing(request, currency="USD")
         assert isinstance(out, EscalationRequired)
@@ -1998,9 +1994,7 @@ class TestCashLegGateConsultation:
             emitted_at=now,
             cato_f_decision=None,
         )
-        out = agent.select_cash_sweep_and_short_term_investment(
-            request, currency="USD"
-        )
+        out = agent.select_cash_sweep_and_short_term_investment(request, currency="USD")
         assert not isinstance(out, EscalationRequired) or (
             out.failed_guardrail is not JClassGuardrail.NO_SETTLEMENT_WITHOUT_LINEAGE
         )
@@ -2042,3 +2036,112 @@ class TestCashLegGateConsultation:
         out = agent.select_large_value_payment_system(request, currency="USD")
         assert isinstance(out, EscalationRequired)
         assert out.failed_guardrail is JClassGuardrail.NO_SETTLEMENT_WITHOUT_LINEAGE
+
+
+# ---------------------------------------------------------------------------
+# ATR-I-06 (W2A-3): a halt covering Atreides stops every path selection, and
+# ATR-I-04: a PROCEED that names no obligation cannot authorize routing.
+# ---------------------------------------------------------------------------
+
+_SELECTORS: list[tuple[str, dict[str, str]]] = [
+    ("select_multi_currency_rail_routing", {"currency": "USD", "jurisdiction": "US"}),
+    ("select_correspondent_banking_coordination", {"currency": "USD", "jurisdiction": "US"}),
+    ("select_cross_border_fx_leg", {"currency_pair": "EUR/USD"}),
+    ("select_depository_vs_sub_custodian", {"jurisdiction": "US"}),
+    ("select_large_value_payment_system", {"currency": "USD", "jurisdiction": "US"}),
+    ("select_fed_related_operation", {"fed_facility_path_id": "fed_discount_window"}),
+    ("select_cash_sweep_and_short_term_investment", {"currency": "USD"}),
+]
+
+
+def _halt(now: datetime, *, active: bool = True, scope: object = "ALL") -> object:
+    from cannae_kernel.actor import ActorKind, ActorRef
+    from cannae_kernel.halt import HaltContext
+    from cannae_kernel.ids import ActorId, HaltId
+
+    return HaltContext(
+        halt_id=HaltId("hlt_" + "1" * 26),
+        version=3,
+        active=active,
+        scope=scope,  # type: ignore[arg-type]
+        declared_by=ActorRef(
+            actor_id=ActorId("act_" + "1" * 26),
+            actor_kind=ActorKind.HUMAN,
+            role="operator",
+            entitlement_refs=(),
+            authenticated=True,
+        ),
+        declared_at=now,
+        reason="drill",
+    )
+
+
+class TestHaltAndGateBinding:
+    @pytest.mark.parametrize(("method", "kwargs"), _SELECTORS)
+    def test_every_selector_escalates_at_tier_0_under_a_halt(
+        self,
+        agent: FIATOperationsSpecialist,
+        request_passing: PathSelectionRequest,
+        now: datetime,
+        method: str,
+        kwargs: dict[str, str],
+    ) -> None:
+        halted = request_passing.model_copy(update={"halt": _halt(now)})
+        result = getattr(agent, method)(halted, **kwargs)
+        assert isinstance(result, EscalationRequired)
+        assert result.escalation_tier is CAOMTier.T0
+        assert result.failed_guardrail is JClassGuardrail.NO_SETTLEMENT_WITHOUT_LINEAGE
+        assert "ATR-I-06" in result.failure_reason
+
+    def test_a_halt_outranks_the_material_magnitude_route_to_quorum(
+        self,
+        agent: FIATOperationsSpecialist,
+        request_passing: PathSelectionRequest,
+        now: datetime,
+    ) -> None:
+        big = request_passing.model_copy(
+            update={"halt": _halt(now), "amount": Decimal("999999999999")}
+        )
+        result = agent.select_multi_currency_rail_routing(big, currency="USD", jurisdiction="US")
+        assert isinstance(result, EscalationRequired)
+        assert result.escalation_tier is CAOMTier.T0
+
+    @pytest.mark.parametrize("halt_kind", ["inactive", "other_domain"])
+    def test_a_halt_that_does_not_cover_atreides_does_not_stop_routing(
+        self,
+        agent: FIATOperationsSpecialist,
+        request_passing: PathSelectionRequest,
+        now: datetime,
+        halt_kind: str,
+    ) -> None:
+        from cannae_kernel.domains import Domain
+
+        halt = (
+            _halt(now, active=False)
+            if halt_kind == "inactive"
+            else _halt(now, scope=(Domain.AUREON,))
+        )
+        routed = request_passing.model_copy(update={"halt": halt})
+        result = agent.select_multi_currency_rail_routing(routed, currency="USD", jurisdiction="US")
+        assert isinstance(result, RoutingDecision)
+
+    def test_an_unbound_proceed_does_not_authorize_routing(
+        self,
+        agent: FIATOperationsSpecialist,
+        request_passing: PathSelectionRequest,
+    ) -> None:
+        unbound = CatoFDecision(
+            decision=GateDecision.PROCEED,
+            reason_code=ReasonCode.CLEARED,
+            recommended_rail=CashRail.FEDWIRE,
+            finality_class=FinalityClass.GROSS_FINAL,
+            rationale="cleared, but for which obligation?",
+            checks_evaluated=(("fixture", "True"),),
+            funding_state_snapshot=(),
+        )
+        request = request_passing.model_copy(update={"cato_f_decision": unbound})
+        result = agent.select_multi_currency_rail_routing(
+            request, currency="USD", jurisdiction="US"
+        )
+        assert isinstance(result, EscalationRequired)
+        assert "ATR-I-04" in result.failure_reason

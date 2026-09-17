@@ -30,6 +30,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from cannae_kernel.disposition import Disposition
+from cannae_kernel.domains import Domain
+from cannae_kernel.halt import HaltContext, gate_under_halt
+
 from atreides.agents.tier1.outputs import (
     DiscrepancyCode,
     RailAcknowledgment,
@@ -50,8 +54,20 @@ GATE_ORDER: tuple[str, ...] = (
 )
 
 
-def validate_tasking(tasking: SettlementTaskingRecord) -> SettlementValidation:
-    """Run the pre-routing gates in order. Pure: no clock, route, reference or I/O."""
+def validate_tasking(
+    tasking: SettlementTaskingRecord, *, halt: HaltContext | None = None
+) -> SettlementValidation:
+    """Run the pre-routing gates in order. Pure: no clock, route, reference or I/O.
+
+    An active halt covering Atreides holds before any gate runs (ATR-I-06).
+    """
+    if halt is not None and gate_under_halt(halt, Domain.ATREIDES) is Disposition.BLOCK:
+        return _held(
+            tasking,
+            DiscrepancyCode.HALT_ACTIVE,
+            f"Halt {halt.halt_id} (version {halt.version}) is active for Atreides: "
+            f"{halt.reason}. Pre-routing hold. Instruction not issued (ATR-I-06).",
+        ).model_copy(update={"checks_evaluated": ("halt",)})
     evaluated: list[str] = []
     checks = (
         (GATE_ORDER[0], _intraday_funding_hold),
@@ -179,6 +195,7 @@ class SettlementOperationsAnalyst:
         store: DSORStore,
         *,
         now: datetime | None = None,
+        halt: HaltContext | None = None,
     ) -> tuple[SettlementOutput, DSORRecord]:
         """Validate, then emit. Equivalent to ``emit(tasking, validate_tasking(tasking), store)``.
 
@@ -191,7 +208,9 @@ class SettlementOperationsAnalyst:
             ``(output, record)``: the emitted :data:`SettlementOutput` and the
             persisted :class:`DSORRecord`.
         """
-        return self.emit(tasking, validate_tasking(tasking), store, now=now)
+        return self.emit(
+            tasking, validate_tasking(tasking, halt=halt), store, now=now, halt=halt
+        )
 
     def emit(
         self,
@@ -200,15 +219,21 @@ class SettlementOperationsAnalyst:
         store: DSORStore,
         *,
         now: datetime | None = None,
+        halt: HaltContext | None = None,
     ) -> tuple[SettlementOutput, DSORRecord]:
         """The emission stage: persist the escalation or route and persist telemetry.
 
         The only method here that selects a route, creates an instruction
         reference, reads the clock or writes to the DSOR. It never sets a rail
         acknowledgement.
+
+        A halt in effect at emission overrides a validation that passed before
+        it was declared: the escalation is persisted instead (ATR-I-06).
         """
         if validation.operation_id != tasking.operation_id:
             raise ValueError("validation and tasking describe different operations")
+        if validation.passed and halt is not None:
+            validation = validate_tasking(tasking, halt=halt)
         emitted_at = now if now is not None else datetime.now(tz=UTC)
 
         if not validation.passed:

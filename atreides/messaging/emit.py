@@ -25,11 +25,16 @@ from decimal import Decimal
 from typing import Literal, cast
 from xml.etree import ElementTree as ET
 
+from cannae_kernel.disposition import Disposition
+from cannae_kernel.domains import Domain
+from cannae_kernel.halt import HaltContext, gate_under_halt
+
 from atreides.messaging.canonical import CashLegInstruction, FinancialInstitution
 from atreides.messaging.profile import BASE_ISO_20022, DepositoryProfile
 
 __all__ = [
     "InstructionArtifact",
+    "PreparationHaltedError",
     "emit_business_application_header",
     "emit_fi_credit_transfer",
     "emit_instruction_artifact",
@@ -168,16 +173,30 @@ def emit_fi_credit_transfer(
     return cast(bytes, ET.tostring(doc, encoding="utf-8", xml_declaration=True))
 
 
+class PreparationHaltedError(RuntimeError):
+    """Raised instead of preparing an instruction while a halt covers Atreides."""
+
+
 def emit_instruction_artifact(
     instruction: CashLegInstruction,
     profile: DepositoryProfile = BASE_ISO_20022,
+    *,
+    halt: HaltContext | None = None,
 ) -> InstructionArtifact:
     """Emit the full instruction package: header plus document.
 
     The returned artifact is what the cockpit's ``emit_instruction_package``
     hands the operator. It is a prepared artifact for human entry, never a
     submission.
+
+    Raises :class:`PreparationHaltedError` when ``halt`` is active for Atreides:
+    nothing is prepared under a declared halt (ATR-I-06).
     """
+    if halt is not None and gate_under_halt(halt, Domain.ATREIDES) is Disposition.BLOCK:
+        raise PreparationHaltedError(
+            f"halt {halt.halt_id} (version {halt.version}) is active for Atreides: "
+            f"{halt.reason}. No instruction is prepared (ATR-I-06)."
+        )
     return InstructionArtifact(
         header_xml=emit_business_application_header(instruction, profile),
         document_xml=emit_fi_credit_transfer(instruction, profile),

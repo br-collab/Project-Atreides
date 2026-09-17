@@ -33,11 +33,13 @@ from atreides.agents.tier2.outputs import (
     QuorumAuthorityRequired,
     RoutingDecision,
 )
+from atreides.rails.cato_f_record import CatoFDecisionRecord
 
 AureonOutput = (
     RoutingDecision | EscalationRequired | QuorumAuthorityRequired
     | SettlementTelemetry | SettlementEscalation
     | EvidenceTimeline | InvestigationEscalation
+    | CatoFDecisionRecord
 )
 
 RecordKind = Literal[
@@ -48,6 +50,7 @@ RecordKind = Literal[
     "settlement_escalation",
     "evidence_timeline",
     "investigation_escalation",
+    "cash_gate_decision",
 ]
 
 

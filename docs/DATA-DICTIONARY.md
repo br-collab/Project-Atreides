@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**193 of 193 enumeration values (100%) state what they mean in
+**194 of 194 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -91,7 +91,7 @@ Immutable DSOR record wrapping one :data:`AureonOutput`.
 | `record_id` | `UUID` | no | Unique record identifier. Independent of the embedded output's operation_id — a correction for the same operation gets a new record_id. |
 | `dtg` | `datetime` | yes | UTC DTG stamp at record assembly time. |
 | `kind` | `Literal` | yes | Discriminator matching output.kind. |
-| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation` | yes | The agent output this record wraps. |
+| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_f_record.CatoFDecisionRecord` | yes | The agent output this record wraps. |
 | `correction_of` | `uuid.UUID \| None` | no | record_id of the record this corrects. The original is preserved unchanged per Axiom 4 (immutable lineage). None for initial records. |
 
 ---
@@ -149,6 +149,9 @@ Gate output per AUR-CUSTODY-CASH-001 Section V.D.
 | `dsor_lineage_uri` | `str \| None` | `None` |
 | `obligation_finality_class` | `FinalityClass \| None` | `None` |
 | `settlement_perimeter` | `SettlementPerimeter` | `<SettlementPerimeter.NOT_ASSESSED: 'NOT_ASSESSED'>` |
+| `obligation_id` | `str \| None` | `None` |
+| `obligation_digest` | `str \| None` | `None` |
+| `gate_set_version` | `str` | `'cato-f-gates/0.3'` |
 
 #### `Counterparty`
 
@@ -270,6 +273,7 @@ Reason codes. One per check in Section V.B plus the PROCEED case.
 | `COUNTERPARTY_UNDER_REVIEW` | The counterparty is under review. Escalates rather than holds: a review means a human is already looking, and this operation is evidence they need rather than a decision this gate should take without them. |
 | `STRESS_READING_UNUSABLE` | The systemic-stress reading is not a usable number, so no statement about market stress can be made from it. Deliberately NOT the escalate code. SYSTEMIC_STRESS_ESCALATE asserts that stress was observed above a band; a NaN or an infinity asserts nothing except that the feed is broken. Naming the two differently is the same discipline the registries apply between NOT_ASSESSED and NONE_DISCLOSED: "we could not read it" and "we read it and it says X" carry the same conservative treatment and completely different remedies. Holds rather than escalates because HOLD is this framework's default everywhere evidence is absent, including the absent-gate default. The trade-off is stated rather than hidden: an operator who wants a broken feed to page somebody must route on this code, because the gate will not manufacture a stress finding it does not have. |
 | `FUNDING_INDETERMINATE` | The funding model declined to assert the position, so the gate has no funded state to check. Distinct from UNFUNDED_AT_SETTLEMENT_INSTANT, which asserts that the position is short. This code asserts nothing about the position at all - the projection reached a state where the model refuses to say, and a refusal must not be converted into a number on the way to this gate. |
+| `HALT_ACTIVE` | A halt covering Atreides is in effect (ATR-I-06). Checked before anything else: under a declared halt no cash leg proceeds, whatever the market and funding say. |
 | `INPUT_UNRECOGNISED` | An enum input did not match a member exactly (ATR-I-05). HOLD: the gate does not guess which branch a misspelt value meant. |
 | `CLEARED` | No check fired. A rail is recommended. |
 | `GATE_UNAVAILABLE` | The gate could not be consulted. The absent-gate default is HOLD. |
