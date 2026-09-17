@@ -55,10 +55,10 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from atreides.agents.tier1.outputs import (
     CreditFacilityType,
@@ -245,6 +245,11 @@ class InstructionPackage(_Frozen):
     record reference and an authority stamp. It is NEVER a submission:
     ``is_submission`` is pinned to ``Literal[False]`` so a submission
     package cannot be constructed. There is no credential field.
+
+    The pin holds at runtime on every path (ATR-I-03): only the value
+    ``False`` is accepted, so ``0`` is not a spelling of it, and :meth:`model_copy`
+    revalidates, because Pydantic's default copy skips validation and would
+    otherwise let ``update={"is_submission": True}`` through.
     """
 
     operation_id: UUID
@@ -261,6 +266,22 @@ class InstructionPackage(_Frozen):
     for_human_entry: bool
     is_submission: Literal[False] = False
     notes: str | None = None
+
+    @field_validator("is_submission", mode="before")
+    @classmethod
+    def _exactly_false(cls, value: object) -> object:
+        if value is not False:
+            raise ValueError(
+                f"is_submission must be False, got {value!r}: Atreides never "
+                f"constructs a submission (ATR-I-03)"
+            )
+        return value
+
+    def model_copy(self, *, update: dict[str, Any] | None = None, deep: bool = False) -> Self:
+        """Copy with validation, so an update cannot produce a submission."""
+        if not update:
+            return super().model_copy(deep=deep)
+        return self.model_validate({**self.model_dump(), **update})
 
 
 class PortalReadback(_Frozen):
