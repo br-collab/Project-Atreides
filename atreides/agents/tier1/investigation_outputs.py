@@ -13,7 +13,8 @@ the closed inventory in ``AUR-J-PATHSET-RCA-001``.
 That split is doctrinally load-bearing, not stylistic: unbounded causal
 inference over novel failures is Thifur-H behaviour, and
 ``AUR-ROADMAP-001 §III`` non-goal 1 keeps Thifur-H unactivated pending
-SR 11-7 Tier 1 validation. So the boundary is enforced structurally rather
+Tier 1 validation (NIST AI RMF 1.0 plus Aureon doctrine; the roadmap's SR 11-7
+citation is superseded). So the boundary is enforced structurally rather
 than by convention — exactly as the Clearing Operator Cockpit makes a
 submission object unconstructible:
 

@@ -45,7 +45,8 @@ become improvisation — it becomes an `EscalationRequired` with
 `failed_guardrail = APPROVED_PATHS_ONLY`. There is no adaptive tier in the custody
 doctrine, and nothing here updates its own decision function from experience. That
 is what makes any decision deterministically replayable years later, and what keeps
-SR 11-7 ongoing-monitoring obligations tractable.
+ongoing monitoring tractable under the National Institute of Standards and Technology AI Risk Management Framework (NIST AI RMF) 1.0 plus Aureon doctrine.
+SR 11-7 is superseded; see `doctrine/ERRATA-2026-09-SR26-2.md`.
 
 It does not move anything itself. That constraint is the design.
 

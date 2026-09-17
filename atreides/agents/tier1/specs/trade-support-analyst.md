@@ -78,7 +78,7 @@ C2 receives the escalation, assembles the unified picture per Axiom 6 (Escalatio
 
 | Framework | Article / Standard | What the agent supports |
 |---|---|---|
-| SR 11-7 | Tier 2 deterministic | Allocation logic is fully specifiable, no judgment, no optimization. |
+| National Institute of Standards and Technology AI Risk Management Framework (NIST AI RMF) 1.0 plus Aureon doctrine | Tier 2 deterministic | Allocation logic is fully specifiable, no judgment, no optimization. |
 | OCC 2023-17 | Third-party risk management | The agent operates against Verana's registered venue and FIX-counterparty node set. |
 | BCBS 239 | Principle 3 — automated accuracy | Trade capture and allocation are automated, reconciled against DSOR pre-trade allocations. |
 | DORA | Settlement integrity | The agent's lineage discipline supports the operational resilience requirement that every executed trade can be reconstructed at any subsequent stage. |
