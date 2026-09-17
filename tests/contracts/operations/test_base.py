@@ -92,9 +92,7 @@ class TestUrFRequiresInherentSafety:
             lineage=lineage_quorum,
             custody_object=ordinary_treasury,
             failure_mode_class=FailureModeClass.UR_F,
-            inherent_safety_surface=(
-                InherentSafetySurface.PLEDGED_ASSET_MATERIAL
-            ),
+            inherent_safety_surface=(InherentSafetySurface.PLEDGED_ASSET_MATERIAL),
             quorum_authority=quorum_3_of_5_completed,
         )
         assert op.failure_mode_class is FailureModeClass.UR_F
@@ -135,9 +133,7 @@ class TestInherentSafetyRequiresQuorum:
                 lineage=lineage_quorum,
                 custody_object=ordinary_treasury,
                 failure_mode_class=FailureModeClass.UR_R,
-                inherent_safety_surface=(
-                    InherentSafetySurface.KEY_CEREMONY
-                ),
+                inherent_safety_surface=(InherentSafetySurface.KEY_CEREMONY),
             )
 
     def test_inherent_safety_with_quorum_accepted(
@@ -150,14 +146,10 @@ class TestInherentSafetyRequiresQuorum:
             lineage=lineage_quorum,
             custody_object=ordinary_treasury,
             failure_mode_class=FailureModeClass.UR_R,
-            inherent_safety_surface=(
-                InherentSafetySurface.KEY_CEREMONY
-            ),
+            inherent_safety_surface=(InherentSafetySurface.KEY_CEREMONY),
             quorum_authority=quorum_3_of_5_completed,
         )
-        assert (
-            op.inherent_safety_surface is InherentSafetySurface.KEY_CEREMONY
-        )
+        assert op.inherent_safety_surface is InherentSafetySurface.KEY_CEREMONY
 
 
 class TestInherentSafetyRequiresQuorumTier:
@@ -179,9 +171,7 @@ class TestInherentSafetyRequiresQuorumTier:
                 lineage=lineage_t1,
                 custody_object=ordinary_treasury,
                 failure_mode_class=FailureModeClass.UR_R,
-                inherent_safety_surface=(
-                    InherentSafetySurface.KEY_CEREMONY
-                ),
+                inherent_safety_surface=(InherentSafetySurface.KEY_CEREMONY),
                 quorum_authority=quorum_3_of_5_completed,
             )
 
@@ -236,3 +226,42 @@ class TestImmutability:
         )
         with pytest.raises(ValidationError):
             op.failure_mode_class = FailureModeClass.RM  # type: ignore[misc]
+
+
+class TestInherentSafetyRequiresACompletedQuorum:
+    """ATR-I-08 (stress case E6.4): the architectural validator requires the
+    presence of a quorum record on an inherent-safety operation and never
+    inspects its ceremony, so an unstarted ceremony with zero signatures
+    satisfies the axiom. Out of scope for Wave 2 (T6 quorum); kept as a strict
+    xfail so the day the validator is fixed, this marker has to come off."""
+
+    @pytest.mark.xfail(strict=True, reason="ATR-I-08 — Wave 6")
+    def test_unstarted_quorum_ceremony_does_not_satisfy_inherent_safety(
+        self,
+        lineage_quorum: DSORLineageStub,
+        ordinary_treasury: OrdinarySafekeepingObject,
+    ) -> None:
+        from atreides.contracts.quorum import SigningAuthority
+
+        pending = QuorumAuthority(
+            independence_requirements=frozenset(),
+            signing_pool=tuple(
+                SigningAuthority(
+                    authority_id=f"A{i}",
+                    identity_id=f"I{i}",
+                    organizational_unit=f"U{i}",
+                    jurisdiction=f"J{i}",
+                    signing_system=f"S{i}",
+                )
+                for i in range(5)
+            ),
+        )
+        assert not pending.collected_signatures
+        with pytest.raises(ValidationError):
+            _MinimalOperation(
+                lineage=lineage_quorum,
+                custody_object=ordinary_treasury,
+                failure_mode_class=FailureModeClass.UR_F,
+                inherent_safety_surface=InherentSafetySurface.PLEDGED_ASSET_MATERIAL,
+                quorum_authority=pending,
+            )
