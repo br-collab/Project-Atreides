@@ -15,6 +15,8 @@ keywords = ["asset-services", "post-trade", "custody", "governance", "doctrine"]
 
 dependencies = [
     "pydantic>=2.6,<3.0",
+    # Shared identifiers, digests, dispositions and halt context (CL-JUM-001 JUM-D-05).
+    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@v0.1.0",
 ]
 
 [project.optional-dependencies]
