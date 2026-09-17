@@ -29,6 +29,7 @@ from typing import Literal
 from uuid import UUID
 
 from cannae_kernel.halt import HaltContext
+from cannae_kernel.ids import LifecycleId
 from pydantic import BaseModel, ConfigDict, Field
 
 from atreides.rails.cato_f import (
@@ -60,6 +61,8 @@ class CatoFDecisionRecord(BaseModel):
     operation_id: UUID
     #: The settlement operation the decision governs, where there is one.
     settlement_operation_id: UUID | None = None
+    #: The lifecycle the governed obligation belongs to, for journalling.
+    lifecycle_id: LifecycleId | None = None
 
     # -- Inputs to evaluate(), exactly as supplied --------------------------
     operation: OperationContext
@@ -87,6 +90,7 @@ class CatoFDecisionRecord(BaseModel):
         rails: dict[CashRail, RailState],
         ofr_stlfsi4: float,
         settlement_operation_id: UUID | None = None,
+        lifecycle_id: str | None = None,
         dsor_lineage_uri: str | None = None,
         stress_reading_age_seconds: int | None = None,
         freshness_policy: FreshnessPolicy | None = None,
@@ -110,6 +114,7 @@ class CatoFDecisionRecord(BaseModel):
         return cls(
             operation_id=decision_id,
             settlement_operation_id=settlement_operation_id,
+            lifecycle_id=lifecycle_id,
             decision=evaluate(**inputs),  # type: ignore[arg-type]
             **inputs,
         )

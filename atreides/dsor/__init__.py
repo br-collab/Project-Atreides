@@ -14,7 +14,7 @@ and Axiom 4 (One Lineage Record). Provides:
 - :class:`DSORRecordNotFoundError` — raised when ``record_id`` is absent.
 """
 
-from atreides.dsor.record import AureonOutput, DSORRecord, RecordKind
+from atreides.dsor.record import AureonOutput, DSORRecord, RecordKind, SettlementDomainOutput
 from atreides.dsor.store import DSORAppendOnlyError, DSORRecordNotFoundError, DSORStore
 
 __all__ = [
@@ -24,4 +24,5 @@ __all__ = [
     "DSORRecordNotFoundError",
     "DSORStore",
     "RecordKind",
+    "SettlementDomainOutput",
 ]

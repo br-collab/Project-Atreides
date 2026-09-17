@@ -10,9 +10,11 @@ one operation may accumulate multiple records over its lifecycle (the
 initial record plus one or more corrections). The ``correction_of``
 pointer forms an auditable correction chain without mutating any record.
 
-``AureonOutput`` is the unified discriminated union of all agent output
-types that can be stored in the DSOR. The ``kind`` field on every output
-type serves as the discriminator.
+``SettlementDomainOutput`` is the unified discriminated union of every output
+type that can be stored in the DSOR. The ``kind`` field on every output type
+serves as the discriminator. It was called ``AureonOutput``, a name that
+collided with Aureon's own outputs (CL-JUM-001 §5.3); ``AureonOutput`` remains
+as a deprecated alias until Wave 3.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from atreides.acceptance.record import ObligationAcceptanceRecord
 from atreides.agents.tier1.investigation_outputs import (
     EvidenceTimeline,
     InvestigationEscalation,
@@ -33,14 +36,26 @@ from atreides.agents.tier2.outputs import (
     QuorumAuthorityRequired,
     RoutingDecision,
 )
+from atreides.dsor.lifecycle_records import (
+    FinalityAssertedRecord,
+    HaltRecord,
+    InstructionPreparedRecord,
+    RailStatusObservedRecord,
+    ReconciliationResultRecord,
+)
 from atreides.rails.cato_f_record import CatoFDecisionRecord
 
-AureonOutput = (
+SettlementDomainOutput = (
     RoutingDecision | EscalationRequired | QuorumAuthorityRequired
     | SettlementTelemetry | SettlementEscalation
     | EvidenceTimeline | InvestigationEscalation
-    | CatoFDecisionRecord
+    | CatoFDecisionRecord | ObligationAcceptanceRecord | HaltRecord
+    | InstructionPreparedRecord | RailStatusObservedRecord
+    | FinalityAssertedRecord | ReconciliationResultRecord
 )
+
+#: Deprecated until Wave 3: use ``SettlementDomainOutput``.
+AureonOutput = SettlementDomainOutput
 
 RecordKind = Literal[
     "routing_decision",
@@ -51,11 +66,17 @@ RecordKind = Literal[
     "evidence_timeline",
     "investigation_escalation",
     "cash_gate_decision",
+    "obligation_acceptance",
+    "halt_context",
+    "instruction_prepared",
+    "rail_status_observed",
+    "finality_asserted",
+    "reconciliation_result",
 ]
 
 
 class DSORRecord(BaseModel):
-    """Immutable DSOR record wrapping one :data:`AureonOutput`.
+    """Immutable DSOR record wrapping one :data:`SettlementDomainOutput`.
 
     Assembled by :meth:`assemble` at record-creation time. The model is
     frozen and extra-forbid to guarantee the immutability invariant at the
@@ -81,7 +102,7 @@ class DSORRecord(BaseModel):
     kind: RecordKind = Field(
         description="Discriminator matching output.kind.",
     )
-    output: AureonOutput = Field(
+    output: SettlementDomainOutput = Field(
         description="The agent output this record wraps.",
     )
     correction_of: UUID | None = Field(
@@ -95,11 +116,11 @@ class DSORRecord(BaseModel):
     @classmethod
     def assemble(
         cls,
-        output: AureonOutput,
+        output: SettlementDomainOutput,
         dtg: datetime,
         correction_of: UUID | None = None,
     ) -> DSORRecord:
-        """Assemble a new :class:`DSORRecord` from an :data:`AureonOutput`."""
+        """Assemble a new :class:`DSORRecord` from a :data:`SettlementDomainOutput`."""
         return cls(
             dtg=dtg,
             kind=output.kind,
@@ -108,4 +129,4 @@ class DSORRecord(BaseModel):
         )
 
 
-__all__ = ["AureonOutput", "DSORRecord", "RecordKind"]
+__all__ = ["AureonOutput", "DSORRecord", "RecordKind", "SettlementDomainOutput"]

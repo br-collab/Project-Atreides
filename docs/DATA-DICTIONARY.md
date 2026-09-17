@@ -84,14 +84,14 @@ The append-only lineage record and the union of agent outputs it wraps. This is 
 
 #### `DSORRecord`
 
-Immutable DSOR record wrapping one :data:`AureonOutput`.
+Immutable DSOR record wrapping one :data:`SettlementDomainOutput`.
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `record_id` | `UUID` | no | Unique record identifier. Independent of the embedded output's operation_id — a correction for the same operation gets a new record_id. |
 | `dtg` | `datetime` | yes | UTC DTG stamp at record assembly time. |
 | `kind` | `Literal` | yes | Discriminator matching output.kind. |
-| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_f_record.CatoFDecisionRecord` | yes | The agent output this record wraps. |
+| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_f_record.CatoFDecisionRecord \| acceptance.record.ObligationAcceptanceRecord \| dsor.lifecycle_records.HaltRecord \| dsor.lifecycle_records.InstructionPreparedRecord \| dsor.lifecycle_records.RailStatusObservedRecord \| dsor.lifecycle_records.FinalityAssertedRecord \| dsor.lifecycle_records.ReconciliationResultRecord` | yes | The agent output this record wraps. |
 | `correction_of` | `uuid.UUID \| None` | no | record_id of the record this corrects. The original is preserved unchanged per Axiom 4 (immutable lineage). None for initial records. |
 
 ---

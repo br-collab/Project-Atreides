@@ -277,6 +277,7 @@ def evaluate_candidate(
         operation_id=acceptance_id,
         obligation_id=candidate.obligation_id,
         obligation_version=candidate.obligation_version,
+        lifecycle_id=candidate.lifecycle_id,
         obligation_digest=candidate_digest,
         disposition=disposition,
         outcome=outcome,
