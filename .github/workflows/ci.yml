@@ -30,15 +30,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v10.1.0
         with:
           python-version: "3.11"
-          cache: pip
+          enable-cache: true
 
-      - name: Install
+      # Installs exactly what uv.lock records. --locked fails the job if the
+      # lock no longer matches pyproject.toml, so a dependency change cannot
+      # land without the lock being regenerated in the same pull request.
+      - name: Install from the lock
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]" || pip install pytest pytest-cov mypy ruff hypothesis lxml pydantic
+          uv sync --locked --extra dev
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       # Property tests run at the default profile here (200 examples). The deep
       # profile is on a schedule below: it takes minutes rather than seconds,
@@ -54,11 +57,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v10.1.0
         with:
           python-version: "3.11"
-          cache: pip
-      - run: pip install ruff
+          enable-cache: true
+
+      # Same lock-file install as the Tests job.
+      - name: Install from the lock
+        run: |
+          uv sync --locked --extra dev
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       # Gates the whole repository. Every rule this project deliberately does
       # not follow is listed in pyproject.toml with the reason - an
       # unexplained ignore is indistinguishable from a rule somebody switched
@@ -70,11 +78,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v10.1.0
         with:
           python-version: "3.11"
-          cache: pip
-      - run: pip install mypy pydantic lxml hypothesis pytest
+          enable-cache: true
+
+      # Same lock-file install as the Tests job.
+      - name: Install from the lock
+        run: |
+          uv sync --locked --extra dev
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       # SCOPED, AND THE SCOPE IS THE POINT. mypy strict is clean across the
       # rails, contracts, messaging and dsor packages - everything the four
       # recent builds touch - and is NOT clean across cockpit and agents,
@@ -91,11 +104,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v10.1.0
         with:
           python-version: "3.11"
-          cache: pip
-      - run: pip install pydantic lxml
+          enable-cache: true
+
+      # Same lock-file install as the Tests job.
+      - name: Install from the lock
+        run: |
+          uv sync --locked --extra dev
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       # Exits non-zero if any scenario raises or if a trace differs between
       # two runs of identical inputs. Byte-for-byte replay is the property the
       # whole framework is sold on, so it is checked on every push rather than

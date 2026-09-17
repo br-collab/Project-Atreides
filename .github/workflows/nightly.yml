@@ -28,11 +28,16 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v10.1.0
         with:
           python-version: "3.11"
-          cache: pip
-      - run: pip install pytest hypothesis pydantic lxml
+          enable-cache: true
+
+      # Installs exactly what uv.lock records; see ci.yml.
+      - name: Install from the lock
+        run: |
+          uv sync --locked --extra dev
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Deep property run
         run: pytest --hypothesis-profile=deep tests/test_properties.py -q
