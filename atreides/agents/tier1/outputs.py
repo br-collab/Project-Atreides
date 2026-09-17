@@ -11,8 +11,14 @@ Enumerations: SettlementRail, SettlementKind, CreditFacilityType,
 
 Input contract: SettlementTaskingRecord — frozen, delivered by Thifur-C2.
 
+Validation result: SettlementValidation — the pure outcome of the
+    pre-routing gates, before anything is emitted (ATR-I-02).
+
 Output contracts: SettlementTelemetry (success path), SettlementEscalation
     (any pre-routing gate failure). Discriminated on ``kind``.
+
+Rail acknowledgement: RailAcknowledgment — built only from a verified
+    readback, never from local emission (ATR-I-02).
 
 SettlementOutput — union alias used by DSORStore type adapter.
 """
@@ -22,12 +28,13 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Final, Literal
+from typing import Any, Final, Literal, Self
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atreides.contracts import DSORLineageStub
+from atreides.messaging.readback import ReadbackMatch, SettlementStatus
 
 CURRENT_DOCTRINE_VERSION: Final = "AUR-CANONICAL-001-v1.5.1"
 
@@ -127,6 +134,104 @@ class SettlementTaskingRecord(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class SettlementValidation(BaseModel):
+    """The outcome of the pre-routing gates, and nothing else (ATR-I-02).
+
+    Pure data: no time, no route, no instruction reference, no DSOR record.
+    Validation used to route, generate a reference and persist telemetry with
+    a rail acknowledgement set before any instruction existed. That work now
+    belongs to :meth:`SettlementOperationsAnalyst.emit`, an explicitly named
+    stage.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    operation_id: UUID
+    passed: bool
+    #: Gate names in the order they were evaluated, up to and including the
+    #: first that held.
+    checks_evaluated: tuple[str, ...]
+    discrepancy_code: DiscrepancyCode | None = None
+    failure_detail: str | None = None
+    intraday_credit_usage: Decimal | None = None
+    intraday_credit_limit: Decimal | None = None
+    clearing_fund_deficiency: bool = False
+    net_obligation_discrepancy: str | None = None
+
+    @model_validator(mode="after")
+    def _held_says_why(self) -> Self:
+        if self.passed != (self.discrepancy_code is None):
+            raise ValueError("a held validation names its discrepancy; a passed one does not")
+        if not self.passed and not self.failure_detail:
+            raise ValueError("a held validation carries its failure detail")
+        if not self.checks_evaluated:
+            raise ValueError("a validation that evaluated no check is not a validation")
+        return self
+
+
+#: Venue statuses that acknowledge an instruction. REJECTED, CANCELLED,
+#: ACCEPTED_WITH_CHANGE and UNRECOGNIZED do not.
+ACKNOWLEDGING_STATUSES: Final[frozenset[SettlementStatus]] = frozenset(
+    {
+        SettlementStatus.RECEIVED,
+        SettlementStatus.IN_PROGRESS,
+        SettlementStatus.ACCEPTED_NOT_POSTED,
+        SettlementStatus.SETTLED,
+    }
+)
+
+
+class RailAcknowledgment(BaseModel):
+    """The rail's acknowledgement of an instruction, from a verified readback.
+
+    Build it with :meth:`from_readback`. The rail acknowledged the instruction
+    only when the venue's own status report, reconciled against what was
+    prepared, says so. A time this framework chose locally is not an
+    acknowledgement (ATR-I-02).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    source: Literal["verified_readback"] = "verified_readback"
+    end_to_end_id: str = Field(min_length=1)
+    status: SettlementStatus
+    status_report_message_id: str = Field(min_length=1)
+    acknowledged_at: datetime
+
+    @model_validator(mode="after")
+    def _status_acknowledges(self) -> Self:
+        if self.status not in ACKNOWLEDGING_STATUSES:
+            raise ValueError(f"venue status {self.status.value!r} is not an acknowledgement")
+        if self.acknowledged_at.tzinfo is None:
+            raise ValueError("acknowledged_at must be timezone-aware")
+        return self
+
+    @classmethod
+    def from_readback(cls, match: ReadbackMatch, end_to_end_id: str) -> RailAcknowledgment:
+        """The acknowledgement a reconciled status report establishes, or raise.
+
+        Refuses when nothing came back, when the report carries any break for
+        this instruction, when the instruction was not matched, or when the
+        venue's status is not an acknowledgement. The time is the venue's
+        acceptance time where it gave one, else the report's creation time.
+        """
+        if match.is_absent:
+            raise ValueError("no readback: silence is not an acknowledgement")
+        if any(b.end_to_end_id == end_to_end_id for b in match.breaks):
+            raise ValueError(f"the readback for {end_to_end_id!r} did not reconcile cleanly")
+        status = match.matched.get(end_to_end_id)
+        if status is None:
+            raise ValueError(f"the readback does not match instruction {end_to_end_id!r}")
+        entry = next(e for e in match.report.entries if e.end_to_end_id == end_to_end_id)
+        stamp = entry.acceptance_datetime or match.report.created_at
+        return cls(
+            end_to_end_id=end_to_end_id,
+            status=status,
+            status_report_message_id=match.report.message_id,
+            acknowledged_at=datetime.fromisoformat(stamp.replace("Z", "+00:00")),
+        )
+
+
 class _SettlementOutputBase(BaseModel):
     """Common fields for all Settlement Operations Analyst outputs."""
 
@@ -156,12 +261,35 @@ class SettlementTelemetry(_SettlementOutputBase):
     net_cusip: str | None = None
     net_delivery_quantity: Decimal | None = None
     net_payment_amount: Decimal | None = None
-    rail_acknowledgment_dtg: datetime
+    #: Set only from a verified readback (ATR-I-02). ``None`` means the rail
+    #: has not acknowledged, which is the state of every freshly emitted
+    #: instruction.
+    rail_acknowledgment: RailAcknowledgment | None = None
     clearing_fund_compliant: bool
     intraday_credit_usage_at_execution: Decimal | None = None
     intraday_credit_limit: Decimal | None = None
     sponsoring_member_id: str | None = None
     gcf_pool_custodian: GCFPoolCustodian | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_fabricated_acknowledgment(cls, data: Any) -> Any:
+        # Records written before Wave 2 carry rail_acknowledgment_dtg, which
+        # was always the local emission time and never an acknowledgement.
+        # They are read without it rather than refused, so old DSOR records
+        # still replay; the value was not evidence of anything.
+        if isinstance(data, dict) and "rail_acknowledgment_dtg" in data:
+            data = {k: v for k, v in data.items() if k != "rail_acknowledgment_dtg"}
+        return data
+
+    @property
+    def rail_acknowledgment_dtg(self) -> datetime | None:
+        """Deprecated until Wave 3: use ``rail_acknowledgment.acknowledged_at``.
+
+        ``None`` until a verified readback acknowledges the instruction.
+        """
+        ack = self.rail_acknowledgment
+        return None if ack is None else ack.acknowledged_at
 
 
 class SettlementEscalation(_SettlementOutputBase):
@@ -185,14 +313,17 @@ class SettlementEscalation(_SettlementOutputBase):
 SettlementOutput = SettlementTelemetry | SettlementEscalation
 
 __all__ = [
+    "ACKNOWLEDGING_STATUSES",
     "CURRENT_DOCTRINE_VERSION",
     "CreditFacilityType",
     "DiscrepancyCode",
     "GCFPoolCustodian",
+    "RailAcknowledgment",
     "SettlementEscalation",
     "SettlementKind",
     "SettlementOutput",
     "SettlementRail",
     "SettlementTaskingRecord",
     "SettlementTelemetry",
+    "SettlementValidation",
 ]

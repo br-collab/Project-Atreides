@@ -66,10 +66,10 @@ from atreides.agents.tier1.outputs import (
     SettlementKind,
     SettlementRail,
     SettlementTaskingRecord,
-    SettlementTelemetry,
 )
 from atreides.agents.tier1.settlement_operations_analyst import (
     SettlementOperationsAnalyst,
+    validate_tasking,
 )
 from atreides.contracts import DSORLineageStub
 from atreides.contracts.dsor_stub import CAOMTier
@@ -242,13 +242,22 @@ class CockpitTasking(_Frozen):
 class GateResult(_Frozen):
     """Outcome of Beat 2 validation against the Settlement Operations
     Analyst gate set. On a hold, ``passed`` is False and no package may be
-    emitted."""
+    emitted.
+
+    Validation writes nothing (ATR-I-02), so this result references no DSOR
+    record. It used to carry ``dsor_pre_trade_record_id``, which named the
+    settlement telemetry validation had persisted - not a pre-trade record.
+    The DSOR record now comes from Beat 3 and is on the package as
+    ``dsor_record_id``.
+    """
 
     operation_id: UUID
     regime: PortalRegime
     passed: bool
+    #: The record kind Beat 3 will persist: settlement telemetry on a pass,
+    #: settlement escalation on a hold. Nothing has been persisted yet.
     output_kind: str
-    dsor_pre_trade_record_id: UUID
+    checks_evaluated: tuple[str, ...]
     discrepancy_code: str | None = None
     detail: str | None = None
 
@@ -275,7 +284,10 @@ class InstructionPackage(_Frozen):
     cusip: str | None
     net_delivery_quantity: Decimal | None
     net_payment_amount: Decimal | None
-    dsor_pre_trade_record_id: UUID
+    #: The DSOR record Beat 3 persisted: telemetry when emitted for human
+    #: entry, the escalation when the gate held. ``None`` for a quorum hold,
+    #: where no instruction was issued and nothing is recorded as emitted.
+    dsor_record_id: UUID | None
     authority_stamp: dict[str, str]
     quorum_required: bool
     for_human_entry: bool
@@ -297,6 +309,11 @@ class InstructionPackage(_Frozen):
         if not update:
             return super().model_copy(deep=deep)
         return self.model_validate({**self.model_dump(), **update})
+
+    @property
+    def dsor_pre_trade_record_id(self) -> UUID | None:
+        """Deprecated until Wave 3: use ``dsor_record_id``. The record was never pre-trade."""
+        return self.dsor_record_id
 
 
 class PortalReadback(_Frozen):
@@ -338,9 +355,14 @@ class BreakTicket(_Frozen):
     regime: PortalRegime
     leg: BreakLeg
     detail: str
-    dsor_pre_trade_record_id: UUID
+    dsor_record_id: UUID | None
     raised_at: datetime
     status: Literal["OPEN_ON_WORKBENCH"] = "OPEN_ON_WORKBENCH"
+
+    @property
+    def dsor_pre_trade_record_id(self) -> UUID | None:
+        """Deprecated until Wave 3: use ``dsor_record_id``. The record was never pre-trade."""
+        return self.dsor_record_id
 
 
 # ---------------------------------------------------------------------------
@@ -470,9 +492,34 @@ class ClearingCockpit:
         gate set (intraday funding -> clearing fund -> net obligation ->
         DSOR lineage). A hold here is caught before anything reaches a
         portal; no package is emitted on a held gate.
+
+        Pure with respect to the decision of record (ATR-I-02): no route is
+        selected, no reference created, no telemetry or DSOR record written.
+        Only the in-memory cycle ledger records that validation ran.
         """
         self._guard_halt("run_validation_gates")
+        validation = validate_tasking(self._tasking_record(tasking))
+        result = GateResult(
+            operation_id=tasking.operation_id,
+            regime=tasking.regime,
+            passed=validation.passed,
+            output_kind="settlement_telemetry" if validation.passed else "settlement_escalation",
+            checks_evaluated=validation.checks_evaluated,
+            discrepancy_code=(
+                None if validation.discrepancy_code is None else validation.discrepancy_code.value
+            ),
+            detail=validation.failure_detail,
+        )
+        self._ledger_append(tasking.operation_id, CycleBeat.VALIDATE, result)
+        return result
 
+    def _tasking_record(self, tasking: CockpitTasking) -> SettlementTaskingRecord:
+        """The analyst's tasking record for a cockpit tasking, built deterministically.
+
+        Identifiers derive from the captured picture (UUID version 5 of its
+        pre-operation state hash), so Beat 2 and Beat 3 build the same record
+        and validation creates no new reference.
+        """
         pre_hash = tasking.pre_operation_state_hash()
         lineage_stub = DSORLineageStub(
             operation_id=tasking.operation_id,
@@ -484,14 +531,15 @@ class ClearingCockpit:
             c2_handoff_id=None,  # operator-direct under CAOM-001
             pre_operation_state_hash=pre_hash,
         )
-        dsor_pre_trade_record_id = uuid.uuid4()
-        record = SettlementTaskingRecord(
+        derived = uuid.uuid5(uuid.NAMESPACE_URL, f"atreides:cockpit:{pre_hash}")
+        return SettlementTaskingRecord(
+            task_id=derived,
             operation_id=tasking.operation_id,
             rail=tasking.rail,
             settlement_kind=tasking.settlement_kind,
             counterparty_id=tasking.counterparty_id,
             deadline=tasking.settlement_date,
-            dsor_pre_trade_record_id=dsor_pre_trade_record_id,
+            dsor_pre_trade_record_id=derived,
             lineage_stub=lineage_stub,
             net_cusip=tasking.cusip,
             net_delivery_quantity=tasking.net_delivery_quantity,
@@ -505,20 +553,6 @@ class ClearingCockpit:
             gcf_pool_custodian=tasking.gcf_pool_custodian,
         )
 
-        output, dsor_record = self._analyst.run(record, self._store)
-        passed = isinstance(output, SettlementTelemetry)
-        result = GateResult(
-            operation_id=tasking.operation_id,
-            regime=tasking.regime,
-            passed=passed,
-            output_kind=output.kind,
-            dsor_pre_trade_record_id=dsor_record.record_id,
-            discrepancy_code=None if passed else output.discrepancy_code.value,
-            detail=None if passed else output.failure_detail,
-        )
-        self._ledger_append(tasking.operation_id, CycleBeat.VALIDATE, result)
-        return result
-
     # -- Beat 3: prepare ---------------------------------------------------
 
     def emit_instruction_package(
@@ -530,10 +564,27 @@ class ClearingCockpit:
         Material magnitude routes to quorum, which is unavailable under
         CAOM-001, so the operation HOLDS (no package). The output is
         always an artifact for human entry — never a submission.
+
+        This is the emission stage (ATR-I-02): the only cockpit step that
+        writes to the DSOR. A held gate persists its escalation; an emitted
+        package persists its settlement telemetry, with no rail
+        acknowledgement. A quorum hold persists nothing, because no
+        instruction was issued.
         """
         self._guard_halt("emit_instruction_package")
         if gate_result.operation_id != tasking.operation_id:
             raise CockpitBoundaryError("gate_result/operation_id mismatch")
+        record = self._tasking_record(tasking)
+        validation = validate_tasking(record)
+        if validation.passed != gate_result.passed:
+            raise CockpitBoundaryError(
+                "gate_result no longer matches the tasking; re-run Beat 2 before emitting"
+            )
+        emit_now = gate_result.passed and not self._is_material(tasking)
+        dsor_record_id: UUID | None = None
+        if not gate_result.passed or emit_now:
+            _, dsor_record = self._analyst.emit(record, validation, self._store)
+            dsor_record_id = dsor_record.record_id
 
         authority_stamp = {
             "authority_tier": tasking.authority_tier.value,
@@ -549,7 +600,7 @@ class ClearingCockpit:
             cusip=tasking.cusip,
             net_delivery_quantity=tasking.net_delivery_quantity,
             net_payment_amount=tasking.net_payment_amount,
-            dsor_pre_trade_record_id=gate_result.dsor_pre_trade_record_id,
+            dsor_record_id=dsor_record_id,
             authority_stamp=authority_stamp,
         )
 
@@ -567,7 +618,7 @@ class ClearingCockpit:
             self._ledger_append(tasking.operation_id, CycleBeat.PREPARE, pkg)
             return pkg
 
-        if self._is_material(tasking):
+        if not emit_now:
             pkg = InstructionPackage(
                 disposition=PackageDisposition.QUORUM_REQUIRED_HOLD,
                 quorum_required=True,
@@ -750,12 +801,13 @@ class ClearingCockpit:
         return recon
 
     def raise_break(
-        self, reconciliation: Reconciliation, dsor_pre_trade_record_id: UUID
+        self, reconciliation: Reconciliation, dsor_record_id: UUID | None
     ) -> list[BreakTicket]:
         """Route each reconciliation break to the workbench with lineage.
 
-        One ticket per broken leg, each carrying the DSOR pre-trade record
-        reference so the workbench can replay the full cycle (Section VII).
+        One ticket per broken leg, each carrying the DSOR record Beat 3
+        persisted (``InstructionPackage.dsor_record_id``) so the workbench can
+        replay the full cycle (Section VII).
         """
         self._guard_halt("raise_break")
         tickets: list[BreakTicket] = []
@@ -766,7 +818,7 @@ class ClearingCockpit:
                 regime=reconciliation.regime,
                 leg=leg,
                 detail=json.dumps(reconciliation.detail.get(_DETAIL_KEY[leg], {})),
-                dsor_pre_trade_record_id=dsor_pre_trade_record_id,
+                dsor_record_id=dsor_record_id,
                 raised_at=datetime.now(tz=UTC),
             )
             tickets.append(ticket)
