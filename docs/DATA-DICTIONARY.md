@@ -286,6 +286,7 @@ An expected movement on the funding account.
 | `amount` | `Decimal` | required |
 | `label` | `str` | required |
 | `committed` | `bool` | `True` |
+| `offset_is_certain` | `bool` | `True` |
 
 #### `FundingDisposition` (enumeration)
 
