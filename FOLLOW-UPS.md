@@ -244,3 +244,35 @@ contracts.
   historical — consider moving it to a `prompts/` or `archive/` folder
   rather than leaving it at the repo root where it will be confused
   for current scope.
+
+## Test gap noticed while pinning kernel v0.1.1 (2026-09-17)
+
+### `test_allocated_plus_residual_is_what_was_owed` does not cover the flat-with-allocation case
+
+Hypothesis generated `quantity=0.00, allocated=0.01` and the property failed:
+
+```
+assert result.allocated_quantity + residual == position.quantity
+AssertionError: assert (Decimal('0.01') + Decimal('0')) == Decimal('0.00')
+```
+
+**The domain code is behaving as designed, and the property is what is out of
+date.** `settle_net_position` used to discard a venue-reported allocation
+against a flat position and return `FLAT` with a hardcoded zero — the comment in
+`atreides/rails/cns.py` explains why that was wrong, since it made a real
+movement vanish with no break. The branch now keeps the venue's figure and
+raises `ALLOCATION_AGAINST_FLAT_POSITION`. That is deliberate.
+
+The conservation property, `allocated + residual == owed`, was never amended for
+it. For a flat position with a reported allocation the two records disagree by
+construction; that is the break, not a dropped or invented residual.
+
+**Not fixed here:** this was found while bumping the kernel pin, and it is
+neither a kernel nor a typing matter. It is unrelated to that change and
+reproduces with kernel v0.1.0.
+
+**Suggested fix:** scope the property to non-flat positions and assert the flat
+case separately — `FLAT`, `allocated_quantity` preserved, and an
+`ALLOCATION_AGAINST_FLAT_POSITION` break present. It does not reproduce on a
+fresh checkout unless Hypothesis generates the example again; it is in the local
+example database, so it is deterministic once seen.
