@@ -78,6 +78,7 @@ class DiscrepancyCode(StrEnum):
     NET_OBLIGATION_MISMATCH = "net_obligation_mismatch"
     FICC_MTM_DEADLINE_BREACH = "ficc_mtm_deadline_breach"
     RAIL_CONFIRMATION_MISMATCH = "rail_confirmation_mismatch"
+    HALT_ACTIVE = "halt_active"
 
 
 # ---------------------------------------------------------------------------

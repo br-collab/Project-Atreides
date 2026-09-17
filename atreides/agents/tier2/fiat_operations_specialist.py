@@ -41,6 +41,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Final, Self
 
+from cannae_kernel.disposition import Disposition
+from cannae_kernel.domains import Domain
+from cannae_kernel.halt import HaltContext, gate_under_halt
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atreides.agents.tier2.eligibility import EligibilityInputs, verify_eligibility
@@ -246,6 +249,14 @@ class PathSelectionRequest(BaseModel):
             "GATE DECISION EXISTS, which per AUR-CUSTODY-CASH-001 v0.2 "
             "Section V.E resolves to HOLD for the dimensions in "
             "GATE_REQUIRED_DIMENSIONS -- never to PROCEED."
+        ),
+    )
+    halt: HaltContext | None = Field(
+        default=None,
+        description=(
+            "The kernel halt context in force (ATR-I-06). An active halt "
+            "covering Atreides stops every path selection before any "
+            "other check, including the material-magnitude route to quorum."
         ),
     )
     amount: Decimal | None = Field(
@@ -967,6 +978,45 @@ class FIATOperationsSpecialist:
     #      EscalationRequired.
     # ------------------------------------------------------------------
 
+    def _halt_escalation(
+        self,
+        request: PathSelectionRequest,
+        dimension: PathSelectionDimension,
+    ) -> EscalationRequired | None:
+        """Escalate at Tier 0 when a halt covering Atreides is in effect (ATR-I-06).
+
+        Reported under Guardrail 3, as a CATO-F hold already is: doctrine fixes
+        exactly five J-class guardrails, and a halt is not a sixth. The Tier 0
+        escalation tier and the failure reason say it was the halt.
+        """
+        halt = request.halt
+        if halt is None or gate_under_halt(halt, Domain.ATREIDES) is not Disposition.BLOCK:
+            return None
+        telemetry_hash = self.compute_telemetry_hash(
+            operation_id=str(request.operation.lineage.operation_id),
+            decision_kind="escalation_required",
+            ordered_inputs_signature=(
+                "tier_0_halt",
+                dimension.value,
+                str(halt.halt_id),
+                str(halt.version),
+            ),
+        )
+        return EscalationRequired(
+            operation_id=request.operation.lineage.operation_id,
+            agent_telemetry_hash=telemetry_hash,
+            lineage_stub=request.operation.lineage,
+            emitted_at=request.emitted_at,
+            failed_guardrail=JClassGuardrail.NO_SETTLEMENT_WITHOUT_LINEAGE,
+            failure_reason=(
+                f"Halt {halt.halt_id} (version {halt.version}) is active for Atreides: "
+                f"{halt.reason}. No path is selected for dimension "
+                f"{dimension.value!r} under a declared halt (ATR-I-06)."
+            ),
+            escalation_tier=CAOMTier.T0,
+            attempted_dimension=dimension,
+        )
+
     def _consult_cash_leg_gate(
         self,
         request: PathSelectionRequest,
@@ -996,6 +1046,14 @@ class FIATOperationsSpecialist:
                 f"does not route a cash leg the gate has not governed."
             )
             signature = ("cato_f_absent", dimension.value, "HOLD")
+        elif decision.proceeds and not decision.bound:
+            failure_reason = (
+                f"CATO-F returned PROCEED for dimension {dimension.value!r} "
+                f"without naming the obligation it governs. An unbound gate "
+                f"decision cannot authorize routing: it could belong to any "
+                f"operation (ATR-I-04)."
+            )
+            signature = ("cato_f_unbound", dimension.value, "HOLD")
         elif decision.decision is not GateDecision.PROCEED:
             failure_reason = (
                 f"CATO-F returned {decision.decision.value} for dimension "
@@ -1072,6 +1130,9 @@ class FIATOperationsSpecialist:
         5 → Guardrail 1.
         """
         dimension = PathSelectionDimension.MULTI_CURRENCY_RAIL_ROUTING
+        halted = self._halt_escalation(request, dimension)
+        if halted is not None:
+            return halted
         triggered = self._check_material_magnitude(
             request=request, dimension=dimension, currency=currency
         )
@@ -1136,6 +1197,9 @@ class FIATOperationsSpecialist:
         select a correspondent bank routing.
         """
         dimension = PathSelectionDimension.CORRESPONDENT_BANKING_COORDINATION
+        halted = self._halt_escalation(request, dimension)
+        if halted is not None:
+            return halted
         triggered = self._check_material_magnitude(
             request=request, dimension=dimension, currency=currency
         )
@@ -1198,6 +1262,9 @@ class FIATOperationsSpecialist:
         rollout.
         """
         dimension = PathSelectionDimension.CROSS_BORDER_FX_LEG
+        halted = self._halt_escalation(request, dimension)
+        if halted is not None:
+            return halted
         # Use the base currency (first half of the pair) for the
         # amount-based magnitude check. Deployments needing the quote
         # currency to also be checked should configure both in
@@ -1261,6 +1328,9 @@ class FIATOperationsSpecialist:
         compliance, and cost economics.
         """
         dimension = PathSelectionDimension.DEPOSITORY_VS_SUB_CUSTODIAN
+        halted = self._halt_escalation(request, dimension)
+        if halted is not None:
+            return halted
         # No amount-based trigger for Dim 4; sanctioned-adjacency check
         # still applies via the request's attribution.
         triggered = self._check_material_magnitude(
@@ -1321,6 +1391,9 @@ class FIATOperationsSpecialist:
         method; selection criteria differ.
         """
         dimension = PathSelectionDimension.LARGE_VALUE_PAYMENT_SYSTEM
+        halted = self._halt_escalation(request, dimension)
+        if halted is not None:
+            return halted
         triggered = self._check_material_magnitude(
             request=request, dimension=dimension, currency=currency
         )
@@ -1394,6 +1467,9 @@ class FIATOperationsSpecialist:
         approved Fed paths and emits the routing decision.
         """
         dimension = PathSelectionDimension.FED_RELATED_OPERATION
+        halted = self._halt_escalation(request, dimension)
+        if halted is not None:
+            return halted
         # No amount-based trigger for Dim 6 (Fed operations are
         # governed by Fed-specific protocols, not the FIAT material-
         # magnitude policy). Sanctioned-adjacency check still applies.
@@ -1459,6 +1535,9 @@ class FIATOperationsSpecialist:
         cutoffs, redemption mechanics, risk concentration.
         """
         dimension = PathSelectionDimension.CASH_SWEEP_AND_SHORT_TERM_INVESTMENT
+        halted = self._halt_escalation(request, dimension)
+        if halted is not None:
+            return halted
         # No amount-based trigger for Dim 7 in the current policy
         # shape (sweep thresholds aren't separately configured;
         # deployments wanting a sweep-magnitude trigger should add it

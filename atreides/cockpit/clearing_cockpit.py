@@ -58,6 +58,11 @@ from enum import StrEnum
 from typing import Any, Literal, Self
 from uuid import UUID
 
+from cannae_kernel.actor import ActorKind, ActorRef
+from cannae_kernel.disposition import Disposition
+from cannae_kernel.domains import Domain
+from cannae_kernel.halt import HaltContext, gate_under_halt
+from cannae_kernel.ids import ActorId, HaltId
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from atreides.agents.tier1.outputs import (
@@ -172,6 +177,32 @@ RISK_CONTROL_BREACHED = "BREACHED"
 
 def _is_risk_control_breach(status: str | None) -> bool:
     return status is not None and status.strip().upper() == RISK_CONTROL_BREACHED
+
+
+#: Fixed identities for the halt context the legacy ``halt_check`` predicate
+#: produces. The predicate carries no identity of its own, so the cockpit
+#: declares on behalf of its Tier 0 control.
+TIER0_HALT_ID = HaltId("hlt_" + "0" * 26)
+TIER0_HALT_ACTOR = ActorRef(
+    actor_id=ActorId("act_" + "0" * 26),
+    actor_kind=ActorKind.DETERMINISTIC_SERVICE,
+    role="atreides-cockpit-tier0-halt",
+    entitlement_refs=("AUR-CANONICAL-001 v1.6 Axiom 9",),
+    authenticated=True,
+)
+
+
+def tier0_halt_context(declared_at: datetime) -> HaltContext:
+    """The kernel halt context for a raised cockpit ``halt_check``: all domains."""
+    return HaltContext(
+        halt_id=TIER0_HALT_ID,
+        version=1,
+        active=True,
+        scope="ALL",
+        declared_by=TIER0_HALT_ACTOR,
+        declared_at=declared_at,
+        reason="Tier 0 Halt raised through the cockpit halt_check predicate",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -392,7 +423,15 @@ class ClearingCockpit:
         doctrine_version: str = "1.6",
         caom_mode: str = "CAOM-001",
         escalation_register: EscalationRegister | None = None,
+        halt: Callable[[], HaltContext | None] | None = None,
     ) -> None:
+        """``halt`` supplies the kernel halt context in force (ATR-I-06).
+
+        ``halt_check`` is the older boolean predicate. It still works: a true
+        result produces an all-domain halt context (:func:`tier0_halt_context`),
+        so there is one halt mechanism, not two. Where both are given, either
+        one halting halts the cockpit.
+        """
         self._store = dsor_store if dsor_store is not None else DSORStore(":memory:")
         self._escalations = (
             escalation_register if escalation_register is not None else EscalationRegister()
@@ -400,6 +439,7 @@ class ClearingCockpit:
         self._analyst = SettlementOperationsAnalyst()
         self._threshold = material_magnitude_threshold
         self._halt_check = halt_check
+        self._halt = halt
         self._doctrine_version = doctrine_version
         self._caom_mode = caom_mode
 
@@ -415,12 +455,26 @@ class ClearingCockpit:
 
     # -- boundary guards ---------------------------------------------------
 
-    def _guard_halt(self, primitive: str) -> None:
+    def current_halt(self) -> HaltContext | None:
+        """The halt context in force for this cockpit, if any halt blocks Atreides."""
+        if self._halt is not None:
+            ctx = self._halt()
+            if ctx is not None and gate_under_halt(ctx, Domain.ATREIDES) is Disposition.BLOCK:
+                return ctx
         if self._halt_check is not None and self._halt_check():
+            return tier0_halt_context(datetime.now(tz=UTC))
+        return None
+
+    def _guard_halt(self, primitive: str) -> HaltContext | None:
+        """Refuse the primitive under a halt; otherwise return the context consulted."""
+        ctx = self.current_halt()
+        if ctx is not None:
             raise CockpitHalted(
-                f"Tier 0 Halt active — cockpit primitive {primitive!r} refused. "
-                "AUR-CANONICAL-001 v1.6 Axiom 9."
+                f"Tier 0 Halt active (halt {ctx.halt_id}, version {ctx.version}: "
+                f"{ctx.reason}) — cockpit primitive {primitive!r} refused. "
+                "AUR-CANONICAL-001 v1.6 Axiom 9; ATR-I-06."
             )
+        return None
 
     def _context_for(self, regime: PortalRegime) -> dict[UUID, CockpitTasking]:
         return self._ccp_context if regime is PortalRegime.CCP else self._csd_context
@@ -844,6 +898,8 @@ class ClearingCockpit:
 
 
 __all__ = [
+    "TIER0_HALT_ACTOR",
+    "TIER0_HALT_ID",
     "BreakLeg",
     "BreakTicket",
     "ClearingCockpit",
@@ -857,4 +913,5 @@ __all__ = [
     "PortalReadback",
     "PortalRegime",
     "Reconciliation",
+    "tier0_halt_context",
 ]

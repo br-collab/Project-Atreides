@@ -90,6 +90,13 @@ python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
 
+# cannae-kernel v0.1.0 ships no py.typed marker, so strict mypy would treat it as
+# untyped. Following its source keeps its types checked. Remove this once the
+# kernel publishes py.typed (a kernel follow-up after v0.1.0).
+[[tool.mypy.overrides]]
+module = ["cannae_kernel", "cannae_kernel.*"]
+follow_untyped_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"

@@ -113,6 +113,9 @@ CATO_F_PROCEED = CatoFDecision(
     rationale="Test fixture - gate cleared.",
     checks_evaluated=(("fixture", "True"),),
     funding_state_snapshot=(),
+    # Bound to an obligation: Tier 2 refuses an unbound PROCEED (ATR-I-04).
+    obligation_id="obl_01M2P20SY00000000000000001",
+    obligation_digest="sha256:" + "0" * 64,
 )
 
 _SHA256_HEX_LEN = 64

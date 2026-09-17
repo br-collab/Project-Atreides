@@ -841,16 +841,22 @@ def h6_2() -> tuple[str, str]:
 def h6_3() -> tuple[str, str]:
     from atreides.rails.cato_f import CatoFDecision, GateDecision, ReasonCode
 
-    forged = CatoFDecision(
-        decision=GateDecision.PROCEED,
-        reason_code=ReasonCode.CLEARED,
-        recommended_rail=CashRail.FEDWIRE,
-        finality_class=FinalityClass.GROSS_FINAL,
-        rationale="",
-        checks_evaluated=(),
-        funding_state_snapshot=(),
-        dsor_lineage_uri=None,
-    )
+    try:
+        forged = CatoFDecision(
+            decision=GateDecision.PROCEED,
+            reason_code=ReasonCode.CLEARED,
+            recommended_rail=CashRail.FEDWIRE,
+            finality_class=FinalityClass.GROSS_FINAL,
+            rationale="",
+            checks_evaluated=(),
+            funding_state_snapshot=(),
+            dsor_lineage_uri=None,
+        )
+    except ValueError as exc:
+        # Wave 2 W2A-3 (ATR-I-04): a PROCEED with no evaluated checks is refused
+        # at construction, which covers the JSON boundary too, and Tier 2
+        # refuses a PROCEED that names no obligation.
+        return HELD, f"refused at construction: {exc}"
     evidence_free = forged.proceeds and not forged.checks_evaluated
     # Narrowed after refutation. In-process construction is not an attack -
     # the caller is in the same trust domain and the same argument voids every
