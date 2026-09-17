@@ -4,40 +4,173 @@ Deterministic settlement instruction routing and execution monitoring.
 Per AUR-CANONICAL-001 v1.5.1 Section IV (settlement-operations-analyst v0.3)
 and AUR-CUSTODY-001 v1.0 Section VI (R-class roles).
 
-Six primitives execute in sequence (pre-routing gates 4→5→6→1, then
-routing and confirmation). Any gate failure emits a
-:class:`~atreides.agents.tier1.outputs.SettlementEscalation` to the DSOR
-and returns immediately — no instruction is ever issued after a gate
-failure. R-class guardrails preserved unchanged from v0.2.
+Two stages, deliberately separate (ATR-I-02):
+
+1. :func:`validate_tasking` — the pre-routing gates (4 → 5 → 6 → 1), as a
+   pure function. It reads the tasking and returns a
+   :class:`~atreides.agents.tier1.outputs.SettlementValidation`. It selects no
+   route, reads no clock, creates no reference and writes nothing.
+2. :meth:`SettlementOperationsAnalyst.emit` — the explicitly named emission
+   stage. A held validation persists a
+   :class:`~atreides.agents.tier1.outputs.SettlementEscalation`; a passed one
+   routes, generates the instruction reference and persists
+   :class:`~atreides.agents.tier1.outputs.SettlementTelemetry`.
+
+Before Wave 2 one ``run`` did both, so validating a clean tasking persisted
+telemetry with a rail acknowledgement time before any instruction existed.
+``run`` remains for callers that want both stages together.
+
+A rail acknowledgement is never set by emission. It is recorded only from a
+verified readback, as a correction record: see
+:meth:`SettlementOperationsAnalyst.record_rail_acknowledgment`. R-class
+guardrails are unchanged.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from decimal import Decimal
 
 from atreides.agents.tier1.outputs import (
     DiscrepancyCode,
+    RailAcknowledgment,
     SettlementEscalation,
     SettlementOutput,
     SettlementTaskingRecord,
     SettlementTelemetry,
+    SettlementValidation,
 )
 from atreides.dsor import DSORRecord, DSORStore
+
+#: Pre-routing gate names, in evaluation order.
+GATE_ORDER: tuple[str, ...] = (
+    "monitor_intraday_funding_position",
+    "verify_ficc_clearing_fund_compliance",
+    "model_ficc_net_settlement_obligation",
+    "verify_dsor_pre_trade_record",
+)
+
+
+def validate_tasking(tasking: SettlementTaskingRecord) -> SettlementValidation:
+    """Run the pre-routing gates in order. Pure: no clock, route, reference or I/O."""
+    evaluated: list[str] = []
+    checks = (
+        (GATE_ORDER[0], _intraday_funding_hold),
+        (GATE_ORDER[1], _clearing_fund_hold),
+        (GATE_ORDER[2], _net_obligation_hold),
+        (GATE_ORDER[3], _lineage_hold),
+    )
+    for name, check in checks:
+        evaluated.append(name)
+        held = check(tasking)
+        if held is not None:
+            return held.model_copy(update={"checks_evaluated": tuple(evaluated)})
+    return SettlementValidation(
+        operation_id=tasking.operation_id, passed=True, checks_evaluated=tuple(evaluated)
+    )
+
+
+def _held(
+    tasking: SettlementTaskingRecord,
+    code: DiscrepancyCode,
+    detail: str,
+    *,
+    clearing_fund_deficiency: bool = False,
+    net_obligation_discrepancy: str | None = None,
+) -> SettlementValidation:
+    return SettlementValidation(
+        operation_id=tasking.operation_id,
+        passed=False,
+        checks_evaluated=("pending",),
+        discrepancy_code=code,
+        failure_detail=detail,
+        intraday_credit_usage=tasking.intraday_credit_current_usage,
+        intraday_credit_limit=tasking.intraday_credit_limit,
+        clearing_fund_deficiency=clearing_fund_deficiency,
+        net_obligation_discrepancy=net_obligation_discrepancy,
+    )
+
+
+def _intraday_funding_hold(tasking: SettlementTaskingRecord) -> SettlementValidation | None:
+    """Primitive 4 (v0.3): hold if intraday credit usage is at or above the facility limit."""
+    if (
+        tasking.intraday_credit_limit is not None
+        and tasking.intraday_credit_current_usage is not None
+        and tasking.intraday_credit_current_usage >= tasking.intraday_credit_limit
+    ):
+        return _held(
+            tasking,
+            DiscrepancyCode.INTRADAY_CREDIT_THRESHOLD,
+            "Intraday credit usage at or above facility limit. "
+            "Pre-routing hold. Instruction not issued. "
+            "Primitive: monitor_intraday_funding_position. "
+            "AUR-CANONICAL-001 v1.5.1 Section IV.",
+        )
+    return None
+
+
+def _clearing_fund_hold(tasking: SettlementTaskingRecord) -> SettlementValidation | None:
+    """Primitive 5 (v0.3): hold if FICC clearing fund contribution (VaR-based) is deficient."""
+    if not tasking.ficc_clearing_fund_compliant:
+        return _held(
+            tasking,
+            DiscrepancyCode.CLEARING_FUND_DEFICIENCY,
+            "FICC clearing fund contribution (VaR-based) deficient. "
+            "Pre-routing hold. Instruction not issued. "
+            "Primitive: verify_ficc_clearing_fund_compliance. "
+            "AUR-CANONICAL-001 v1.5.1 Section IV.",
+            clearing_fund_deficiency=True,
+        )
+    return None
+
+
+def _net_obligation_hold(tasking: SettlementTaskingRecord) -> SettlementValidation | None:
+    """Primitive 6 (v0.3): hold if tasking net delivery diverges from FICC's published figure."""
+    if (
+        tasking.ficc_published_net_delivery is not None
+        and tasking.net_delivery_quantity is not None
+        and tasking.ficc_published_net_delivery != tasking.net_delivery_quantity
+    ):
+        return _held(
+            tasking,
+            DiscrepancyCode.NET_OBLIGATION_MISMATCH,
+            "FICC net settlement obligation does not match "
+            "FICC-published net delivery position. Pre-routing hold. "
+            "Primitive: model_ficc_net_settlement_obligation. "
+            "AUR-CANONICAL-001 v1.5.1 Section IV.",
+            net_obligation_discrepancy=(
+                f"tasking={tasking.net_delivery_quantity!s}; "
+                f"ficc_published={tasking.ficc_published_net_delivery!s}"
+            ),
+        )
+    return None
+
+
+def _lineage_hold(tasking: SettlementTaskingRecord) -> SettlementValidation | None:
+    """Primitive 1: verify the lineage stub operation_id matches the tasking operation_id."""
+    if tasking.lineage_stub.operation_id != tasking.operation_id:
+        return _held(
+            tasking,
+            DiscrepancyCode.DSOR_MISMATCH,
+            "Lineage stub operation_id does not match tasking operation_id. "
+            "DSOR pre-trade record verification failed. "
+            "Primitive: verify_dsor_pre_trade_record. "
+            "AUR-CANONICAL-001 v1.5.1 Section IV.",
+        )
+    return None
 
 
 class SettlementOperationsAnalyst:
     """Tier 1 · Thifur-R — Settlement Operations Analyst.
 
-    Executes the six-primitive settlement workflow and persists the result
-    to the DSOR. Fully deterministic: zero variance, no path selection.
+    Fully deterministic: zero variance, no path selection.
 
     Usage::
 
         analyst = SettlementOperationsAnalyst()
+        validation = validate_tasking(tasking)          # pure
+        output, record = analyst.emit(tasking, validation, store)
+        # or both at once:
         output, record = analyst.run(tasking, store)
-        # output: SettlementTelemetry | SettlementEscalation
-        # record: DSORRecord (persisted; record.record_id for replay)
     """
 
     def run(
@@ -47,59 +180,47 @@ class SettlementOperationsAnalyst:
         *,
         now: datetime | None = None,
     ) -> tuple[SettlementOutput, DSORRecord]:
-        """Execute the settlement operations workflow.
-
-        Pre-routing gates fire in order (funding → clearing fund →
-        net obligation → DSOR lineage). The first failure emits a
-        :class:`SettlementEscalation`, persists it to the DSOR, and
-        returns early — no instruction is issued.
-
-        On a clean gate pass, routes the instruction and emits
-        :class:`SettlementTelemetry` to the DSOR.
+        """Validate, then emit. Equivalent to ``emit(tasking, validate_tasking(tasking), store)``.
 
         Args:
             tasking: C2-delivered tasking record (frozen).
             store: DSOR store for output persistence.
-            now: Override execution timestamp (testing only).
+            now: Override emission timestamp (testing only).
 
         Returns:
-            ``(output, record)`` where ``output`` is the emitted
-            :data:`SettlementOutput` and ``record`` is the persisted
-            :class:`DSORRecord` (``record.record_id`` may be used to
-            replay from the DSOR).
+            ``(output, record)``: the emitted :data:`SettlementOutput` and the
+            persisted :class:`DSORRecord`.
         """
+        return self.emit(tasking, validate_tasking(tasking), store, now=now)
+
+    def emit(
+        self,
+        tasking: SettlementTaskingRecord,
+        validation: SettlementValidation,
+        store: DSORStore,
+        *,
+        now: datetime | None = None,
+    ) -> tuple[SettlementOutput, DSORRecord]:
+        """The emission stage: persist the escalation or route and persist telemetry.
+
+        The only method here that selects a route, creates an instruction
+        reference, reads the clock or writes to the DSOR. It never sets a rail
+        acknowledgement.
+        """
+        if validation.operation_id != tasking.operation_id:
+            raise ValueError("validation and tasking describe different operations")
         emitted_at = now if now is not None else datetime.now(tz=UTC)
 
-        # Gate 4 (v0.3): intraday funding position
-        esc = self._monitor_intraday_funding_position(tasking, emitted_at)
-        if esc is not None:
-            return esc, store.append(esc, dtg=emitted_at)
-
-        # Gate 5 (v0.3): FICC clearing fund compliance
-        esc = self._verify_ficc_clearing_fund_compliance(tasking, emitted_at)
-        if esc is not None:
-            return esc, store.append(esc, dtg=emitted_at)
-
-        # Gate 6 (v0.3): FICC net settlement obligation consistency
-        esc = self._model_ficc_net_settlement_obligation(tasking, emitted_at)
-        if esc is not None:
-            return esc, store.append(esc, dtg=emitted_at)
-
-        # Gate 1: DSOR lineage consistency
-        esc = self._verify_dsor_pre_trade_record(tasking, emitted_at)
-        if esc is not None:
+        if not validation.passed:
+            esc = self._make_escalation(tasking, validation, emitted_at)
             return esc, store.append(esc, dtg=emitted_at)
 
         # Primitive 2: route settlement instruction
         instruction_ref = self._route_settlement_instruction(tasking)
 
-        # STUB — Primitive 3: match_rail_confirmation.
-        # NOT YET REAL. Production path: await the rail-assigned acknowledgment
-        # reference (FICC CNS sequence number or Fedwire end-to-end reference),
-        # validate it against the instruction parameters and DSOR intent, and
-        # apply the five-second internal alert threshold (operational SLA;
-        # no US statutory equivalent governs settlement-confirmation timing). Current
-        # stub sets rail_acknowledgment_dtg = emitted_at and skips validation.
+        # Primitive 3: match_rail_confirmation is NOT performed here. The rail
+        # acknowledgement arrives only from a verified readback, recorded by
+        # record_rail_acknowledgment() as a correction of this record.
         telemetry = SettlementTelemetry(
             operation_id=tasking.operation_id,
             task_id=tasking.task_id,
@@ -112,7 +233,6 @@ class SettlementOperationsAnalyst:
             net_cusip=tasking.net_cusip,
             net_delivery_quantity=tasking.net_delivery_quantity,
             net_payment_amount=tasking.net_payment_amount,
-            rail_acknowledgment_dtg=emitted_at,
             clearing_fund_compliant=tasking.ficc_clearing_fund_compliant,
             intraday_credit_usage_at_execution=tasking.intraday_credit_current_usage,
             intraday_credit_limit=tasking.intraday_credit_limit,
@@ -121,122 +241,24 @@ class SettlementOperationsAnalyst:
         )
         return telemetry, store.append(telemetry, dtg=emitted_at)
 
-    # ------------------------------------------------------------------
-    # Primitive 4 (v0.3): monitor_intraday_funding_position
-    # ------------------------------------------------------------------
-
-    def _monitor_intraday_funding_position(
+    def record_rail_acknowledgment(
         self,
-        tasking: SettlementTaskingRecord,
-        now: datetime,
-    ) -> SettlementEscalation | None:
-        """Hold if intraday credit usage is at or above the facility limit."""
-        if (
-            tasking.intraday_credit_limit is not None
-            and tasking.intraday_credit_current_usage is not None
-            and tasking.intraday_credit_current_usage >= tasking.intraday_credit_limit
-        ):
-            return self._make_escalation(
-                tasking,
-                now,
-                DiscrepancyCode.INTRADAY_CREDIT_THRESHOLD,
-                (
-                    "Intraday credit usage at or above facility limit. "
-                    "Pre-routing hold. Instruction not issued. "
-                    "Primitive: monitor_intraday_funding_position. "
-                    "AUR-CANONICAL-001 v1.5.1 Section IV."
-                ),
-                intraday_credit_usage=tasking.intraday_credit_current_usage,
-                intraday_credit_limit=tasking.intraday_credit_limit,
-            )
-        return None
+        record: DSORRecord,
+        acknowledgment: RailAcknowledgment,
+        store: DSORStore,
+        *,
+        now: datetime | None = None,
+    ) -> tuple[SettlementTelemetry, DSORRecord]:
+        """Append the rail's acknowledgement as a correction of the telemetry record.
 
-    # ------------------------------------------------------------------
-    # Primitive 5 (v0.3): verify_ficc_clearing_fund_compliance
-    # ------------------------------------------------------------------
-
-    def _verify_ficc_clearing_fund_compliance(
-        self,
-        tasking: SettlementTaskingRecord,
-        now: datetime,
-    ) -> SettlementEscalation | None:
-        """Hold if FICC clearing fund contribution (VaR-based) is deficient."""
-        if not tasking.ficc_clearing_fund_compliant:
-            return self._make_escalation(
-                tasking,
-                now,
-                DiscrepancyCode.CLEARING_FUND_DEFICIENCY,
-                (
-                    "FICC clearing fund contribution (VaR-based) deficient. "
-                    "Pre-routing hold. Instruction not issued. "
-                    "Primitive: verify_ficc_clearing_fund_compliance. "
-                    "AUR-CANONICAL-001 v1.5.1 Section IV."
-                ),
-                intraday_credit_usage=tasking.intraday_credit_current_usage,
-                intraday_credit_limit=tasking.intraday_credit_limit,
-                clearing_fund_deficiency=True,
-            )
-        return None
-
-    # ------------------------------------------------------------------
-    # Primitive 6 (v0.3): model_ficc_net_settlement_obligation
-    # ------------------------------------------------------------------
-
-    def _model_ficc_net_settlement_obligation(
-        self,
-        tasking: SettlementTaskingRecord,
-        now: datetime,
-    ) -> SettlementEscalation | None:
-        """Hold if tasking net delivery diverges from FICC's published figure."""
-        if (
-            tasking.ficc_published_net_delivery is not None
-            and tasking.net_delivery_quantity is not None
-            and tasking.ficc_published_net_delivery != tasking.net_delivery_quantity
-        ):
-            return self._make_escalation(
-                tasking,
-                now,
-                DiscrepancyCode.NET_OBLIGATION_MISMATCH,
-                (
-                    "FICC net settlement obligation does not match "
-                    "FICC-published net delivery position. Pre-routing hold. "
-                    "Primitive: model_ficc_net_settlement_obligation. "
-                    "AUR-CANONICAL-001 v1.5.1 Section IV."
-                ),
-                intraday_credit_usage=tasking.intraday_credit_current_usage,
-                intraday_credit_limit=tasking.intraday_credit_limit,
-                net_obligation_discrepancy=(
-                    f"tasking={tasking.net_delivery_quantity!s}; "
-                    f"ficc_published={tasking.ficc_published_net_delivery!s}"
-                ),
-            )
-        return None
-
-    # ------------------------------------------------------------------
-    # Primitive 1: verify_dsor_pre_trade_record
-    # ------------------------------------------------------------------
-
-    def _verify_dsor_pre_trade_record(
-        self,
-        tasking: SettlementTaskingRecord,
-        now: datetime,
-    ) -> SettlementEscalation | None:
-        """Verify lineage stub operation_id matches the tasking operation_id."""
-        if tasking.lineage_stub.operation_id != tasking.operation_id:
-            return self._make_escalation(
-                tasking,
-                now,
-                DiscrepancyCode.DSOR_MISMATCH,
-                (
-                    "Lineage stub operation_id does not match tasking operation_id. "
-                    "DSOR pre-trade record verification failed. "
-                    "Primitive: verify_dsor_pre_trade_record. "
-                    "AUR-CANONICAL-001 v1.5.1 Section IV."
-                ),
-                intraday_credit_usage=tasking.intraday_credit_current_usage,
-                intraday_credit_limit=tasking.intraday_credit_limit,
-            )
-        return None
+        The original record is never changed (Axiom 4). The acknowledgement
+        must come from :meth:`RailAcknowledgment.from_readback`.
+        """
+        if not isinstance(record.output, SettlementTelemetry):
+            raise ValueError("only emitted settlement telemetry can be acknowledged")
+        acknowledged = record.output.model_copy(update={"rail_acknowledgment": acknowledgment})
+        dtg = now if now is not None else datetime.now(tz=UTC)
+        return acknowledged, store.append(acknowledged, dtg=dtg, correction_of=record.record_id)
 
     # ------------------------------------------------------------------
     # Primitive 2: route_settlement_instruction
@@ -258,15 +280,11 @@ class SettlementOperationsAnalyst:
     def _make_escalation(
         self,
         tasking: SettlementTaskingRecord,
+        validation: SettlementValidation,
         now: datetime,
-        code: DiscrepancyCode,
-        detail: str,
-        *,
-        intraday_credit_usage: Decimal | None = None,
-        intraday_credit_limit: Decimal | None = None,
-        clearing_fund_deficiency: bool = False,
-        net_obligation_discrepancy: str | None = None,
     ) -> SettlementEscalation:
+        assert validation.discrepancy_code is not None
+        assert validation.failure_detail is not None
         return SettlementEscalation(
             operation_id=tasking.operation_id,
             task_id=tasking.task_id,
@@ -274,10 +292,10 @@ class SettlementOperationsAnalyst:
             lineage_stub=tasking.lineage_stub,
             emitted_at=now,
             rail=None,
-            discrepancy_code=code,
-            failure_detail=detail,
-            intraday_credit_usage=intraday_credit_usage,
-            intraday_credit_limit=intraday_credit_limit,
-            clearing_fund_deficiency=clearing_fund_deficiency,
-            net_obligation_discrepancy=net_obligation_discrepancy,
+            discrepancy_code=validation.discrepancy_code,
+            failure_detail=validation.failure_detail,
+            intraday_credit_usage=validation.intraday_credit_usage,
+            intraday_credit_limit=validation.intraday_credit_limit,
+            clearing_fund_deficiency=validation.clearing_fund_deficiency,
+            net_obligation_discrepancy=validation.net_obligation_discrepancy,
         )

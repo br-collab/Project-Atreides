@@ -43,13 +43,13 @@ def _cycle(cockpit: ClearingCockpit, status: str | None):  # type: ignore[no-unt
         ccp_net_obligation=D("1000000"),
         risk_control_status=status,
     )
-    return t, gate, cockpit.reconcile_expected_actual(pkg, rb)
+    return t, pkg, cockpit.reconcile_expected_actual(pkg, rb)
 
 
 def test_stress_h7_5_breach_with_matching_amounts_breaks_and_escalates() -> None:
     register = EscalationRegister()
     cockpit = ClearingCockpit(escalation_register=register)
-    t, gate, recon = _cycle(cockpit, "BREACHED")
+    t, pkg, recon = _cycle(cockpit, "BREACHED")
     assert not recon.matched
     assert recon.breaks == (BreakLeg.RISK_CONTROL,)
     assert recon.detail["risk_control"] == {"status": "BREACHED"}
@@ -60,7 +60,7 @@ def test_stress_h7_5_breach_with_matching_amounts_breaks_and_escalates() -> None
     assert escalation.routed_to == "authority_tier:T1"
     assert "ATR-I-07" in escalation.reason
     assert escalation.raised_at_offset_seconds >= 0
-    tickets = cockpit.raise_break(recon, gate.dsor_pre_trade_record_id)
+    tickets = cockpit.raise_break(recon, pkg.dsor_record_id)
     assert [(tk.leg, tk.detail) for tk in tickets] == [
         (BreakLeg.RISK_CONTROL, '{"status": "BREACHED"}')
     ]

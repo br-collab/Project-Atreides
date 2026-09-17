@@ -75,7 +75,9 @@ def test_full_cycle_emits_package_and_reconciles_clean():
     assert pkg.disposition is PackageDisposition.EMIT_FOR_HUMAN_ENTRY
     assert pkg.for_human_entry is True
     assert pkg.is_submission is False
-    assert pkg.dsor_pre_trade_record_id == gate.dsor_pre_trade_record_id
+    # Beat 3 persists the telemetry; validation (Beat 2) references no record.
+    assert pkg.dsor_record_id is not None
+    assert pkg.dsor_pre_trade_record_id == pkg.dsor_record_id  # deprecated alias
 
     rb = cp.ingest_portal_readback(
         operation_id=t.operation_id, regime=PortalRegime.CCP,
@@ -195,8 +197,10 @@ def test_reconcile_classifies_breaks_by_leg_and_routes_to_workbench():
         BreakLeg.POSITION, BreakLeg.NET_OBLIGATION,
         BreakLeg.CLEARING_FUND, BreakLeg.FUNDING,
     }
-    tickets = cp.raise_break(recon, gate.dsor_pre_trade_record_id)
+    tickets = cp.raise_break(recon, pkg.dsor_record_id)
     assert len(tickets) == 4
+    assert all(tk.dsor_record_id == pkg.dsor_record_id for tk in tickets)
+    assert all(tk.dsor_pre_trade_record_id == tk.dsor_record_id for tk in tickets)  # alias
     assert all(tk.status == "OPEN_ON_WORKBENCH" for tk in tickets)
     assert len(cp.workbench) == 4
 
@@ -222,7 +226,7 @@ def test_tier0_halt_refuses_every_primitive():
         lambda: cp.emit_instruction_package(t, gate),
         lambda: cp.ingest_portal_readback(operation_id=t.operation_id, regime=PortalRegime.CCP),
         lambda: cp.reconcile_expected_actual(pkg, rb),
-        lambda: cp.raise_break(recon, gate.dsor_pre_trade_record_id),
+        lambda: cp.raise_break(recon, pkg.dsor_record_id),
     ):
         with pytest.raises(CockpitHalted):
             call()
@@ -253,7 +257,7 @@ def test_instruction_package_is_never_a_submission():
             cusip=None,
             net_delivery_quantity=None,
             net_payment_amount=None,
-            dsor_pre_trade_record_id=uuid.uuid4(),
+            dsor_record_id=uuid.uuid4(),
             authority_stamp={},
             quorum_required=False,
             for_human_entry=True,

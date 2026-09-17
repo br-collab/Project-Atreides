@@ -66,7 +66,7 @@ def _package(**changes: object) -> InstructionPackage:
         "cusip": None,
         "net_delivery_quantity": None,
         "net_payment_amount": None,
-        "dsor_pre_trade_record_id": uuid.uuid4(),
+        "dsor_record_id": uuid.uuid4(),
         "authority_stamp": {},
         "quorum_required": False,
         "for_human_entry": False,
