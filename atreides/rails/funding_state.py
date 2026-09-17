@@ -56,6 +56,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Final
 
+from atreides.rails.boundary import coerce_member, describe, unrecognised
 from atreides.rails.cato_f import FinalityClass, FundingState
 from atreides.rails.determination import DeterminationOutcome
 
@@ -110,6 +111,10 @@ class CashFlow:
     amount: Decimal
     label: str
     committed: bool = True
+    #: Whether ``offset_seconds`` is a firm date. An uncertain date may land
+    #: inside the settlement window even when it is stated after it, so an
+    #: uncertain outflow stays in the cap calculation (ATR-I-09).
+    offset_is_certain: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,6 +150,27 @@ class FundingInputs:
     #: carry two independent facts, and overloading ``finality_class`` to
     #: try was the first design and was wrong.
     determination_outcome: DeterminationOutcome = DeterminationOutcome.NOT_APPLICABLE
+
+    def __post_init__(self) -> None:
+        # Coerce at the boundary (ATR-I-05). A value that is not recognised is
+        # kept as it arrived, and project_funding refuses it; see
+        # atreides.rails.boundary.
+        object.__setattr__(
+            self, "finality_class", coerce_member(FinalityClass, self.finality_class)
+        )
+        object.__setattr__(
+            self,
+            "determination_outcome",
+            coerce_member(DeterminationOutcome, self.determination_outcome),
+        )
+
+    @property
+    def unrecognised_fields(self) -> tuple[str, ...]:
+        """Enum fields whose value is not a member (ATR-I-05)."""
+        return unrecognised(
+            finality_class=(FinalityClass, self.finality_class),
+            determination_outcome=(DeterminationOutcome, self.determination_outcome),
+        )
 
     @property
     def clearing_fund_sufficient(self) -> bool:
@@ -284,8 +310,41 @@ def _build_ladder(
             "post-settlement",
         )
     )
-    trough = min(p.position for p in points)
-    return tuple(sorted(points, key=lambda p: (p.offset_seconds, p.label))), trough
+    return tuple(sorted(points, key=lambda p: (p.offset_seconds, p.label))), _cap_trough(
+        inputs, settle_pos
+    )
+
+
+def _cap_trough(inputs: FundingInputs, settle_pos: Decimal) -> Decimal:
+    """The deepest position the net-debit cap is tested against (ATR-I-09).
+
+    Only flows that can occur inside the settlement window count. Before Wave 2
+    every committed flow counted, so a certain outflow dated tomorrow breached
+    today's cap (stress case H3.4) - the model bounded its horizon where it
+    decided queue-versus-fail and not where it decided cap breach.
+
+    - A 24/7 rail (no window close) has no horizon: every committed flow counts.
+    - A certain flow dated after the close is excluded.
+    - An uncertain flow dated after the close is counted conservatively: an
+      outflow as if it landed at the close, an inflow not at all.
+    """
+    close = inputs.window_close_offset_seconds
+    # Ordered as the ladder orders its points, (offset, label), so the trough
+    # for a 24/7 rail is exactly the ladder's lowest point.
+    timed: list[tuple[int, str, Decimal]] = []
+    for f in inputs.flows:
+        if not f.committed:
+            continue
+        if close is None or f.offset_seconds <= close:
+            timed.append((f.offset_seconds, f.label, f.amount))
+        elif not f.offset_is_certain and f.amount < 0:
+            timed.append((close, f.label, f.amount))
+    running = inputs.opening_position
+    trough = running
+    for _, _, amount in sorted(timed, key=lambda item: (item[0], item[1])):
+        running += amount
+        trough = min(trough, running)
+    return min(trough, settle_pos - inputs.obligation)
 
 
 def _first_funded_offset(inputs: FundingInputs) -> int | None:
@@ -342,11 +401,20 @@ def project_funding(inputs: FundingInputs) -> FundingProjection:
         # Headroom against the deepest intraday point, not the closing one.
         headroom = inputs.net_debit_cap + min(trough, Decimal(0))
 
+    unrecognised_fields = inputs.unrecognised_fields
+
     def build(
         disposition: FundingDisposition,
         rationale: str,
         funded_at: int | None = None,
     ) -> FundingProjection:
+        outcome = (
+            # An unrecognised outcome cannot be recorded as itself. The most
+            # conservative named state stands in, and the rationale says why.
+            DeterminationOutcome.QUALIFICATION_UNKNOWN
+            if "determination_outcome" in unrecognised_fields
+            else inputs.determination_outcome
+        )
         return FundingProjection(
             disposition=disposition,
             projected_position_at_settlement=committed,
@@ -358,7 +426,21 @@ def project_funding(inputs: FundingInputs) -> FundingProjection:
             funded_at_offset_seconds=funded_at,
             ladder=ladder,
             rationale=rationale,
-            determination_outcome=inputs.determination_outcome,
+            determination_outcome=outcome,
+        )
+
+    # -1. An input the model does not recognise, refused rather than guessed.
+    #     Before Wave 2 an unrecognised finality class skipped every identity
+    #     check below and fell through to FUNDED (ATR-I-05).
+    if unrecognised_fields:
+        values = ", ".join(
+            f"{name}={describe(getattr(inputs, name))}" for name in unrecognised_fields
+        )
+        return build(
+            FundingDisposition.INDETERMINATE,
+            f"Unrecognised input ({values}). Enum values must match a member "
+            f"exactly; the model declines to project rather than guess which "
+            f"treatment was meant (ATR-I-05).",
         )
 
     # 0. Contract violation, caught rather than guessed at.

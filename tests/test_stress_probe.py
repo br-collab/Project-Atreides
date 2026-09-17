@@ -49,10 +49,18 @@ import stress_probe  # noqa: E402
 #: H5.3 (market-data staleness), H4.1 (counterparty standing) and E3.2
 #: (escalation delivery) moved NO_TARGET -> HELD. NO_TARGET falls from
 #: nine to six, and that number only moves by building something.
+#:
+#: 17 Sep 2026, Wave 2 W2A-1 (CL-JUM-001): four LOW findings fixed, each now
+#: also an ordinary regression test. H3.4 BROKE -> HELD (ATR-I-09: flows after
+#: the window close no longer drive the cap test). H7.5 BROKE -> HELD
+#: (ATR-I-07: a declared risk-control breach breaks and escalates). E2.5
+#: BROKE -> HELD (ATR-I-05: enums coerced at the boundary). E6.2 BROKE -> HELD
+#: (ATR-I-03: a submission artifact is refused at construction). Remaining
+#: BROKE: H6.2, H6.3, E7.5 (Wave 2 W2A-3) and E6.4 (ATR-I-08, Wave 6).
 EXPECTED = {
-    "HELD": 31,
+    "HELD": 35,
     "BY_DESIGN": 15,
-    "BROKE": 8,
+    "BROKE": 4,
     "NO_TARGET": 6,
 }
 

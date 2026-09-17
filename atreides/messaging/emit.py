@@ -8,8 +8,11 @@ Per AUR-CUSTODY-CASH-001 v0.2 Section VIII. Two rules govern this module:
 2. **It is never a submission.** Atreides prepares, governs and reconciles;
    the entitled member submits (`AUR-CUSTODY-FED-001 §III`,
    `AUR-COCKPIT-001 §XI`). :class:`InstructionArtifact` pins
-   ``is_submission`` to ``Literal[False]`` — the same control the cockpit
-   uses to make a submission object unconstructible at the type layer.
+   ``is_submission`` to ``Literal[False]`` and enforces it at runtime:
+   anything other than ``False`` raises at construction (ATR-I-03). The
+   annotation alone was a static promise only; a plain dataclass does not
+   check it, so ``InstructionArtifact(..., is_submission=True)`` used to
+   construct.
 
 No network calls, no clock, no I/O. Timestamps arrive on the instruction.
 """
@@ -64,6 +67,16 @@ class InstructionArtifact:
     #: Structural guarantee, not a comment. This artifact is prepared for
     #: the entitled member to submit; nothing in Atreides submits it.
     is_submission: Literal[False] = False
+
+    def __post_init__(self) -> None:
+        # Exactly False, not merely falsy: 0 or None would be a second spelling
+        # of a field whose only permitted value is False.
+        if self.is_submission is not False:
+            raise ValueError(
+                f"InstructionArtifact.is_submission must be False, got "
+                f"{self.is_submission!r}: Atreides never constructs a submission "
+                f"(ATR-I-03)"
+            )
 
 
 def _fmt_amount(amount: Decimal) -> str:

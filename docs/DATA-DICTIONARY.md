@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**192 of 192 enumeration values (100%) state what they mean in
+**193 of 193 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -270,6 +270,7 @@ Reason codes. One per check in Section V.B plus the PROCEED case.
 | `COUNTERPARTY_UNDER_REVIEW` | The counterparty is under review. Escalates rather than holds: a review means a human is already looking, and this operation is evidence they need rather than a decision this gate should take without them. |
 | `STRESS_READING_UNUSABLE` | The systemic-stress reading is not a usable number, so no statement about market stress can be made from it. Deliberately NOT the escalate code. SYSTEMIC_STRESS_ESCALATE asserts that stress was observed above a band; a NaN or an infinity asserts nothing except that the feed is broken. Naming the two differently is the same discipline the registries apply between NOT_ASSESSED and NONE_DISCLOSED: "we could not read it" and "we read it and it says X" carry the same conservative treatment and completely different remedies. Holds rather than escalates because HOLD is this framework's default everywhere evidence is absent, including the absent-gate default. The trade-off is stated rather than hidden: an operator who wants a broken feed to page somebody must route on this code, because the gate will not manufacture a stress finding it does not have. |
 | `FUNDING_INDETERMINATE` | The funding model declined to assert the position, so the gate has no funded state to check. Distinct from UNFUNDED_AT_SETTLEMENT_INSTANT, which asserts that the position is short. This code asserts nothing about the position at all - the projection reached a state where the model refuses to say, and a refusal must not be converted into a number on the way to this gate. |
+| `INPUT_UNRECOGNISED` | An enum input did not match a member exactly (ATR-I-05). HOLD: the gate does not guess which branch a misspelt value meant. |
 | `CLEARED` | No check fired. A rail is recommended. |
 | `GATE_UNAVAILABLE` | The gate could not be consulted. The absent-gate default is HOLD. |
 
@@ -285,6 +286,7 @@ An expected movement on the funding account.
 | `amount` | `Decimal` | required |
 | `label` | `str` | required |
 | `committed` | `bool` | `True` |
+| `offset_is_certain` | `bool` | `True` |
 
 #### `FundingDisposition` (enumeration)
 

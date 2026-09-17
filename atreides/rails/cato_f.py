@@ -44,6 +44,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Final
 
+from atreides.rails.boundary import coerce_member, describe, unrecognised
 from atreides.rails.determination import (
     DeterminationOutcome,
     obligation_finality_class,
@@ -245,6 +246,9 @@ class ReasonCode(StrEnum):
     position is short. This code asserts nothing about the position at all -
     the projection reached a state where the model refuses to say, and a
     refusal must not be converted into a number on the way to this gate."""
+    INPUT_UNRECOGNISED = "INPUT_UNRECOGNISED"
+    """An enum input did not match a member exactly (ATR-I-05). HOLD: the gate
+    does not guess which branch a misspelt value meant."""
     CLEARED = "CLEARED"
     """No check fired. A rail is recommended."""
     GATE_UNAVAILABLE = "GATE_UNAVAILABLE"
@@ -282,6 +286,12 @@ class RailState:
     # second, and before this field existed the record could not tell them
     # apart. Policed only where a FreshnessPolicy is supplied.
     observed_age_seconds: int | None = None
+
+    def __post_init__(self) -> None:
+        # Coerce at the boundary (ATR-I-05). An unrecognised status is kept as
+        # it arrived and is never usable, because usable requires AVAILABLE.
+        object.__setattr__(self, "rail", coerce_member(CashRail, self.rail))
+        object.__setattr__(self, "status", coerce_member(RailStatus, self.status))
 
     @property
     def usable(self) -> bool:
@@ -532,6 +542,37 @@ class OperationContext:
     #: `atreides.rails.perimeter`.
     settlement_perimeter: SettlementPerimeter = SettlementPerimeter.NOT_ASSESSED
 
+    def __post_init__(self) -> None:
+        # Coerce at the boundary (ATR-I-05). An unrecognised value is kept as it
+        # arrived, and evaluate() holds on it.
+        object.__setattr__(
+            self,
+            "determination_outcome",
+            coerce_member(DeterminationOutcome, self.determination_outcome),
+        )
+        object.__setattr__(
+            self,
+            "settlement_perimeter",
+            coerce_member(SettlementPerimeter, self.settlement_perimeter),
+        )
+        if self.depository_linked_rail is not None:
+            object.__setattr__(
+                self,
+                "depository_linked_rail",
+                coerce_member(CashRail, self.depository_linked_rail),
+            )
+
+    @property
+    def unrecognised_fields(self) -> tuple[str, ...]:
+        """Enum fields whose value is not a member (ATR-I-05)."""
+        fields: dict[str, tuple[type[StrEnum], object]] = {
+            "determination_outcome": (DeterminationOutcome, self.determination_outcome),
+            "settlement_perimeter": (SettlementPerimeter, self.settlement_perimeter),
+        }
+        if self.depository_linked_rail is not None:
+            fields["depository_linked_rail"] = (CashRail, self.depository_linked_rail)
+        return unrecognised(**fields)
+
 
 @dataclass(frozen=True, slots=True)
 class CatoFDecision:
@@ -731,6 +772,31 @@ def evaluate(
     doctrine, not an optimization, and must not be reordered without a
     doctrine change landing in both implementations.
     """
+    # Before any check reads an enum: an unrecognised input holds (ATR-I-05).
+    # Every check below compares by identity, so a value that is not a member
+    # would otherwise take whichever branch its absence leaves open.
+    unrecognised_fields = operation.unrecognised_fields
+    if unrecognised_fields:
+        values = tuple(
+            (f"unrecognised:{name}", describe(getattr(operation, name)))
+            for name in unrecognised_fields
+        )
+        return CatoFDecision(
+            decision=GateDecision.HOLD,
+            reason_code=ReasonCode.INPUT_UNRECOGNISED,
+            recommended_rail=None,
+            finality_class=None,
+            rationale=(
+                "Unrecognised operation input: "
+                + ", ".join(f"{k.split(':', 1)[1]}={v}" for k, v in values)
+                + ". Enum values must match a member exactly. The gate holds "
+                "rather than guess which branch was meant (ATR-I-05)."
+            ),
+            checks_evaluated=values,
+            funding_state_snapshot=_snapshot_funding(funding),
+            dsor_lineage_uri=dsor_lineage_uri,
+        )
+
     checks: list[tuple[str, str]] = [
         ("ofr_stlfsi4", str(ofr_stlfsi4)),
         ("is_material", str(operation.is_material)),
