@@ -56,6 +56,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Final
 
+from atreides.rails.boundary import coerce_member, describe, unrecognised
 from atreides.rails.cato_f import FinalityClass, FundingState
 from atreides.rails.determination import DeterminationOutcome
 
@@ -145,6 +146,27 @@ class FundingInputs:
     #: carry two independent facts, and overloading ``finality_class`` to
     #: try was the first design and was wrong.
     determination_outcome: DeterminationOutcome = DeterminationOutcome.NOT_APPLICABLE
+
+    def __post_init__(self) -> None:
+        # Coerce at the boundary (ATR-I-05). A value that is not recognised is
+        # kept as it arrived, and project_funding refuses it; see
+        # atreides.rails.boundary.
+        object.__setattr__(
+            self, "finality_class", coerce_member(FinalityClass, self.finality_class)
+        )
+        object.__setattr__(
+            self,
+            "determination_outcome",
+            coerce_member(DeterminationOutcome, self.determination_outcome),
+        )
+
+    @property
+    def unrecognised_fields(self) -> tuple[str, ...]:
+        """Enum fields whose value is not a member (ATR-I-05)."""
+        return unrecognised(
+            finality_class=(FinalityClass, self.finality_class),
+            determination_outcome=(DeterminationOutcome, self.determination_outcome),
+        )
 
     @property
     def clearing_fund_sufficient(self) -> bool:
@@ -342,11 +364,20 @@ def project_funding(inputs: FundingInputs) -> FundingProjection:
         # Headroom against the deepest intraday point, not the closing one.
         headroom = inputs.net_debit_cap + min(trough, Decimal(0))
 
+    unrecognised_fields = inputs.unrecognised_fields
+
     def build(
         disposition: FundingDisposition,
         rationale: str,
         funded_at: int | None = None,
     ) -> FundingProjection:
+        outcome = (
+            # An unrecognised outcome cannot be recorded as itself. The most
+            # conservative named state stands in, and the rationale says why.
+            DeterminationOutcome.QUALIFICATION_UNKNOWN
+            if "determination_outcome" in unrecognised_fields
+            else inputs.determination_outcome
+        )
         return FundingProjection(
             disposition=disposition,
             projected_position_at_settlement=committed,
@@ -358,7 +389,21 @@ def project_funding(inputs: FundingInputs) -> FundingProjection:
             funded_at_offset_seconds=funded_at,
             ladder=ladder,
             rationale=rationale,
-            determination_outcome=inputs.determination_outcome,
+            determination_outcome=outcome,
+        )
+
+    # -1. An input the model does not recognise, refused rather than guessed.
+    #     Before Wave 2 an unrecognised finality class skipped every identity
+    #     check below and fell through to FUNDED (ATR-I-05).
+    if unrecognised_fields:
+        values = ", ".join(
+            f"{name}={describe(getattr(inputs, name))}" for name in unrecognised_fields
+        )
+        return build(
+            FundingDisposition.INDETERMINATE,
+            f"Unrecognised input ({values}). Enum values must match a member "
+            f"exactly; the model declines to project rather than guess which "
+            f"treatment was meant (ATR-I-05).",
         )
 
     # 0. Contract violation, caught rather than guessed at.
