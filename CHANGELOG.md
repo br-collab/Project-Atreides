@@ -2,6 +2,15 @@
 
 Versions before 0.4.0 were tagged without a changelog; their contents are in the pull requests and in the commit history. This file starts at the Wave 2 release.
 
+## 0.4.1 — 18 Sep 2026
+
+Packaging only. No source change.
+
+- The `cannae-kernel` pin moved from `v0.1.0` to `v0.1.1` (#19).
+- The `[[tool.mypy.overrides]]` block with `follow_untyped_imports` for
+  `cannae_kernel` was deleted, because v0.1.1 ships a `py.typed` marker and
+  strict mypy reads its annotations directly.
+
 ## 0.4.0 — 17 Sep 2026
 
 Wave 2, part A of the Cannae Legion joint upgrade map (CL-JUM-001), tasking order W2A. Six work packages, pull requests #12 to #17. Aureon pins this tag in W2B-7.
