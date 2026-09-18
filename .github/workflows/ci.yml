@@ -89,9 +89,12 @@ jobs:
           uv sync --locked --extra dev
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       # SCOPED, AND THE SCOPE IS THE POINT. mypy strict is clean across the
-      # rails, contracts, messaging and dsor packages - everything the four
-      # recent builds touch - and is NOT clean across cockpit and agents,
-      # which carry ten pre-existing errors.
+      # rails, contracts, messaging, dsor, escalation and acceptance packages
+      # - everything the recent builds touch - and is NOT clean across
+      # cockpit, which carries five pre-existing errors, all in
+      # clearing_cockpit.py and all "Missing type arguments for generic type".
+      # Measured 18 Sep 2026; agents is clean and is excluded only because it
+      # is checked together with cockpit here.
       #
       # Those two packages are excluded here rather than the gate being
       # softened repo-wide, so the debt is named and visible instead of

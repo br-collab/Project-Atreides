@@ -518,8 +518,24 @@ def test_allocated_plus_residual_is_what_was_owed(
     published: bool,
     spans: bool,
 ) -> None:
-    """The conservation law of the settlement side. If this ever fails, a
-    residual has been dropped or invented."""
+    """The conservation law of the settlement side, for a position that owed
+    something. If this ever fails, a residual has been dropped or invented.
+
+    **Flat positions are excluded, by domain, not by weakening the assertion.**
+    A flat position owes nothing, so there is nothing to conserve; and when a
+    venue reports an allocation against one, ``settle_net_position``
+    deliberately keeps the venue's figure and raises
+    ``ALLOCATION_AGAINST_FLAT_POSITION`` rather than discarding it — see the
+    comment at that branch in ``atreides/rails/cns.py``. Conservation cannot
+    hold there by construction: the two records disagree, and that
+    disagreement is the break. Satisfying this assertion for a flat position
+    would require throwing the venue's figure away, which is the defect the
+    branch exists to prevent.
+
+    The flat case is asserted instead, with literal values, in
+    ``test_flat_position_keeps_a_reported_allocation_as_a_break``.
+    """
+    assume(quantity != 0)
     position = net_positions(
         (("SEC-A", quantity),), market_id="X", settlement_date_offset_days=1
     )[0]
@@ -539,6 +555,40 @@ def test_allocated_plus_residual_is_what_was_owed(
         return
     residual = result.residual.quantity if result.residual else Decimal(0)
     assert result.allocated_quantity + residual == position.quantity
+
+
+def test_flat_position_keeps_a_reported_allocation_as_a_break() -> None:
+    """A venue allocation against a flat position is kept and raised, not discarded.
+
+    The literal case Hypothesis found (``quantity=0.00``, ``allocated=0.01``),
+    pinned by an example that cannot stop being generated. This is the half of
+    the conservation law that the property above excludes: the framework does
+    not make the day read clean by dropping a movement the venue reported.
+    """
+    position = net_positions(
+        (("SEC-A", Decimal("0.00")),), market_id="X", settlement_date_offset_days=1
+    )[0]
+    assert position.quantity == Decimal("0.00")
+    profile = MarketProfile(
+        market_id="X",
+        settlement_cycle_days=1,
+        close_out_regime=CloseOutRegime.MANDATORY_DEADLINE,
+        close_out_deadline_days=3,
+        allocation_rule_published=False,
+        provenance="flat-position regression",
+    )
+
+    result = settle_net_position(
+        position, profile, allocated_quantity=Decimal("0.01"), spans_record_date=False
+    )
+
+    assert result.disposition is CNSDisposition.FLAT
+    assert result.allocated_quantity == Decimal("0.01"), "the venue's figure was discarded"
+    assert result.residual is None
+    assert any(
+        b.code is SecuritiesBreakCode.ALLOCATION_AGAINST_FLAT_POSITION for b in result.breaks
+    ), "no break was raised for an allocation against a flat position"
+    assert result.completed is False, "a day with an unexplained movement is not completed"
 
 
 @SETTINGS
