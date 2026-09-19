@@ -77,7 +77,6 @@ def test_full_cycle_emits_package_and_reconciles_clean():
     assert pkg.is_submission is False
     # Beat 3 persists the telemetry; validation (Beat 2) references no record.
     assert pkg.dsor_record_id is not None
-    assert pkg.dsor_pre_trade_record_id == pkg.dsor_record_id  # deprecated alias
 
     rb = cp.ingest_portal_readback(
         operation_id=t.operation_id, regime=PortalRegime.CCP,
@@ -200,7 +199,6 @@ def test_reconcile_classifies_breaks_by_leg_and_routes_to_workbench():
     tickets = cp.raise_break(recon, pkg.dsor_record_id)
     assert len(tickets) == 4
     assert all(tk.dsor_record_id == pkg.dsor_record_id for tk in tickets)
-    assert all(tk.dsor_pre_trade_record_id == tk.dsor_record_id for tk in tickets)  # alias
     assert all(tk.status == "OPEN_ON_WORKBENCH" for tk in tickets)
     assert len(cp.workbench) == 4
 
