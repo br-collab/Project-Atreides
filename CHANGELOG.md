@@ -2,18 +2,9 @@
 
 Versions before 0.4.0 were tagged without a changelog; their contents are in the pull requests and in the commit history. This file starts at the Wave 2 release.
 
-## Unreleased
+## 0.5.0 — 19 Sep 2026
 
-### The `cannae-kernel` pin moves to v1.0.0
-
-From `v0.1.1`. The kernel's Wave 3 releases (0.2.0 through 1.0.0) added the `measurement`, `absence`, `session`, `effects` and `envelopes` modules, and all five cross-domain envelopes are now frozen at 1.0. Every one of those releases is additive — no existing field, enum member or canonical-serialization rule changed, and the golden vectors carried forward byte-identical — so nothing here needed adapting.
-
-Verified rather than assumed: 1,439 passed, 1 xfailed, ruff clean and strict mypy clean against the installed v1.0.0.
-
-Nothing in Atreides uses the new modules yet. Adoption — `ObligationAcceptanceRecord` in particular, which is where `dsor_record` as `Recorded | Absent` belongs — is its own work package.
-
-
-Wave 3, tasking order `W3-contract-freeze.md` § R5. **Breaking**: a required field is removed from a public model.
+Wave 3, tasking order `W3-contract-freeze.md`. **Breaking**: a required field is removed from a public model. Aureon pins this tag.
 
 ### R5 — `dsor_pre_trade_record_id` resolved to one meaning
 
@@ -25,6 +16,14 @@ The name meant three different things across the boundary Wave 3 freezes. `GateR
   The order allowed for renaming it, on the reading that it named something different. It named nothing: the record's identity is `task_id`, and its upstream provenance is `lineage_stub`, which carries the operation, the authority tier and identifier, the pre-operation state hash and the `c2_handoff_id` slot. A third field naming none of those had nothing to name, so it is gone rather than renamed.
 
 Nothing outside this repository constructs `SettlementTaskingRecord`, so the break reaches no consumer today.
+
+### The `cannae-kernel` pin moves to v1.0.0
+
+From `v0.1.1`. The kernel's Wave 3 releases (0.2.0 through 1.0.0) added the `measurement`, `absence`, `session`, `effects` and `envelopes` modules, and all five cross-domain envelopes are now frozen at 1.0. Every one of those releases is additive — no existing field, enum member or canonical-serialization rule changed, and the golden vectors carried forward byte-identical — so nothing here needed adapting.
+
+Verified rather than assumed: 1,439 passed, 1 xfailed, ruff clean and strict mypy clean against the installed v1.0.0.
+
+Nothing in Atreides uses the new modules yet. Adoption — `ObligationAcceptanceRecord` in particular, which is where `dsor_record` as `Recorded | Absent` belongs — is its own work package.
 
 ## 0.4.1 — 18 Sep 2026
 
