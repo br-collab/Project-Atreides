@@ -2,6 +2,21 @@
 
 Versions before 0.4.0 were tagged without a changelog; their contents are in the pull requests and in the commit history. This file starts at the Wave 2 release.
 
+## Unreleased
+
+Wave 3, tasking order `W3-contract-freeze.md` § R5. **Breaking**: a required field is removed from a public model.
+
+### R5 — `dsor_pre_trade_record_id` resolved to one meaning
+
+The name meant three different things across the boundary Wave 3 freezes. `GateResult` lost it in 0.4.0. The remaining two are resolved here.
+
+- **Removed:** the `@property` aliases on `InstructionPackage` and `BreakTicket`, which returned `dsor_record_id` and were marked "Deprecated until Wave 3". An alias is a second meaning kept alive; `dsor_record_id` is the name, and it means the record written at emission.
+- **Removed (breaking):** `SettlementTaskingRecord.dsor_pre_trade_record_id`. It was not a DSOR reference. The cockpit set it to `uuid5(NAMESPACE_URL, f"atreides:cockpit:{pre_hash}")` — the same value it assigns to `task_id` — so it was a second copy of the record's own identifier, and no DSOR record with that identifier exists. The nine test fixtures passed an unrelated `uuid4()`, and nothing in any repository read it.
+
+  The order allowed for renaming it, on the reading that it named something different. It named nothing: the record's identity is `task_id`, and its upstream provenance is `lineage_stub`, which carries the operation, the authority tier and identifier, the pre-operation state hash and the `c2_handoff_id` slot. A third field naming none of those had nothing to name, so it is gone rather than renamed.
+
+Nothing outside this repository constructs `SettlementTaskingRecord`, so the break reaches no consumer today.
+
 ## 0.4.1 — 18 Sep 2026
 
 Packaging only. No source change.

@@ -278,8 +278,8 @@ class GateResult(_Frozen):
     Validation writes nothing (ATR-I-02), so this result references no DSOR
     record. It used to carry ``dsor_pre_trade_record_id``, which named the
     settlement telemetry validation had persisted - not a pre-trade record.
-    The DSOR record now comes from Beat 3 and is on the package as
-    ``dsor_record_id``.
+    That name is gone from the codebase (R5); the DSOR record comes from
+    Beat 3 and is on the package as ``dsor_record_id``.
     """
 
     operation_id: UUID
@@ -341,11 +341,6 @@ class InstructionPackage(_Frozen):
             return super().model_copy(deep=deep)
         return self.model_validate({**self.model_dump(), **update})
 
-    @property
-    def dsor_pre_trade_record_id(self) -> UUID | None:
-        """Deprecated until Wave 3: use ``dsor_record_id``. The record was never pre-trade."""
-        return self.dsor_record_id
-
 
 class PortalReadback(_Frozen):
     """Beat 5 inbound — operator-entered post-submission portal state.
@@ -389,11 +384,6 @@ class BreakTicket(_Frozen):
     dsor_record_id: UUID | None
     raised_at: datetime
     status: Literal["OPEN_ON_WORKBENCH"] = "OPEN_ON_WORKBENCH"
-
-    @property
-    def dsor_pre_trade_record_id(self) -> UUID | None:
-        """Deprecated until Wave 3: use ``dsor_record_id``. The record was never pre-trade."""
-        return self.dsor_record_id
 
 
 # ---------------------------------------------------------------------------
@@ -593,7 +583,6 @@ class ClearingCockpit:
             settlement_kind=tasking.settlement_kind,
             counterparty_id=tasking.counterparty_id,
             deadline=tasking.settlement_date,
-            dsor_pre_trade_record_id=derived,
             lineage_stub=lineage_stub,
             net_cusip=tasking.cusip,
             net_delivery_quantity=tasking.net_delivery_quantity,

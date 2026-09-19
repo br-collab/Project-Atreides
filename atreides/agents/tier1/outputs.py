@@ -102,7 +102,6 @@ class SettlementTaskingRecord(BaseModel):
     settlement_kind: SettlementKind
     counterparty_id: str
     deadline: datetime
-    dsor_pre_trade_record_id: UUID
     lineage_stub: DSORLineageStub
     doctrine_version: str = CURRENT_DOCTRINE_VERSION
 
