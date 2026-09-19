@@ -16,7 +16,7 @@ keywords = ["asset-services", "post-trade", "custody", "governance", "doctrine"]
 dependencies = [
     "pydantic>=2.6,<3.0",
     # Shared identifiers, digests, dispositions and halt context (CL-JUM-001 JUM-D-05).
-    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@v0.1.1",
+    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@v1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -90,7 +90,7 @@ python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
 
-# cannae-kernel v0.1.1 ships py.typed, so strict mypy reads its annotations
+# cannae-kernel ships py.typed (since v0.1.1), so strict mypy reads its annotations
 # directly. The follow_untyped_imports override is deleted, not disabled.
 
 [tool.pytest.ini_options]
