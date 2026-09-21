@@ -24,10 +24,10 @@ on:
 jobs:
   deep-properties:
     name: Property hunt (2,000 examples)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.1.0
         with:
           python-version: "3.11"
@@ -48,7 +48,7 @@ jobs:
       # can be reproduced rather than merely reported.
       - name: Preserve the example database
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hypothesis-examples
           path: .hypothesis/
