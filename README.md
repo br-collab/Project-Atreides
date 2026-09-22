@@ -367,6 +367,9 @@ inline so the code can be followed without it.
 
 MIT License — Copyright (c) 2026 Guillermo Ravelo. See [LICENSE](LICENSE).
 
+The ISO 20022 schemas in tests/fixtures/iso20022/ are not covered by the MIT
+licence; see the NOTICE there.
+
 This is academic work. It is produced on the capstone research track of the
 Columbia University M.S. Technology Management programme, the doctrine
 documents carry that framing on their own headers, and the status recorded

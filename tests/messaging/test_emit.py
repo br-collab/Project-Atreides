@@ -10,6 +10,7 @@ have thought to write. Only the schema caught them.
 
 from __future__ import annotations
 
+import hashlib
 import pathlib
 from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal
@@ -32,6 +33,12 @@ from atreides.messaging.profile import DTCC_SETTLEMENT_PENDING, FEDWIRE_PENDING
 from atreides.rails.cato_f import CashRail
 
 FIXTURES = pathlib.Path(__file__).parent.parent / "fixtures" / "iso20022"
+SCHEMA_SHA256 = {
+    "head.001.001.04.xsd": "73d68e98ec079806a23f37494ed47662a74cebfae91807bfbaacda3728d65796",
+    "pacs.002.001.16.xsd": "fa35ba75f6f22654bf82eadef689cd0c95ab620a7683bbad7602cef665e7c2f6",
+    "pacs.008.001.14.xsd": "e054014aabeb99ba0a59ddaaa9d925eb717f3c75e591551f246bddebc0764306",
+    "pacs.009.001.13.xsd": "81b1fcedad68faae63f56424db2e39a3ce873cb4537b6a284e3fafd3fab9691b",
+}
 T0 = datetime(2026, 7, 31, 15, 0, tzinfo=UTC)
 
 
@@ -57,6 +64,14 @@ def _instr(**kw) -> CashLegInstruction:
 
 
 # --- the tests that actually matter: real schema conformance ---------------
+
+
+def test_published_schemas_are_the_recorded_unmodified_copies() -> None:
+    schemas = {path.name: path for path in FIXTURES.glob("*.xsd")}
+    assert schemas.keys() == SCHEMA_SHA256.keys()
+    assert {
+        name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in schemas.items()
+    } == SCHEMA_SHA256
 
 
 class TestSchemaConformance:
