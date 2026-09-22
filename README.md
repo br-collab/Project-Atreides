@@ -1,5 +1,13 @@
 # Project Atreides — AI-assisted multi-asset settlement governance, with custodial routing
 
+> **Claim label: research.**
+> This repository is research code. It is not audited, not production-qualified, and
+> has never been used to move real money. Every surface that could reach a payment
+> rail refuses to by construction. The four labels this programme uses are *research*,
+> *experimental*, *validated* and *production-qualified*; all five repositories are at
+> the first, and this label changes only when evidence changes it.
+
+
 Atreides is a **governance layer for multi-asset settlement**. It sits above the
 systems that actually move securities and money, governs the decision behind each
 operation, selects the settlement path from an approved registry, and records the

@@ -10,7 +10,7 @@ Audited 11 September 2026 against the working tree.
 
 | What | Where | Source | Licence | Notes |
 |---|---|---|---|---|
-| ISO 20022 message schemas | `tests/fixtures/iso20022/*.xsd` | ISO 20022 Registration Authority, published message definitions | Published by the Registration Authority for implementation use | `pacs.008.001.14`, `pacs.009.001.13`, `pacs.002.001.16`, `head.001.001.04`. Held so emitted messages are validated against the real schema rather than a paraphrase of it. |
+| ISO 20022 message schemas | `tests/fixtures/iso20022/*.xsd` | ISO 20022 Registration Authority, published message definitions | **Redistribution terms not verified — see `tests/fixtures/iso20022/NOTICE.md`.** Published by the Registration Authority for implementation use, which is not a redistribution grant | `pacs.008.001.14`, `pacs.009.001.13`, `pacs.002.001.16`, `head.001.001.04`. Held so emitted messages are validated against the real schema rather than a paraphrase of it. |
 | Three `pacs.002` status reports | `tests/fixtures/third_party/issettled/` | `github.com/issettled/iso20022-issettled`, retrieved 14 August 2026 | **Apache License 2.0**, full text and `NOTICE.md` alongside the files | Unmodified. Retained verbatim including the proprietary envelope and signature block, because the point of holding them is that they are not what this framework would have written. Apache 2.0 permits redistribution, so they travel lawfully under this repository's own grant. |
 | Doctrine documents | `doctrine/*.md` | Authored by the repository owner | MIT, with the rest of the repository | `AUR-CANONICAL-001`, `AUR-CUSTODY-001`, `AUR-COCKPIT-001` and the path sets. |
 | Everything else | source, tests, docs | Authored by the repository owner | MIT | |
