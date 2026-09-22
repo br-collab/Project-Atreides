@@ -66,7 +66,7 @@ from atreides.messaging.readback import (  # noqa: E402
     absent_readback,
     ingest_readback,
 )
-from atreides.rails.cato_f import (  # noqa: E402
+from atreides.rails.cato_cash import (  # noqa: E402
     CashRail,
     OperationContext,
     RailState,

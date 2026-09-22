@@ -83,7 +83,7 @@ treatment and completely different remedies: one is a research task, the
 other is a risk acceptance. Collapsing them would let an unread venue pass
 as a clean one.
 
-Architectural contract: PURE, NO I/O, NO CLOCK. Same as CATO-F. Elapsed
+Architectural contract: PURE, NO I/O, NO CLOCK. Same as Cato Cash. Elapsed
 time since determination arrives as a scalar from the caller; this module
 never asks what time it is, which is what keeps a classification
 replayable from its recorded inputs.

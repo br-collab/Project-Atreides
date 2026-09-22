@@ -3,7 +3,7 @@
 DRAFT, ``0.1-draft`` (JUM-D-26). One record kind per lifecycle fact the first
 settlement slice needs to journal. The obligation acceptance record
 (:mod:`atreides.acceptance.record`) and the cash-gate decision record
-(:mod:`atreides.rails.cato_f_record`) live beside the code that produces them;
+(:mod:`atreides.rails.cato_cash_record`) live beside the code that produces them;
 the kinds below have no other home yet.
 
 Store subject: the DSOR store allows one original record per ``operation_id``,

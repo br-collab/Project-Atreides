@@ -14,7 +14,7 @@ from atreides.messaging import (
     emit_instruction_artifact,
     settlement_method_for_rail,
 )
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     CashRail,
     FinalityClass,
     OperationContext,
@@ -55,7 +55,7 @@ pf = project_funding(funded)
 print(f"\n  funded case        : {pf.disposition.value}  (settles={pf.settles})")
 
 # ---- 2. Which rail, and how final? -------------------------------------
-line("2. CATO-F — which cash rail, and what finality?")
+line("2. Cato Cash — which cash rail, and what finality?")
 rails = {
     CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200),
     CashRail.CHIPS: RailState(CashRail.CHIPS, RailStatus.AVAILABLE, 7200),

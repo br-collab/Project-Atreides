@@ -78,7 +78,7 @@ class SettlementMethodKind(StrEnum):
     """Single irreversible operation, typically on-chain. Securities and
     cash legs settle simultaneously through smart-contract execution.
     Eliminates settlement-risk window structurally. Available today on
-    tokenized rails (Ethereum L1, Base, Arbitrum, Solana per Cato);
+    tokenized rails (Ethereum L1, Base, Arbitrum, Solana per Cato Sec);
     anticipated for wholesale infrastructure (PORTS-aligned)."""
 
     CONDITIONAL = "conditional"
@@ -172,8 +172,8 @@ class AtomicSettlement(_SettlementMethodBase):
     """Atomic on-chain settlement. Per Section V and Section X
     (forward-state framework — atomic settlement governance).
 
-    The ``rail`` field carries the Cato-validated rail identifier. Rail
-    selection is governed by the Cato gate (canonical Section II); this
+    The ``rail`` field carries the Cato Sec-validated rail identifier. Rail
+    selection is governed by the Cato Sec gate (canonical Section II); this
     contract carries the rail decision rather than evaluating it.
     """
 
@@ -181,7 +181,7 @@ class AtomicSettlement(_SettlementMethodBase):
     rail: str = Field(
         min_length=1,
         description=(
-            "Cato-validated atomic rail (e.g., 'ethereum_l1', 'base', "
+            "Cato Sec-validated atomic rail (e.g., 'ethereum_l1', 'base', "
             "'arbitrum', 'solana', 'fed_l1' when PORTS-aligned wholesale "
             "infrastructure is operational)."
         ),

@@ -41,7 +41,7 @@ which are in scope for this build**:
   `QuorumAuthorityRequired` packages this agent produces
 - Rail integration (Fedwire, CHIPS, Target2, etc.) — consumes
   `RoutingDecision` outputs
-- The Cato-equivalent FIAT-rail governance gate per CUS Section X —
+- The Cato Sec-equivalent FIAT-rail governance gate per CUS Section X —
   feeds the agent forward-state routing context (anticipated work)
 
 The agent **produces routing decisions; it does not execute**. It
@@ -145,8 +145,8 @@ load-bearing items:
   MMFs, and global large-value systems requires external data sources
   (SWIFT BIC directory, depository membership rosters, fund-vendor
   data) and is operational-specification work.
-- **Cato-equivalent FIAT-rail governance gate** — per CUS Section X,
-  a FIAT-rail equivalent of the Cato governance gate is anticipated
+- **Cato Sec-equivalent FIAT-rail governance gate** — per CUS Section X,
+  a FIAT-rail equivalent of the Cato Sec governance gate is anticipated
   doctrine work. The agent is built to **consume** gate decisions
   when present; it does not provide gate logic.
 - **External eligibility-service integration** — `eligibility.py` runs

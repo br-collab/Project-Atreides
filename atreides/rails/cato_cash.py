@@ -1,13 +1,13 @@
-"""CATO-F — FIAT/cash settlement-rail governance gate.
+"""Cato Cash (``cato_cash``) — cash settlement-rail governance gate.
 
 Per AUR-CUSTODY-CASH-001 v0.2 Section V (gate specification) and
 AUR-CUSTODY-001 v1.0 Section X as amended by AUR-CUSTODY-AMD-001
 (FIAT settlement-rail governance reclassified from forward-state to
 present-state build obligation).
 
-CATO-F is the cash-leg twin of Cato. It stands in the 1:1 parity
+Cato Cash is the cash-leg counterpart of Cato Sec. It stands in the 1:1 parity
 AUR-CUSTODY-001 Section VI and Section X commit the framework to:
-Cato governs the securities/tokenized rail, CATO-F governs the cash
+Cato Sec governs the securities/tokenized rail, Cato Cash governs the cash
 rail, and neither decides the settlement method alone (Section VI of
 CASH-001 — the joint resolver).
 
@@ -15,8 +15,8 @@ Architectural contract — PURE, NO I/O
 -------------------------------------
 This module makes no network calls, reads no files, and consults no
 clock. Every input arrives as a scalar or frozen value object, exactly
-as the Cato Python twin receives FRED/Blockscout/CoinGecko state via
-scalar parameters from the caller's refresh loop. Per the Cato
+as the Cato Sec Python twin receives FRED/Blockscout/CoinGecko state via
+scalar parameters from the caller's refresh loop. Per the Cato Sec
 invariant: *any endpoint that makes a network call in the request
 handler is a bug.* Input refresh is the caller's responsibility.
 
@@ -26,9 +26,9 @@ reproducible from its recorded inputs alone, which is what
 
 Parity
 ------
-Per AUR-CUSTODY-CASH-001 Section V.F, if CATO-F is ever exposed through
+Per AUR-CUSTODY-CASH-001 Section V.F, if Cato Cash is ever exposed through
 a second implementation (external MCP surface, licensee-side twin), the
-Cato Parity Principle applies without modification: bit-for-bit
+Cato Sec Parity Principle applies without modification: bit-for-bit
 identical decisions for identical inputs, golden vectors run in both
 implementations in CI, doctrine changes landing in both in the same
 commit series. GOLDEN_VECTORS below is the shared fixture for that.
@@ -67,7 +67,7 @@ __all__ = [
     "OFR_STRESS_PREFERENCE_THRESHOLD",
     "RAIL_FINALITY",
     "CashRail",
-    "CatoFDecision",
+    "CatoCashDecision",
     "Counterparty",
     "CounterpartyStanding",
     "FinalityClass",
@@ -88,11 +88,11 @@ DOCTRINE_VERSION: Final[str] = "AUR-CUSTODY-CASH-001-v0.2"
 #: Version of the check set evaluate() runs, recorded on every decision so a
 #: replay can tell "same inputs, same gates" from "same inputs, newer gates".
 #: Wave 2 (W2A-1, W2A-3) added the unrecognised-input and halt checks.
-GATE_SET_VERSION: Final[str] = "cato-f-gates/0.3"
+GATE_SET_VERSION: Final[str] = "cato-cash-gates/0.3"
 
 _DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 
-# Stress thresholds are deliberately identical to Cato's OFR STLFSI4
+# Stress thresholds are deliberately identical to Cato Sec's OFR STLFSI4
 # bands. The cash leg and the securities leg respond to systemic stress
 # identically — that is what parity means operationally, and sharing the
 # threshold constants makes the parity structural rather than a matter
@@ -110,7 +110,7 @@ OFR_STRESS_PREFERENCE_THRESHOLD: Final[float] = 0.25
 
 
 class GateDecision(StrEnum):
-    """Gate disposition. Mirrors Cato's PROCEED / HOLD / ESCALATE."""
+    """Gate disposition. Mirrors Cato Sec's PROCEED / HOLD / ESCALATE."""
 
     PROCEED = "PROCEED"
     """Cleared. The operation may be released."""
@@ -141,7 +141,7 @@ class CashRail(StrEnum):
     REGULATED_STABLECOIN = "regulated_stablecoin"
     """Regulated payment stablecoin. Ledger-final."""
     # Reserved placeholder. ALWAYS present in rail state, NEVER removed.
-    # Mirrors the Cato `fed_l1` invariant exactly: when wholesale
+    # Mirrors the Cato Sec `fed_l1` invariant exactly: when wholesale
     # tokenized settlement infrastructure ships, the rail-state shape
     # does not change — only the status field flips. Rail addition is a
     # doctrine non-event by design (CASH-001 Section III).
@@ -593,7 +593,7 @@ class OperationContext:
 
 
 @dataclass(frozen=True, slots=True)
-class CatoFDecision:
+class CatoCashDecision:
     """Gate output per AUR-CUSTODY-CASH-001 Section V.D.
 
     Every field is recorded in the DSOR lineage. A decision that cannot
@@ -824,7 +824,7 @@ def evaluate(
     obligation_id: str | None = None,
     obligation_digest: str | None = None,
     halt: HaltContext | None = None,
-) -> CatoFDecision:
+) -> CatoCashDecision:
     """Evaluate the cash leg. Deterministic, pure, replayable.
 
     Checks run in the order fixed by AUR-CUSTODY-CASH-001 Section V.B.
@@ -839,7 +839,7 @@ def evaluate(
     """
     # A declared halt outranks every other input (ATR-I-06).
     if halt is not None and gate_under_halt(halt, Domain.ATREIDES) is Disposition.BLOCK:
-        return CatoFDecision(
+        return CatoCashDecision(
             decision=GateDecision.HOLD,
             reason_code=ReasonCode.HALT_ACTIVE,
             recommended_rail=None,
@@ -865,7 +865,7 @@ def evaluate(
             (f"unrecognised:{name}", describe(getattr(operation, name)))
             for name in unrecognised_fields
         )
-        return CatoFDecision(
+        return CatoCashDecision(
             decision=GateDecision.HOLD,
             reason_code=ReasonCode.INPUT_UNRECOGNISED,
             recommended_rail=None,
@@ -928,8 +928,8 @@ def evaluate(
         reason: ReasonCode,
         rationale: str,
         rail: CashRail | None = None,
-    ) -> CatoFDecision:
-        return CatoFDecision(
+    ) -> CatoCashDecision:
+        return CatoCashDecision(
             decision=decision,
             reason_code=reason,
             recommended_rail=rail,
@@ -1027,7 +1027,7 @@ def evaluate(
             ReasonCode.SYSTEMIC_STRESS_ESCALATE,
             f"OFR STLFSI4 {ofr_stlfsi4} exceeds {OFR_ESCALATE_THRESHOLD}; "
             f"systemic stress routes to human authority (CASH-001 SV.B.1, "
-            f"Cato parity band).",
+            f"Cato Sec parity band).",
         )
 
     # 2. Material magnitude — quorum-required, quorum architecturally
@@ -1134,7 +1134,7 @@ def evaluate(
             GateDecision.HOLD,
             ReasonCode.BROAD_STRESS_HOLD,
             f"OFR STLFSI4 {ofr_stlfsi4} exceeds {OFR_HOLD_THRESHOLD}; broad "
-            f"settlement-system stress (CASH-001 SV.B.5, Cato parity band).",
+            f"settlement-system stress (CASH-001 SV.B.5, Cato Sec parity band).",
         )
 
     # 6. Timing infeasible — no rail open, reachable, AND able to carry
@@ -1302,7 +1302,7 @@ def evaluate(
     return _decide(GateDecision.PROCEED, ReasonCode.CLEARED, rationale, rail)
 
 
-def absent_gate_decision(reason: str = "CATO-F unavailable") -> CatoFDecision:
+def absent_gate_decision(reason: str = "Cato Cash unavailable") -> CatoCashDecision:
     """The absent-gate default per AUR-CUSTODY-CASH-001 Section V.E: HOLD.
 
     Callers MUST use this when the gate is unavailable, unreachable, or
@@ -1314,7 +1314,7 @@ def absent_gate_decision(reason: str = "CATO-F unavailable") -> CatoFDecision:
     convention so that "what happens when the gate is missing" is answered
     in one auditable place instead of at every call site.
     """
-    return CatoFDecision(
+    return CatoCashDecision(
         decision=GateDecision.HOLD,
         reason_code=ReasonCode.GATE_UNAVAILABLE,
         recommended_rail=None,
@@ -1330,7 +1330,7 @@ def absent_gate_decision(reason: str = "CATO-F unavailable") -> CatoFDecision:
 
 # ---------------------------------------------------------------------------
 # Golden vectors — the shared parity fixture (CASH-001 Section V.F).
-# Any second implementation of CATO-F must reproduce these exactly.
+# Any second implementation of Cato Cash must reproduce these exactly.
 # ---------------------------------------------------------------------------
 
 def _std_rails() -> dict[CashRail, RailState]:

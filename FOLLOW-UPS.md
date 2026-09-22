@@ -111,9 +111,9 @@ The original entry is retained below for the record.
   respectively"). This build provides the policy-injection interface;
   threshold population is a downstream operational specification
   concern.
-- **Cato-equivalent FIAT-rail governance gate.** Per AUR-CUSTODY-001
+- **Cato Sec-equivalent FIAT-rail governance gate.** Per AUR-CUSTODY-001
   v1.0 Section X (FIAT Settlement-Rail Governance), a FIAT-rail
-  equivalent of the Cato governance gate is anticipated as forthcoming
+  equivalent of the Cato Sec governance gate is anticipated as forthcoming
   doctrine work. The FIAT Operations Specialist is built to **consume**
   gate decisions when they are present (the `RoutingRecommendation`
   carries the path identifier; future iterations may carry an embedded
@@ -200,7 +200,7 @@ contracts.
   minimum lineage fields. Full DSOR (the Thifur-C2-assembled unified
   lineage record) lives in `aureon/dsor/`.
 - **Rail integration layer.** FIAT-rail governance gate (AUR-CUSTODY-001
-  v1.0 Section X 1:1 parity with Cato), atomic settlement governance,
+  v1.0 Section X 1:1 parity with Cato Sec), atomic settlement governance,
   PORTS-aligned wholesale tokenized infrastructure activation.
   `aureon/rails/`.
 - **Settlement-method-to-asset-class compatibility validators.** The

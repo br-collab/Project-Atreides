@@ -10,7 +10,7 @@ from decimal import Decimal
 
 import pytest
 
-from atreides.rails.cato_f import FinalityClass, FundingState
+from atreides.rails.cato_cash import FinalityClass, FundingState
 from atreides.rails.funding_state import (
     CashFlow,
     FundingDisposition,
@@ -220,7 +220,7 @@ class TestHardControls:
         assert p.disposition is FundingDisposition.CLEARING_FUND_DEFICIENT
 
 
-# --- the happy path and the CATO-F handoff ---------------------------------
+# --- the happy path and the Cato Cash handoff ---------------------------------
 
 
 class TestFundedAndHandoff:
@@ -230,7 +230,7 @@ class TestFundedAndHandoff:
         assert p.settles
         assert p.shortfall == D("0")
 
-    def test_to_gate_input_produces_a_cato_f_funding_state(self) -> None:
+    def test_to_gate_input_produces_a_cato_cash_funding_state(self) -> None:
         p = project_funding(_inputs())
         gate_input = p.to_gate_input()
         assert isinstance(gate_input, FundingState)

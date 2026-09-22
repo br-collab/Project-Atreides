@@ -1,9 +1,9 @@
 """ATR-I-06 regression: one halt context, honoured by every layer that could proceed.
 
 Before Wave 2 the Tier 0 halt was a predicate the cockpit consulted at its own
-primitives only: CATO-F had no halt parameter and returned PROCEED with the
+primitives only: Cato Cash had no halt parameter and returned PROCEED with the
 cockpit halted (stress case H6.2). W2A-3 passes the kernel ``HaltContext``
-through CATO-F, the Tier 1 analyst, the preparation stage and the cockpit
+through Cato Cash, the Tier 1 analyst, the preparation stage and the cockpit
 (the Tier 2 specialist is covered in its own test module), and the cockpit's
 ``halt_check`` now produces that context rather than being a second mechanism.
 """
@@ -40,7 +40,7 @@ from atreides.messaging.canonical import (
     SettlementMethod,
 )
 from atreides.messaging.emit import PreparationHaltedError, emit_instruction_artifact
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     CashRail,
     FundingState,
     GateDecision,
@@ -79,7 +79,7 @@ BLOCKING = [_halt(), _halt(scope=(Domain.ATREIDES,)), _halt(scope=(Domain.LC, Do
 NOT_BLOCKING = [_halt(active=False), _halt(scope=(Domain.AUREON, Domain.LC))]
 
 
-# ---- CATO-F ---------------------------------------------------------------------------------
+# ---- Cato Cash ---------------------------------------------------------------------------------
 
 
 def _gate(halt: HaltContext | None) -> Any:

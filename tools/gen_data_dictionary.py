@@ -48,7 +48,7 @@ SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "willing to assert about each.",
         (
             "atreides.rails.finality",
-            "atreides.rails.cato_f",
+            "atreides.rails.cato_cash",
             "atreides.rails.funding_state",
             "atreides.rails.determination",
             "atreides.rails.cns",

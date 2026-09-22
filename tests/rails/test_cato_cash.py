@@ -1,4 +1,4 @@
-"""Tests for CATO-F — the FIAT/cash settlement-rail gate.
+"""Tests for Cato Cash — the cash settlement-rail gate.
 
 Exercises the Section V.B check ordering, the Section V.C rail ladder,
 the Section V.E absent-gate default, and the Section III PORTS
@@ -11,12 +11,12 @@ from decimal import Decimal
 
 import pytest
 
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     GOLDEN_VECTORS,
     OFR_HOLD_THRESHOLD,
     OFR_STRESS_PREFERENCE_THRESHOLD,
     CashRail,
-    CatoFDecision,
+    CatoCashDecision,
     Counterparty,
     CounterpartyStanding,
     FinalityClass,
@@ -68,7 +68,7 @@ def _op(**kw: object) -> OperationContext:
     return OperationContext(**defaults)  # type: ignore[arg-type]
 
 
-def _eval(**kw: object) -> CatoFDecision:
+def _eval(**kw: object) -> CatoCashDecision:
     params: dict[str, object] = {
         "operation": _op(),
         "funding": _funded(),
@@ -497,9 +497,9 @@ def test_the_rail_ladder_has_no_unreachable_assertion() -> None:
     """
     import inspect
 
-    from atreides.rails import cato_f
+    from atreides.rails import cato_cash
 
-    source = inspect.getsource(cato_f._recommend_rail)
+    source = inspect.getsource(cato_cash._recommend_rail)
     # The comment explaining why the assertion was removed mentions it by
     # name, so test the executable lines rather than the prose.
     code = "\n".join(
@@ -963,7 +963,7 @@ def _ledger_only() -> dict[CashRail, RailState]:
     }
 
 
-def _off_hours(perimeter: SettlementPerimeter) -> CatoFDecision:
+def _off_hours(perimeter: SettlementPerimeter) -> CatoCashDecision:
     return evaluate(
         operation=_op(
             within_business_hours=False,

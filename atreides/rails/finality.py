@@ -2,14 +2,14 @@
 
 Per AUR-CUSTODY-CASH-001 Section IV.
 
-This enum was originally defined inside CATO-F, which was correct while
+This enum was originally defined inside Cato Cash, which was correct while
 the gate was its only consumer. It now has four: the gate, the intraday
 funding model, the determination classifier, and the proposed margin model.
 Extracting it here is the honest layering, and it also breaks the import
 cycle that the determination classifier would otherwise create - that
-module needs FinalityClass, and CATO-F needs the determination vocabulary.
+module needs FinalityClass, and Cato Cash needs the determination vocabulary.
 
-``atreides.rails.cato_f`` re-exports ``FinalityClass``, so every existing
+``atreides.rails.cato_cash`` re-exports ``FinalityClass``, so every existing
 import site keeps working unchanged. Nothing about the enum's meaning moved
 with it.
 """

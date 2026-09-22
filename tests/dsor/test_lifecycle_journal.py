@@ -45,14 +45,14 @@ from atreides.dsor.lifecycle_records import (
     ReconciliationResultRecord,
 )
 from atreides.messaging.readback import SettlementStatus
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     CashRail,
     FundingState,
     OperationContext,
     RailState,
     RailStatus,
 )
-from atreides.rails.cato_f_record import CatoFDecisionRecord
+from atreides.rails.cato_cash_record import CatoCashDecisionRecord
 from tests.acceptance.test_acceptance import _candidate, _gate
 
 T0 = datetime(2026, 9, 17, 18, 0, tzinfo=UTC)
@@ -86,7 +86,7 @@ def _halt(active: bool) -> HaltContext:
 def _lifecycle(store: DSORStore) -> list[Any]:
     """One settlement lifecycle, each fact appended one minute after the last."""
     candidate = _candidate()
-    gate = CatoFDecisionRecord.capture(
+    gate = CatoCashDecisionRecord.capture(
         decision_id=uuid.uuid4(),
         lifecycle_id=LIF,
         operation=OperationContext(
@@ -179,7 +179,7 @@ def test_union_carries_every_lifecycle_kind_and_keeps_the_deprecated_alias() -> 
     assert AureonOutput is SettlementDomainOutput
     names = str(SettlementDomainOutput)
     for kind in (
-        "CatoFDecisionRecord",
+        "CatoCashDecisionRecord",
         "ObligationAcceptanceRecord",
         "HaltRecord",
         "InstructionPreparedRecord",
@@ -227,7 +227,7 @@ def test_lifecycle_journal_verifies_and_renders_deterministically() -> None:
     assert envelopes[5].provenance is Provenance.FACT_SYNTHETIC
     assert envelopes[6].actor.actor_kind is ActorKind.EXTERNAL_EMULATOR
     assert envelopes[3].rule_version == "obligation-acceptance/0.1-draft"
-    assert envelopes[2].rule_version == "cato-f-gates/0.3"
+    assert envelopes[2].rule_version == "cato-cash-gates/0.3"
     assert isinstance(first.payload, DSORRecordRef)
     assert first.payload.stored_payload_digest == digest_bytes(
         store.payload_bytes(records[0].record_id)

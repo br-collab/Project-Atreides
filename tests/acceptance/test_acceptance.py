@@ -42,7 +42,7 @@ from atreides.messaging.canonical import (
     SettlementMethod,
 )
 from atreides.messaging.emit import PreparationHaltedError
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     CashRail,
     FundingState,
     GateDecision,
@@ -153,7 +153,7 @@ def test_clean_candidate_with_a_bound_proceed_is_accepted() -> None:
     assert record.obligation_digest == digest(candidate)
     assert record.rule_version == ACCEPTANCE_RULE_VERSION
     assert record.reason_codes == ()
-    assert dict(record.data_versions)["cato_f_gate_set"] == "cato-f-gates/0.3"
+    assert dict(record.data_versions)["cato_cash_gate_set"] == "cato-cash-gates/0.3"
     assert set(_by_name(record)) == {
         "required_fields_present",
         "no_unknown_enums",

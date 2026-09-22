@@ -71,9 +71,9 @@ from atreides.contracts import (
     OrdinarySafekeepingObject,
     Representation,
 )
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     CashRail,
-    CatoFDecision,
+    CatoCashDecision,
     FinalityClass,
     GateDecision,
     ReasonCode,
@@ -81,7 +81,7 @@ from atreides.rails.cato_f import (
 
 __all__ = [
     "SYNTHETIC_OPERATOR",
-    "cato_f_proceed",
+    "cato_cash_proceed",
     "investigation_lineage",
     "investigation_unit",
     "path_selection_unit",
@@ -236,14 +236,14 @@ def investigation_unit(
 # Tier 2 — FIAT Operations Specialist --------------------------------------------------
 
 
-def cato_f_proceed() -> CatoFDecision:
-    """A cleared CATO-F cash-leg gate decision, bound to a synthetic obligation.
+def cato_cash_proceed() -> CatoCashDecision:
+    """A cleared Cato Cash cash-leg gate decision, bound to a synthetic obligation.
 
     Bound rather than unbound because Tier 2 refuses an unbound PROCEED
     (ATR-I-04), and an activation that only ever fed the agent input it refuses
     would tell us nothing about the routing path.
     """
-    return CatoFDecision(
+    return CatoCashDecision(
         decision=GateDecision.PROCEED,
         reason_code=ReasonCode.CLEARED,
         recommended_rail=CashRail.FEDWIRE,
@@ -326,6 +326,6 @@ def path_selection_unit(tick: int, at: datetime) -> PathSelectionRequest:
             attributed_at=at,
         ),
         emitted_at=at,
-        cato_f_decision=cato_f_proceed(),
+        cato_cash_decision=cato_cash_proceed(),
         amount=Decimal("1500000.00"),
     )

@@ -58,7 +58,7 @@ For that reason `is_failure` deliberately excludes `WILL_QUEUE`, and the model r
 - Treating all six dispositions as one: no operator can tell "wait" from "fix it," which is the difference between a non-event and a break.
 
 **Doctrine and Provenance Note:**
-Finality class drives treatment. The funding model reads the rail's finality class before it interprets a shortfall, because the same shortfall means different things on gross-final, deferred-net, ledger-final, and correspondent-dependent rails. Where the gate is unavailable the answer is HOLD, never PROCEED: `absent_gate_decision()` is a named exported function so that "what happens when governance did not run" is answered in one auditable place rather than at every call site. Governing doctrine: `AUR-CUSTODY-CASH-001`, CATO-F specification. Inputs are synthetic; gate decisions are implemented and tested; live rail execution is roadmap.
+Finality class drives treatment. The funding model reads the rail's finality class before it interprets a shortfall, because the same shortfall means different things on gross-final, deferred-net, ledger-final, and correspondent-dependent rails. Where the gate is unavailable the answer is HOLD, never PROCEED: `absent_gate_decision()` is a named exported function so that "what happens when governance did not run" is answered in one auditable place rather than at every call site. Governing doctrine: `AUR-CUSTODY-CASH-001`, Cato Cash specification. Inputs are synthetic; gate decisions are implemented and tested; live rail execution is roadmap.
 
 **Rubric:**
 

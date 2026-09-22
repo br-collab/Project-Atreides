@@ -91,7 +91,7 @@ Immutable DSOR record wrapping one :data:`SettlementDomainOutput`.
 | `record_id` | `UUID` | no | Unique record identifier. Independent of the embedded output's operation_id — a correction for the same operation gets a new record_id. |
 | `dtg` | `datetime` | yes | UTC DTG stamp at record assembly time. |
 | `kind` | `Literal` | yes | Discriminator matching output.kind. |
-| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_f_record.CatoFDecisionRecord \| acceptance.record.ObligationAcceptanceRecord \| dsor.lifecycle_records.HaltRecord \| dsor.lifecycle_records.InstructionPreparedRecord \| dsor.lifecycle_records.RailStatusObservedRecord \| dsor.lifecycle_records.FinalityAssertedRecord \| dsor.lifecycle_records.ReconciliationResultRecord` | yes | The agent output this record wraps. |
+| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_cash_record.CatoCashDecisionRecord \| acceptance.record.ObligationAcceptanceRecord \| dsor.lifecycle_records.HaltRecord \| dsor.lifecycle_records.InstructionPreparedRecord \| dsor.lifecycle_records.RailStatusObservedRecord \| dsor.lifecycle_records.FinalityAssertedRecord \| dsor.lifecycle_records.ReconciliationResultRecord` | yes | The agent output this record wraps. |
 | `correction_of` | `uuid.UUID \| None` | no | record_id of the record this corrects. The original is preserved unchanged per Axiom 4 (immutable lineage). None for initial records. |
 
 ---
@@ -114,7 +114,7 @@ Finality classes per AUR-CUSTODY-CASH-001 Section IV.
 | `CORRESPONDENT_DEPENDENT` | Finality is not observable to the originator. An epistemic state rather than a mechanism, and the most dangerous of the four for exactly that reason - the state is unknown rather than merely deferred. |
 | `DETERMINATION_DEPENDENT` | Obligation-level only. The cash movement is irrevocable on its rail's own terms, and the venue retains authority to cancel the contract and return the funds, so the value can still be taken back for reasons the rail knows nothing about. NEVER appears in ``RAIL_FINALITY``; supplying it as a rail's class is a caller error and is refused rather than guessed at. |
 
-### `atreides.rails.cato_f`
+### `atreides.rails.cato_cash`
 
 #### `CashRail` (enumeration)
 
@@ -132,7 +132,7 @@ The cash-rail universe per AUR-CUSTODY-CASH-001 Section III.
 | `regulated_stablecoin` | Regulated payment stablecoin. Ledger-final. |
 | `ports_wholesale` | Reserved placeholder for wholesale tokenized settlement infrastructure. Always present in rail state and never removed, so that its arrival flips a status field rather than changing the shape of the record. |
 
-#### `CatoFDecision`
+#### `CatoCashDecision`
 
 Gate output per AUR-CUSTODY-CASH-001 Section V.D.
 
@@ -151,7 +151,7 @@ Gate output per AUR-CUSTODY-CASH-001 Section V.D.
 | `settlement_perimeter` | `SettlementPerimeter` | `<SettlementPerimeter.NOT_ASSESSED: 'NOT_ASSESSED'>` |
 | `obligation_id` | `str \| None` | `None` |
 | `obligation_digest` | `str \| None` | `None` |
-| `gate_set_version` | `str` | `'cato-f-gates/0.3'` |
+| `gate_set_version` | `str` | `'cato-cash-gates/0.3'` |
 
 #### `Counterparty`
 
@@ -200,7 +200,7 @@ Intraday funding state per AUR-CUSTODY-CASH-001 Section VII.
 
 #### `GateDecision` (enumeration)
 
-Gate disposition. Mirrors Cato's PROCEED / HOLD / ESCALATE.
+Gate disposition. Mirrors Cato Sec's PROCEED / HOLD / ESCALATE.
 
 | Value | Meaning |
 | --- | --- |

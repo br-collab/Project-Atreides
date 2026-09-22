@@ -43,13 +43,13 @@ from atreides.dsor.lifecycle_records import (
     RailStatusObservedRecord,
     ReconciliationResultRecord,
 )
-from atreides.rails.cato_f_record import CatoFDecisionRecord
+from atreides.rails.cato_cash_record import CatoCashDecisionRecord
 
 SettlementDomainOutput = (
     RoutingDecision | EscalationRequired | QuorumAuthorityRequired
     | SettlementTelemetry | SettlementEscalation
     | EvidenceTimeline | InvestigationEscalation
-    | CatoFDecisionRecord | ObligationAcceptanceRecord | HaltRecord
+    | CatoCashDecisionRecord | ObligationAcceptanceRecord | HaltRecord
     | InstructionPreparedRecord | RailStatusObservedRecord
     | FinalityAssertedRecord | ReconciliationResultRecord
 )
