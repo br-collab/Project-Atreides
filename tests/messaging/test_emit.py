@@ -33,7 +33,8 @@ from atreides.messaging.profile import DTCC_SETTLEMENT_PENDING, FEDWIRE_PENDING
 from atreides.rails.cato_f import CashRail
 
 FIXTURES = pathlib.Path(__file__).parent.parent / "fixtures" / "iso20022"
-SCHEMA_SHA256 = {
+FIXTURE_SHA256 = {
+    "NOTICE.md": "87fd9f1c3594436d55edd8782d5be6c021ca8c020d373c819108d9a9af32580d",
     "head.001.001.04.xsd": "73d68e98ec079806a23f37494ed47662a74cebfae91807bfbaacda3728d65796",
     "pacs.002.001.16.xsd": "fa35ba75f6f22654bf82eadef689cd0c95ab620a7683bbad7602cef665e7c2f6",
     "pacs.008.001.14.xsd": "e054014aabeb99ba0a59ddaaa9d925eb717f3c75e591551f246bddebc0764306",
@@ -66,12 +67,12 @@ def _instr(**kw) -> CashLegInstruction:
 # --- the tests that actually matter: real schema conformance ---------------
 
 
-def test_published_schemas_are_the_recorded_unmodified_copies() -> None:
-    schemas = {path.name: path for path in FIXTURES.glob("*.xsd")}
-    assert schemas.keys() == SCHEMA_SHA256.keys()
+def test_published_fixtures_are_the_recorded_unmodified_copies() -> None:
+    fixtures = {path.name: path for path in FIXTURES.iterdir() if path.is_file()}
+    assert fixtures.keys() == FIXTURE_SHA256.keys()
     assert {
-        name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in schemas.items()
-    } == SCHEMA_SHA256
+        name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in fixtures.items()
+    } == FIXTURE_SHA256
 
 
 class TestSchemaConformance:
