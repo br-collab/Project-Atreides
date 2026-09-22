@@ -1,15 +1,15 @@
-"""The CATO-F decision as a decision of record (ATR-I-04; stress case E7.5).
+"""The Cato Cash decision as a decision of record (ATR-I-04; stress case E7.5).
 
-CATO-F is pure and writes nothing, by architectural contract. Before Wave 2
+Cato Cash is pure and writes nothing, by architectural contract. Before Wave 2
 that left its output with no supported type in the DSOR: nothing in the
 output union could carry a gate decision, so the cash gate's own verdict could
 not be stored or replayed.
 
-:class:`CatoFDecisionRecord` carries every input ``evaluate()`` took and the
-decision it returned. :meth:`CatoFDecisionRecord.replay` re-runs the gate on
+:class:`CatoCashDecisionRecord` carries every input ``evaluate()`` took and the
+decision it returned. :meth:`CatoCashDecisionRecord.replay` re-runs the gate on
 the recorded inputs; a record whose replay differs from its decision either
 was tampered with or was evaluated under a different gate-set version, and
-:meth:`CatoFDecisionRecord.reproduces` says which.
+:meth:`CatoCashDecisionRecord.reproduces` says which.
 
 Store subject
 -------------
@@ -32,10 +32,10 @@ from cannae_kernel.halt import HaltContext
 from cannae_kernel.ids import LifecycleId
 from pydantic import BaseModel, ConfigDict, Field
 
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     GATE_SET_VERSION,
     CashRail,
-    CatoFDecision,
+    CatoCashDecision,
     FreshnessPolicy,
     FundingState,
     OperationContext,
@@ -43,13 +43,13 @@ from atreides.rails.cato_f import (
     evaluate,
 )
 
-__all__ = ["CASH_GATE_DECISION_SCHEMA", "CatoFDecisionRecord"]
+__all__ = ["CASH_GATE_DECISION_SCHEMA", "CatoCashDecisionRecord"]
 
 CASH_GATE_DECISION_SCHEMA: Literal["cash_gate_decision/0.1"] = "cash_gate_decision/0.1"
 
 
-class CatoFDecisionRecord(BaseModel):
-    """A CATO-F decision with the inputs that produced it. Replayable."""
+class CatoCashDecisionRecord(BaseModel):
+    """A Cato Cash decision with the inputs that produced it. Replayable."""
 
     # NaN and infinite stress readings are inputs the gate names explicitly
     # (STRESS_READING_UNUSABLE); they must survive JSON to replay.
@@ -77,7 +77,7 @@ class CatoFDecisionRecord(BaseModel):
     halt: HaltContext | None = None
 
     # -- Output --------------------------------------------------------------
-    decision: CatoFDecision
+    decision: CatoCashDecision
     gate_set_version: str = Field(default=GATE_SET_VERSION, min_length=1)
 
     @classmethod
@@ -97,7 +97,7 @@ class CatoFDecisionRecord(BaseModel):
         obligation_id: str | None = None,
         obligation_digest: str | None = None,
         halt: HaltContext | None = None,
-    ) -> CatoFDecisionRecord:
+    ) -> CatoCashDecisionRecord:
         """Evaluate the gate and package inputs and decision together."""
         inputs = {
             "operation": operation,
@@ -119,7 +119,7 @@ class CatoFDecisionRecord(BaseModel):
             **inputs,
         )
 
-    def replay(self) -> CatoFDecision:
+    def replay(self) -> CatoCashDecision:
         """Re-run the gate on the recorded inputs. Pure."""
         return evaluate(
             operation=self.operation,
@@ -144,4 +144,3 @@ class CatoFDecisionRecord(BaseModel):
         if self.gate_set_version != GATE_SET_VERSION:
             return None
         return self.replay() == self.decision
-

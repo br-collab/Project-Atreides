@@ -59,18 +59,18 @@ from atreides.contracts import (
     DSORLineageStub,
     InherentSafetySurface,
 )
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     CashRail,
-    CatoFDecision,
+    CatoCashDecision,
     FinalityClass,
     GateDecision,
     ReasonCode,
 )
 
-# CATO-F gate fixture. Cash-leg settlement-rail dimensions may not route
+# Cato Cash gate fixture. Cash-leg settlement-rail dimensions may not route
 # without a gate decision (AUR-CUSTODY-CASH-001 v0.2 SV.E); tests that
 # exercise those dimensions must declare their gate posture explicitly.
-CATO_F_PROCEED = CatoFDecision(
+CATO_CASH_PROCEED = CatoCashDecision(
     decision=GateDecision.PROCEED,
     reason_code=ReasonCode.CLEARED,
     recommended_rail=CashRail.FEDWIRE,
@@ -664,7 +664,7 @@ def request_passing(
         eligibility_inputs=passing_eligibility_inputs,
         attribution=attribution_us_domestic,
         emitted_at=now,
-        cato_f_decision=CATO_F_PROCEED,
+        cato_cash_decision=CATO_CASH_PROCEED,
     )
 
 
@@ -680,7 +680,7 @@ def request_eligibility_fails(
         eligibility_inputs=failing_eligibility_inputs,
         attribution=attribution_us_domestic,
         emitted_at=now,
-        cato_f_decision=CATO_F_PROCEED,
+        cato_cash_decision=CATO_CASH_PROCEED,
     )
 
 
@@ -695,7 +695,7 @@ def request_attribution_missing(
         eligibility_inputs=passing_eligibility_inputs,
         attribution=None,
         emitted_at=now,
-        cato_f_decision=CATO_F_PROCEED,
+        cato_cash_decision=CATO_CASH_PROCEED,
     )
 
 
@@ -722,7 +722,7 @@ class TestPathSelectionRequest:
             operation=equity_operation_routine,
             eligibility_inputs=passing_eligibility_inputs,
             emitted_at=now,
-            cato_f_decision=CATO_F_PROCEED,
+            cato_cash_decision=CATO_CASH_PROCEED,
         )
         assert req.attribution is None
 
@@ -1237,7 +1237,7 @@ def request_above_fiat_settlement_threshold(
         attribution=attribution_us_domestic,
         emitted_at=now,
         amount=Decimal("15000000"),
-        cato_f_decision=CATO_F_PROCEED,
+        cato_cash_decision=CATO_CASH_PROCEED,
     )
 
 
@@ -1256,7 +1256,7 @@ def request_above_lvps_threshold(
         attribution=attribution_us_domestic,
         emitted_at=now,
         amount=Decimal("75000000"),
-        cato_f_decision=CATO_F_PROCEED,
+        cato_cash_decision=CATO_CASH_PROCEED,
     )
 
 
@@ -1275,7 +1275,7 @@ def request_above_fx_bundled_threshold(
         attribution=attribution_us_domestic,
         emitted_at=now,
         amount=Decimal("30000000"),
-        cato_f_decision=CATO_F_PROCEED,
+        cato_cash_decision=CATO_CASH_PROCEED,
     )
 
 
@@ -1305,7 +1305,7 @@ def request_with_sanctioned_adjacency(
         attribution=attribution_with_sanctioned_intermediary,
         emitted_at=now,
         amount=Decimal("100"),
-        cato_f_decision=CATO_F_PROCEED,
+        cato_cash_decision=CATO_CASH_PROCEED,
     )
 
 
@@ -1325,7 +1325,7 @@ def request_material_with_failed_eligibility(
         attribution=attribution_us_domestic,
         emitted_at=now,
         amount=Decimal("15000000"),
-        cato_f_decision=CATO_F_PROCEED,
+        cato_cash_decision=CATO_CASH_PROCEED,
     )
 
 
@@ -1347,7 +1347,7 @@ class TestCheckMaterialMagnitude:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=None,
             emitted_at=now,
-            cato_f_decision=CATO_F_PROCEED,
+            cato_cash_decision=CATO_CASH_PROCEED,
         )
         result = agent._check_material_magnitude(
             request=request,
@@ -1446,7 +1446,7 @@ class TestCheckMaterialMagnitude:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
-            cato_f_decision=CATO_F_PROCEED,
+            cato_cash_decision=CATO_CASH_PROCEED,
         )
         result = agent._check_material_magnitude(
             request=request,
@@ -1815,7 +1815,7 @@ class TestMaterialMagnitudeTakesPrecedence:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_with_sanctioned_intermediary,
             emitted_at=now,
-            cato_f_decision=CATO_F_PROCEED,
+            cato_cash_decision=CATO_CASH_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request,
@@ -1865,7 +1865,7 @@ class TestQuorumAuthorityRequiredStructure:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_with_sanctioned_intermediary,
             emitted_at=now,
-            cato_f_decision=CATO_F_PROCEED,
+            cato_cash_decision=CATO_CASH_PROCEED,
         )
         result = agent.select_multi_currency_rail_routing(
             request,
@@ -1877,7 +1877,7 @@ class TestQuorumAuthorityRequiredStructure:
 
 
 # ---------------------------------------------------------------------------
-# CATO-F cash-leg gate consultation (AUR-CUSTODY-CASH-001 v0.2 SV.E)
+# Cato Cash cash-leg gate consultation (AUR-CUSTODY-CASH-001 v0.2 SV.E)
 #
 # The absent-gate default is HOLD, never PROCEED. A missing gate decision
 # is not a missing optional input -- it means the cash-leg governance
@@ -1886,8 +1886,8 @@ class TestQuorumAuthorityRequiredStructure:
 # ---------------------------------------------------------------------------
 
 
-def _gate(decision: GateDecision, reason: ReasonCode) -> CatoFDecision:
-    return CatoFDecision(
+def _gate(decision: GateDecision, reason: ReasonCode) -> CatoCashDecision:
+    return CatoCashDecision(
         decision=decision,
         reason_code=reason,
         recommended_rail=None,
@@ -1923,7 +1923,7 @@ class TestCashLegGateConsultation:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
-            cato_f_decision=None,
+            cato_cash_decision=None,
         )
         out = agent.select_multi_currency_rail_routing(request, currency="USD")
         assert isinstance(out, EscalationRequired)
@@ -1943,7 +1943,7 @@ class TestCashLegGateConsultation:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
-            cato_f_decision=_gate(GateDecision.HOLD, ReasonCode.UNFUNDED_AT_SETTLEMENT_INSTANT),
+            cato_cash_decision=_gate(GateDecision.HOLD, ReasonCode.UNFUNDED_AT_SETTLEMENT_INSTANT),
         )
         out = agent.select_multi_currency_rail_routing(request, currency="USD")
         assert isinstance(out, EscalationRequired)
@@ -1963,7 +1963,7 @@ class TestCashLegGateConsultation:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
-            cato_f_decision=_gate(GateDecision.ESCALATE, ReasonCode.SYSTEMIC_STRESS_ESCALATE),
+            cato_cash_decision=_gate(GateDecision.ESCALATE, ReasonCode.SYSTEMIC_STRESS_ESCALATE),
         )
         out = agent.select_multi_currency_rail_routing(request, currency="USD")
         assert isinstance(out, EscalationRequired)
@@ -1992,7 +1992,7 @@ class TestCashLegGateConsultation:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
-            cato_f_decision=None,
+            cato_cash_decision=None,
         )
         out = agent.select_cash_sweep_and_short_term_investment(request, currency="USD")
         assert not isinstance(out, EscalationRequired) or (
@@ -2012,7 +2012,7 @@ class TestCashLegGateConsultation:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
-            cato_f_decision=None,
+            cato_cash_decision=None,
         )
         out = agent.select_cross_border_fx_leg(request, currency_pair="EUR/USD")
         assert isinstance(out, EscalationRequired)
@@ -2031,7 +2031,7 @@ class TestCashLegGateConsultation:
             eligibility_inputs=passing_eligibility_inputs,
             attribution=attribution_us_domestic,
             emitted_at=now,
-            cato_f_decision=None,
+            cato_cash_decision=None,
         )
         out = agent.select_large_value_payment_system(request, currency="USD")
         assert isinstance(out, EscalationRequired)
@@ -2130,7 +2130,7 @@ class TestHaltAndGateBinding:
         agent: FIATOperationsSpecialist,
         request_passing: PathSelectionRequest,
     ) -> None:
-        unbound = CatoFDecision(
+        unbound = CatoCashDecision(
             decision=GateDecision.PROCEED,
             reason_code=ReasonCode.CLEARED,
             recommended_rail=CashRail.FEDWIRE,
@@ -2139,7 +2139,7 @@ class TestHaltAndGateBinding:
             checks_evaluated=(("fixture", "True"),),
             funding_state_snapshot=(),
         )
-        request = request_passing.model_copy(update={"cato_f_decision": unbound})
+        request = request_passing.model_copy(update={"cato_cash_decision": unbound})
         result = agent.select_multi_currency_rail_routing(
             request, currency="USD", jurisdiction="US"
         )

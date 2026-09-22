@@ -51,7 +51,7 @@ settlement-mechanics one. Calling this workstream "cash settlement" would
 name the wrong thing to the one reader most likely to catch it.
 
 The doctrine (`AUR-CUSTODY-CASH-001`), the module tree
-(`atreides.rails.cato_f`, `atreides.rails.funding_state`), the HTTP surface
+(`atreides.rails.cato_cash`, `atreides.rails.funding_state`), the HTTP surface
 (`/api/cashleg/*`), and the console tab all carry the same word for the same
 reason. Terminology drift between a doctrine document and the code that
 claims to implement it is a small failure that looks exactly like a large
@@ -116,9 +116,9 @@ million below the cap at 10am and recovers by 3pm has breached it.
 
 ## Stop 2 — Which rail, and how final?
 
-`atreides/rails/cato_f.py`
+`atreides/rails/cato_cash.py`
 
-CATO-F is the cash-leg settlement gate. Deterministic, no I/O, no clock —
+Cato Cash is the cash-leg settlement gate. Deterministic, no I/O, no clock —
 scalars in, decision out, so any decision replays from its recorded inputs.
 
 ```
@@ -316,7 +316,7 @@ the ones to build against for go-live.
 | If you want to see | Read |
 | --- | --- |
 | The operator cycle and its boundary | `atreides/cockpit/clearing_cockpit.py` |
-| Gate check order and the rail ladder | `atreides/rails/cato_f.py` §§ `evaluate`, `_recommend_rail` |
+| Gate check order and the rail ladder | `atreides/rails/cato_cash.py` §§ `evaluate`, `_recommend_rail` |
 | Queue-versus-fail logic | `atreides/rails/funding_state.py` § `project_funding` |
 | Schema conformance tests | `tests/messaging/test_emit.py` § `TestSchemaConformance` |
 | Bounded path selection under guardrails | `atreides/agents/tier2/fiat_operations_specialist.py` |

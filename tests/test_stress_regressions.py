@@ -10,11 +10,11 @@ Case   Finding      Behavioural regression test
 =====  ===========  ==================================================================
 H3.4   ATR-I-09     tests/rails/test_funding_window_cap.py
 H6.2   ATR-I-06     tests/test_halt_propagation.py
-H6.3   ATR-I-04     tests/rails/test_cato_f_record.py
+H6.3   ATR-I-04     tests/rails/test_cato_cash_record.py
 H7.5   ATR-I-07     tests/cockpit/test_risk_control_breach.py
 E2.5   ATR-I-05     tests/rails/test_probe_raw_string_finality.py
 E6.2   ATR-I-03     tests/messaging/test_probe_submission_artifact.py
-E7.5   ATR-I-04     tests/rails/test_cato_f_record.py
+E7.5   ATR-I-04     tests/rails/test_cato_cash_record.py
 =====  ===========  ==================================================================
 
 E6.4 (ATR-I-08, the quorum validator) is out of Wave 2 scope. It stays BROKE in

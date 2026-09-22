@@ -1,10 +1,10 @@
 """Intraday funding-state model — the cash leg's "can it settle" answer.
 
-Per AUR-CUSTODY-CASH-001 v0.2 Section VII. Rail selection (CATO-F, §V)
+Per AUR-CUSTODY-CASH-001 v0.2 Section VII. Rail selection (Cato Cash, §V)
 answers *how* the money moves. This module answers *whether it can*, and
 it is the check that most often determines whether a cash leg completes.
 
-It produces the :class:`~atreides.rails.cato_f.FundingState` that CATO-F's
+It produces the :class:`~atreides.rails.cato_cash.FundingState` that Cato Cash's
 checks 3 and 4 consume, closing the loop the gate left open: before this
 module, funding state was whatever the caller asserted.
 
@@ -45,7 +45,7 @@ do not fund a settlement on hoped-for inflows. The optimistic projection is
 surfaced separately so an operator can see the gap between what is
 committed and what is anticipated.
 
-Architectural contract: PURE, NO I/O, NO CLOCK. Same as CATO-F. Every
+Architectural contract: PURE, NO I/O, NO CLOCK. Same as Cato Cash. Every
 input arrives as a value; the caller's refresh loop owns data fetching.
 """
 
@@ -57,7 +57,7 @@ from enum import StrEnum
 from typing import Final
 
 from atreides.rails.boundary import coerce_member, describe, unrecognised
-from atreides.rails.cato_f import FinalityClass, FundingState
+from atreides.rails.cato_cash import FinalityClass, FundingState
 from atreides.rails.determination import DeterminationOutcome
 
 __all__ = [
@@ -234,7 +234,7 @@ class FundingProjection:
         }
 
     def to_gate_input(self) -> FundingState:
-        """Render as the :class:`FundingState` CATO-F consumes.
+        """Render as the :class:`FundingState` Cato Cash consumes.
 
         A queued instruction reports its committed position honestly — the
         gate holds on it, which is correct: an operation that cannot settle

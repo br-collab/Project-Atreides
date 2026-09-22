@@ -154,7 +154,7 @@ exists to eliminate.
 | Component | Module | What it does |
 | --- | --- | --- |
 | **Clearing Operator Cockpit** | `atreides/cockpit/` | The five-beat operator cycle: gather → validate → prepare → *(member submits)* → reconcile. Six capability primitives; no `submit` method exists. |
-| **CATO-F** — cash settlement-rail gate | `atreides/rails/cato_f.py` | Deterministic PROCEED / HOLD / ESCALATE across Fedwire, CHIPS, FedNow, NSS, FICC/GSD, correspondent and tokenized rails. Emits a rail **and a finality class**. |
+| **Cato Cash** — cash settlement-rail gate | `atreides/rails/cato_cash.py` | Deterministic PROCEED / HOLD / ESCALATE across Fedwire, CHIPS, FedNow, NSS, FICC/GSD, correspondent and tokenized rails. Emits a rail **and a finality class**. |
 | **Intraday funding model** | `atreides/rails/funding_state.py` | Whether the leg can actually settle. Distinguishes *will queue* from *will fail* — the distinction that prevents duplicate payments. |
 | **ISO 20022 emit path** | `atreides/messaging/` | Canonical settlement model → `pacs.009` + `head.001`, validated in CI against the **published ISO 20022 XSDs**. |
 | **FIAT Operations Specialist** | `atreides/agents/tier2/` | Path selection across seven dimensions — rail routing, correspondent coordination, cross-border FX leg, depository vs sub-custodian, large-value payment system, Fed operations, cash sweep — under bounded-autonomy guardrails. |
@@ -163,15 +163,15 @@ exists to eliminate.
 | **Typed custody contracts** | `atreides/contracts/` | Asset class, custody object, settlement method, failure mode, inherent safety, authority. |
 | **Decision record (DSOR)** | `atreides/dsor/` | Append-only, DTG-stamped, deterministic replay. |
 
-> **Naming — two gates called Cato.** `CATO-F` here
-> (`atreides/rails/cato_f.py`) is an in-process gate for the **cash**
+> **Canonical identities.** `cato_cash` here
+> (`atreides/rails/cato_cash.py`) is the in-process gate for the **cash**
 > settlement rail; it emits `PROCEED` / `HOLD` / `ESCALATE` with a rail and a
 > finality class. The gates in
 > [br-collab/Cato-FICC-MCP](https://github.com/br-collab/Cato-FICC-MCP)
-> (`cato_gate` for pre-settlement doctrine context, `get_atomic_settlement_gate`
+> (`cato_sec` for pre-settlement doctrine context, `get_atomic_settlement_gate`
 > for `PROCEED` / `HOLD` / `ESCALATE` plus a recommended chain) govern the
 > securities and tokenized settlement rail, and are separate public MCP tools.
-> The two are designed as counterparts and share the same OFR STLFSI4 stress
+> Cato Cash and Cato Sec are designed as counterparts and share the same OFR STLFSI4 stress
 > thresholds, but they are different components answering different questions
 > on different surfaces. Not interchangeable.
 
@@ -295,7 +295,7 @@ Both fail at a venue.
 *Negative-path test generation.* Testing programmes are chronically thin on failure
 paths because constructing a failure deliberately is harder than constructing a
 success. The gate layer enumerates its own failure space — six funding dispositions
-crossed with CATO-F's eight ordered checks, plus clearing-fund, net-obligation, and
+crossed with Cato Cash's eight ordered checks, plus clearing-fund, net-obligation, and
 lineage gates — so a negative test matrix can be derived from the decision space
 rather than hand-written. The highest-value case in that set is `WILL_QUEUE`: a
 queued gross-final instruction is **not** a failure, and a system that classifies it
@@ -357,7 +357,7 @@ governing documents ship in `doctrine/`:
   cardinal boundary.
 
 Cash-leg specifics — `AUR-CUSTODY-CASH-001`, the rail universe, finality
-classes, the CATO-F specification and the ISO 20022 obligation — live in the
+classes, the Cato Cash specification and the ISO 20022 obligation — live in the
 restricted doctrine repository. The walkthrough cites the relevant sections
 inline so the code can be followed without it.
 

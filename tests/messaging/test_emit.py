@@ -30,7 +30,7 @@ from atreides.messaging import (
     settlement_method_for_rail,
 )
 from atreides.messaging.profile import DTCC_SETTLEMENT_PENDING, FEDWIRE_PENDING
-from atreides.rails.cato_f import CashRail
+from atreides.rails.cato_cash import CashRail
 
 FIXTURES = pathlib.Path(__file__).parent.parent / "fixtures" / "iso20022"
 FIXTURE_SHA256 = {
@@ -163,7 +163,7 @@ class TestDomainStricterThanSchema:
             _instr(currency="US")
 
 
-# --- the join between CATO-F and the wire ---------------------------------
+# --- the join between Cato Cash and the wire ---------------------------------
 
 
 class TestRailToSettlementMethod:

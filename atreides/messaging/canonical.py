@@ -35,7 +35,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Final
 
-from atreides.rails.cato_f import CashRail
+from atreides.rails.cato_cash import CashRail
 
 __all__ = [
     "BICFI_PATTERN",
@@ -73,7 +73,7 @@ class SettlementMethod(StrEnum):
     """CLRG. Settlement through a clearing system."""
 
 
-#: Maps CATO-F's rail selection onto the settlement method the message must
+#: Maps Cato Cash's rail selection onto the settlement method the message must
 #: declare. This is the join between the gate (CASH-001 §V) and the wire
 #: (§VIII): the gate chooses a rail, and the rail determines how the
 #: settlement is expressed on the network.
@@ -94,7 +94,7 @@ RAIL_SETTLEMENT_METHOD: Final[dict[CashRail, SettlementMethod]] = {
 
 
 def settlement_method_for_rail(rail: CashRail) -> SettlementMethod:
-    """Resolve the settlement method for a CATO-F-selected rail.
+    """Resolve the settlement method for a Cato Cash-selected rail.
 
     Raises for rails with no ISO 20022 credit-transfer expression. That is
     deliberate: tokenized-deposit, stablecoin and the reserved

@@ -70,7 +70,7 @@ from atreides.contracts.margin_impact import (  # noqa: E402
 from atreides.contracts.margin_profile import CollectionModel  # noqa: E402
 from atreides.messaging.emit import emit_instruction_artifact  # noqa: E402
 from atreides.messaging.readback import ingest_readback  # noqa: E402
-from atreides.rails.cato_f import (  # noqa: E402
+from atreides.rails.cato_cash import (  # noqa: E402
     OperationContext,
     evaluate,
 )
@@ -182,7 +182,7 @@ def _stages() -> dict[str, tuple[object, str]]:
             lambda: project_funding(funding),
             "one intraday funding projection over a 10-point flow ladder",
         ),
-        "cato_f_gate": (
+        "cato_cash_gate": (
             lambda: evaluate(
                 operation=operation,
                 funding=gate_funding,

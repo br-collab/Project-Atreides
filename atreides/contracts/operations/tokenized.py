@@ -40,7 +40,7 @@ class TokenizedTransactionType(StrEnum):
     on-chain.'"""
     ATOMIC_SWAP = "atomic_swap"
     """Per Section V: 'Simultaneous on-chain exchange of two tokens or
-    token-versus-cash via smart contract.' Routed through Cato
+    token-versus-cash via smart contract.' Routed through Cato Sec
     governance gate per Section II of the canonical."""
     SMART_CONTRACT_EXECUTION = "smart_contract_execution"
     """Per Section V: 'Tokenized security operations executed through

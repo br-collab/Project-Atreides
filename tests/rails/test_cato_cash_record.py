@@ -1,4 +1,4 @@
-"""ATR-I-04 regression: a CATO-F decision is bound, evidenced, stored and replayable.
+"""ATR-I-04 regression: a Cato Cash decision is bound, evidenced, stored and replayable.
 
 Before Wave 2 a gate decision carried no reference to the obligation it
 governed, a PROCEED with zero checks constructed (stress case H6.3), and the
@@ -18,10 +18,10 @@ from pydantic import TypeAdapter
 
 from atreides.dsor import DSORStore
 from atreides.dsor.record import AureonOutput
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     GATE_SET_VERSION,
     CashRail,
-    CatoFDecision,
+    CatoCashDecision,
     FinalityClass,
     FundingState,
     GateDecision,
@@ -31,7 +31,7 @@ from atreides.rails.cato_f import (
     ReasonCode,
     evaluate,
 )
-from atreides.rails.cato_f_record import CatoFDecisionRecord
+from atreides.rails.cato_cash_record import CatoCashDecisionRecord
 
 D = Decimal
 OBLIGATION = "obl_01M2P20SY00000000000000001"
@@ -62,7 +62,7 @@ def test_decision_carries_the_obligation_and_gate_set_version() -> None:
     assert decision.checks_evaluated
 
 
-def _proceed(**changes: Any) -> CatoFDecision:
+def _proceed(**changes: Any) -> CatoCashDecision:
     fields: dict[str, Any] = {
         "decision": GateDecision.PROCEED,
         "reason_code": ReasonCode.CLEARED,
@@ -73,7 +73,7 @@ def _proceed(**changes: Any) -> CatoFDecision:
         "funding_state_snapshot": (),
     }
     fields.update(changes)
-    return CatoFDecision(**fields)
+    return CatoCashDecision(**fields)
 
 
 def test_stress_h6_3_proceed_with_no_checks_is_refused() -> None:
@@ -86,7 +86,7 @@ def test_stress_h6_3_proceed_with_no_checks_is_refused() -> None:
 
 
 def test_stress_h6_3_json_boundary_cannot_forge_an_evidence_free_proceed() -> None:
-    adapter = TypeAdapter(CatoFDecision)
+    adapter = TypeAdapter(CatoCashDecision)
     raw = json.loads(adapter.dump_json(_proceed()))
     raw["checks_evaluated"] = []
     with pytest.raises(ValueError, match="must record the checks"):
@@ -123,18 +123,18 @@ def test_decision_strings_are_coerced() -> None:
 
 
 def test_stress_e7_5_the_output_union_carries_a_gate_decision() -> None:
-    assert "CatoFDecisionRecord" in str(AureonOutput)
+    assert "CatoCashDecisionRecord" in str(AureonOutput)
 
 
 @pytest.mark.parametrize("ofr", [0.0, 0.75, 1.5, float("nan"), float("inf")])
 def test_decision_replayed_from_the_dsor_reproduces_the_same_decision(ofr: float) -> None:
-    record = CatoFDecisionRecord.capture(
+    record = CatoCashDecisionRecord.capture(
         decision_id=uuid.uuid4(), settlement_operation_id=uuid.uuid4(), **_inputs(ofr_stlfsi4=ofr)
     )
     store = DSORStore(":memory:")
     stored = store.append(record)
     replayed = store.replay(stored.record_id)
-    assert isinstance(replayed, CatoFDecisionRecord)
+    assert isinstance(replayed, CatoCashDecisionRecord)
     assert stored.kind == "cash_gate_decision"
     assert replayed.decision == record.decision
     assert replayed.replay() == record.decision
@@ -146,7 +146,7 @@ def test_several_decisions_for_one_operation_do_not_collide_in_the_store() -> No
     store = DSORStore(":memory:")
     for ofr in (0.0, 0.75):
         store.append(
-            CatoFDecisionRecord.capture(
+            CatoCashDecisionRecord.capture(
                 decision_id=uuid.uuid4(),
                 settlement_operation_id=operation,
                 **_inputs(ofr_stlfsi4=ofr),
@@ -155,13 +155,13 @@ def test_several_decisions_for_one_operation_do_not_collide_in_the_store() -> No
 
 
 def test_a_tampered_decision_does_not_reproduce() -> None:
-    record = CatoFDecisionRecord.capture(decision_id=uuid.uuid4(), **_inputs(ofr_stlfsi4=1.5))
+    record = CatoCashDecisionRecord.capture(decision_id=uuid.uuid4(), **_inputs(ofr_stlfsi4=1.5))
     assert record.decision.decision is GateDecision.ESCALATE
     tampered = record.model_copy(update={"decision": evaluate(**_inputs())})
     assert tampered.reproduces() is False
 
 
 def test_a_record_from_another_gate_set_version_is_not_judged() -> None:
-    record = CatoFDecisionRecord.capture(decision_id=uuid.uuid4(), **_inputs())
-    older = record.model_copy(update={"gate_set_version": "cato-f-gates/0.2"})
+    record = CatoCashDecisionRecord.capture(decision_id=uuid.uuid4(), **_inputs())
+    older = record.model_copy(update={"gate_set_version": "cato-cash-gates/0.2"})
     assert older.reproduces() is None

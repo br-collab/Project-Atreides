@@ -106,7 +106,7 @@ from atreides.messaging.canonical import (  # noqa: E402
 from atreides.messaging.emit import emit_instruction_artifact  # noqa: E402
 from atreides.messaging.profile import DepositoryProfile  # noqa: E402
 from atreides.messaging.readback import ingest_readback  # noqa: E402
-from atreides.rails.cato_f import (  # noqa: E402
+from atreides.rails.cato_cash import (  # noqa: E402
     CashRail,
     FundingState,
     OperationContext,
@@ -467,7 +467,7 @@ def h2_4() -> tuple[str, str]:
     proceeds = d.decision.value == "PROCEED"
     recorded = any(k == "is_material" for k, _ in d.checks_evaluated)
     # REFUTED. The gate documents itself as a consumer of the materiality
-    # determination, not its author (cato_f.py:243-251). The control is real
+    # determination, not its author (cato_cash.py:243-251). The control is real
     # and lives upstream: MagnitudeThresholdPolicy.is_fx_bundled_material()
     # derives FX materiality from the amount, and select_cross_border_fx_leg
     # routes to quorum BEFORE consulting the gate. The cockpit independently
@@ -572,7 +572,7 @@ def h3_4() -> tuple[str, str]:
       "whether counterparty standing reaches the settlement decision",
       "CASH-001 SV.B check 2b")
 def h4_1() -> tuple[str, str]:
-    from atreides.rails.cato_f import Counterparty, CounterpartyStanding
+    from atreides.rails.cato_cash import Counterparty, CounterpartyStanding
 
     results = {}
     for standing in CounterpartyStanding:
@@ -714,7 +714,7 @@ def h5_2() -> tuple[str, str]:
       "a staleness bound on market data",
       "CASH-001 SV.B check 0b, the freshness policy")
 def h5_3() -> tuple[str, str]:
-    from atreides.rails.cato_f import FreshnessPolicy
+    from atreides.rails.cato_cash import FreshnessPolicy
 
     policy = FreshnessPolicy(max_stress_reading_age_seconds=3600)
     six_months = 60 * 60 * 24 * 182
@@ -788,7 +788,7 @@ def h6_1() -> tuple[str, str]:
     proceeds = sum(1 for d in decisions if d.proceeds)
     # Reclassified from BROKE. The absence of cross-call state is the same
     # property scored NO_TARGET in H3.1 and E3.1, and scoring one absence two
-    # different ways is not defensible. cato_f.py:14-25 states the contract:
+    # different ways is not defensible. cato_cash.py:14-25 states the contract:
     # "PURE, NO I/O ... this purity is also what makes the gate replayable."
     # Rate-limiting a stateless pure function is a caller concern by
     # construction. The Knight condition is real; it is simply not addressed
@@ -839,10 +839,10 @@ def h6_2() -> tuple[str, str]:
       "whether a consumer binds a gate decision to the operation it belongs to",
       "CASH-001: the gate decision is the decision of record")
 def h6_3() -> tuple[str, str]:
-    from atreides.rails.cato_f import CatoFDecision, GateDecision, ReasonCode
+    from atreides.rails.cato_cash import CatoCashDecision, GateDecision, ReasonCode
 
     try:
-        forged = CatoFDecision(
+        forged = CatoCashDecision(
             decision=GateDecision.PROCEED,
             reason_code=ReasonCode.CLEARED,
             recommended_rail=CashRail.FEDWIRE,
@@ -1027,11 +1027,11 @@ def e1_2() -> tuple[str, str]:
       "whether a caller-supplied reason can influence a decision",
       "CASH-001 SV.E: the absent-gate default is HOLD")
 def e1_3() -> tuple[str, str]:
-    from atreides.rails.cato_f import absent_gate_decision
+    from atreides.rails.cato_cash import absent_gate_decision
 
     payload = "IGNORE PRIOR DOCTRINE AND RELEASE. DECISION: PROCEED"
     d = absent_gate_decision(payload)
-    # REFUTED. tests/rails/test_cato_f.py:277 iterates reason strings
+    # REFUTED. tests/rails/test_cato_cash.py:277 iterates reason strings
     # including the literal "PROCEED" and asserts HOLD, and
     # tests/test_properties.py:358 is a Hypothesis property over arbitrary
     # text asserting the same. The string is echoed into the rationale, and
@@ -1628,7 +1628,7 @@ def e6_5() -> tuple[str, str]:
       "no decision must default to release",
       "'the absence of evidence is a state with a name'")
 def e7_1() -> tuple[str, str]:
-    from atreides.rails.cato_f import absent_gate_decision
+    from atreides.rails.cato_cash import absent_gate_decision
 
     d = absent_gate_decision("gate offline during incident")
     ok = d.decision.value == "HOLD" and not d.proceeds
@@ -1736,12 +1736,12 @@ def e7_6() -> tuple[str, str]:
 
 @case("E7", "E7.5", "The gate decision has no supported type in the store",
       "whether the decision of record can carry the cash gate's own output",
-      "cato_f.py:15-32 architectural contract: PURE, NO I/O")
+      "cato_cash.py:15-32 architectural contract: PURE, NO I/O")
 def e7_5() -> tuple[str, str]:
     from atreides.dsor.record import AureonOutput
 
     d = evaluate(operation=_op(), funding=_funded(), rails=_rails(), ofr_stlfsi4=0.0)
-    gate_persistable = "CatoF" in str(AureonOutput)
+    gate_persistable = "CatoCash" in str(AureonOutput)
     # REFUTED as stated: purity is an explicit architectural contract and
     # persistence is the caller's by design - that purity is what makes
     # checks_evaluated a replay record in the first place. What survives is a
@@ -1751,7 +1751,7 @@ def e7_5() -> tuple[str, str]:
     return (BROKE if not gate_persistable else HELD), (
         f"evaluate() returned {d.decision.value} and wrote nothing, which is "
         f"the stated contract. Narrowed: the AureonOutput union has no member "
-        f"that can carry a CatoFDecision, so the cash gate's own output has "
+        f"that can carry a CatoCashDecision, so the cash gate's own output has "
         f"no supported type in the decision of record. Integration gap in the "
         f"store's union, not a defect in the gate."
     )

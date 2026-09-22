@@ -79,7 +79,7 @@ Invented here, and owed an explanation. Renaming any of these to sound standards
 | **Unsolicited readback** | A venue status for an instruction this framework never prepared. The detector for out-of-band submission. |
 | **CNS disposition** | The outcome for one net position. `PARTIAL_ALLOCATION` is the ordinary case, not an exception path. |
 | **Gate** | A deterministic checkpoint returning proceed, hold or escalate. Check order is doctrine, not optimisation. |
-| **CATO-F** | The cash-leg rail gate. Cash-side twin of the securities-side gate, held in bit-for-bit parity with it. |
+| **Cato Cash (`cato_cash`)** | The cash-leg rail and finality gate. Counterpart to Cato Sec; it shares systemic-stress bands but answers a different question. |
 | **Approved-path registry** | The pre-declared set of settlement paths an agent may enumerate from. It never constructs a path at decision time; an empty match escalates rather than improvises. |
 | **Failure-mode class** | `RA`, `RM`, `UR-R`, `UR-F`. Recoverable automatically, recoverable manually, unrecoverable but reversible by other means, unrecoverable and final. |
 | **Inherent safety** | A surface on which unrecoverable-and-final failures are not reachable. |

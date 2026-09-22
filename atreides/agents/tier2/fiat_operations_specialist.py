@@ -73,7 +73,7 @@ from atreides.contracts import (
     DSORLineageStub,
     InherentSafetySurface,
 )
-from atreides.rails.cato_f import CatoFDecision, GateDecision
+from atreides.rails.cato_cash import CatoCashDecision, GateDecision
 
 
 class MagnitudeThresholdPolicy(BaseModel):
@@ -186,7 +186,7 @@ class MagnitudeThresholdPolicy(BaseModel):
 
 
 # Dimensions whose selection IS a cash-leg settlement-rail decision and
-# therefore may not be made without a CATO-F gate decision, per
+# therefore may not be made without a Cato Cash gate decision, per
 # AUR-CUSTODY-CASH-001 v0.2 Section V (the gate emits a recommended cash
 # rail) and Section V.E (absent gate resolves to HOLD).
 #
@@ -238,13 +238,13 @@ class PathSelectionRequest(BaseModel):
     emitted_at: datetime = Field(
         description="UTC timestamp at which the agent emits its output.",
     )
-    cato_f_decision: CatoFDecision | None = Field(
+    cato_cash_decision: CatoCashDecision | None = Field(
         default=None,
         description=(
-            "CATO-F cash-leg settlement-rail gate decision for this "
+            "Cato Cash cash-leg settlement-rail gate decision for this "
             "operation, evaluated by the caller and consumed here. The "
-            "agent never invokes the gate itself -- CATO-F is pure and "
-            "its inputs are refreshed by the caller, exactly as Cato's "
+            "agent never invokes the gate itself -- Cato Cash is pure and "
+            "its inputs are refreshed by the caller, exactly as Cato Sec's "
             "twin receives scalars from the refresh loop. None means NO "
             "GATE DECISION EXISTS, which per AUR-CUSTODY-CASH-001 v0.2 "
             "Section V.E resolves to HOLD for the dimensions in "
@@ -985,7 +985,7 @@ class FIATOperationsSpecialist:
     ) -> EscalationRequired | None:
         """Escalate at Tier 0 when a halt covering Atreides is in effect (ATR-I-06).
 
-        Reported under Guardrail 3, as a CATO-F hold already is: doctrine fixes
+        Reported under Guardrail 3, as a Cato Cash hold already is: doctrine fixes
         exactly five J-class guardrails, and a halt is not a sixth. The Tier 0
         escalation tier and the failure reason say it was the halt.
         """
@@ -1022,7 +1022,7 @@ class FIATOperationsSpecialist:
         request: PathSelectionRequest,
         dimension: PathSelectionDimension,
     ) -> EscalationRequired | None:
-        """Consult CATO-F before a cash-leg settlement-rail selection.
+        """Consult Cato Cash before a cash-leg settlement-rail selection.
 
         Per AUR-CUSTODY-CASH-001 v0.2 Section V.E the absent-gate default
         is HOLD, never PROCEED. A missing gate decision is not a missing
@@ -1036,32 +1036,32 @@ class FIATOperationsSpecialist:
         if dimension not in GATE_REQUIRED_DIMENSIONS:
             return None
 
-        decision = request.cato_f_decision
+        decision = request.cato_cash_decision
         if decision is None:
             failure_reason = (
-                f"No CATO-F gate decision supplied for dimension "
+                f"No Cato Cash gate decision supplied for dimension "
                 f"{dimension.value!r}, which is a cash-leg settlement-rail "
                 f"selection. Per AUR-CUSTODY-CASH-001 v0.2 Section V.E the "
                 f"absent-gate default is HOLD, never PROCEED; the agent "
                 f"does not route a cash leg the gate has not governed."
             )
-            signature = ("cato_f_absent", dimension.value, "HOLD")
+            signature = ("cato_cash_absent", dimension.value, "HOLD")
         elif decision.proceeds and not decision.bound:
             failure_reason = (
-                f"CATO-F returned PROCEED for dimension {dimension.value!r} "
+                f"Cato Cash returned PROCEED for dimension {dimension.value!r} "
                 f"without naming the obligation it governs. An unbound gate "
                 f"decision cannot authorize routing: it could belong to any "
                 f"operation (ATR-I-04)."
             )
-            signature = ("cato_f_unbound", dimension.value, "HOLD")
+            signature = ("cato_cash_unbound", dimension.value, "HOLD")
         elif decision.decision is not GateDecision.PROCEED:
             failure_reason = (
-                f"CATO-F returned {decision.decision.value} for dimension "
+                f"Cato Cash returned {decision.decision.value} for dimension "
                 f"{dimension.value!r} (reason {decision.reason_code.value}): "
                 f"{decision.rationale}"
             )
             signature = (
-                "cato_f_" + decision.decision.value.lower(),
+                "cato_cash_" + decision.decision.value.lower(),
                 dimension.value,
                 decision.reason_code.value,
             )

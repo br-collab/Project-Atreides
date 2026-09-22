@@ -72,7 +72,7 @@ from atreides.contracts.margin_impact import (  # noqa: E402
     absent_margin_assessment,
     margin_priority_rank,
 )
-from atreides.rails.cato_f import (  # noqa: E402
+from atreides.rails.cato_cash import (  # noqa: E402
     CashRail,
     OperationContext,
     RailState,

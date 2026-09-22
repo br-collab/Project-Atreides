@@ -58,7 +58,7 @@ from atreides.messaging.readback import (
     ingest_readback,
     parse_status_report,
 )
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     OFR_ESCALATE_THRESHOLD,
     CashRail,
     FundingState,

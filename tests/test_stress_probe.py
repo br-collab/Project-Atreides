@@ -59,10 +59,10 @@ import stress_probe  # noqa: E402
 #: BROKE: H6.2, H6.3, E7.5 (Wave 2 W2A-3) and E6.4 (ATR-I-08, Wave 6).
 #:
 #: 17 Sep 2026, Wave 2 W2A-3: three more fixed. H6.2 BROKE -> HELD (ATR-I-06:
-#: CATO-F takes the kernel halt context and holds under it). H6.3 BROKE -> HELD
+#: Cato Cash takes the kernel halt context and holds under it). H6.3 BROKE -> HELD
 #: (ATR-I-04: a PROCEED with no evaluated checks is refused at construction;
 #: the probe case now reports that refusal instead of crashing on it). E7.5
-#: BROKE -> HELD (the DSOR output union carries CatoFDecisionRecord). One BROKE
+#: BROKE -> HELD (the DSOR output union carries CatoCashDecisionRecord). One BROKE
 #: remains: E6.4, the quorum validator (ATR-I-08, Wave 6).
 EXPECTED = {
     "HELD": 38,

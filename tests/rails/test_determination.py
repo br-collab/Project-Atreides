@@ -20,7 +20,7 @@ from decimal import Decimal
 
 import pytest
 
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     RAIL_FINALITY,
     CashRail,
     FinalityClass,
@@ -420,7 +420,7 @@ def test_qualified_receipt_is_not_a_failure_and_not_free_cash() -> None:
 
 
 # ---------------------------------------------------------------------------
-# CATO-F gate
+# Cato Cash gate
 # ---------------------------------------------------------------------------
 
 

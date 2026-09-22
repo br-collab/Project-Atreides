@@ -83,7 +83,7 @@ class ObligationAcceptanceRecord(BaseModel):
     outcome: AcceptanceOutcome
     evaluated_predicates: tuple[PredicateResult, ...] = Field(min_length=1)
     rule_version: str = Field(min_length=1)
-    #: Versions of the evidence consulted, e.g. the CATO-F gate set.
+    #: Versions of the evidence consulted, e.g. the Cato Cash gate set.
     data_versions: tuple[tuple[str, str], ...]
     reason_codes: tuple[str, ...]
     #: The halt context version consulted; ``None`` when no halt context was supplied.

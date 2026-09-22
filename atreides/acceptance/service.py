@@ -2,7 +2,7 @@
 
 ATR-I-01. Atreides accepts or refuses an obligation formed elsewhere (L.C.); it
 never rewrites the economics. :func:`evaluate_candidate` is a pure function: it
-reads the candidate, the CATO-F decision and the halt context, and returns an
+reads the candidate, the Cato Cash decision and the halt context, and returns an
 :class:`~atreides.acceptance.record.ObligationAcceptanceRecord`. It writes
 nothing and changes nothing; persisting the record is the caller's job.
 
@@ -18,7 +18,7 @@ leg_linkage               legs disagree with the          BLOCK
                           delivery pattern
 halt_not_active           a halt covering Atreides is     HOLD
                           in effect
-funding_bound             no CATO-F decision, or one not  INDETERMINATE
+funding_bound             no Cato Cash decision, or one not  INDETERMINATE
                           bound to this obligation id
                           and digest
                           the bound decision holds or     HOLD
@@ -56,7 +56,7 @@ from atreides.acceptance.record import (
 from atreides.messaging.canonical import CashLegInstruction
 from atreides.messaging.emit import InstructionArtifact, emit_instruction_artifact
 from atreides.messaging.profile import BASE_ISO_20022, DepositoryProfile
-from atreides.rails.cato_f import CatoFDecision, GateDecision
+from atreides.rails.cato_cash import CatoCashDecision, GateDecision
 
 __all__ = ["PreparationRefusedError", "evaluate_candidate", "prepare_instruction"]
 
@@ -201,7 +201,7 @@ def _halt(halt: HaltContext | None) -> PredicateResult:
 
 
 def _funding(
-    c: ObligationCandidate, candidate_digest: str, decision: CatoFDecision | None
+    c: ObligationCandidate, candidate_digest: str, decision: CatoCashDecision | None
 ) -> PredicateResult:
     name = "funding_bound"
     if c.delivery_pattern in _NO_CASH_LEG:
@@ -210,28 +210,28 @@ def _funding(
         return _result(
             name,
             Disposition.INDETERMINATE,
-            "No CATO-F decision supplied. Funding is unassessed, not assumed.",
+            "No Cato Cash decision supplied. Funding is unassessed, not assumed.",
             "CASH_GATE_DECISION_MISSING",
         )
     if not decision.bound:
         return _result(
             name,
             Disposition.INDETERMINATE,
-            "The CATO-F decision names no obligation, so it is not evidence about this one.",
+            "The Cato Cash decision names no obligation, so it is not evidence about this one.",
             "CASH_GATE_UNBOUND",
         )
     if decision.obligation_id != c.obligation_id:
         return _result(
             name,
             Disposition.INDETERMINATE,
-            f"The CATO-F decision governs {decision.obligation_id}, not {c.obligation_id}.",
+            f"The Cato Cash decision governs {decision.obligation_id}, not {c.obligation_id}.",
             "CASH_GATE_OTHER_OBLIGATION",
         )
     if decision.obligation_digest != candidate_digest:
         return _result(
             name,
             Disposition.INDETERMINATE,
-            "The CATO-F decision was made for a different version of this obligation "
+            "The Cato Cash decision was made for a different version of this obligation "
             f"({decision.obligation_digest}, not {candidate_digest}).",
             "CASH_GATE_STALE_DIGEST",
         )
@@ -239,11 +239,11 @@ def _funding(
         return _result(
             name,
             Disposition.HOLD,
-            f"CATO-F returned {decision.decision.value} ({decision.reason_code.value}): "
+            f"Cato Cash returned {decision.decision.value} ({decision.reason_code.value}): "
             f"{decision.rationale}",
             f"CASH_GATE_{decision.decision.value}:{decision.reason_code.value}",
         )
-    return _passed(name, "CATO-F PROCEED is bound to this obligation id and digest.")
+    return _passed(name, "Cato Cash PROCEED is bound to this obligation id and digest.")
 
 
 def evaluate_candidate(
@@ -251,7 +251,7 @@ def evaluate_candidate(
     *,
     acceptance_id: UUID,
     evaluated_at: datetime,
-    gate_decision: CatoFDecision | None,
+    gate_decision: CatoCashDecision | None,
     halt: HaltContext | None,
 ) -> ObligationAcceptanceRecord:
     """Evaluate a candidate. Pure: reads its inputs, returns a record, changes nothing."""
@@ -272,7 +272,7 @@ def evaluate_candidate(
         ("cannae_kernel", cannae_kernel.__version__),
     ]
     if gate_decision is not None:
-        data_versions.append(("cato_f_gate_set", gate_decision.gate_set_version))
+        data_versions.append(("cato_cash_gate_set", gate_decision.gate_set_version))
     return ObligationAcceptanceRecord(
         operation_id=acceptance_id,
         obligation_id=candidate.obligation_id,

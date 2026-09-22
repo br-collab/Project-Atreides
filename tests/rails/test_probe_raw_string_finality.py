@@ -1,6 +1,6 @@
 """ATR-I-05 regression: enum values are coerced at the boundary, never fail open.
 
-``project_funding`` and CATO-F compare enum members by identity. Until Wave 2
+``project_funding`` and Cato Cash compare enum members by identity. Until Wave 2
 a finality class arriving as a plain string (from JSON, a dict, a caller)
 matched no identity check and fell through to FUNDED. The Atreides inventory
 probe (15 Sep 2026, commit 31b62f0) and stress case E2.5 both showed it.
@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 from atreides.rails.boundary import coerce_member, describe, unrecognised
-from atreides.rails.cato_f import (
+from atreides.rails.cato_cash import (
     CashRail,
     FundingState,
     GateDecision,
@@ -119,7 +119,7 @@ def test_stress_e2_5_json_string_matches_the_enum_result() -> None:
     assert project_funding(from_json).disposition is project_funding(from_enum).disposition
 
 
-# ---- CATO-F -------------------------------------------------------------------------------
+# ---- Cato Cash -------------------------------------------------------------------------------
 
 
 def _funding() -> FundingState:
