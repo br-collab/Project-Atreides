@@ -72,10 +72,7 @@ from atreides.agents.tier1.outputs import (
     SettlementRail,
     SettlementTaskingRecord,
 )
-from atreides.agents.tier1.settlement_operations_analyst import (
-    SettlementOperationsAnalyst,
-    validate_tasking,
-)
+from atreides.api import emit_settlement, validate_settlement
 from atreides.contracts import DSORLineageStub
 from atreides.contracts.dsor_stub import CAOMTier
 from atreides.dsor import DSORStore
@@ -399,9 +396,9 @@ class ClearingCockpit:
     of the gather -> validate -> prepare -> reconcile cycle (Section IV
     "Audit" is cross-cutting).
 
-    The cockpit reuses :class:`SettlementOperationsAnalyst` for Beat 2:
-    the gate logic is not reimplemented here, so there is exactly one
-    settlement gate set in the estate (Parity Principle).
+    The cockpit calls the functional settlement entrypoints for Beats 2 and 3:
+    the gate and emission logic are not reimplemented here, so there is exactly
+    one settlement rule set in the estate (Parity Principle).
     """
 
     def __init__(
@@ -426,7 +423,6 @@ class ClearingCockpit:
         self._escalations = (
             escalation_register if escalation_register is not None else EscalationRegister()
         )
-        self._analyst = SettlementOperationsAnalyst()
         self._threshold = material_magnitude_threshold
         self._halt_check = halt_check
         self._halt = halt
@@ -532,8 +528,8 @@ class ClearingCockpit:
     # -- Beat 2: validate --------------------------------------------------
 
     def run_validation_gates(self, tasking: CockpitTasking) -> GateResult:
-        """Beat 2 — run the tasking through the Settlement Operations Analyst
-        gate set (intraday funding -> clearing fund -> net obligation ->
+        """Beat 2 — run the tasking through the settlement gate set
+        (intraday funding -> clearing fund -> net obligation ->
         DSOR lineage). A hold here is caught before anything reaches a
         portal; no package is emitted on a held gate.
 
@@ -542,7 +538,7 @@ class ClearingCockpit:
         Only the in-memory cycle ledger records that validation ran.
         """
         self._guard_halt("run_validation_gates")
-        validation = validate_tasking(self._tasking_record(tasking))
+        validation = validate_settlement(self._tasking_record(tasking))
         result = GateResult(
             operation_id=tasking.operation_id,
             regime=tasking.regime,
@@ -618,7 +614,7 @@ class ClearingCockpit:
         if gate_result.operation_id != tasking.operation_id:
             raise CockpitBoundaryError("gate_result/operation_id mismatch")
         record = self._tasking_record(tasking)
-        validation = validate_tasking(record)
+        validation = validate_settlement(record)
         if validation.passed != gate_result.passed:
             raise CockpitBoundaryError(
                 "gate_result no longer matches the tasking; re-run Beat 2 before emitting"
@@ -626,7 +622,7 @@ class ClearingCockpit:
         emit_now = gate_result.passed and not self._is_material(tasking)
         dsor_record_id: UUID | None = None
         if not gate_result.passed or emit_now:
-            _, dsor_record = self._analyst.emit(record, validation, self._store)
+            _, dsor_record = emit_settlement(record, validation, self._store)
             dsor_record_id = dsor_record.record_id
 
         authority_stamp = {

@@ -1003,11 +1003,11 @@ def h7_5() -> tuple[str, str]:
       "no doctrine section - no such surface exists")
 def e1_1() -> tuple[str, str]:
     return NO_TARGET, (
-        "There is no agent runtime in this repository: no loop, no model "
-        "invocation, no tool use, no free-text instruction field. The only "
-        "runtime dependency is pydantic. Every 'agent' is a synchronous pure "
-        "class over caller-supplied typed inputs. There is nothing to inject "
-        "into, and correspondingly no injection defence to test."
+        "The advisory supervisor is a deterministic loop over typed work units: "
+        "there is no model invocation, tool use or free-text instruction field. "
+        "Its functional entrypoints consume caller-supplied typed inputs and do "
+        "not parse instructions. There is nothing to inject into, and "
+        "correspondingly no injection defence to test."
     )
 
 
@@ -1188,10 +1188,11 @@ def e2_5() -> tuple[str, str]:
       "no doctrine section - no such interaction exists")
 def e3_1() -> tuple[str, str]:
     return NO_TARGET, (
-        "Exactly one call between components exists: the cockpit instantiates "
-        "SettlementOperationsAnalyst and calls .run(). There is no agent-to-"
-        "agent messaging, no shared bus, no scheduler and no concurrency "
-        "anywhere in the package. A cascade has no medium to propagate through."
+        "The cockpit and advisory supervisor call independent functional "
+        "entrypoints over typed inputs. No output is fed into another agent, "
+        "the standing lateral-handoff probe refuses unrecorded agent-to-agent "
+        "input, and there is no shared bus or concurrency. A cascade has no "
+        "medium to propagate through."
     )
 
 

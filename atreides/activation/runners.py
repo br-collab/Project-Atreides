@@ -54,19 +54,19 @@ from atreides.activation.handoff import (
 from atreides.activation.outputs import AgentIdentity, AgentTier, PolicyExecution
 from atreides.activation.supervisor import Finding, WorkUnit
 from atreides.agents.tier1.investigation_outputs import InvestigationEscalation
-from atreides.agents.tier1.settlement_investigation_analyst import (
-    SettlementInvestigationAnalyst,
-)
 from atreides.agents.tier1.settlement_operations_analyst import (
     GATE_ORDER,
-    validate_tasking,
 )
 from atreides.agents.tier2.fiat_operations_specialist import (
-    FIATOperationsSpecialist,
     MagnitudeThresholdPolicy,
 )
 from atreides.agents.tier2.outputs import RoutingDecision
-from atreides.agents.tier2.routing_tables import default_routing_tables
+from atreides.agents.tier2.routing_tables import RoutingTables, default_routing_tables
+from atreides.api import (
+    assemble_settlement_investigation,
+    select_multi_currency_rail,
+    validate_settlement,
+)
 from atreides.dsor import DSORStore
 
 __all__ = [
@@ -144,7 +144,7 @@ class SettlementOperationsRunner:
 
     def observe(self, unit: WorkUnit, tick: int, at: datetime) -> Finding:
         tasking = synthetic.settlement_tasking_unit(tick, at)
-        validation = validate_tasking(tasking)
+        validation = validate_settlement(tasking)
         gates = validation.checks_evaluated or GATE_ORDER
         if validation.passed:
             summary = f"Pre-routing gates clear for {tasking.rail.value}"
@@ -162,7 +162,7 @@ class SettlementOperationsRunner:
             summary=summary,
             policy_execution=Recorded[PolicyExecution](
                 value=PolicyExecution(
-                    policy="atreides.agents.tier1.settlement_operations_analyst.validate_tasking",
+                    policy="atreides.api.validate_settlement",
                     gates=tuple(gates),
                     outcome=disposition,
                 )
@@ -190,9 +190,6 @@ class SettlementInvestigationRunner:
             "Settlement Investigation Analyst",
         )
     )
-    analyst: SettlementInvestigationAnalyst = field(
-        default_factory=SettlementInvestigationAnalyst
-    )
     store: DSORStore = field(default_factory=lambda: DSORStore(":memory:"))
 
     expects_refusal: bool = False
@@ -208,7 +205,7 @@ class SettlementInvestigationRunner:
     def observe(self, unit: WorkUnit, tick: int, at: datetime) -> Finding:
         lineage = synthetic.investigation_lineage(tick, at)
         items, gaps = synthetic.investigation_unit(tick, at)
-        output, _record = self.analyst.run(
+        output, _record = assemble_settlement_investigation(
             operation_id=lineage.operation_id,
             task_id=synthetic.synthetic_operation_id("investigation-task", tick),
             lineage_stub=lineage,
@@ -232,7 +229,7 @@ class SettlementInvestigationRunner:
             summary=summary,
             policy_execution=Recorded[PolicyExecution](
                 value=PolicyExecution(
-                    policy="atreides.agents.tier1.settlement_investigation_analyst.run",
+                    policy="atreides.api.assemble_settlement_investigation",
                     gates=("assemble_timeline", "account_for_every_expected_source"),
                     outcome=disposition,
                 )
@@ -258,11 +255,9 @@ class FiatOperationsRunner:
             "FIAT Operations Specialist",
         )
     )
-    agent: FIATOperationsSpecialist = field(
-        default_factory=lambda: FIATOperationsSpecialist(
-            routing_tables=default_routing_tables(),
-            magnitude_threshold_policy=MagnitudeThresholdPolicy(),
-        )
+    routing_tables: RoutingTables = field(default_factory=default_routing_tables)
+    magnitude_threshold_policy: MagnitudeThresholdPolicy = field(
+        default_factory=MagnitudeThresholdPolicy
     )
 
     expects_refusal: bool = False
@@ -277,8 +272,12 @@ class FiatOperationsRunner:
 
     def observe(self, unit: WorkUnit, tick: int, at: datetime) -> Finding:
         request = synthetic.path_selection_unit(tick, at)
-        output = self.agent.select_multi_currency_rail_routing(
-            request, currency="USD", jurisdiction="US"
+        output = select_multi_currency_rail(
+            request,
+            currency="USD",
+            jurisdiction="US",
+            routing_tables=self.routing_tables,
+            magnitude_threshold_policy=self.magnitude_threshold_policy,
         )
         if isinstance(output, RoutingDecision):
             disposition = Disposition.PASS
@@ -293,8 +292,7 @@ class FiatOperationsRunner:
             policy_execution=Recorded[PolicyExecution](
                 value=PolicyExecution(
                     policy=(
-                        "atreides.agents.tier2.fiat_operations_specialist"
-                        ".select_multi_currency_rail_routing"
+                        "atreides.api.select_multi_currency_rail"
                     ),
                     gates=(
                         "material_magnitude",

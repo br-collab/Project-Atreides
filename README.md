@@ -73,8 +73,19 @@ discouraged.
 
 ## Public API
 
-The package does not yet have one aggregate facade. `import atreides` exposes only
-`__version__`. The supported package-level facades today are:
+`atreides.api` is the supported functional facade. It exposes the governed
+verbs callers need without requiring them to construct doctrine-named agent
+classes:
+
+- obligation evaluation and preparation;
+- settlement validation, emission and rail-acknowledgment recording;
+- settlement-investigation assembly;
+- approved-path multi-currency rail selection;
+- the Cato Cash gate and funding projection.
+
+`import atreides` continues to expose only `__version__`, avoiding eager imports
+and dependency cycles. The existing domain packages remain compatibility
+surfaces for their typed models and established callers:
 
 | Import | Supported role |
 |---|---|
@@ -86,20 +97,18 @@ The package does not yet have one aggregate facade. `import atreides` exposes on
 | `atreides.escalation` | Escalation registration and acknowledgement. |
 | `atreides.activation` | Advisory activation, handoff admission and supervisor outputs; authority remains human. |
 
-The rail decision functions are still module-local: notably
+Additional rail decision functions remain module-local: notably
 `atreides.rails.cato_cash.evaluate()`,
 `atreides.rails.funding_state.project_funding()` and the functions exported by
 `atreides.rails.cns` and `atreides.rails.determination`. Until consolidation,
 names explicitly declared in a module's `__all__` remain supported compatibility
 imports.
 
-`atreides.agents` is **not** a facade. Some downstream code still imports agent
-output types and implementation classes from their concrete modules, so those
-imports cannot honestly be called private yet. New integrations should call the
-decision, acceptance, messaging and cockpit functions above instead of adding new
-agent-class coupling. Tests, fixtures, probes under `tools/`, and underscored names
-are not library API. A later refactor will consolidate this documented surface and
-hide the remaining agent implementations behind functions.
+`atreides.agents` is **not** a facade. Its output types and implementation
+classes remain importable for compatibility, but new integrations should call
+`atreides.api`. The cockpit and activation runtime do so themselves; agent names
+no longer form their integration boundary. Tests, fixtures, probes under
+`tools/`, and underscored names are not library API.
 
 ---
 
