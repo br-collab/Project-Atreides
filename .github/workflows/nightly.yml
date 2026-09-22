@@ -1,10 +1,13 @@
-# Nightly deep property hunt.
+# Nightly deep invariant hunt.
 #
 # The deep Hypothesis profile runs 2,000 examples per property and takes
 # minutes rather than seconds - roughly eleven and a half on one developer
 # machine. That is too long for a per-push gate: a check people wait out is a
 # check people learn to skip, and a skipped check reads as coverage while
-# providing none.
+# providing none. The same job also replays every end-to-end scenario twice
+# and compares the complete JSON output byte for byte; the per-push probe
+# catches immediate drift, while this scheduled run guards the claim even on
+# quiet days.
 #
 # So it runs here instead, where nobody is waiting. This is the mode that
 # hunts rather than confirms, and the properties most likely to catch
@@ -41,6 +44,14 @@ jobs:
 
       - name: Deep property run
         run: pytest --hypothesis-profile=deep tests/test_properties.py -q
+
+      - name: Replay every pipeline scenario byte for byte
+        run: |
+          replay_dir="$RUNNER_TEMP/atreides-replay"
+          mkdir -p "$replay_dir"
+          python tools/pipeline_probe.py --json > "$replay_dir/first.json"
+          python tools/pipeline_probe.py --json > "$replay_dir/second.json"
+          cmp "$replay_dir/first.json" "$replay_dir/second.json"
 
       # A counterexample is the entire value of a failed run and it does not
       # survive a re-run: Hypothesis prints a minimal failing case and a

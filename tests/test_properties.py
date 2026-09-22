@@ -324,6 +324,23 @@ def test_systemic_stress_outranks_every_other_condition(call) -> None:
 
 
 @SETTINGS
+@given(gate_call(), st.sampled_from([float("nan"), float("inf"), float("-inf")]))
+def test_unusable_stress_never_proceeds(call, stress: float) -> None:
+    """A broken stress feed must fail closed for every other gate state.
+
+    The fixed regression examples prove the three non-finite representations
+    are named correctly on a serviceable operation. This property attacks the
+    stronger claim: no combination of operation, funding, or rails may turn
+    any of those unusable readings into PROCEED.
+    """
+    operation, funding, rails, _finite_stress = call
+    decision = evaluate(
+        operation=operation, funding=funding, rails=rails, ofr_stlfsi4=stress
+    )
+    assert decision.proceeds is False
+
+
+@SETTINGS
 @given(gate_call())
 def test_proceeding_always_names_a_usable_rail(call) -> None:
     """A PROCEED with no rail, or with the reserved placeholder, would be a
