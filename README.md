@@ -69,7 +69,37 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**1,265 tests (1,025 functions, 240 parametrized cases) · 34 Hypothesis property invariants · 99% line coverage, whole package, no branch coverage · MIT**
+**1,503 collected tests · 36 Hypothesis property tests · 95% whole-package line-coverage gate plus branch-coverage floors on Cato Cash and funding dispositions · MIT**
+
+## Public API
+
+The package does not yet have one aggregate facade. `import atreides` exposes only
+`__version__`. The supported package-level facades today are:
+
+| Import | Supported role |
+|---|---|
+| `atreides.contracts` | Custody objects, operations, settlement methods, finality-related profiles and authority contracts. |
+| `atreides.acceptance` | Obligation evaluation and instruction preparation through `evaluate_candidate()` and `prepare_instruction()`. |
+| `atreides.cockpit` | The prepare/govern/reconcile operator cycle. It never submits. |
+| `atreides.messaging` | Canonical cash instructions, ISO 20022 emission, status parsing and readback reconciliation. |
+| `atreides.dsor` | Append-only decision records and the `DSORStore`. |
+| `atreides.escalation` | Escalation registration and acknowledgement. |
+| `atreides.activation` | Advisory activation, handoff admission and supervisor outputs; authority remains human. |
+
+The rail decision functions are still module-local: notably
+`atreides.rails.cato_cash.evaluate()`,
+`atreides.rails.funding_state.project_funding()` and the functions exported by
+`atreides.rails.cns` and `atreides.rails.determination`. Until consolidation,
+names explicitly declared in a module's `__all__` remain supported compatibility
+imports.
+
+`atreides.agents` is **not** a facade. Some downstream code still imports agent
+output types and implementation classes from their concrete modules, so those
+imports cannot honestly be called private yet. New integrations should call the
+decision, acceptance, messaging and cockpit functions above instead of adding new
+agent-class coupling. Tests, fixtures, probes under `tools/`, and underscored names
+are not library API. A later refactor will consolidate this documented surface and
+hide the remaining agent implementations behind functions.
 
 ---
 
