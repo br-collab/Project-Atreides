@@ -1,58 +1,26 @@
-"""Obligation acceptance: evaluate a candidate, and gate instruction preparation on the result.
-
-ATR-I-01. Atreides accepts or refuses an obligation formed elsewhere (L.C.); it
-never rewrites the economics. :func:`evaluate_candidate` is a pure function: it
-reads the candidate, the Cato Cash decision and the halt context, and returns an
-:class:`~atreides.acceptance.record.ObligationAcceptanceRecord`. It writes
-nothing and changes nothing; persisting the record is the caller's job.
-
-Predicates (``obligation-acceptance/0.1-draft``) and what failing each means:
-
-========================  ==============================  ==============
-Predicate                 Fails when                      Disposition
-========================  ==============================  ==============
-required_fields_present   a required field is absent      BLOCK
-no_unknown_enums          an enum value is not a member   INDETERMINATE
-leg_linkage               legs disagree with the          BLOCK
-                          obligation on lifecycle or
-                          delivery pattern
-halt_not_active           a halt covering Atreides is     HOLD
-                          in effect
-funding_bound             no Cato Cash decision, or one not  INDETERMINATE
-                          bound to this obligation id
-                          and digest
-                          the bound decision holds or     HOLD
-                          escalates
-========================  ==============================  ==============
-
-The record's disposition is the most severe predicate result, in the order
-BLOCK, INDETERMINATE, HOLD, PASS. Missing evidence is never PASS.
-
-:func:`prepare_instruction` is the ``INSTRUCTION_PREPARED`` step for the
-obligation path: it refuses unless an ACCEPTED record exists for the exact
-digest of the candidate being prepared.
-"""
+"""Frozen settlement-obligation acceptance boundary and instruction gate."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from uuid import UUID
 
-import cannae_kernel
-from cannae_kernel.canonical import digest
+from cannae_kernel.absence import AbsenceKind, Absent, Recorded
+from cannae_kernel.actor import ActorRef
+from cannae_kernel.canonical import digest, digest_bytes
 from cannae_kernel.delivery import DeliveryPattern
 from cannae_kernel.disposition import Disposition
 from cannae_kernel.domains import Domain
+from cannae_kernel.envelopes import ObligationAcceptanceRecord as FrozenAcceptanceRecord
+from cannae_kernel.envelopes import SettlementObligationEnvelope
 from cannae_kernel.finality import FinalityType
 from cannae_kernel.halt import HaltContext, gate_under_halt
+from cannae_kernel.provenance import Provenance
+from pydantic import ValidationError
 
 from atreides.acceptance.candidate import ObligationCandidate
-from atreides.acceptance.record import (
-    ACCEPTANCE_RULE_VERSION,
-    ObligationAcceptanceRecord,
-    PredicateResult,
-    outcome_for,
-)
+from atreides.acceptance.record import ObligationAcceptanceRecord as DraftAcceptanceRecord
+from atreides.acceptance.record import PredicateResult
 from atreides.messaging.canonical import CashLegInstruction
 from atreides.messaging.emit import InstructionArtifact, emit_instruction_artifact
 from atreides.messaging.profile import BASE_ISO_20022, DepositoryProfile
@@ -60,13 +28,7 @@ from atreides.rails.cato_cash import CatoCashDecision, GateDecision
 
 __all__ = ["PreparationRefusedError", "evaluate_candidate", "prepare_instruction"]
 
-_SEVERITY: tuple[Disposition, ...] = (
-    Disposition.BLOCK,
-    Disposition.INDETERMINATE,
-    Disposition.HOLD,
-    Disposition.PASS,
-)
-
+_SEVERITY = (Disposition.BLOCK, Disposition.INDETERMINATE, Disposition.HOLD, Disposition.PASS)
 _NO_SECURITIES_LEG = {DeliveryPattern.PAYMENT_ONLY.value, DeliveryPattern.PVP.value}
 _NO_CASH_LEG = {DeliveryPattern.FOP.value}
 
@@ -83,108 +45,117 @@ def _passed(name: str, detail: str) -> PredicateResult:
 
 def _required_fields(c: ObligationCandidate) -> PredicateResult:
     missing: list[str] = []
-    if c.obligation_version is None:
-        missing.append("obligation_version")
-    if c.lifecycle_id is None:
-        missing.append("lifecycle_id")
+    if c.source_manifest is None or not c.source_manifest.references:
+        missing.append("source_manifest.references")
     if c.delivery_pattern is None:
         missing.append("delivery_pattern")
-    if not c.source_references:
-        missing.append("source_references")
     if not c.participants:
         missing.append("participants")
-    pattern = c.delivery_pattern
-    if pattern not in _NO_SECURITIES_LEG:
-        leg = c.securities_leg
-        if leg is None:
+    if not c.candidate_paths:
+        missing.append("candidate_paths")
+    if c.delivery_pattern not in _NO_SECURITIES_LEG:
+        if c.securities_leg is None:
             missing.append("securities_leg")
         else:
             missing += [
-                f"securities_leg.{f}"
-                for f in (
-                    "lifecycle_id",
-                    "delivery_pattern",
+                f"securities_leg.{field}"
+                for field in (
                     "instrument_id",
                     "quantity",
-                    "deliverer_participant_id",
-                    "receiver_participant_id",
+                    "delivering_account_id",
+                    "receiving_account_id",
                 )
-                if getattr(leg, f) is None
+                if getattr(c.securities_leg, field) is None
             ]
-        if not any(e.leg == "securities" for e in c.expected_finality):
+        if not any(item.leg == "SECURITIES" for item in c.expected_finality):
             missing.append("expected_finality.securities")
-    if pattern not in _NO_CASH_LEG:
-        cash = c.cash_leg
-        if cash is None:
+    if c.delivery_pattern not in _NO_CASH_LEG:
+        if c.cash_leg is None:
             missing.append("cash_leg")
         else:
             missing += [
-                f"cash_leg.{f}"
-                for f in (
-                    "lifecycle_id",
-                    "delivery_pattern",
+                f"cash_leg.{field}"
+                for field in (
+                    "principal",
+                    "accrued",
                     "total",
                     "currency",
                     "value_date",
-                    "payer_participant_id",
-                    "payee_participant_id",
+                    "paying_account_id",
+                    "receiving_account_id",
                 )
-                if getattr(cash, f) is None
+                if getattr(c.cash_leg, field) is None
             ]
-        if not any(e.leg == "cash" for e in c.expected_finality):
+        if not any(item.leg == "CASH" for item in c.expected_finality):
             missing.append("expected_finality.cash")
     if missing:
         return _result(
             "required_fields_present",
             Disposition.BLOCK,
             f"Required fields absent: {', '.join(missing)}.",
-            *(f"MISSING:{m}" for m in missing),
+            *(f"MISSING:{item}" for item in missing),
         )
     return _passed("required_fields_present", "Every required field is present.")
 
 
 def _unknown_enums(c: ObligationCandidate) -> PredicateResult:
-    patterns = {p.value for p in DeliveryPattern}
-    finality = {f.value for f in FinalityType}
+    patterns = {item.value for item in DeliveryPattern}
+    finality = {item.value for item in FinalityType}
     unknown: list[str] = []
-    for where, value in (
-        ("delivery_pattern", c.delivery_pattern),
-        ("securities_leg.delivery_pattern", c.securities_leg and c.securities_leg.delivery_pattern),
-        ("cash_leg.delivery_pattern", c.cash_leg and c.cash_leg.delivery_pattern),
-    ):
-        if value is not None and value not in patterns:
-            unknown.append(f"{where}={value!r}")
-    for i, expected in enumerate(c.expected_finality):
+    if c.delivery_pattern is not None and c.delivery_pattern not in patterns:
+        unknown.append("delivery_pattern")
+    for index, path in enumerate(c.candidate_paths):
+        if path.delivery_pattern is not None and path.delivery_pattern not in patterns:
+            unknown.append(f"candidate_paths[{index}].delivery_pattern")
+    for index, expected in enumerate(c.expected_finality):
         if expected.finality_type not in finality:
-            unknown.append(f"expected_finality[{i}].finality_type={expected.finality_type!r}")
+            unknown.append(f"expected_finality[{index}].finality_type")
     if unknown:
         return _result(
             "no_unknown_enums",
             Disposition.INDETERMINATE,
-            f"Values that name no member exactly: {', '.join(unknown)}. Not guessed at (ATR-I-05).",
-            *(f"UNKNOWN_ENUM:{u.split('=', 1)[0]}" for u in unknown),
+            f"Values name no enum member exactly: {', '.join(unknown)}.",
+            *(f"UNKNOWN_ENUM:{item}" for item in unknown),
         )
     return _passed("no_unknown_enums", "Every enum value names a member exactly.")
 
 
 def _leg_linkage(c: ObligationCandidate) -> PredicateResult:
     codes: list[str] = []
-    for name, leg in (("securities_leg", c.securities_leg), ("cash_leg", c.cash_leg)):
-        if leg is None:
-            continue
-        if leg.lifecycle_id is not None and leg.lifecycle_id != c.lifecycle_id:
-            codes.append(f"LEG_LIFECYCLE_MISMATCH:{name}")
-        if leg.delivery_pattern is not None and leg.delivery_pattern != c.delivery_pattern:
-            codes.append(f"LEG_DELIVERY_PATTERN_MISMATCH:{name}")
+    accounts = {participant.account_id for participant in c.participants}
+    securities_accounts = (
+        ()
+        if c.securities_leg is None
+        else (
+            c.securities_leg.delivering_account_id,
+            c.securities_leg.receiving_account_id,
+        )
+    )
+    cash_accounts = (
+        ()
+        if c.cash_leg is None
+        else (
+            c.cash_leg.paying_account_id,
+            c.cash_leg.receiving_account_id,
+        )
+    )
+    if any(account is not None and account not in accounts for account in securities_accounts):
+        codes.append("LEG_ACCOUNT_MISMATCH:securities_leg")
+    if any(account is not None and account not in accounts for account in cash_accounts):
+        codes.append("LEG_ACCOUNT_MISMATCH:cash_leg")
+    if any(
+        path.delivery_pattern is not None and path.delivery_pattern != c.delivery_pattern
+        for path in c.candidate_paths
+    ):
+        codes.append("LEG_DELIVERY_PATTERN_MISMATCH:candidate_path")
     if codes:
         return _result(
             "leg_linkage",
             Disposition.BLOCK,
-            "A leg does not share the obligation's lifecycle and delivery pattern, so the "
-            "legs are not one settlement.",
+            "A leg account or candidate path is not linked to this obligation payload.",
             *codes,
         )
-    return _passed("leg_linkage", "Present legs share the lifecycle and delivery pattern.")
+    return _passed("leg_linkage", "Leg accounts and candidate paths are linked.")
 
 
 def _halt(halt: HaltContext | None) -> PredicateResult:
@@ -194,138 +165,138 @@ def _halt(halt: HaltContext | None) -> PredicateResult:
         return _result(
             "halt_not_active",
             Disposition.HOLD,
-            f"Halt {halt.halt_id} (version {halt.version}) is active for Atreides: {halt.reason}.",
+            f"Halt {halt.halt_id} (version {halt.version}) is active for Atreides.",
             "HALT_ACTIVE",
         )
     return _passed("halt_not_active", f"Halt context version {halt.version} does not block.")
 
 
 def _funding(
-    c: ObligationCandidate, candidate_digest: str, decision: CatoCashDecision | None
+    envelope: SettlementObligationEnvelope,
+    candidate: ObligationCandidate,
+    envelope_digest: str,
+    decision: CatoCashDecision | None,
 ) -> PredicateResult:
     name = "funding_bound"
-    if c.delivery_pattern in _NO_CASH_LEG:
-        return _passed(name, "Free of payment: no cash leg, so no cash gate decision applies.")
+    if candidate.delivery_pattern in _NO_CASH_LEG:
+        return _passed(name, "Free of payment: no cash gate decision applies.")
     if decision is None:
         return _result(
-            name,
-            Disposition.INDETERMINATE,
-            "No Cato Cash decision supplied. Funding is unassessed, not assumed.",
-            "CASH_GATE_DECISION_MISSING",
+            name, Disposition.INDETERMINATE, "No cash decision.", "CASH_GATE_DECISION_MISSING"
         )
     if not decision.bound:
         return _result(
-            name,
-            Disposition.INDETERMINATE,
-            "The Cato Cash decision names no obligation, so it is not evidence about this one.",
-            "CASH_GATE_UNBOUND",
+            name, Disposition.INDETERMINATE, "Cash decision is unbound.", "CASH_GATE_UNBOUND"
         )
-    if decision.obligation_id != c.obligation_id:
+    if decision.obligation_id != envelope.obligation_id:
         return _result(
-            name,
-            Disposition.INDETERMINATE,
-            f"The Cato Cash decision governs {decision.obligation_id}, not {c.obligation_id}.",
-            "CASH_GATE_OTHER_OBLIGATION",
+            name, Disposition.INDETERMINATE, "Other obligation.", "CASH_GATE_OTHER_OBLIGATION"
         )
-    if decision.obligation_digest != candidate_digest:
-        return _result(
-            name,
-            Disposition.INDETERMINATE,
-            "The Cato Cash decision was made for a different version of this obligation "
-            f"({decision.obligation_digest}, not {candidate_digest}).",
-            "CASH_GATE_STALE_DIGEST",
-        )
+    if decision.obligation_digest != envelope_digest:
+        return _result(name, Disposition.INDETERMINATE, "Stale envelope.", "CASH_GATE_STALE_DIGEST")
     if decision.decision is not GateDecision.PROCEED:
         return _result(
             name,
             Disposition.HOLD,
-            f"Cato Cash returned {decision.decision.value} ({decision.reason_code.value}): "
-            f"{decision.rationale}",
+            f"Cato Cash returned {decision.decision.value}.",
             f"CASH_GATE_{decision.decision.value}:{decision.reason_code.value}",
         )
-    return _passed(name, "Cato Cash PROCEED is bound to this obligation id and digest.")
+    return _passed(name, "Cato Cash PROCEED is bound to this frozen envelope.")
+
+
+def _frozen_record(
+    envelope: SettlementObligationEnvelope,
+    *,
+    disposition: Disposition,
+    acceptance_id: UUID,
+    decided_by: ActorRef,
+    reasons: tuple[str, ...],
+) -> FrozenAcceptanceRecord:
+    dsor = (
+        Recorded[str](value=f"atreides-acceptance:{acceptance_id}")
+        if disposition is Disposition.PASS
+        else Absent(
+            kind=AbsenceKind.NOTHING_RECORDED,
+            reason=";".join(reasons) or "ACCEPTANCE_NOT_RECORDED",
+        )
+    )
+    return FrozenAcceptanceRecord(
+        obligation_id=envelope.obligation_id,
+        obligation_digest=digest(envelope),
+        disposition=disposition,
+        dsor_record=dsor,
+        decided_by=decided_by,
+        provenance=Provenance.POLICY_RESULT,
+    )
 
 
 def evaluate_candidate(
-    candidate: ObligationCandidate,
+    envelope: SettlementObligationEnvelope,
+    payload: bytes,
     *,
     acceptance_id: UUID,
     evaluated_at: datetime,
+    decided_by: ActorRef,
     gate_decision: CatoCashDecision | None,
     halt: HaltContext | None,
-) -> ObligationAcceptanceRecord:
-    """Evaluate a candidate. Pure: reads its inputs, returns a record, changes nothing."""
-    candidate_digest = digest(candidate)
+) -> FrozenAcceptanceRecord:
+    """Verify attested bytes, parse them internally, then apply every predicate."""
+    if evaluated_at.tzinfo is None:
+        raise ValueError("evaluated_at must be timezone-aware")
+    if digest_bytes(payload) != envelope.payload_digest:
+        return _frozen_record(
+            envelope,
+            disposition=Disposition.BLOCK,
+            acceptance_id=acceptance_id,
+            decided_by=decided_by,
+            reasons=("PAYLOAD_DIGEST_MISMATCH",),
+        )
+    try:
+        candidate = ObligationCandidate.model_validate_json(payload)
+    except ValidationError:
+        return _frozen_record(
+            envelope,
+            disposition=Disposition.BLOCK,
+            acceptance_id=acceptance_id,
+            decided_by=decided_by,
+            reasons=("PAYLOAD_INVALID",),
+        )
+    envelope_digest = digest(envelope)
     predicates = (
         _required_fields(candidate),
         _unknown_enums(candidate),
         _leg_linkage(candidate),
         _halt(halt),
-        _funding(candidate, candidate_digest, gate_decision),
+        _funding(envelope, candidate, envelope_digest, gate_decision),
     )
     disposition = next(
         severity for severity in _SEVERITY if any(p.disposition is severity for p in predicates)
     )
-    outcome = outcome_for(disposition)
-    data_versions: list[tuple[str, str]] = [
-        ("candidate_schema", candidate.schema_version),
-        ("cannae_kernel", cannae_kernel.__version__),
-    ]
-    if gate_decision is not None:
-        data_versions.append(("cato_cash_gate_set", gate_decision.gate_set_version))
-    return ObligationAcceptanceRecord(
-        operation_id=acceptance_id,
-        obligation_id=candidate.obligation_id,
-        obligation_version=candidate.obligation_version,
-        lifecycle_id=candidate.lifecycle_id,
-        obligation_digest=candidate_digest,
+    reasons = tuple(code for predicate in predicates for code in predicate.reason_codes)
+    return _frozen_record(
+        envelope,
         disposition=disposition,
-        outcome=outcome,
-        evaluated_predicates=predicates,
-        rule_version=ACCEPTANCE_RULE_VERSION,
-        data_versions=tuple(data_versions),
-        reason_codes=tuple(code for p in predicates for code in p.reason_codes),
-        halt_context_version=None if halt is None else halt.version,
-        evaluated_at=evaluated_at,
-        accepted_at=evaluated_at if disposition is Disposition.PASS else None,
+        acceptance_id=acceptance_id,
+        decided_by=decided_by,
+        reasons=reasons,
     )
 
 
 class PreparationRefusedError(RuntimeError):
-    """Raised instead of preparing an instruction for an obligation that was not accepted."""
+    """Raised instead of preparing an instruction without matching acceptance."""
 
 
 def prepare_instruction(
     candidate: ObligationCandidate,
-    acceptance: ObligationAcceptanceRecord | None,
+    acceptance: DraftAcceptanceRecord | None,
     instruction: CashLegInstruction,
     profile: DepositoryProfile = BASE_ISO_20022,
     *,
     halt: HaltContext | None = None,
 ) -> InstructionArtifact:
-    """``INSTRUCTION_PREPARED`` for an obligation: only against an ACCEPTED record, same digest.
-
-    Refuses with :class:`PreparationRefusedError` when there is no record, when the record
-    is not ACCEPTED, or when it was made for another obligation or another version of
-    this one. A halt in effect still refuses in :func:`emit_instruction_artifact`.
-    """
-    if acceptance is None:
+    """Legacy internal boundary; migrated to frozen inputs in WP-2."""
+    if acceptance is None or not acceptance.accepted:
         raise PreparationRefusedError(
-            f"No acceptance record for {candidate.obligation_id}; nothing is prepared (ATR-I-01)."
-        )
-    if not acceptance.accepted:
-        raise PreparationRefusedError(
-            f"Obligation {candidate.obligation_id} was {acceptance.outcome.value}, not "
-            f"ACCEPTED; nothing is prepared (ATR-I-01)."
-        )
-    candidate_digest = digest(candidate)
-    if (
-        acceptance.obligation_id != candidate.obligation_id
-        or acceptance.obligation_digest != candidate_digest
-    ):
-        raise PreparationRefusedError(
-            f"The acceptance record is for {acceptance.obligation_id} at "
-            f"{acceptance.obligation_digest}, not {candidate.obligation_id} at "
-            f"{candidate_digest}; nothing is prepared (ATR-I-01)."
+            "Obligation was not ACCEPTED; nothing is prepared (ATR-I-01)."
         )
     return emit_instruction_artifact(instruction, profile, halt=halt)

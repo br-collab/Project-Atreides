@@ -53,7 +53,7 @@ from atreides.rails.cato_cash import (
     RailStatus,
 )
 from atreides.rails.cato_cash_record import CatoCashDecisionRecord
-from tests.acceptance.test_acceptance import _candidate, _gate
+from tests.acceptance.test_acceptance import ACTOR, _candidate, _gate, _wire
 
 T0 = datetime(2026, 9, 17, 18, 0, tzinfo=UTC)
 LIF = "lif_01M2P20SY00000000000000001"
@@ -86,6 +86,7 @@ def _halt(active: bool) -> HaltContext:
 def _lifecycle(store: DSORStore) -> list[Any]:
     """One settlement lifecycle, each fact appended one minute after the last."""
     candidate = _candidate()
+    envelope, payload = _wire(candidate)
     gate = CatoCashDecisionRecord.capture(
         decision_id=uuid.uuid4(),
         lifecycle_id=LIF,
@@ -95,27 +96,28 @@ def _lifecycle(store: DSORStore) -> list[Any]:
         funding=FundingState(D("5000000"), D("996234.56"), D("10000000"), True),
         rails={CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200)},
         ofr_stlfsi4=0.0,
-        obligation_id=candidate.obligation_id,
-        obligation_digest=digest(candidate),
+        obligation_id=envelope.obligation_id,
+        obligation_digest=digest(envelope),
     )
     acceptance = evaluate_candidate(
-        candidate,
+        envelope,
+        payload,
         acceptance_id=uuid.uuid4(),
         evaluated_at=T0,
-        gate_decision=_gate(candidate),
+        decided_by=ACTOR,
+        gate_decision=_gate(envelope),
         halt=None,
     )
     outputs: list[Any] = [
         HaltRecord(operation_id=uuid.uuid4(), lifecycle_id=LIF, halt=_halt(True)),
         HaltRecord(operation_id=uuid.uuid4(), lifecycle_id=LIF, halt=_halt(False)),
         gate,
-        acceptance,
         InstructionPreparedRecord(
             operation_id=uuid.uuid4(),
             lifecycle_id=LIF,
-            obligation_id=candidate.obligation_id,
-            obligation_digest=digest(candidate),
-            acceptance_record_digest=acceptance.digest(),
+            obligation_id=envelope.obligation_id,
+            obligation_digest=digest(envelope),
+            acceptance_record_digest=digest(acceptance),
             message_definition="pacs.009.001.13",
             end_to_end_id="E2E-0002",
             artifact_digest=digest_bytes(b"<AppHdr/><Document/>"),
@@ -124,7 +126,7 @@ def _lifecycle(store: DSORStore) -> list[Any]:
         RailStatusObservedRecord(
             operation_id=uuid.uuid4(),
             lifecycle_id=LIF,
-            obligation_id=candidate.obligation_id,
+            obligation_id=envelope.obligation_id,
             end_to_end_id="E2E-0002",
             status=SettlementStatus.SETTLED,
             status_code="ACSC",
@@ -135,7 +137,7 @@ def _lifecycle(store: DSORStore) -> list[Any]:
         FinalityAssertedRecord(
             operation_id=uuid.uuid4(),
             lifecycle_id=LIF,
-            obligation_id=candidate.obligation_id,
+            obligation_id=envelope.obligation_id,
             assertion=FinalityAssertion(
                 finality_type=FinalityType.CASH_FINAL,
                 governing_rule_set="synthetic-fedwire-funds/v0.1",
@@ -158,7 +160,7 @@ def _lifecycle(store: DSORStore) -> list[Any]:
         ReconciliationResultRecord(
             operation_id=uuid.uuid4(),
             lifecycle_id=LIF,
-            obligation_id=candidate.obligation_id,
+            obligation_id=envelope.obligation_id,
             status_report_message_id="MSG-9",
             matched=True,
             break_codes=(),
@@ -199,7 +201,6 @@ def test_every_lifecycle_record_round_trips_through_the_store() -> None:
         "halt_context",
         "halt_context",
         "cash_gate_decision",
-        "obligation_acceptance",
         "instruction_prepared",
         "rail_status_observed",
         "finality_asserted",
@@ -217,16 +218,15 @@ def test_lifecycle_journal_verifies_and_renders_deterministically() -> None:
     envelopes = render_journal(store, records, lifecycle_id=LIF)
     report = verify_chain(envelopes)
     assert report.ok, report.issues
-    assert report.event_count == 8
+    assert report.event_count == 7
     assert render_journal(store, records, lifecycle_id=LIF) == envelopes
     first, halt_cleared = envelopes[0], envelopes[1]
     assert first.prior_event_digest is None and first.parent_ids == ()
     assert halt_cleared.parent_ids == (first.event_id,)
     assert first.provenance is Provenance.HUMAN_JUDGMENT
     assert envelopes[3].actor == ATREIDES_DSOR_ACTOR
-    assert envelopes[5].provenance is Provenance.FACT_SYNTHETIC
-    assert envelopes[6].actor.actor_kind is ActorKind.EXTERNAL_EMULATOR
-    assert envelopes[3].rule_version == "obligation-acceptance/0.1-draft"
+    assert envelopes[4].provenance is Provenance.FACT_SYNTHETIC
+    assert envelopes[5].actor.actor_kind is ActorKind.EXTERNAL_EMULATOR
     assert envelopes[2].rule_version == "cato-cash-gates/0.3"
     assert isinstance(first.payload, DSORRecordRef)
     assert first.payload.stored_payload_digest == digest_bytes(
@@ -289,9 +289,7 @@ def test_a_rewritten_middle_record_breaks_the_chain_against_the_old_envelopes() 
     conn.execute(
         "UPDATE dsor_records SET payload = ? WHERE record_id = ?",
         (
-            middle.output.model_dump_json().replace(
-                "obligation-acceptance/0.1-draft", "obligation-acceptance/0.2-draft"
-            ),
+            middle.output.model_dump_json().replace("pacs.009.001.13", "pacs.009.001.14"),
             str(middle.record_id),
         ),
     )
