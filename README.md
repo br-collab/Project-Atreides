@@ -69,7 +69,16 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**1,503 collected tests · 36 Hypothesis property tests · 95% whole-package line-coverage gate plus branch-coverage floors on Cato Cash and funding dispositions · MIT**
+**1,505 collected tests (1,504 passing, 1 expected failure) · 99% measured whole-package line
+coverage, with a 95% gate plus branch-coverage floors on Cato Cash and funding dispositions · MIT**
+
+This is research software with the public functional facade described below. It prepares,
+governs, and reconciles settlement work, but does not hold submission credentials, connect to a
+rail as an entitled member, submit instructions, or replace legal books and records.
+
+Historical release tags `v0.1.0` through `v0.3.1` have no retained continuous-integration
+evidence. Their historical build status is therefore **Indeterminate**, not proven green; no tag
+has been moved or re-cut to manufacture evidence after the fact.
 
 ## Public API
 
@@ -355,7 +364,7 @@ one rather than assumed away.
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q          # 1265 passed
+pytest -q          # 1504 passed, 1 expected failure
 ```
 
 Requires Python ≥ 3.11. Runtime dependency: `pydantic>=2.6`. `lxml` is
