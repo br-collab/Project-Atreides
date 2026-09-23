@@ -100,7 +100,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cannae-kernel", git = "https://github.com/br-collab/cannae-kernel.git?rev=v1.0.0" },
+    { name = "cannae-kernel", git = "https://github.com/br-collab/cannae-kernel.git?rev=v1.1.1" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },
     { name = "lxml", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9" },
@@ -113,8 +113,8 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "cannae-kernel"
-version = "1.0.0"
-source = { git = "https://github.com/br-collab/cannae-kernel.git?rev=v1.0.0#74def3f1cd3010f35375d771425903ad2f72f8ec" }
+version = "1.1.0"
+source = { git = "https://github.com/br-collab/cannae-kernel.git?rev=v1.1.1#3a0b5dfccc3d5ff9c2eebad02c6518664be72e75" }
 dependencies = [
     { name = "pydantic" },
 ]
