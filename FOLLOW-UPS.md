@@ -4,6 +4,26 @@ Items noticed during the contracts-layer build and the FIAT Operations
 Specialist agent build that are explicitly out of scope for those
 builds but should be addressed in subsequent work.
 
+## ATR-FU-01 — whole-repository formatting and typing debt
+
+Measured on `Project-Atreides` commit
+`06d0350228d66db64fb977b6c359a8b34a264570` with the repository development
+environment:
+
+```console
+ruff format --check .
+# 79 files would be reformatted, 108 files already formatted
+
+mypy atreides
+# Found 5 errors in 1 file (checked 69 source files)
+```
+
+The five typing errors are in `atreides/cockpit/clearing_cockpit.py`. The current
+continuous integration (CI) checks remain green because their scope is narrower,
+not because this debt is absent: CI runs `ruff check .` rather than the formatter
+check, and strict mypy covers six named packages rather than the whole `atreides`
+package. This finding records the debt only; it does not change source or CI scope.
+
 ## Doctrine errata to fix in the next custody doctrine iteration
 
 ### DISCHARGED 312350Z JUL 26 — §VI line 634 citation erratum
