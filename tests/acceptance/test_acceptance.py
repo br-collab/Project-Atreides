@@ -29,7 +29,17 @@ from atreides.acceptance.candidate import (
     SourceManifest,
     SourceReference,
 )
-from atreides.acceptance.service import evaluate_candidate
+from atreides.acceptance.service import (
+    PreparationRefusedError,
+    evaluate_candidate,
+    prepare_instruction,
+)
+from atreides.messaging.canonical import (
+    CashLegInstruction,
+    FinancialInstitution,
+    SettlementMethod,
+)
+from atreides.messaging.emit import PreparationHaltedError
 from atreides.rails.cato_cash import (
     CashRail,
     FundingState,
@@ -306,3 +316,83 @@ def test_session_business_date_is_consumed_unchanged() -> None:
         halt=None,
     )
     assert envelope.session == before
+
+
+def _instruction() -> CashLegInstruction:
+    return CashLegInstruction(
+        message_id="AUR20260917000002",
+        end_to_end_id="E2E-0002",
+        created_at=T,
+        amount=D("996234.56"),
+        currency="USD",
+        debtor=FinancialInstitution("DDDDUS33"),
+        creditor=FinancialInstitution("EEEEUS33"),
+        settlement_method=SettlementMethod.CLEARING_SYSTEM,
+        sender=FinancialInstitution("DDDDUS33"),
+        receiver=FinancialInstitution("FFFFUS33"),
+    )
+
+
+def _accepted_wire() -> tuple[SettlementObligationEnvelope, bytes, ObligationAcceptanceRecord]:
+    envelope, payload = _wire(_candidate())
+    acceptance = evaluate_candidate(
+        envelope,
+        payload,
+        acceptance_id=uuid.uuid4(),
+        evaluated_at=T,
+        decided_by=ACTOR,
+        gate_decision=_gate(envelope),
+        halt=None,
+    )
+    assert acceptance.disposition is Disposition.PASS
+    return envelope, payload, acceptance
+
+
+def test_preparation_requires_the_accepted_frozen_envelope_and_payload() -> None:
+    envelope, payload, acceptance = _accepted_wire()
+    artifact = prepare_instruction(envelope, payload, acceptance, _instruction())
+    assert artifact.is_submission is False
+
+
+def test_preparation_refuses_missing_or_non_pass_acceptance() -> None:
+    envelope, payload, _ = _accepted_wire()
+    with pytest.raises(PreparationRefusedError, match="No acceptance record"):
+        prepare_instruction(envelope, payload, None, _instruction())
+
+    held = evaluate_candidate(
+        envelope,
+        payload,
+        acceptance_id=uuid.uuid4(),
+        evaluated_at=T,
+        decided_by=ACTOR,
+        gate_decision=_gate(envelope),
+        halt=_halt(),
+    )
+    with pytest.raises(PreparationRefusedError, match="HOLD, not PASS"):
+        prepare_instruction(envelope, payload, held, _instruction())
+
+
+def test_preparation_refuses_tampered_payload() -> None:
+    envelope, payload, acceptance = _accepted_wire()
+    tampered = payload.replace(b"996234.56", b"996234.57")
+    with pytest.raises(PreparationRefusedError, match="PAYLOAD_DIGEST_MISMATCH"):
+        prepare_instruction(envelope, tampered, acceptance, _instruction())
+
+
+def test_preparation_refuses_acceptance_for_another_envelope() -> None:
+    envelope, payload, acceptance = _accepted_wire()
+    other_acceptance = acceptance.model_copy(
+        update={"obligation_id": ObligationId("obl_01M2P20SY00000000000000009")}
+    )
+    with pytest.raises(PreparationRefusedError, match="names another obligation"):
+        prepare_instruction(envelope, payload, other_acceptance, _instruction())
+
+    other = envelope.model_copy(update={"transformation_digest": "sha256:" + "9" * 64})
+    with pytest.raises(PreparationRefusedError, match="does not reference this envelope digest"):
+        prepare_instruction(other, payload, acceptance, _instruction())
+
+
+def test_preparation_still_honours_a_halt() -> None:
+    envelope, payload, acceptance = _accepted_wire()
+    with pytest.raises(PreparationHaltedError):
+        prepare_instruction(envelope, payload, acceptance, _instruction(), halt=_halt())
