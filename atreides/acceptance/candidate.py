@@ -1,98 +1,93 @@
-"""The provisional obligation candidate the acceptance service evaluates (ATR-I-01).
-
-DRAFT, INTERNAL, ``0.1-draft`` (JUM-D-26): Wave 3 freezes the cross-domain
-``SettlementObligationEnvelope`` and may change these fields without a
-deprecation cycle. The behaviour proven against them may not be weakened.
-
-The candidate is deliberately lenient in shape: every field may be absent and
-enum-valued fields hold the raw value as it arrived. That is what lets the
-acceptance service *report* a missing field or an unknown enum value as a
-predicate result, instead of the candidate failing to construct and leaving no
-record at all. The service never modifies a candidate; it is frozen.
-"""
+"""Atreides' internal parse target for settlement-obligation payload bytes."""
 
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Annotated, Literal
+from typing import Annotated
 
-from cannae_kernel.ids import LifecycleId, ObligationId
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
-    "CANDIDATE_SCHEMA_VERSION",
+    "CandidatePathDescriptor",
     "CashLeg",
+    "Correction",
     "ExpectedFinality",
     "ObligationCandidate",
     "Participant",
     "SecuritiesLeg",
+    "SourceManifest",
     "SourceReference",
 ]
 
-CANDIDATE_SCHEMA_VERSION: Literal["0.1-draft"] = "0.1-draft"
-
-#: Amounts and quantities are exact decimals, never binary floats.
-ExactDecimal = Annotated[Decimal, Field(strict=True)]
-#: ISO 8601 calendar date, kept as text so the candidate stays canonicalizable.
+ExactDecimal = Annotated[Decimal, Field(strict=False)]
 IsoDate = Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}$")]
 
 
-class _Draft(BaseModel):
+class _Payload(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
-class SourceReference(_Draft):
-    """Where part of the obligation came from: an intent, order, execution, allocation or match."""
-
-    reference_type: str = Field(min_length=1)
-    reference_id: str = Field(min_length=1)
-    digest: str | None = None
+class SourceReference(_Payload):
+    kind: str = Field(min_length=1)
+    identifier: str = Field(min_length=1)
+    digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
 
 
-class Participant(_Draft):
+class SourceManifest(_Payload):
+    references: tuple[SourceReference, ...] = ()
+
+
+class Participant(_Payload):
     participant_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
     role: str = Field(min_length=1)
-    account: str | None = None
 
 
-class SecuritiesLeg(_Draft):
-    lifecycle_id: LifecycleId | None = None
-    #: Raw delivery pattern as it arrived; must name a kernel ``DeliveryPattern``.
-    delivery_pattern: str | None = None
+class SecuritiesLeg(_Payload):
     instrument_id: str | None = None
     quantity: ExactDecimal | None = None
-    deliverer_participant_id: str | None = None
-    receiver_participant_id: str | None = None
+    delivering_account_id: str | None = None
+    receiving_account_id: str | None = None
 
 
-class CashLeg(_Draft):
-    lifecycle_id: LifecycleId | None = None
-    delivery_pattern: str | None = None
+class CashLeg(_Payload):
     principal: ExactDecimal | None = None
-    accrued_interest: ExactDecimal | None = None
+    accrued: ExactDecimal | None = None
     total: ExactDecimal | None = None
     currency: str | None = None
     value_date: IsoDate | None = None
-    payer_participant_id: str | None = None
-    payee_participant_id: str | None = None
+    paying_account_id: str | None = None
+    receiving_account_id: str | None = None
 
 
-class ExpectedFinality(_Draft):
-    leg: Literal["securities", "cash"]
-    #: Raw finality type as it arrived; must name a kernel ``FinalityType``.
-    finality_type: str
-
-
-class ObligationCandidate(_Draft):
-    """A provisional settlement obligation, as proposed to Atreides for acceptance."""
-
-    schema_version: Literal["0.1-draft"] = CANDIDATE_SCHEMA_VERSION
-    obligation_id: ObligationId
-    obligation_version: int | None = Field(default=None, ge=1)
-    lifecycle_id: LifecycleId | None = None
+class CandidatePathDescriptor(_Payload):
+    path_id: str = Field(min_length=1)
+    rail: str = Field(min_length=1)
+    securities_route: str = Field(min_length=1)
+    cash_route: str = Field(min_length=1)
     delivery_pattern: str | None = None
-    source_references: tuple[SourceReference, ...] = ()
+
+
+class ExpectedFinality(_Payload):
+    leg: str
+    finality_type: str
+    governing_rule_set: str = Field(min_length=1)
+
+
+class Correction(_Payload):
+    correction_id: str = Field(min_length=1)
+    supersedes_payload_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+    reason: str = Field(min_length=1)
+
+
+class ObligationCandidate(_Payload):
+    """Parsed L.C.-owned payload; never the cross-domain boundary type."""
+
+    source_manifest: SourceManifest | None = None
     securities_leg: SecuritiesLeg | None = None
     cash_leg: CashLeg | None = None
     participants: tuple[Participant, ...] = ()
+    delivery_pattern: str | None = None
+    candidate_paths: tuple[CandidatePathDescriptor, ...] = ()
     expected_finality: tuple[ExpectedFinality, ...] = ()
+    corrections: tuple[Correction, ...] = ()
