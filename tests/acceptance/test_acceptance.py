@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 import pytest
-from cannae_kernel.absence import Absent, Recorded
+from cannae_kernel.absence import AbsenceKind, Absent, Recorded
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes_of, digest, digest_bytes
 from cannae_kernel.disposition import Disposition
@@ -18,6 +18,7 @@ from cannae_kernel.halt import HaltContext
 from cannae_kernel.ids import ActorId, HaltId, LifecycleId, ObligationId
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
+from pydantic import ValidationError
 
 from atreides.acceptance.candidate import (
     CandidatePathDescriptor,
@@ -195,6 +196,49 @@ def test_payload_digest_mismatch_is_a_recorded_refusal() -> None:
     assert record.disposition is not Disposition.PASS
     assert _reason(record) == "PAYLOAD_DIGEST_MISMATCH"
     assert record.obligation_digest == digest(envelope)
+
+
+def test_valid_payload_with_short_cash_funding_is_a_distinct_recorded_hold() -> None:
+    envelope, payload = _wire(_candidate())
+    short = evaluate(
+        operation=OperationContext(
+            notional=D("996234.56"), currency="USD", is_material=False, is_lvps_material=False
+        ),
+        funding=FundingState(D("0"), D("996234.56"), D("10000000"), True),
+        rails={CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200)},
+        ofr_stlfsi4=0.0,
+        obligation_id=envelope.obligation_id,
+        obligation_digest=digest(envelope),
+    )
+    record = evaluate_candidate(
+        envelope,
+        payload,
+        acceptance_id=uuid.uuid4(),
+        evaluated_at=T,
+        decided_by=ACTOR,
+        gate_decision=short,
+        halt=None,
+    )
+    assert record.disposition is Disposition.HOLD
+    assert _reason(record) == "CASH_GATE_HOLD:UNFUNDED_AT_SETTLEMENT_INSTANT"
+    assert _reason(record) != "PAYLOAD_DIGEST_MISMATCH"
+    assert record.obligation_digest == digest(envelope)
+
+
+def test_frozen_contract_rejects_pass_without_a_dsor_record() -> None:
+    envelope, _ = _wire(_candidate())
+    with pytest.raises(ValidationError, match="PASS with no DSOR record"):
+        ObligationAcceptanceRecord(
+            obligation_id=envelope.obligation_id,
+            obligation_digest=digest(envelope),
+            disposition=Disposition.PASS,
+            dsor_record=Absent(
+                kind=AbsenceKind.NOTHING_RECORDED,
+                reason="test proves the frozen invariant",
+            ),
+            decided_by=ACTOR,
+            provenance=Provenance.POLICY_RESULT,
+        )
 
 
 @pytest.mark.parametrize(
