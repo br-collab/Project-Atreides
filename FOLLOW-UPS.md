@@ -24,6 +24,24 @@ not because this debt is absent: CI runs `ruff check .` rather than the formatte
 check, and strict mypy covers six named packages rather than the whole `atreides`
 package. This finding records the debt only; it does not change source or CI scope.
 
+## ATR-FU-02 — frozen acceptance record flattens predicate evidence
+
+The draft record in `atreides/acceptance/record.py` carries
+`evaluated_predicates: tuple[PredicateResult, ...]`. Each `PredicateResult` retains
+the predicate name, its own disposition, its reason codes, and its detail.
+
+The frozen `cannae_kernel.envelopes.ObligationAcceptanceRecord` instead carries one
+aggregate `disposition` and `dsor_record`. When acceptance does not pass,
+`atreides/acceptance/service.py` joins the predicate reason codes into
+`dsor_record.reason`. That flattening loses each predicate's individual disposition,
+the association between a predicate and its reason codes, and machine-readable
+predicate structure. A consumer that wants per-predicate results must parse a free-text
+string and cannot recover all of the draft evidence reliably.
+
+A structured predicate-results field on a future kernel acceptance-record version is a
+candidate remedy. This is a finding, not that change: the five cross-domain contracts
+remain frozen at `cannae.*/1.0`, and no contract or code is changed here.
+
 ## Doctrine errata to fix in the next custody doctrine iteration
 
 ### DISCHARGED 312350Z JUL 26 — §VI line 634 citation erratum
