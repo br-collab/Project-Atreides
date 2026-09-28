@@ -142,3 +142,19 @@ jobs:
       # suite and has to be accounted for in review.
       - name: Stress probe
         run: python tools/stress_probe.py
+
+  publish-agents-snapshot:
+    name: Publish agent activation snapshot
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, lint, typecheck, probes]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: agents-snapshot-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/publish-agents-snapshot
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
