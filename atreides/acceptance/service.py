@@ -19,7 +19,6 @@ from cannae_kernel.provenance import Provenance
 from pydantic import ValidationError
 
 from atreides.acceptance.candidate import ObligationCandidate
-from atreides.acceptance.record import ObligationAcceptanceRecord as DraftAcceptanceRecord
 from atreides.acceptance.record import PredicateResult
 from atreides.messaging.canonical import CashLegInstruction
 from atreides.messaging.emit import InstructionArtifact, emit_instruction_artifact
@@ -287,16 +286,33 @@ class PreparationRefusedError(RuntimeError):
 
 
 def prepare_instruction(
-    candidate: ObligationCandidate,
-    acceptance: DraftAcceptanceRecord | None,
+    envelope: SettlementObligationEnvelope,
+    payload: bytes,
+    acceptance: FrozenAcceptanceRecord | None,
     instruction: CashLegInstruction,
     profile: DepositoryProfile = BASE_ISO_20022,
     *,
     halt: HaltContext | None = None,
 ) -> InstructionArtifact:
-    """Legacy internal boundary; migrated to frozen inputs in WP-2."""
-    if acceptance is None or not acceptance.accepted:
+    """Prepare only from payload bytes attested and accepted by frozen records."""
+    if digest_bytes(payload) != envelope.payload_digest:
         raise PreparationRefusedError(
-            "Obligation was not ACCEPTED; nothing is prepared (ATR-I-01)."
+            "Payload does not match the frozen envelope (PAYLOAD_DIGEST_MISMATCH)."
+        )
+    if acceptance is None:
+        raise PreparationRefusedError("No acceptance record; nothing is prepared (ATR-I-01).")
+    if acceptance.disposition is not Disposition.PASS:
+        raise PreparationRefusedError(
+            f"Acceptance disposition is {acceptance.disposition.value}, not PASS; "
+            "nothing is prepared (ATR-I-01)."
+        )
+    if acceptance.obligation_id != envelope.obligation_id:
+        raise PreparationRefusedError(
+            "Acceptance record names another obligation; nothing is prepared (ATR-I-01)."
+        )
+    if acceptance.obligation_digest != digest(envelope):
+        raise PreparationRefusedError(
+            "Acceptance record does not reference this envelope digest; "
+            "nothing is prepared (ATR-I-01)."
         )
     return emit_instruction_artifact(instruction, profile, halt=halt)
