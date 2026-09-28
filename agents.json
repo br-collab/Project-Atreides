@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "domain": "ATREIDES",
+  "phase": "A",
+  "synthetic": true,
+  "taken_at": "2026-09-28T13:29:55.026534Z",
+  "tick": {
+    "state": "recorded",
+    "value": 0
+  },
+  "last_tick_at": {
+    "state": "recorded",
+    "value": "2026-09-28T13:29:55.026534Z"
+  },
+  "halted": false,
+  "halt_reason": {
+    "state": "absent",
+    "kind": "NOT_APPLICABLE",
+    "reason": "no halt covering Atreides is in effect"
+  },
+  "disposition": "PASS",
+  "effects": {
+    "operation": "atreides.activation.advisory_output",
+    "effects": [],
+    "note": "Contained. An advisory agent output is analysis written to this process's own record: it sends nothing, pays nothing, submits nothing to a rail, publishes nothing outside the process, writes no store this process does not own, and spends no metered third-party allowance. Atreides never submits to a rail and never holds submission credentials, so the SUBMITS class cannot arise here."
+  },
+  "agents": [
+    {
+      "agent_id": "settlement-operations-analyst",
+      "tier": "TIER_1",
+      "role": "Settlement Operations Analyst",
+      "up": true,
+      "expects_refusal": false,
+      "disposition": "PASS",
+      "stopped_reason": {
+        "state": "absent",
+        "kind": "NOT_APPLICABLE",
+        "reason": "this agent is running"
+      },
+      "last_summary": {
+        "state": "recorded",
+        "value": "Pre-routing gates clear for ficc_gsd_dvp"
+      },
+      "last_observed_at": {
+        "state": "recorded",
+        "value": "2026-09-28T13:29:55.026534Z"
+      },
+      "last_provenance": {
+        "state": "recorded",
+        "value": "POLICY_RESULT"
+      },
+      "last_handoff_basis": {
+        "state": "absent",
+        "kind": "NOTHING_RECORDED",
+        "reason": "operator-direct under CAOM-001"
+      },
+      "last_refusal": {
+        "state": "absent",
+        "kind": "NOT_YET_KNOWN",
+        "reason": "this agent has not produced an output since activation started"
+      },
+      "recommendations": 1,
+      "refusals": 0
+    },
+    {
+      "agent_id": "settlement-investigation-analyst",
+      "tier": "TIER_1",
+      "role": "Settlement Investigation Analyst",
+      "up": true,
+      "expects_refusal": false,
+      "disposition": "PASS",
+      "stopped_reason": {
+        "state": "absent",
+        "kind": "NOT_APPLICABLE",
+        "reason": "this agent is running"
+      },
+      "last_summary": {
+        "state": "recorded",
+        "value": "Evidence timeline complete: 8 observations"
+      },
+      "last_observed_at": {
+        "state": "recorded",
+        "value": "2026-09-28T13:29:55.026534Z"
+      },
+      "last_provenance": {
+        "state": "recorded",
+        "value": "POLICY_RESULT"
+      },
+      "last_handoff_basis": {
+        "state": "absent",
+        "kind": "NOTHING_RECORDED",
+        "reason": "operator-direct under CAOM-001"
+      },
+      "last_refusal": {
+        "state": "absent",
+        "kind": "NOT_YET_KNOWN",
+        "reason": "this agent has not produced an output since activation started"
+      },
+      "recommendations": 1,
+      "refusals": 0
+    },
+    {
+      "agent_id": "fiat-operations-specialist",
+      "tier": "TIER_2",
+      "role": "FIAT Operations Specialist",
+      "up": true,
+      "expects_refusal": false,
+      "disposition": "PASS",
+      "stopped_reason": {
+        "state": "absent",
+        "kind": "NOT_APPLICABLE",
+        "reason": "this agent is running"
+      },
+      "last_summary": {
+        "state": "recorded",
+        "value": "Path selected: fedwire"
+      },
+      "last_observed_at": {
+        "state": "recorded",
+        "value": "2026-09-28T13:29:55.026534Z"
+      },
+      "last_provenance": {
+        "state": "recorded",
+        "value": "POLICY_RESULT"
+      },
+      "last_handoff_basis": {
+        "state": "absent",
+        "kind": "NOTHING_RECORDED",
+        "reason": "operator-direct under CAOM-001"
+      },
+      "last_refusal": {
+        "state": "absent",
+        "kind": "NOT_YET_KNOWN",
+        "reason": "this agent has not produced an output since activation started"
+      },
+      "recommendations": 1,
+      "refusals": 0
+    },
+    {
+      "agent_id": "lateral-handoff-probe",
+      "tier": "TIER_1",
+      "role": "Lateral handoff probe (WP-A2)",
+      "up": true,
+      "expects_refusal": true,
+      "disposition": "PASS",
+      "stopped_reason": {
+        "state": "absent",
+        "kind": "NOT_APPLICABLE",
+        "reason": "this agent is running"
+      },
+      "last_summary": {
+        "state": "recorded",
+        "value": "Input refused at the receiving agent's own type check"
+      },
+      "last_observed_at": {
+        "state": "recorded",
+        "value": "2026-09-28T13:29:55.026534Z"
+      },
+      "last_provenance": {
+        "state": "recorded",
+        "value": "POLICY_RESULT"
+      },
+      "last_handoff_basis": {
+        "state": "absent",
+        "kind": "NOTHING_RECORDED",
+        "reason": "operator-direct under CAOM-001"
+      },
+      "last_refusal": {
+        "state": "recorded",
+        "value": {
+          "code": "NO_RECORDED_HANDOFF",
+          "detail": "Refused at the receiving agent: a lateral agent-to-agent input with no recorded handoff authorization (nothing recorded · operator-direct under CAOM-001). No C2 runtime exists to issue one, so every lateral input is refused (W3 § R1, WP-A2).",
+          "observed_at": "2026-09-28T13:29:55.026534Z"
+        }
+      },
+      "recommendations": 0,
+      "refusals": 1
+    }
+  ]
+}
