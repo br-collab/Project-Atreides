@@ -119,6 +119,22 @@ classes remain importable for compatibility, but new integrations should call
 no longer form their integration boundary. Tests, fixtures, probes under
 `tools/`, and underscored names are not library API.
 
+### Settlement-obligation acceptance boundary
+
+The cross-domain boundary uses the frozen kernel contracts. `evaluate_candidate()`
+takes a `SettlementObligationEnvelope` and the obligation payload as canonical
+`bytes`; it verifies those bytes against the envelope's `payload_digest` before any
+acceptance predicate runs and returns the frozen `ObligationAcceptanceRecord`.
+
+`prepare_instruction()` takes the same frozen envelope and canonical payload bytes,
+the frozen `ObligationAcceptanceRecord`, a `CashLegInstruction`, and a
+`DepositoryProfile`. It verifies the payload digest before preparing and returns an
+`InstructionArtifact`. `ObligationCandidate` remains an internal parse target for the
+verified bytes and crosses no domain boundary.
+
+Preparation is not submission. Atreides never submits to a rail and never holds a
+submission credential; every `InstructionArtifact` fixes `is_submission` to `False`.
+
 ---
 
 ## The problem this addresses
