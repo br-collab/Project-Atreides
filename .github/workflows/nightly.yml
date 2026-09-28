@@ -65,3 +65,18 @@ jobs:
           path: .hypothesis/
           if-no-files-found: ignore
           retention-days: 30
+
+  publish-agents-snapshot:
+    name: Publish agent activation snapshot
+    needs: [deep-properties]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: agents-snapshot-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/publish-agents-snapshot
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

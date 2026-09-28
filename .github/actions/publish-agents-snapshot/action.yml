@@ -1,0 +1,50 @@
+name: Publish agent activation snapshot
+description: Write the current activation snapshot to the stable publication branch.
+
+inputs:
+  token:
+    description: GitHub token allowed to update the generated snapshot branch
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v10.1.0
+      with:
+        python-version: "3.11"
+        enable-cache: true
+
+    - name: Install from the lock
+      shell: bash
+      run: uv sync --locked
+
+    - name: Write the snapshot
+      shell: bash
+      run: uv run python -m atreides.activation.snapshot_writer "$RUNNER_TEMP/agents.json"
+
+    - name: Publish the newest good snapshot
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        publish_dir="$RUNNER_TEMP/agents-snapshot-publication"
+        remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+        if git ls-remote --exit-code --heads "$remote" agents-snapshot >/dev/null; then
+          git clone --depth 1 --branch agents-snapshot "$remote" "$publish_dir"
+        else
+          mkdir -p "$publish_dir"
+          git -C "$publish_dir" init --initial-branch=agents-snapshot
+          git -C "$publish_dir" remote add origin "$remote"
+        fi
+
+        cp "$RUNNER_TEMP/agents.json" "$publish_dir/agents.json"
+        git -C "$publish_dir" config user.name "github-actions[bot]"
+        git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git -C "$publish_dir" add agents.json
+        if git -C "$publish_dir" diff --cached --quiet; then
+          exit 0
+        fi
+        git -C "$publish_dir" commit -m "Publish agent activation snapshot"
+        git -C "$publish_dir" push origin HEAD:agents-snapshot
