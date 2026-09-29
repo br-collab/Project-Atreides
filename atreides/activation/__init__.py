@@ -10,7 +10,9 @@ make approval decisions; every approval gate requires explicit operator action.
 Phase A wires existing agents to already-published doctrine and already-published
 contracts. It adds no orchestration design, and in particular nothing that
 issues a handoff, assembles a lineage record or packages an escalation — those
-are Phase B and are held on the Research Charter § 18.5 decision (AMD1 § 4).
+are Phase B, published under the Research Charter § 18.5 open-publication
+decision recorded on 21 September 2026 in
+``Research-record/decisions/DEC-18.5-open-publication-2026-09-21.md``.
 
 The modules
 -----------
