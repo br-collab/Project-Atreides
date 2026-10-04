@@ -37,4 +37,18 @@ settings.register_profile(
     deadline=None,
     suppress_health_check=[HealthCheck.too_slow],
 )
+# Registered, never loaded by default. One derandomized example per property
+# test, so a coverage run under it measures what the example tests cover on
+# their own. It exists to prove a coverage floor does not depend on which
+# examples Hypothesis happened to generate (ORDER HYG-1)::
+#
+#     pytest --hypothesis-profile=floor --cov=atreides --cov-branch
+#
+# It is not a bug-finding mode. One example finds almost nothing.
+settings.register_profile(
+    "floor",
+    max_examples=1,
+    derandomize=True,
+    deadline=None,
+)
 settings.load_profile("default")
