@@ -37,14 +37,6 @@ from atreides.rails.perimeter import SettlementPerimeter, continuously_available
 
 NOTIONAL = Decimal("5000000")
 
-#: The defect this file was written against, recorded before the fix. Strict,
-#: so the suite fails the moment the defect is fixed until this marker is
-#: removed: the fix and the evidence that it fixed something land together.
-_DEFECT = pytest.mark.xfail(
-    strict=True,
-    reason="ORDER HYG-2: rule 4 returns the linked rail without validating it",
-)
-
 
 def _open_fedwire() -> dict[CashRail, RailState]:
     return {CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200)}
@@ -154,7 +146,6 @@ def _eval(
         ),
     ],
 )
-@_DEFECT
 def test_a_linked_rail_that_cannot_carry_the_operation_holds(
     linked: CashRail,
     state: RailState | None,
@@ -169,7 +160,6 @@ def test_a_linked_rail_that_cannot_carry_the_operation_holds(
     assert condition in decision.rationale
 
 
-@_DEFECT
 def test_the_reserved_placeholder_holds_even_when_marked_available() -> None:
     """The one case ``_serviceable`` alone would pass. Check 6 excludes the
     PORTS placeholder by name, and the linked path must exclude it the same
@@ -258,7 +248,6 @@ _rail_states = st.builds(
 )
 
 
-@_DEFECT
 @given(
     linked=st.sampled_from(CashRail),
     states=st.lists(_rail_states, max_size=len(CashRail)),
