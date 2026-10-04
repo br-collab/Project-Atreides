@@ -42,6 +42,7 @@ from atreides.customer_protection.advisory import (
     CustomerProtectionAdvisory,
     advise,
 )
+from atreides.customer_protection.challenger import ChallengerInputs, ChallengerReport, challenge
 from atreides.customer_protection.common import Frozen
 from atreides.customer_protection.control import (
     ControlInputs,
@@ -62,6 +63,7 @@ from atreides.customer_protection.rules.model import (
 )
 
 __all__ = [
+    "ChallengerComputation",
     "Computation",
     "ControlComputation",
     "CustomerProtectionComputationRecord",
@@ -98,10 +100,22 @@ class ControlComputation(Frozen):
     result: ControlResult
 
 
+class ChallengerComputation(Frozen):
+    """A challenger comparison: the engine's and the vendor's figures, and the report."""
+
+    engine: Literal["challenger"] = "challenger"
+    inputs: ChallengerInputs
+    result: ChallengerReport
+
+
 Computation = Annotated[
-    ReserveComputation | NetCapitalComputation | ControlComputation,
+    ReserveComputation | NetCapitalComputation | ControlComputation | ChallengerComputation,
     Field(discriminator="engine"),
 ]
+_Inputs = ReserveInputs | NetCapitalInputs | ControlInputs | ChallengerInputs
+_Computation = (
+    ReserveComputation | NetCapitalComputation | ControlComputation | ChallengerComputation
+)
 
 
 class CustomerProtectionComputationRecord(Frozen):
@@ -136,10 +150,10 @@ class ReplayVerification(Frozen):
         return coerce_disposition(value)
 
 
-def compute(
-    inputs: ReserveInputs | NetCapitalInputs | ControlInputs, table: RuleTable
-) -> ReserveComputation | NetCapitalComputation | ControlComputation:
-    """Run the engine the inputs belong to."""
+def compute(inputs: _Inputs, table: RuleTable) -> _Computation:
+    """Run the engine the inputs belong to. The challenger compares; it reads no rules."""
+    if isinstance(inputs, ChallengerInputs):
+        return ChallengerComputation(inputs=inputs, result=challenge(inputs))
     if isinstance(inputs, ReserveInputs):
         return ReserveComputation(inputs=inputs, result=compute_reserve(inputs, table))
     if isinstance(inputs, NetCapitalInputs):
@@ -148,7 +162,7 @@ def compute(
 
 
 def record_computation(
-    inputs: ReserveInputs | NetCapitalInputs | ControlInputs,
+    inputs: _Inputs,
     table: RuleTable,
     *,
     operation_id: UUID,

@@ -36,6 +36,7 @@ from cannae_kernel.canonical import Digest, digest
 from cannae_kernel.disposition import Disposition, coerce_disposition
 from pydantic import Field, field_validator, model_validator
 
+from atreides.customer_protection.challenger import ChallengerInputs, ChallengerReport
 from atreides.customer_protection.common import Frozen
 from atreides.customer_protection.control import ControlInputs, ControlResult
 from atreides.customer_protection.net_capital import NetCapitalInputs, NetCapitalResult
@@ -53,10 +54,12 @@ __all__ = [
 #: The only enforcement status this package has. See the module docstring.
 ENFORCEMENT_STATUS: Literal["ADVISORY_ONLY"] = "ADVISORY_ONLY"
 
-EngineInputs = ReserveInputs | NetCapitalInputs | ControlInputs
+EngineInputs = ReserveInputs | NetCapitalInputs | ControlInputs | ChallengerInputs
 EngineResult = Annotated[
-    ReserveResult | NetCapitalResult | ControlResult, Field(discriminator="engine")
+    ReserveResult | NetCapitalResult | ControlResult | ChallengerReport,
+    Field(discriminator="engine"),
 ]
+_Result = ReserveResult | NetCapitalResult | ControlResult | ChallengerReport
 
 
 class CustomerProtectionAdvisory(Frozen):
@@ -68,7 +71,7 @@ class CustomerProtectionAdvisory(Frozen):
     schema_version: Literal["0.1-draft"] = "0.1-draft"
     claim_label: Literal["EXPERIMENTAL"] = CLAIM_LABEL
     enforcement_status: Literal["ADVISORY_ONLY"] = ENFORCEMENT_STATUS
-    subject: Literal["reserve", "net_capital", "possession_or_control"]
+    subject: Literal["reserve", "net_capital", "possession_or_control", "challenger"]
     as_of: date
     disposition: Disposition
     reasons: tuple[str, ...]
@@ -101,18 +104,12 @@ class CustomerProtectionAdvisory(Frozen):
         return tuple(reason for reason in self.reasons if reason.startswith("breach: "))
 
 
-def _versions(result: ReserveResult | NetCapitalResult | ControlResult, table: RuleTable) -> tuple[
-    RuleVersion, ...
-]:
+def _versions(result: _Result, table: RuleTable) -> tuple[RuleVersion, ...]:
     sources = sorted({ref.source_id for ref in result.rules_used})
     return tuple(v for v in (table.version_of(s) for s in sources) if v is not None)
 
 
-def advise(
-    inputs: EngineInputs,
-    result: ReserveResult | NetCapitalResult | ControlResult,
-    table: RuleTable,
-) -> CustomerProtectionAdvisory:
+def advise(inputs: EngineInputs, result: _Result, table: RuleTable) -> CustomerProtectionAdvisory:
     """The advisory for one computation. ADVISORY_ONLY: it is returned, never enforced."""
     reasons = (
         tuple(f"breach: {b}" for b in result.breaches)
