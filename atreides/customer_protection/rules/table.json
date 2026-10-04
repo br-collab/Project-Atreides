@@ -1,0 +1,835 @@
+{
+  "table_version": "sc2-rules/0.1",
+  "claim_label": "EXPERIMENTAL",
+  "note": "Every item is checked by atreides/customer_protection/rules/loader.py against the pinned source. Quotes are written against loader.normalize_text output.",
+  "sources": [
+    {
+      "source_id": "17cfr240.15c3-1",
+      "filename": "17-CFR-240.15c3-1.xml"
+    },
+    {
+      "source_id": "17cfr240.15c3-3",
+      "filename": "17-CFR-240.15c3-3.xml"
+    },
+    {
+      "source_id": "17cfr240.15c3-3a",
+      "filename": "17-CFR-240.15c3-3a.xml"
+    },
+    {
+      "source_id": "17cfr240.17a-11",
+      "filename": "17-CFR-240.17a-11.xml"
+    },
+    {
+      "source_id": "sec-faq-15c3-3-daily",
+      "filename": "SEC-FAQ-15c3-3-daily-reserve.html"
+    }
+  ],
+  "items": [
+    {
+      "id": "15c3-3a.item.01",
+      "kind": "EXHIBIT_A_CREDIT",
+      "citation": "17 CFR 240.15c3-3a, Item 1",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "1. Free credit balances and other credit balances in customers' security accounts."
+    },
+    {
+      "id": "15c3-3a.item.02",
+      "kind": "EXHIBIT_A_CREDIT",
+      "citation": "17 CFR 240.15c3-3a, Item 2",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "2. Monies borrowed collateralized by securities carried for the accounts of customers"
+    },
+    {
+      "id": "15c3-3a.item.03",
+      "kind": "EXHIBIT_A_CREDIT",
+      "citation": "17 CFR 240.15c3-3a, Item 3",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "3. Monies payable against customers' securities loaned"
+    },
+    {
+      "id": "15c3-3a.item.04",
+      "kind": "EXHIBIT_A_CREDIT",
+      "citation": "17 CFR 240.15c3-3a, Item 4",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "4. Customers' securities failed to receive"
+    },
+    {
+      "id": "15c3-3a.item.05",
+      "kind": "EXHIBIT_A_CREDIT",
+      "citation": "17 CFR 240.15c3-3a, Item 5",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "5. Credit balances in firm accounts which are attributable to principal sales to customers"
+    },
+    {
+      "id": "15c3-3a.item.06",
+      "kind": "EXHIBIT_A_CREDIT",
+      "citation": "17 CFR 240.15c3-3a, Item 6",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "6. Market value of stock dividends, stock splits and similar distributions receivable outstanding over 30 calendar days"
+    },
+    {
+      "id": "15c3-3a.item.07",
+      "kind": "EXHIBIT_A_CREDIT",
+      "citation": "17 CFR 240.15c3-3a, Item 7",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "7. Market value of short security count differences over 30 calendar days old"
+    },
+    {
+      "id": "15c3-3a.item.08",
+      "kind": "EXHIBIT_A_CREDIT",
+      "citation": "17 CFR 240.15c3-3a, Item 8",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "8. Market value of short securities and credits (not to be offset by longs or by debits) in all suspense accounts over 30 calendar days"
+    },
+    {
+      "id": "15c3-3a.item.09",
+      "kind": "EXHIBIT_A_CREDIT",
+      "citation": "17 CFR 240.15c3-3a, Item 9",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "9. Market value of securities which are in transfer in excess of 40 calendar days and have not been confirmed to be in transfer by the transfer agent or the issuer during the 40 days"
+    },
+    {
+      "id": "15c3-3a.item.10",
+      "kind": "EXHIBIT_A_DEBIT",
+      "citation": "17 CFR 240.15c3-3a, Item 10",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "10. Debit balances in customers' cash and margin accounts excluding unsecured accounts and accounts doubtful of collection."
+    },
+    {
+      "id": "15c3-3a.item.11",
+      "kind": "EXHIBIT_A_DEBIT",
+      "citation": "17 CFR 240.15c3-3a, Item 11",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "11. Securities borrowed to effectuate short sales by customers and securities borrowed to make delivery on customers' securities failed to deliver"
+    },
+    {
+      "id": "15c3-3a.item.12",
+      "kind": "EXHIBIT_A_DEBIT",
+      "citation": "17 CFR 240.15c3-3a, Item 12",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "12. Failed to deliver of customers' securities not older than 30 calendar days"
+    },
+    {
+      "id": "15c3-3a.item.13",
+      "kind": "EXHIBIT_A_DEBIT",
+      "citation": "17 CFR 240.15c3-3a, Item 13",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "13. Margin required and on deposit with the Options Clearing Corporation for all option contracts written or purchased in customer accounts."
+    },
+    {
+      "id": "15c3-3a.item.14",
+      "kind": "EXHIBIT_A_DEBIT",
+      "citation": "17 CFR 240.15c3-3a, Item 14",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "14. Margin required and on deposit with a clearing agency registered with the Commission under section 17A of the Act (15 U.S.C. 78q-1) or a derivatives clearing organization registered with the Commodity Futures Trading Commission"
+    },
+    {
+      "id": "15c3-3a.item.15",
+      "kind": "EXHIBIT_A_DEBIT",
+      "citation": "17 CFR 240.15c3-3a, Item 15",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "15. Margin required and on deposit with a clearing agency registered with the Commission under section 17A of the Act (15 U.S.C. 78q-1) resulting from the following types of transactions in U.S. Treasury securities in customer accounts"
+    },
+    {
+      "id": "15c3-3a.note_e3.debit_reduction",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-3a, Note E(3)",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "Debit balances in customers' cash and margin accounts included in the formula under Item 10 must be reduced by an amount equal to 1 percent of their aggregate value",
+      "figure": "1 percent",
+      "value": "0.01"
+    },
+    {
+      "id": "15c3-3a.pab_note_4.no_note_e3",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-3a, PAB Note 4",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "Note E(3) to § 240.15c3-3a which reduces debit balances by 1 percent does not apply to the PAB reserve computation"
+    },
+    {
+      "id": "15c3-3.e3iB1.daily_threshold",
+      "kind": "USD",
+      "citation": "17 CFR 240.15c3-3(e)(3)(i)(B)(1)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "A broker or dealer with average total credits that are equal to or greater than $500 million must make the computations",
+      "figure": "$500 million",
+      "value": "500000000",
+      "compliance_date": "2026-06-30",
+      "compliance_source_id": "sec-faq-15c3-3-daily",
+      "compliance_quote": "must perform customer and PAB reserve computations daily beginning no later than June 30, 2026"
+    },
+    {
+      "id": "15c3-3.e3iC.monthly_ai_ceiling",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-3(e)(3)(i)(C)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "which has aggregate indebtedness not exceeding 800% of net capital",
+      "figure": "800%",
+      "value": "8"
+    },
+    {
+      "id": "15c3-3.e3iC.monthly_customer_funds_ceiling",
+      "kind": "USD",
+      "citation": "17 CFR 240.15c3-3(e)(3)(i)(C)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "not exceeding $1,000,000, may in the alternative make the Customer Reserve Bank Account computation monthly",
+      "figure": "$1,000,000",
+      "value": "1000000"
+    },
+    {
+      "id": "15c3-3.e3iC.monthly_deposit_factor",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-3(e)(3)(i)(C)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "must deposit not less than 105% of the amount so computed",
+      "figure": "105%",
+      "value": "1.05"
+    },
+    {
+      "id": "15c3-3.e3v.voluntary_daily_notice",
+      "kind": "CALENDAR_DAYS",
+      "citation": "17 CFR 240.15c3-3(e)(3)(v)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "at least 30 calendar days before beginning such computation",
+      "figure": "30 calendar days",
+      "value": "30"
+    },
+    {
+      "id": "15c3-3.e4.pab_from_customer_excess_debits",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-3(e)(4)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "the requirement may be satisfied to the extent of any excess debit in the computation performed under paragraph (e)(3) of this section with respect to customer accounts of the same date"
+    },
+    {
+      "id": "15c3-3.e5.affiliated_bank_excluded",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-3(e)(5)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "must exclude the total amount of any cash deposited with an affiliated bank"
+    },
+    {
+      "id": "15c3-3.e5.bank_equity_cap",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-3(e)(5)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "the deposit exceeds 15% of the bank's equity capital",
+      "figure": "15%",
+      "value": "0.15"
+    },
+    {
+      "id": "15c3-3.control.c1",
+      "kind": "CONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(c)(1)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Are represented by one or more certificates in the custody or control of a clearing corporation or other subsidiary organization of either national securities exchanges or of a registered national securities association"
+    },
+    {
+      "id": "15c3-3.control.c2",
+      "kind": "CONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(c)(2)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "in an omnibus credit account in the name of such broker or dealer with another broker or dealer in compliance with the requirements of section 7(f) of Regulation T"
+    },
+    {
+      "id": "15c3-3.control.c3",
+      "kind": "CONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(c)(3)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Are the subject of bona fide items of transfer"
+    },
+    {
+      "id": "15c3-3.control.c4",
+      "kind": "CONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(c)(4)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Are in the custody of a foreign depository, foreign clearing agency or foreign custodian bank which the Commission"
+    },
+    {
+      "id": "15c3-3.control.c5",
+      "kind": "CONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(c)(5)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Are in the custody or control of a bank as defined in section 3(a)(6) of the Act"
+    },
+    {
+      "id": "15c3-3.control.c6i",
+      "kind": "CONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(c)(6)(i)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Are held in or are in transit between offices of the broker or dealer"
+    },
+    {
+      "id": "15c3-3.control.c6ii",
+      "kind": "CONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(c)(6)(ii)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "are held by a corporate subsidiary if the broker or dealer owns and exercises a majority of the voting rights"
+    },
+    {
+      "id": "15c3-3.control.c7",
+      "kind": "CONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(c)(7)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Are held in such other locations as the Commission shall upon application from a broker or dealer find and designate to be adequate for the protection of customer securities"
+    },
+    {
+      "id": "15c3-3.noncontrol.d1",
+      "kind": "NONCONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(d)(1)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Securities subject to a lien securing moneys borrowed by the broker or dealer or securities loaned to another broker or dealer or a clearing corporation"
+    },
+    {
+      "id": "15c3-3.noncontrol.d2",
+      "kind": "NONCONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(d)(2)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Securities included on the broker's or dealer's books or records as failed to receive more than 30 calendar days"
+    },
+    {
+      "id": "15c3-3.noncontrol.d3",
+      "kind": "NONCONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(d)(3)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Securities receivable by the broker or dealer as a security dividend receivable, stock split or similar distribution for more than 45 calendar days"
+    },
+    {
+      "id": "15c3-3.noncontrol.d4",
+      "kind": "NONCONTROL_LOCATION",
+      "citation": "17 CFR 240.15c3-3(d)(4)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Securities included on the broker's or dealer's books or records that allocate to a short position of the broker or dealer or a short position for another person"
+    },
+    {
+      "id": "15c3-3.d1.lien_release_days",
+      "kind": "BUSINESS_DAYS",
+      "citation": "17 CFR 240.15c3-3(d)(1)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "within two business days following the date of issuance of the instructions in the case of securities subject to lien securing borrowed moneys",
+      "figure": "two business days",
+      "value": "2"
+    },
+    {
+      "id": "15c3-3.d1.loan_return_days",
+      "kind": "BUSINESS_DAYS",
+      "citation": "17 CFR 240.15c3-3(d)(1)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "within five business days following the date of issuance of instructions in the case of securities loaned",
+      "figure": "five business days",
+      "value": "5"
+    },
+    {
+      "id": "15c3-3.d2.fail_to_receive_age",
+      "kind": "CALENDAR_DAYS",
+      "citation": "17 CFR 240.15c3-3(d)(2)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "as failed to receive more than 30 calendar days",
+      "figure": "30 calendar days",
+      "value": "30"
+    },
+    {
+      "id": "15c3-3.d3.distribution_receivable_age",
+      "kind": "CALENDAR_DAYS",
+      "citation": "17 CFR 240.15c3-3(d)(3)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "stock split or similar distribution for more than 45 calendar days",
+      "figure": "45 calendar days",
+      "value": "45"
+    },
+    {
+      "id": "15c3-3.d4.short_allocation_age",
+      "kind": "CALENDAR_DAYS",
+      "citation": "17 CFR 240.15c3-3(d)(4)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "excluding positions covered by paragraph (m) of this section, for more than 30 calendar days",
+      "figure": "30 calendar days",
+      "value": "30"
+    },
+    {
+      "id": "15c3-1.a1i.ai_ceiling",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(a)(1)(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "to exceed 1500 percent of its net capital",
+      "figure": "1500 percent",
+      "value": "15"
+    },
+    {
+      "id": "15c3-1.a1i.ai_ceiling_first_year",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(a)(1)(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "(or 800 percent of its net capital for 12 months after commencing business as a broker or dealer)",
+      "figure": "800 percent",
+      "value": "8"
+    },
+    {
+      "id": "15c3-1.a1i.first_year_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(a)(1)(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "(or 800 percent of its net capital for 12 months after commencing business as a broker or dealer)",
+      "figure": "12 months",
+      "value": "12"
+    },
+    {
+      "id": "15c3-1.a1ii.alternative_floor",
+      "kind": "USD",
+      "citation": "17 CFR 240.15c3-1(a)(1)(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "shall not permit its net capital to be less than the greater of $250,000 or 2 percent of aggregate debit items",
+      "figure": "$250,000",
+      "value": "250000"
+    },
+    {
+      "id": "15c3-1.a1ii.alternative_debit_percent",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(a)(1)(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "shall not permit its net capital to be less than the greater of $250,000 or 2 percent of aggregate debit items",
+      "figure": "2 percent",
+      "value": "0.02"
+    },
+    {
+      "id": "15c3-1.a1iiA.weekly_debit_reduction",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(a)(1)(ii)(A)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "reduce aggregate debit items in such computation by 3%",
+      "figure": "3%",
+      "value": "0.03"
+    },
+    {
+      "id": "15c3-1.a1iiA.daily_debit_reduction",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(a)(1)(ii)(A)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "on a daily basis, the broker or dealer may reduce aggregate debit items in such computation by 2%",
+      "figure": "2%",
+      "value": "0.02",
+      "compliance_date": "2026-06-30",
+      "compliance_source_id": "sec-faq-15c3-3-daily",
+      "compliance_quote": "must perform customer and PAB reserve computations daily beginning no later than June 30, 2026"
+    },
+    {
+      "id": "15c3-1.a2i.minimum.carrying",
+      "kind": "USD",
+      "citation": "17 CFR 240.15c3-1(a)(2)(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "shall maintain net capital of not less than $250,000 if it carries customer or broker or dealer accounts",
+      "figure": "$250,000",
+      "value": "250000"
+    },
+    {
+      "id": "15c3-1.a2ii.minimum.k2i_exempt",
+      "kind": "USD",
+      "citation": "17 CFR 240.15c3-1(a)(2)(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "pursuant to paragraph (k)(2)(i) thereof shall maintain net capital of not less than $100,000",
+      "figure": "$100,000",
+      "value": "100000"
+    },
+    {
+      "id": "15c3-1.a2iii.minimum.dealer",
+      "kind": "USD",
+      "citation": "17 CFR 240.15c3-1(a)(2)(iii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "A dealer shall maintain net capital of not less than $100,000",
+      "figure": "$100,000",
+      "value": "100000"
+    },
+    {
+      "id": "15c3-1.a2iv.minimum.introducing",
+      "kind": "USD",
+      "citation": "17 CFR 240.15c3-1(a)(2)(iv)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "shall maintain net capital of not less than $50,000 if it introduces transactions",
+      "figure": "$50,000",
+      "value": "50000"
+    },
+    {
+      "id": "15c3-1.a2v.minimum.investment_company_shares",
+      "kind": "USD",
+      "citation": "17 CFR 240.15c3-1(a)(2)(v)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "shall maintain net capital of not less than $25,000 if it acts as a broker or dealer with respect to the purchase, sale and redemption of redeemable shares",
+      "figure": "$25,000",
+      "value": "25000"
+    },
+    {
+      "id": "15c3-1.a2vi.minimum.other",
+      "kind": "USD",
+      "citation": "17 CFR 240.15c3-1(a)(2)(vi)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "shall maintain net capital of not less than $5,000",
+      "figure": "$5,000",
+      "value": "5000"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat1.i.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 1(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "Category 1 ( i ) Less than 3 months to maturity—0 percent",
+      "figure": "0 percent",
+      "value": "0"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat1.i.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 1(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "Category 1 ( i ) Less than 3 months to maturity—0 percent",
+      "figure": "3 months",
+      "value": "3"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat1.ii.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 1(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "3 months but less than 6 months to maturity— 1/2 of 1 percent",
+      "figure": "1/2 of 1 percent",
+      "value": "0.005"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat1.ii.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 1(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "3 months but less than 6 months to maturity— 1/2 of 1 percent",
+      "figure": "6 months",
+      "value": "6"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat1.iii.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 1(iii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "6 months but less than 9 months to maturity— 3/4 of 1 percent",
+      "figure": "3/4 of 1 percent",
+      "value": "0.0075"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat1.iii.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 1(iii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "6 months but less than 9 months to maturity— 3/4 of 1 percent",
+      "figure": "9 months",
+      "value": "9"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat1.iv.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 1(iv)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "9 months but less than 12 months to maturity—1 percent",
+      "figure": "1 percent",
+      "value": "0.01"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat1.iv.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 1(iv)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "9 months but less than 12 months to maturity—1 percent",
+      "figure": "12 months",
+      "value": "12"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat2.i.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 2(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "Category 2 ( i ) 1 year but less than 2 years to maturity—1 1/2 percent",
+      "figure": "1 1/2 percent",
+      "value": "0.015"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat2.i.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 2(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "Category 2 ( i ) 1 year but less than 2 years to maturity—1 1/2 percent",
+      "figure": "2 years",
+      "value": "24"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat2.ii.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 2(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "2 years but less than 3 years to maturity—2 percent",
+      "figure": "2 percent",
+      "value": "0.02"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat2.ii.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 2(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "2 years but less than 3 years to maturity—2 percent",
+      "figure": "3 years",
+      "value": "36"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat3.i.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 3(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "Category 3 ( i ) 3 years but less than 5 years to maturity—3%",
+      "figure": "3%",
+      "value": "0.03"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat3.i.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 3(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "Category 3 ( i ) 3 years but less than 5 years to maturity—3%",
+      "figure": "5 years",
+      "value": "60"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat3.ii.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 3(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "5 years but less than 10 years to maturity—4%",
+      "figure": "4%",
+      "value": "0.04"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat3.ii.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 3(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "5 years but less than 10 years to maturity—4%",
+      "figure": "10 years",
+      "value": "120"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat4.i.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 4(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "Category 4 ( i ) 10 years but less than 15 years to maturity—4 1/2 %",
+      "figure": "4 1/2 %",
+      "value": "0.045"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat4.i.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 4(i)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "Category 4 ( i ) 10 years but less than 15 years to maturity—4 1/2 %",
+      "figure": "15 years",
+      "value": "180"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat4.ii.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 4(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "15 years but less than 20 years to maturity—5%",
+      "figure": "5%",
+      "value": "0.05"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat4.ii.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 4(ii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "15 years but less than 20 years to maturity—5%",
+      "figure": "20 years",
+      "value": "240"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat4.iii.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 4(iii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "20 years but less than 25 years to maturity—5 1/2 %",
+      "figure": "5 1/2 %",
+      "value": "0.055"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat4.iii.upper_months",
+      "kind": "MONTHS",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 4(iii)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "20 years but less than 25 years to maturity—5 1/2 %",
+      "figure": "25 years",
+      "value": "300"
+    },
+    {
+      "id": "15c3-1.c2viA1.cat4.iv.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1), Category 4(iv)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "25 years or more to maturity—6%",
+      "figure": "6%",
+      "value": "0.06"
+    },
+    {
+      "id": "15c3-1.c2viA1.offset_percent",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(A)(1)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "plus 50% of the lesser of the aggregate deductions on the long or short positions",
+      "figure": "50%",
+      "value": "0.5"
+    },
+    {
+      "id": "15c3-1.c2viJ.rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(J)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "the deduction shall be 15 percent of the market value of the greater of the long or short positions",
+      "figure": "15 percent",
+      "value": "0.15"
+    },
+    {
+      "id": "15c3-1.c2viJ.lesser_threshold",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(J)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "the market value of the lesser of the long or short positions exceeds 25 percent of the market value of the greater of the long or short positions",
+      "figure": "25 percent",
+      "value": "0.25"
+    },
+    {
+      "id": "15c3-1.c2viJ.excess_rate",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)(J)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "the percentage deduction on such excess shall be 15 percent of the market value of such excess",
+      "figure": "15 percent",
+      "value": "0.15"
+    },
+    {
+      "id": "17a-11.b1.ai_warning",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.17a-11(b)(1)",
+      "source_id": "17cfr240.17a-11",
+      "sha256": "612026da8c0226c20f137de0f72362610d7cbb3fd8a87e904f048363e3eea475",
+      "quote": "shows that its aggregate indebtedness is in excess of 1,200 percent of its net capital",
+      "figure": "1,200 percent",
+      "value": "12"
+    },
+    {
+      "id": "17a-11.b2.alternative_warning",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.17a-11(b)(2)",
+      "source_id": "17cfr240.17a-11",
+      "sha256": "612026da8c0226c20f137de0f72362610d7cbb3fd8a87e904f048363e3eea475",
+      "quote": "shows that its net capital is less than 5 percent of aggregate debit items",
+      "figure": "5 percent",
+      "value": "0.05"
+    },
+    {
+      "id": "17a-11.b3.minimum_warning",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.17a-11(b)(3)",
+      "source_id": "17cfr240.17a-11",
+      "sha256": "612026da8c0226c20f137de0f72362610d7cbb3fd8a87e904f048363e3eea475",
+      "quote": "shows that its total net capital is less than 120 percent of the broker's or dealer's required minimum net capital",
+      "figure": "120 percent",
+      "value": "1.2"
+    },
+    {
+      "id": "17a-11.b5.leverage_warning",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.17a-11(b)(5)",
+      "source_id": "17cfr240.17a-11",
+      "sha256": "612026da8c0226c20f137de0f72362610d7cbb3fd8a87e904f048363e3eea475",
+      "quote": "is in excess of 2500 percent of its tentative net capital",
+      "figure": "2500 percent",
+      "value": "25"
+    }
+  ]
+}
