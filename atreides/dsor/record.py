@@ -36,6 +36,7 @@ from atreides.agents.tier2.outputs import (
     QuorumAuthorityRequired,
     RoutingDecision,
 )
+from atreides.customer_protection.record import CustomerProtectionComputationRecord
 from atreides.dsor.lifecycle_records import (
     FinalityAssertedRecord,
     HaltRecord,
@@ -52,6 +53,7 @@ SettlementDomainOutput = (
     | CatoCashDecisionRecord | ObligationAcceptanceRecord | HaltRecord
     | InstructionPreparedRecord | RailStatusObservedRecord
     | FinalityAssertedRecord | ReconciliationResultRecord
+    | CustomerProtectionComputationRecord
 )
 
 #: Deprecated until Wave 3: use ``SettlementDomainOutput``.
@@ -72,6 +74,7 @@ RecordKind = Literal[
     "rail_status_observed",
     "finality_asserted",
     "reconciliation_result",
+    "customer_protection_computation",
 ]
 
 
