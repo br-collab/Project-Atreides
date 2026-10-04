@@ -4,7 +4,8 @@
 - No regulatory figure outside the rule table: no numeric literal other than 0 and 1
   in any engine module, and no ``Decimal("...")`` built from a string, which would
   be the same figure in disguise.
-- No import of aureon or L.C. (Legiones Cannenses), and no network library.
+- No import of aureon or L.C. (Legiones Cannenses), no network library, and nothing from
+  the rest of Atreides: no enforcement path is reachable from this package.
 
 Every module is scanned except :mod:`atreides.customer_protection.rules.loader`
 for the literal check only: it converts units (per hundred, twelve months a year,
@@ -107,11 +108,17 @@ def test_no_import_of_aureon_lc_or_the_network(path: Path) -> None:
         assert root not in NETWORK_IMPORTS, f"{path.name} imports {name}"
 
 
-def test_no_module_imports_the_dsor_record_union() -> None:
-    """The DSOR (Decision System of Record) imports this package, never the reverse."""
+def test_no_module_imports_the_rest_of_atreides() -> None:
+    """No enforcement path, and no DSOR (Decision System of Record), is reachable from here.
+
+    The DSOR imports this package to admit its record, never the reverse, so the import
+    graph stays acyclic. Every other Atreides package (rails, gates, escalation,
+    messaging) is out of reach, so nothing in this package can act on its own advice.
+    """
     for path in MODULES:
-        assert "atreides.dsor.record" not in imports(_tree(path)), path.name
-        assert "atreides.dsor" not in imports(_tree(path)), path.name
+        for name in imports(_tree(path)):
+            if name.split(".")[0] == "atreides":
+                assert name.startswith("atreides.customer_protection"), f"{path.name}: {name}"
 
 
 @pytest.mark.parametrize(
