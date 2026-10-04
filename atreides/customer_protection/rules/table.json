@@ -449,6 +449,14 @@
       "value": "0.03"
     },
     {
+      "id": "15c3-1.a1iiA.weekly_basis",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-1(a)(1)(ii)(A)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "Make the computation required by § 240.15c3-3(e) and set forth in Exhibit A, § 240.15c3-3a, on a weekly basis"
+    },
+    {
       "id": "15c3-1.a1iiA.daily_debit_reduction",
       "kind": "PERCENT",
       "citation": "17 CFR 240.15c3-1(a)(1)(ii)(A)",

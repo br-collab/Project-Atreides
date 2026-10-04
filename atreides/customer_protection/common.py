@@ -114,6 +114,10 @@ class RuleReader:
         """Whether a categorical item (a line, a location, a provision) is loaded."""
         return self._item(rule_id) is not None
 
+    def flag(self, description: str) -> None:
+        """Record a rule problem that is not a lookup, such as text the engine does not model."""
+        self._missing.add(description)
+
     def of_kind(self, kind: RuleKind) -> tuple[str, ...]:
         """Ids of every loaded item of ``kind``, in table order."""
         return tuple(item.id for item in self._table.of_kind(kind))
