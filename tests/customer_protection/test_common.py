@@ -17,13 +17,13 @@ class Balance(Frozen):
 
 @pytest.mark.parametrize("value", [Decimal("1.10"), "1.10", 1])
 def test_exact_money_is_accepted(value: object) -> None:
-    assert Balance(amount=value).amount == Decimal(str(value))  # type: ignore[arg-type]
+    assert Balance(amount=value).amount == Decimal(str(value))
 
 
 @pytest.mark.parametrize("value", [1.1, True, None, [1]])
 def test_inexact_money_is_refused(value: object) -> None:
     with pytest.raises(ValueError):
-        Balance(amount=value)  # type: ignore[arg-type]
+        Balance(amount=value)
 
 
 def test_a_json_number_with_a_fraction_is_refused() -> None:

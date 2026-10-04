@@ -49,7 +49,7 @@ def _row(document: dict[str, Any], rule_id: str) -> dict[str, Any]:
 
 def test_the_committed_table_loads_with_nothing_refused(table: RuleTable) -> None:
     assert table.rejected == ()
-    assert len(table.items) == 86
+    assert len(table.items) == 87
     assert table.table_version == "sc2-rules/0.1"
 
 
