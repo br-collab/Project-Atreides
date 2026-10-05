@@ -110,6 +110,7 @@ def test_known_variances_are_classified() -> None:
     item_01 = next(v for v in report.variances if v.name == "15c3-3a.item.01")
     assert item_01.variance == D("-50000")
     assert item_01.explanation == "offset by 15c3-3a.item.02"
+    assert all(v.causal_status == "CANDIDATE_NOT_CONFIRMED" for v in report.variances)
     assert report.disposition is Disposition.HOLD
 
 

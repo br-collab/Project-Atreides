@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 import atreides.customer_protection as package
+from atreides.customer_protection import challenger, control, net_capital
 
 PACKAGE = Path(package.__file__).resolve().parent
 MODULES = sorted(PACKAGE.rglob("*.py"))
@@ -40,6 +41,14 @@ def _ids(paths: list[Path]) -> list[str]:
 def test_the_scan_sees_the_package() -> None:
     assert PACKAGE / "rules" / "loader.py" in MODULES
     assert PACKAGE / "common.py" in MODULES
+
+
+def test_public_claims_state_the_reviewed_limits() -> None:
+    assert "selected, caller-classified" in (package.__doc__ or "")
+    assert "partial possession-or-control" in (control.__doc__ or "").lower()
+    assert "not notification logic" in (net_capital.__doc__ or "")
+    assert "candidate never proves" in (challenger.__doc__ or "")
+    assert "not that a broker-dealer complies" in (package.__doc__ or "")
 
 
 def float_uses(tree: ast.AST) -> list[str]:

@@ -40,12 +40,16 @@ WHAT IT COMPUTES
    - the activity minimum of (a)(2) for the firm's category.
 
 5. Excess net capital: net capital less the minimum requirement.
-6. Early warning, Rule 17a-11(b), thresholds as loaded: (b)(1) aggregate
+6. Early-warning trigger indicators, Rule 17a-11(b), thresholds as loaded: (b)(1) aggregate
    indebtedness over its multiple of net capital, (b)(2) net capital under its
    percentage of aggregate debit items, (b)(3) net capital under its multiple
    of the minimum requirement, (b)(5) the leverage test against tentative net
    capital unless the firm reports that activity monthly. (b)(4), backtesting
    exceptions, applies to model-based firms and is not modeled.
+
+The trigger indicators are not notification logic. This engine does not decide
+the recipient, deadline or delivery method, send a notice, retain filing
+evidence, amend a notice, or perform supervisory escalation.
 
 EXACTNESS
 ---------
@@ -230,7 +234,7 @@ class HaircutLine(Frozen):
 
 
 class EarlyWarning(Frozen):
-    """One Rule 17a-11(b) test. ``triggered`` is ``None`` when it could not be assessed."""
+    """One Rule 17a-11(b) trigger indicator, not proof that notice was given."""
 
     rule_id: str
     paragraph: str
