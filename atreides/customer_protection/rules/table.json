@@ -177,6 +177,34 @@
       "compliance_quote": "must perform customer and PAB reserve computations daily beginning no later than June 30, 2026"
     },
     {
+      "id": "15c3-3.e3iB2.exit_notice",
+      "kind": "CALENDAR_DAYS",
+      "citation": "17 CFR 240.15c3-3(e)(3)(i)(B)(2)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "at least 60 calendar days before computing the Customer Reserve Bank Account and the PAB Reserve Bank Account computation weekly",
+      "figure": "60 calendar days",
+      "value": "60"
+    },
+    {
+      "id": "15c3-3.e3iii.pab_monthly",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-3(e)(3)(iii)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "A broker or dealer that does not carry the accounts of a “customer” as defined by this section or conduct a proprietary trading business may make the computation to be performed with respect to PAB accounts under paragraph (e)(1) of this section monthly rather than weekly"
+    },
+    {
+      "id": "15c3-3.e3iii.clean_weekly_computations",
+      "kind": "COUNT",
+      "citation": "17 CFR 240.15c3-3(e)(3)(iii)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "until four successive weekly computations are made, none of which is made at a time when the broker or dealer was required to deposit additional cash or qualified securities in the PAB Reserve Bank Account",
+      "figure": "four successive weekly computations",
+      "value": "4"
+    },
+    {
       "id": "15c3-3.e3iC.monthly_ai_ceiling",
       "kind": "PERCENT",
       "citation": "17 CFR 240.15c3-3(e)(3)(i)(C)",

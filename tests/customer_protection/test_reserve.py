@@ -69,6 +69,7 @@ def inputs(**changes: Any) -> ReserveInputs:
         "mode": ComputationMode.WEEKLY,
         "lines": lines(),
         "average_total_credits": D("400000000"),
+        "previously_daily_required": False,
         "cash_deposits": (
             BankCashDeposit(
                 bank="SYNTHETIC BANK A", amount=D("2000000"), affiliated=False,
@@ -102,7 +103,12 @@ def test_synthetic_customer_alternative_weekly() -> None:
 
 def test_synthetic_customer_alternative_daily_required() -> None:
     result = compute_reserve(
-        inputs(mode=ComputationMode.DAILY, average_total_credits=D("600000000")), TABLE
+        inputs(
+            mode=ComputationMode.DAILY,
+            average_total_credits=D("600000000"),
+            daily_requirement_effective_date=AS_OF,
+        ),
+        TABLE,
     )
     assert result.daily_required is True
     assert result.debit_reduction_rate == D("0.02")
@@ -182,7 +188,11 @@ def test_property_mode_switch_changes_the_reduction_exactly_as_loaded(
     assert daily_rate is not None and daily_rate.value is not None
     values = dict(zip(EXHIBIT_A_DEBITS, debits, strict=True))
     values["15c3-3a.item.01"] = credits
-    common = {"lines": lines(values), "average_total_credits": D("500000000")}
+    common = {
+        "lines": lines(values),
+        "average_total_credits": D("500000000"),
+        "daily_requirement_effective_date": AS_OF,
+    }
     weekly = compute_reserve(inputs(mode=ComputationMode.WEEKLY, **common), TABLE)
     daily = compute_reserve(inputs(mode=ComputationMode.DAILY, **common), TABLE)
     total = sum(debits, D(0))
@@ -209,7 +219,11 @@ def test_a_changed_rate_in_the_table_changes_the_reduction(edited_table: TableEd
 
 def test_daily_threshold_reached_but_weekly_computation_holds() -> None:
     result = compute_reserve(
-        inputs(average_total_credits=D("500000000"), qualified_securities_deposit=D("9000000")),
+        inputs(
+            average_total_credits=D("500000000"),
+            daily_requirement_effective_date=AS_OF,
+            qualified_securities_deposit=D("9000000"),
+        ),
         TABLE,
     )
     assert result.daily_required is True
@@ -224,6 +238,71 @@ def test_missing_average_total_credits_holds() -> None:
     assert result.daily_required is None
     assert result.missing_inputs == ("average_total_credits",)
     assert result.disposition is Disposition.HOLD
+
+
+def test_daily_threshold_inside_phase_in_is_not_yet_required() -> None:
+    result = compute_reserve(
+        inputs(
+            average_total_credits=D("500000000"),
+            daily_requirement_effective_date=AS_OF + timedelta(days=1),
+        ),
+        TABLE,
+    )
+    assert result.daily_required is False
+    assert "phase-in" in result.reasons[0]
+
+
+def test_daily_threshold_needs_an_evidenced_effective_date() -> None:
+    result = compute_reserve(inputs(average_total_credits=D("500000000")), TABLE)
+    assert result.daily_required is None
+    assert "daily_requirement_effective_date" in result.missing_inputs
+    assert result.disposition is Disposition.HOLD
+
+
+def test_prior_daily_firm_remains_daily_until_sixty_days_after_exit_notice() -> None:
+    still_daily = compute_reserve(
+        inputs(
+            mode=ComputationMode.DAILY,
+            previously_daily_required=True,
+            daily_exit_notice_date=AS_OF - timedelta(days=59),
+        ),
+        TABLE,
+    )
+    weekly = compute_reserve(
+        inputs(
+            previously_daily_required=True,
+            daily_exit_notice_date=AS_OF - timedelta(days=60),
+        ),
+        TABLE,
+    )
+    assert still_daily.daily_required is True
+    assert weekly.daily_required is False
+
+
+def test_prior_daily_firm_without_exit_notice_remains_daily() -> None:
+    result = compute_reserve(
+        inputs(mode=ComputationMode.DAILY, previously_daily_required=True), TABLE
+    )
+    assert result.daily_required is True
+
+
+def test_below_threshold_needs_prior_daily_status() -> None:
+    result = compute_reserve(inputs(previously_daily_required=None), TABLE)
+    assert result.daily_required is None
+    assert "previously_daily_required" in result.missing_inputs
+
+
+def test_exit_notice_period_must_be_loaded(edited_table: TableEditor) -> None:
+    result = compute_reserve(
+        inputs(
+            mode=ComputationMode.DAILY,
+            previously_daily_required=True,
+            daily_exit_notice_date=AS_OF,
+        ),
+        edited_table(without("15c3-3.e3iB2.exit_notice")),
+    )
+    assert result.daily_required is None
+    assert result.disposition is Disposition.INDETERMINATE
 
 
 @pytest.mark.parametrize(
@@ -291,11 +370,113 @@ def test_monthly_on_the_alternative_standard_holds() -> None:
     assert any("at least weekly" in b for b in result.breaches)
 
 
-def test_monthly_pab_is_indeterminate() -> None:
+def test_monthly_pab_is_available_for_an_eligible_firm_without_customer_factor() -> None:
     result = compute_reserve(
-        _monthly(accounts=ReserveAccounts.PAB), TABLE
+        _monthly(
+            accounts=ReserveAccounts.PAB,
+            carries_customer_accounts=False,
+            conducts_proprietary_trading_business=False,
+            pab_last_monthly_required_additional_deposit=False,
+        ),
+        TABLE,
     )
-    assert result.missing_rules == ("15c3-3.e3iii.pab_monthly",)
+    assert result.deposit_factor == D(1)
+    assert result.requirement == D("3000000")
+    assert result.missing_rules == ()
+
+
+def test_monthly_pab_is_unavailable_to_a_customer_carrying_firm() -> None:
+    result = compute_reserve(
+        _monthly(
+            accounts=ReserveAccounts.PAB,
+            carries_customer_accounts=True,
+            conducts_proprietary_trading_business=False,
+            pab_last_monthly_required_additional_deposit=False,
+        ),
+        TABLE,
+    )
+    assert result.disposition is Disposition.HOLD
+    assert "carries customer" in result.breaches[0]
+
+
+def test_monthly_pab_requires_four_clean_weeks_after_an_additional_deposit() -> None:
+    result = compute_reserve(
+        _monthly(
+            accounts=ReserveAccounts.PAB,
+            carries_customer_accounts=False,
+            conducts_proprietary_trading_business=False,
+            pab_last_monthly_required_additional_deposit=True,
+            pab_clean_weekly_computations=D(3),
+        ),
+        TABLE,
+    )
+    assert result.disposition is Disposition.HOLD
+    assert "recovery" in result.breaches[0]
+
+
+def test_monthly_pab_with_four_clean_weeks_is_available_again() -> None:
+    result = compute_reserve(
+        _monthly(
+            accounts=ReserveAccounts.PAB,
+            carries_customer_accounts=False,
+            conducts_proprietary_trading_business=False,
+            pab_last_monthly_required_additional_deposit=True,
+            pab_clean_weekly_computations=D(4),
+        ),
+        TABLE,
+    )
+    assert result.deposit_factor == D(1)
+    assert not any("recovery" in breach for breach in result.breaches)
+
+
+def test_monthly_pab_recovery_needs_the_clean_week_count() -> None:
+    result = compute_reserve(
+        _monthly(
+            accounts=ReserveAccounts.PAB,
+            carries_customer_accounts=False,
+            conducts_proprietary_trading_business=False,
+            pab_last_monthly_required_additional_deposit=True,
+        ),
+        TABLE,
+    )
+    assert "pab_clean_weekly_computations" in result.missing_inputs
+    assert result.disposition is Disposition.HOLD
+
+
+def test_monthly_pab_needs_eligibility_evidence() -> None:
+    result = compute_reserve(_monthly(accounts=ReserveAccounts.PAB), TABLE)
+    assert set(result.missing_inputs) >= {
+        "carries_customer_accounts",
+        "conducts_proprietary_trading_business",
+        "pab_last_monthly_required_additional_deposit",
+    }
+    assert result.disposition is Disposition.HOLD
+
+
+def test_monthly_pab_proprietary_trading_is_ineligible() -> None:
+    result = compute_reserve(
+        _monthly(
+            accounts=ReserveAccounts.PAB,
+            carries_customer_accounts=False,
+            conducts_proprietary_trading_business=True,
+            pab_last_monthly_required_additional_deposit=False,
+        ),
+        TABLE,
+    )
+    assert result.disposition is Disposition.HOLD
+
+
+def test_monthly_pab_provision_must_be_loaded(edited_table: TableEditor) -> None:
+    result = compute_reserve(
+        _monthly(
+            accounts=ReserveAccounts.PAB,
+            carries_customer_accounts=False,
+            conducts_proprietary_trading_business=False,
+            pab_last_monthly_required_additional_deposit=False,
+        ),
+        edited_table(without("15c3-3.e3iii.pab_monthly")),
+    )
+    assert result.deposit_factor is None
     assert result.disposition is Disposition.INDETERMINATE
 
 
@@ -306,13 +487,16 @@ def pab(**changes: Any) -> ReserveInputs:
     return inputs(accounts=ReserveAccounts.PAB, **changes)
 
 
-def test_pab_on_the_alternative_standard_is_indeterminate_by_name() -> None:
-    result = compute_reserve(pab(), TABLE)
-    assert result.disposition is Disposition.INDETERMINATE
-    assert result.missing_rules == ("15c3-1.a1iiA.pab_debit_reduction",)
+@pytest.mark.parametrize("mode", [ComputationMode.WEEKLY, ComputationMode.DAILY])
+def test_pab_on_the_alternative_standard_takes_no_debit_reduction(
+    mode: ComputationMode,
+) -> None:
+    result = compute_reserve(pab(mode=mode), TABLE)
+    assert result.disposition is Disposition.PASS
+    assert result.missing_rules == ()
     assert result.total_debits == D("9000000")
-    assert result.requirement is None
-    assert "does not settle" in result.reasons[0]
+    assert result.debit_reduction == D(0)
+    assert result.requirement == D("3000000")
 
 
 def test_pab_on_aggregate_indebtedness_takes_no_note_e3_reduction() -> None:
@@ -327,18 +511,6 @@ def test_pab_without_note_4_loaded_is_indeterminate(edited_table: TableEditor) -
     table = edited_table(without("15c3-3a.pab_note_4.no_note_e3"))
     result = compute_reserve(pab(standard=NetCapitalStandard.AGGREGATE_INDEBTEDNESS), table)
     assert result.disposition is Disposition.INDETERMINATE
-
-
-def test_a_loaded_pab_reduction_would_be_used(edited_table: TableEditor) -> None:
-    """If the reduction is ever loaded with a citation, the engine computes with it."""
-
-    def add(document: dict[str, Any]) -> None:
-        row = next(r for r in document["items"] if r["id"] == "15c3-1.a1iiA.weekly_debit_reduction")
-        document["items"].append(dict(row, id="15c3-1.a1iiA.pab_debit_reduction"))
-
-    result = compute_reserve(pab(), edited_table(add))
-    assert result.debit_reduction == D("270000")
-    assert result.missing_rules == ()
 
 
 def test_pab_requirement_is_satisfied_by_same_date_customer_excess_debits() -> None:
