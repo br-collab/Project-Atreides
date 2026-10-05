@@ -1,4 +1,5 @@
-"""The DSOR record of one corporate action lifecycle request, election or default.
+"""The DSOR record of one corporate action lifecycle request, election, default or
+reconciliation.
 
 EXPERIMENTAL (charter section 18.6). Nothing here is production evidence.
 
@@ -14,7 +15,10 @@ Record), with a body that says which it is:
 - an election submission, accepted, refused or a duplicate
   (:class:`ElectionBody`): the event, the firm's policy and the entry;
 - a default assignment (:class:`DefaultAssignmentBody`): the event, the
-  policy and every account's default or the reason it has none.
+  policy and every account's default or the reason it has none;
+- a reconciliation (:class:`ReconciliationBody`): the event, the entitlement,
+  the confirmations compared and the result. Recomputing the result from those
+  inputs must give the recorded one (:func:`verify_reconciliation`).
 
 Nothing is recorded by reference only, so an event's records are enough to
 rebuild its lifecycle (:func:`rebuild_from_records`) and its elections
@@ -58,6 +62,7 @@ from atreides.corporate_actions.election import (
     ProtectCover,
     rebuild_elections,
 )
+from atreides.corporate_actions.entitlement import EntitlementResult
 from atreides.corporate_actions.events import CorporateActionEvent
 from atreides.corporate_actions.lifecycle import (
     JournalMismatchError,
@@ -66,6 +71,8 @@ from atreides.corporate_actions.lifecycle import (
     TransitionRequest,
     rebuild,
 )
+from atreides.corporate_actions.movement import MovementReport
+from atreides.corporate_actions.reconciliation import CorporateActionReconciliation, reconcile
 from atreides.customer_protection.common import Frozen
 from atreides.customer_protection.rules.model import CLAIM_LABEL, DTG_PATTERN
 
@@ -74,12 +81,15 @@ __all__ = [
     "DefaultAssignmentBody",
     "ElectionBody",
     "LifecycleTransitionBody",
+    "ReconciliationBody",
     "RecordBody",
     "rebuild_elections_from_records",
     "rebuild_from_records",
     "record_defaults",
+    "record_reconciliation",
     "record_request",
     "record_submission",
+    "verify_reconciliation",
 ]
 
 
@@ -109,8 +119,18 @@ class DefaultAssignmentBody(Frozen):
     assignment: DefaultAssignment
 
 
+class ReconciliationBody(Frozen):
+    """An event's entitlement reconciled against its confirmations, with every input."""
+
+    body_type: Literal["reconciliation"] = "reconciliation"
+    event: CorporateActionEvent
+    entitlement: EntitlementResult
+    confirmations: tuple[MovementReport, ...]
+    result: CorporateActionReconciliation
+
+
 RecordBody = Annotated[
-    LifecycleTransitionBody | ElectionBody | DefaultAssignmentBody,
+    LifecycleTransitionBody | ElectionBody | DefaultAssignmentBody | ReconciliationBody,
     Field(discriminator="body_type"),
 ]
 
@@ -183,6 +203,35 @@ def record_defaults(
         recorded_dtg=_dtg(recorded_at),
         body=DefaultAssignmentBody(event=book.event, policy=book.policy, assignment=assignment),
     )
+
+
+def record_reconciliation(
+    event: CorporateActionEvent,
+    entitlement: EntitlementResult,
+    confirmations: tuple[MovementReport, ...],
+    *,
+    operation_id: UUID,
+    recorded_at: datetime,
+) -> CorporateActionEventRecord:
+    """Reconcile and assemble the record, with every input. Pure."""
+    return CorporateActionEventRecord(
+        operation_id=operation_id,
+        recorded_dtg=_dtg(recorded_at),
+        body=ReconciliationBody(
+            event=event, entitlement=entitlement, confirmations=confirmations,
+            result=reconcile(event, entitlement, confirmations, reconciled_at=recorded_at),
+        ),
+    )
+
+
+def verify_reconciliation(record: CorporateActionEventRecord) -> bool:
+    """Whether recomputing a reconciliation record from its inputs gives what it records."""
+    body = record.body
+    if not isinstance(body, ReconciliationBody):
+        raise ValueError("the record is not a reconciliation")
+    again = reconcile(body.event, body.entitlement, body.confirmations,
+                      reconciled_at=body.result.reconciled_at)
+    return again == body.result
 
 
 def _one_event(bodies: list[LifecycleTransitionBody] | list[ElectionBody]) -> CorporateActionEvent:
