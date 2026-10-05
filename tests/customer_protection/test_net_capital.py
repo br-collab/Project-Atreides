@@ -64,6 +64,14 @@ GOVERNMENT = (
     Position(issue="SYNTHETIC NOTE 18M", asset_class="government", long_market_value=D(0),
              short_market_value=D("500000"), months_to_maturity=D(18)),
 )
+#: Rule 15c3-1(c)(2)(vi)(A)(3) to (A)(5). The worked examples state that none applies, so
+#: the modeled (A)(1) and (A)(2) haircut is the firm's haircut (SC2-WP3-01).
+GOVERNMENT_PROVISIONS = (
+    "elects_a3_cross_category_exclusion",
+    "elects_a4_futures_deliverable_inclusion",
+    "qualifies_a5_government_dealer_reduction",
+)
+NONE_APPLY = dict.fromkeys(GOVERNMENT_PROVISIONS, False)
 
 
 def inputs(**changes: Any) -> NetCapitalInputs:
@@ -83,6 +91,7 @@ def inputs(**changes: Any) -> NetCapitalInputs:
         "positions": (EQUITY, *GOVERNMENT),
         "aggregate_debit_items": D("100000000"),
         "reports_lending_activity_monthly": True,
+        **NONE_APPLY,
     }
     base.update(changes)
     return NetCapitalInputs(**base)
@@ -415,3 +424,93 @@ def test_the_result_coerces_its_disposition_at_the_boundary() -> None:
     dumped = compute_net_capital(inputs(), TABLE).model_dump()
     dumped["disposition"] = "pass"
     assert NetCapitalResult.model_validate(dumped).disposition is Disposition.INDETERMINATE
+
+
+# --- SC2-WP3-01: government provisions the engine does not model ----------------------
+#
+# Rule 15c3-1(c)(2)(vi)(A)(3) and (A)(4) are elections a firm may make, and (A)(5) cuts
+# the deduction for a qualifying government securities dealer. Each changes the government
+# haircut and none is modeled. The firm states whether each applies. Unstated is a missing
+# input, so HOLD. One that applies is a rule path the engine cannot compute, so
+# INDETERMINATE. Either way no government haircut is claimed.
+
+def government_only(**changes: Any) -> NetCapitalInputs:
+    """Government positions only, so the provisions alone decide the haircut."""
+    base: dict[str, Any] = {"positions": GOVERNMENT}
+    base.update(changes)
+    return inputs(**base)
+
+
+def test_a_caller_that_never_mentions_the_provisions_holds() -> None:
+    """A caller written before these fields existed. Before SC2-WP3-01 this returned PASS
+    with an (A)(1) haircut, because nothing could say whether (A)(3) to (A)(5) applied."""
+    stated = government_only().model_dump()
+    written_before = NetCapitalInputs(
+        **{k: v for k, v in stated.items() if k not in GOVERNMENT_PROVISIONS}
+    )
+    result = compute_net_capital(written_before, TABLE)
+    assert result.disposition is Disposition.HOLD
+    assert set(GOVERNMENT_PROVISIONS) <= set(result.missing_inputs)
+    assert result.haircuts is None
+
+
+def test_unstated_government_provisions_hold_and_claim_no_haircut() -> None:
+    unstated = {name: None for name in GOVERNMENT_PROVISIONS}
+    result = compute_net_capital(government_only(**unstated), TABLE)
+    assert set(GOVERNMENT_PROVISIONS) <= set(result.missing_inputs)
+    assert result.disposition is Disposition.HOLD
+    assert result.haircuts is None
+    assert result.net_capital is None
+    assert not [line for line in result.haircut_lines if line.asset_class == "government"]
+
+
+@pytest.mark.parametrize("provision", GOVERNMENT_PROVISIONS)
+def test_each_unstated_government_provision_is_named(provision: str) -> None:
+    result = compute_net_capital(government_only(**{**NONE_APPLY, provision: None}), TABLE)
+    assert provision in result.missing_inputs
+    assert result.disposition is Disposition.HOLD
+    assert result.haircuts is None
+
+
+@pytest.mark.parametrize(
+    ("provision", "paragraph"),
+    [
+        ("elects_a3_cross_category_exclusion", "(c)(2)(vi)(A)(3)"),
+        ("elects_a4_futures_deliverable_inclusion", "(c)(2)(vi)(A)(4)"),
+        ("qualifies_a5_government_dealer_reduction", "(c)(2)(vi)(A)(5)"),
+    ],
+)
+def test_a_government_provision_that_applies_is_indeterminate(
+    provision: str, paragraph: str
+) -> None:
+    result = compute_net_capital(government_only(**{**NONE_APPLY, provision: True}), TABLE)
+    assert result.disposition is Disposition.INDETERMINATE
+    assert any(paragraph in rule for rule in result.missing_rules)
+    assert result.haircuts is None
+    assert result.net_capital is None
+
+
+def test_government_provisions_ruled_out_compute_the_modeled_haircut() -> None:
+    stated = compute_net_capital(government_only(**NONE_APPLY), TABLE)
+    assert stated.haircuts is not None
+    assert {line.paragraph for line in stated.haircut_lines} == {"(c)(2)(vi)(A)(1)"}
+    assert not set(GOVERNMENT_PROVISIONS) & set(stated.missing_inputs)
+
+
+def test_government_provisions_are_not_asked_without_government_positions() -> None:
+    """They change only the government haircut, so an equity-only firm is not asked."""
+    unstated = {name: None for name in GOVERNMENT_PROVISIONS}
+    result = compute_net_capital(inputs(positions=(EQUITY,), **unstated), TABLE)
+    assert not set(GOVERNMENT_PROVISIONS) & set(result.missing_inputs)
+    assert result.haircuts is not None
+
+
+def test_unstated_provisions_and_a_missing_maturity_are_both_named() -> None:
+    """One pass names everything a caller must supply, not the first gap only."""
+    undated = Position(issue="SYNTHETIC NOTE", asset_class="government",
+                       long_market_value=D(1), short_market_value=D(0))
+    unstated = {name: None for name in GOVERNMENT_PROVISIONS}
+    result = compute_net_capital(government_only(positions=(undated,), **unstated), TABLE)
+    assert {"months_to_maturity[SYNTHETIC NOTE]", *GOVERNMENT_PROVISIONS} <= set(
+        result.missing_inputs
+    )
