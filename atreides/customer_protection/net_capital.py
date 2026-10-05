@@ -17,7 +17,11 @@ WHAT IT COMPUTES
    - government, Rule 15c3-1(c)(2)(vi)(A): the maturity bands and rates as
      loaded, by the category method of (A)(1), or by subcategory where the firm
      elects (A)(2). The (A)(3) to (A)(5) exclusions and elections are not
-     modeled.
+     modeled, and each would change the result, so the firm states whether each
+     applies (SC2-WP3-01). Unstated is a missing input (HOLD). One that applies
+     is a rule path this engine cannot compute (INDETERMINATE). Either way no
+     government haircut is claimed. A firm with no government positions is not
+     asked.
    - equity, the "all other securities" haircut of (c)(2)(vi)(J): the loaded
      rate on the greater of the long or short position, and the loaded rate on
      the amount by which the lesser exceeds the loaded share of the greater.
@@ -191,6 +195,17 @@ class NetCapitalInputs(Frozen):
     deductions: tuple[CapitalAdjustment, ...] = ()
     positions: tuple[Position, ...] = ()
     government_election: GovernmentElection = GovernmentElection.CATEGORY
+    #: Government positions only. Rule 15c3-1(c)(2)(vi)(A)(3): whether the firm elects to
+    #: exclude offsetting securities across categories. ``None`` means not stated.
+    elects_a3_cross_category_exclusion: bool | None = None
+    #: Government positions only. Rule 15c3-1(c)(2)(vi)(A)(4): whether the firm elects to
+    #: include securities deliverable against government securities futures. ``None`` means
+    #: not stated.
+    elects_a4_futures_deliverable_inclusion: bool | None = None
+    #: Government positions only. Rule 15c3-1(c)(2)(vi)(A)(5): whether the firm is a
+    #: government securities dealer whose deduction is 75 percent of the one otherwise
+    #: computed. ``None`` means not stated.
+    qualifies_a5_government_dealer_reduction: bool | None = None
     #: Aggregate indebtedness standard only.
     aggregate_indebtedness: NonNegativeMoney | None = None
     #: Aggregate indebtedness standard only: months since the firm commenced business.
@@ -294,6 +309,45 @@ def _government_bands(rules: RuleReader) -> list[tuple[str, str, Decimal | None,
     return bands
 
 
+def _government_provisions_ruled_out(
+    inputs: NetCapitalInputs, rules: RuleReader, found: _Findings
+) -> bool:
+    """Whether the firm has stated that none of (A)(3) to (A)(5) applies.
+
+    Each changes the government haircut and none is modeled, so the haircut computed
+    here is the firm's haircut only when all three are ruled out. Not stating one is a
+    missing input. Stating that one applies is a rule path this engine does not have.
+    """
+    ruled_out = True
+    for stated, name, paragraph, provision in (
+        (
+            inputs.elects_a3_cross_category_exclusion,
+            "elects_a3_cross_category_exclusion",
+            "(c)(2)(vi)(A)(3)",
+            "the election to exclude offsetting securities across categories",
+        ),
+        (
+            inputs.elects_a4_futures_deliverable_inclusion,
+            "elects_a4_futures_deliverable_inclusion",
+            "(c)(2)(vi)(A)(4)",
+            "the election to include securities deliverable against government futures",
+        ),
+        (
+            inputs.qualifies_a5_government_dealer_reduction,
+            "qualifies_a5_government_dealer_reduction",
+            "(c)(2)(vi)(A)(5)",
+            "the 75 percent deduction for a qualifying government securities dealer",
+        ),
+    ):
+        if stated is None:
+            found.missing_inputs.append(name)
+            ruled_out = False
+        elif stated:
+            rules.flag(f"Rule 15c3-1{paragraph}, {provision}, applies and is not modeled")
+            ruled_out = False
+    return ruled_out
+
+
 def _government_haircut(
     positions: list[Position],
     election: GovernmentElection,
@@ -386,13 +440,15 @@ def _haircuts(
     for position in inputs.positions:
         if position.asset_class not in unknown:
             by_class[AssetClass(position.asset_class)].append(position)
-    government = (
-        _government_haircut(
+    government: list[HaircutLine] | None = []
+    if by_class[AssetClass.GOVERNMENT]:
+        # Both run, so one pass names every missing maturity and every unstated provision.
+        ruled_out = _government_provisions_ruled_out(inputs, rules, found)
+        government = _government_haircut(
             by_class[AssetClass.GOVERNMENT], inputs.government_election, rules, found
         )
-        if by_class[AssetClass.GOVERNMENT]
-        else []
-    )
+        if not ruled_out:
+            government = None
     equities = by_class[AssetClass.EQUITY]
     equity = _equity_haircut(equities, rules) if equities else []
     if government is None or equity is None or unknown:
