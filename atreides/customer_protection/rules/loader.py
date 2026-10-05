@@ -77,6 +77,7 @@ _FRACTION_OF_ONE = re.compile(r"^(?P<num>\d+)/(?P<den>\d+) of 1\s*(?:percent|%)$
 _USD = re.compile(r"^\$(?P<amount>\d[\d,]*)(?:\s+(?P<scale>million|billion))?$")
 _DURATION = re.compile(rf"^{_NUMBER}\s+(?P<unit>months?|years?)$")
 _DAYS = re.compile(r"^(?P<count>\d+|[a-z]+)\s+(?P<unit>calendar|business) days$")
+_COUNT = re.compile(r"^(?P<count>\d+|[a-z]+)(?:\s+.*)?$")
 
 
 class FigureError(ValueError):
@@ -129,6 +130,13 @@ def parse_figure(kind: RuleKind, figure: str) -> Decimal:
                 return Decimal(int(days))
             if days in _WORDS:
                 return Decimal(_WORDS[days])
+    elif kind is RuleKind.COUNT:
+        if match := _COUNT.match(text):
+            raw_count = match["count"]
+            if raw_count.isdigit():
+                return Decimal(int(raw_count))
+            if raw_count in _WORDS:
+                return Decimal(_WORDS[raw_count])
     raise FigureError(f"{figure!r} does not read as {kind}")
 
 

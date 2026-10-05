@@ -20,10 +20,9 @@ For one computation, customer or PAB (proprietary accounts of broker-dealers):
      aggregate debit items in lieu of Note E(3), the weekly percentage unless
      the computation is daily and the 2 percent is available (daily required,
      or voluntary daily with the written notice given far enough ahead),
-   - alternative standard, PAB: **INDETERMINATE**. The loaded text does not say
-     whether the Rule 15c3-1(a)(1)(ii)(A) reduction, given "in lieu of" Note
-     E(3), applies to a PAB computation that Note E(3) never applied to. The
-     engine will not guess; it names the missing rule.
+   - alternative standard, PAB: none. Securities and Exchange Commission
+     Release 34-102022, footnote 159, states that the PAB computation requires
+     neither the 3 percent nor the 1 percent debit reduction.
 
 4. The requirement: the excess of credits over reduced debits, or zero,
    multiplied by the monthly deposit factor when the computation is monthly.
@@ -48,13 +47,14 @@ note this engine applies, because it is the one that turns on the net capital
 standard. The engine cannot see account-level data and does not pretend to
 check the other Notes.
 
-NOT MODELED, AND SAID SO
-------------------------
-- The six-month phase-in to daily computation and the 60-day exit notice
-  (Rule 15c3-3(e)(3)(i)(B)): average total credits at or over the threshold
-  is treated as daily required. A firm inside its phase-in is HOLD, which is
-  the conservative error.
-- Monthly PAB computation (Rule 15c3-3(e)(3)(iii)): INDETERMINATE.
+LIMITS AND REQUIRED EVIDENCE
+----------------------------
+- The daily requirement uses the caller's evidenced six-month effective date.
+  A previously daily firm stays daily until 60 calendar days after its exit
+  notice when average total credits fall below the threshold.
+- Monthly PAB computation is available only when the firm carries no customer
+  accounts, conducts no proprietary trading business, and is not inside the
+  four-clean-weekly-computation recovery required by Rule 15c3-3(e)(3)(iii).
 - No rounding. A figure is as exact as its inputs. Rounding is the filer's
   presentation, and the challenger classifies a difference inside a stated
   tolerance as rounding.
@@ -110,11 +110,10 @@ PAB_NOTE_4 = "15c3-3a.pab_note_4.no_note_e3"
 WEEKLY_BASIS = "15c3-1.a1iiA.weekly_basis"
 WEEKLY_REDUCTION = "15c3-1.a1iiA.weekly_debit_reduction"
 DAILY_REDUCTION = "15c3-1.a1iiA.daily_debit_reduction"
-#: Deliberately absent from the table. See the module docstring.
-PAB_ALTERNATIVE_REDUCTION = "15c3-1.a1iiA.pab_debit_reduction"
-#: Deliberately absent from the table: monthly PAB computation is not modeled.
 PAB_MONTHLY = "15c3-3.e3iii.pab_monthly"
+PAB_MONTHLY_RECOVERY = "15c3-3.e3iii.clean_weekly_computations"
 DAILY_THRESHOLD = "15c3-3.e3iB1.daily_threshold"
+DAILY_EXIT_NOTICE = "15c3-3.e3iB2.exit_notice"
 VOLUNTARY_NOTICE = "15c3-3.e3v.voluntary_daily_notice"
 MONTHLY_AI_CEILING = "15c3-3.e3iC.monthly_ai_ceiling"
 MONTHLY_FUNDS_CEILING = "15c3-3.e3iC.monthly_customer_funds_ceiling"
@@ -180,12 +179,23 @@ class ReserveInputs(Frozen):
     lines: tuple[LineBalance, ...]
     #: Average total credits under Rule 15c3-3(e)(3)(i)(B)(1), from the 12 most recent filings.
     average_total_credits: NonNegativeMoney | None
+    #: Date the six-month phase-in ended after the threshold was met.
+    daily_requirement_effective_date: date | None = None
+    #: Whether the firm was already subject to required daily computation before falling below.
+    previously_daily_required: bool | None = None
+    #: Written notice electing to return from required daily to weekly computation.
+    daily_exit_notice_date: date | None = None
     #: Date the written notice of a voluntary daily election was given, if one was.
     voluntary_daily_notice_date: date | None = None
     #: Monthly eligibility evidence (Rule 15c3-3(e)(3)(i)(C)).
     aggregate_indebtedness: NonNegativeMoney | None = None
     net_capital: Money | None = None
     aggregate_customer_funds: NonNegativeMoney | None = None
+    #: Monthly PAB eligibility and recovery evidence under Rule 15c3-3(e)(3)(iii).
+    carries_customer_accounts: bool | None = None
+    conducts_proprietary_trading_business: bool | None = None
+    pab_last_monthly_required_additional_deposit: bool | None = None
+    pab_clean_weekly_computations: NonNegativeMoney | None = None
     cash_deposits: tuple[BankCashDeposit, ...] = ()
     #: Market value of qualified securities on deposit. ``None`` means not supplied.
     qualified_securities_deposit: NonNegativeMoney | None
@@ -292,11 +302,34 @@ def _daily_required(
         return None
     if threshold is None:
         return None
-    required = inputs.average_total_credits >= threshold
+    if inputs.average_total_credits >= threshold:
+        effective = inputs.daily_requirement_effective_date
+        if effective is None:
+            found.missing_inputs.append("daily_requirement_effective_date")
+            return None
+        required = inputs.as_of >= effective
+        if not required:
+            found.reasons.append(
+                "the six-month daily-computation phase-in has not reached its evidenced "
+                "effective date"
+            )
+    else:
+        previously_required = inputs.previously_daily_required
+        if previously_required is None:
+            found.missing_inputs.append("previously_daily_required")
+            return None
+        required = previously_required
+        if previously_required and inputs.daily_exit_notice_date is not None:
+            notice_days = rules.value(DAILY_EXIT_NOTICE)
+            if notice_days is None:
+                return None
+            required = inputs.as_of < inputs.daily_exit_notice_date + timedelta(
+                days=int(notice_days)
+            )
     if required and inputs.mode is not ComputationMode.DAILY:
         found.breaches.append(
-            "average total credits are at or over the daily-computation threshold "
-            "(Rule 15c3-3(e)(3)(i)(B)(1)); this computation is not daily"
+            "the firm is subject to Rule 15c3-3(e)(3)(i)(B) daily computation; "
+            "this computation is not daily"
         )
     return required
 
@@ -337,15 +370,7 @@ def _reduction(
         return rate, rate * item_10
 
     if not customer:
-        pab_rate = rules.value(PAB_ALTERNATIVE_REDUCTION)
-        if pab_rate is None:
-            found.reasons.append(
-                "the loaded text does not settle whether the Rule 15c3-1(a)(1)(ii)(A) "
-                "reduction applies to a PAB computation"
-            )
-        if pab_rate is None or debits is None:
-            return pab_rate, None
-        return pab_rate, pab_rate * debits
+        return (ZERO, ZERO) if rules.present(PAB_NOTE_4) else (None, None)
     if inputs.mode is ComputationMode.MONTHLY and rules.present(WEEKLY_BASIS):
         found.breaches.append(
             "a firm on the alternative standard computes at least weekly "
@@ -366,7 +391,35 @@ def _deposit_factor(
     if inputs.mode is not ComputationMode.MONTHLY:
         return ONE
     if inputs.accounts is ReserveAccounts.PAB:
-        return ONE if rules.present(PAB_MONTHLY) else None
+        if not rules.present(PAB_MONTHLY):
+            return None
+        eligibility = {
+            "carries_customer_accounts": inputs.carries_customer_accounts,
+            "conducts_proprietary_trading_business": (
+                inputs.conducts_proprietary_trading_business
+            ),
+            "pab_last_monthly_required_additional_deposit": (
+                inputs.pab_last_monthly_required_additional_deposit
+            ),
+        }
+        found.missing_inputs.extend(
+            name for name, value in eligibility.items() if value is None
+        )
+        if inputs.carries_customer_accounts or inputs.conducts_proprietary_trading_business:
+            found.breaches.append(
+                "monthly PAB computation is not available to a firm that carries customer "
+                "accounts or conducts a proprietary trading business"
+            )
+        if inputs.pab_last_monthly_required_additional_deposit:
+            required = rules.value(PAB_MONTHLY_RECOVERY)
+            if inputs.pab_clean_weekly_computations is None:
+                found.missing_inputs.append("pab_clean_weekly_computations")
+            elif required is not None and inputs.pab_clean_weekly_computations < required:
+                found.breaches.append(
+                    "monthly PAB computation is unavailable until the required clean "
+                    "weekly-computation recovery is complete"
+                )
+        return ONE
     ceiling = rules.value(MONTHLY_AI_CEILING)
     funds_ceiling = rules.value(MONTHLY_FUNDS_CEILING)
     factor = rules.value(MONTHLY_FACTOR)

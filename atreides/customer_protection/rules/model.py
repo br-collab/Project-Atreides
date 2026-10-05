@@ -63,6 +63,8 @@ class RuleKind(StrEnum):
     CALENDAR_DAYS = "CALENDAR_DAYS"
     #: A count of business days.
     BUSINESS_DAYS = "BUSINESS_DAYS"
+    #: A dimensionless count stated in rule text.
+    COUNT = "COUNT"
     #: A credit line of Exhibit A to Rule 15c3-3. No value.
     EXHIBIT_A_CREDIT = "EXHIBIT_A_CREDIT"
     #: A debit line of Exhibit A to Rule 15c3-3. No value.
@@ -87,6 +89,7 @@ _VALUED = frozenset(
         RuleKind.MONTHS,
         RuleKind.CALENDAR_DAYS,
         RuleKind.BUSINESS_DAYS,
+        RuleKind.COUNT,
     }
 )
 
