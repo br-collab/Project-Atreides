@@ -37,14 +37,15 @@ settings.register_profile(
     deadline=None,
     suppress_health_check=[HealthCheck.too_slow],
 )
-# Registered, never loaded by default. One derandomized example per property
-# test, so a coverage run under it measures what the example tests cover on
-# their own. It exists to prove a coverage floor does not depend on which
-# examples Hypothesis happened to generate (ORDER HYG-1)::
+# Never loaded by default. One derandomized example per property test, so a
+# coverage run under it measures what the example tests cover on their own,
+# and a coverage floor cannot depend on which examples Hypothesis happened to
+# generate (ORDER HYG-1). CI's coverage step runs under it::
 #
 #     pytest --hypothesis-profile=floor --cov=atreides --cov-branch
 #
-# It is not a bug-finding mode. One example finds almost nothing.
+# It is not a bug-finding mode. One example finds almost nothing, which is
+# why CI's plain pytest step still runs the default profile.
 settings.register_profile(
     "floor",
     max_examples=1,

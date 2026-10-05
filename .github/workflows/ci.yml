@@ -51,9 +51,15 @@ jobs:
       - name: pytest
         run: pytest -q
 
+      # Measured under the floor profile: one derandomized example per
+      # property test, so the coverage floors are met by example tests alone
+      # and a branch only random examples reach fails here on every run, not
+      # on some seeds (ORDER HYG-1, where the cato_cash.py floor passed on 3
+      # of 8 seeds). The step above still runs every property test at 200
+      # random examples, so no bug finding is lost.
       - name: Coverage
         run: |
-          pytest -q --cov=atreides --cov-branch --cov-report=term --cov-report=json:coverage.json --cov-fail-under=95
+          pytest -q --hypothesis-profile=floor --cov=atreides --cov-branch --cov-report=term --cov-report=json:coverage.json --cov-fail-under=95
           python scripts/check_branch_coverage.py coverage.json
 
   lint:
