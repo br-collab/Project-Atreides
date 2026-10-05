@@ -1,7 +1,9 @@
-"""Possession or control check (17 CFR 240.15c3-3(b) to (d)).
+"""Partial possession-or-control location and conservation check.
 
 EXPERIMENTAL (charter section 18.6). A challenger computation over a stock
 record the caller supplies. It does not move a security and it files nothing.
+It accepts the caller's fully-paid and excess-margin classifications and does
+not establish compliance with 17 CFR 240.15c3-3(b) to (d).
 
 WHAT IT CHECKS
 --------------

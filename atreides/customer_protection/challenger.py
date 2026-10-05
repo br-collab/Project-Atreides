@@ -1,13 +1,13 @@
 """Challenger report: the engine's figures against the vendor's or client's.
 
 EXPERIMENTAL (charter section 18.6). ADVISORY_ONLY: the report enforces nothing.
-It says where two computations of the same thing differ and, where the evidence
-allows, why.
+It says where two computations of the same thing differ and offers candidate
+explanations. A candidate never proves the operational cause.
 
-HOW A VARIANCE IS CLASSIFIED
-----------------------------
-Variance is the vendor figure less the engine figure. Each figure is classified
-by the first rule that applies, in this order:
+HOW A CANDIDATE VARIANCE EXPLANATION IS ASSIGNED
+------------------------------------------------
+Variance is the vendor figure less the engine figure. Each figure receives the
+first candidate classification that applies, in this order:
 
 1. NOT_COMPARED: either side has no figure. Missing evidence, so HOLD.
 2. MATCH: no variance.
@@ -23,9 +23,9 @@ by the first rule that applies, in this order:
    guesses a cause it has no evidence for.
 
 Only MATCH and ROUNDING leave the report at PASS. TIMING and CLASSIFICATION are
-explained differences, but they are still differences a FINOP (Financial and
-Operations Principal) should see, so they HOLD. A rule the engine could not
-load makes the report INDETERMINATE.
+hypotheses that require corroborating source evidence and still HOLD for a
+FINOP (Financial and Operations Principal) to review. A rule the engine could
+not load makes the report INDETERMINATE.
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ ZERO = Decimal(0)
 
 
 class VarianceClass(StrEnum):
-    """Why an engine figure and a vendor figure differ. See the module docstring."""
+    """Candidate explanation for a difference. It does not establish causation."""
 
     #: One side has no figure.
     NOT_COMPARED = "not_compared"
@@ -126,7 +126,7 @@ class ChallengerInputs(Frozen):
 
 
 class FigureVariance(Frozen):
-    """One figure compared."""
+    """One comparison with a candidate, rather than proven causal, explanation."""
 
     name: str
     group: str
@@ -136,6 +136,7 @@ class FigureVariance(Frozen):
     variance: Money | None
     classification: VarianceClass
     explanation: str
+    causal_status: Literal["CANDIDATE_NOT_CONFIRMED"] = "CANDIDATE_NOT_CONFIRMED"
 
 
 class ChallengerReport(Frozen):
@@ -307,8 +308,7 @@ def _pair_offsets(
 
 
 def challenge(inputs: ChallengerInputs) -> ChallengerReport:
-    """Compare and classify. Pure: no I/O, no clock, no rule table (it compares, it does
-    not compute)."""
+    """Compare and suggest candidate explanations. Pure: no I/O and no clock."""
     vendor = {figure.name: figure for figure in inputs.vendor_figures}
     engine_names = {figure.name for figure in inputs.engine_figures}
     variances = [_first_pass(f, vendor.get(f.name), inputs) for f in inputs.engine_figures]

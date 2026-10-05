@@ -22,9 +22,10 @@ and a digest of the result. Each digest is ``sha256:`` over the kernel's
 canonical bytes, so anybody holding the inputs and the pinned rule text can
 recompute all three and check them.
 
-A breach or a projected breach (a triggered early warning) is HOLD. A missing
-balance is HOLD. A missing rule is INDETERMINATE. PASS means this computation
-found nothing, never that the firm complies.
+A breach or a projected breach (a triggered early-warning indicator) is HOLD.
+A missing balance is HOLD. A missing rule is INDETERMINATE. PASS means only
+that this computation found no issue within the supplied inputs and modeled
+rules, never that the firm complies.
 """
 
 from __future__ import annotations
