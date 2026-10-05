@@ -704,6 +704,46 @@ def _serviceable(state: RailState, operation: OperationContext) -> bool:
     return True
 
 
+def _linked_rail_blocker(
+    linked: CashRail,
+    rails: dict[CashRail, RailState],
+    operation: OperationContext,
+) -> str | None:
+    """Why a depository-linked rail cannot carry this operation, or None.
+
+    The linkage determines the rail, so there is no other rail to fall back
+    to: anything this returns is a hold. The verdict is ``_serviceable``,
+    the same predicate check 6 applies, plus the two conditions check 6
+    applies around it (the rail must be in the rail state, and the PORTS
+    placeholder never counts). The specific condition is named so the
+    record says which remedy applies.
+    """
+    state = rails.get(linked)
+    if state is None:
+        # Absent is unknown, and unknown is not open.
+        return "is absent from the rail state, so whether it is open is unknown"
+    if linked is CashRail.PORTS_WHOLESALE:
+        return (
+            "is the reserved placeholder for wholesale tokenized settlement, "
+            "which carries nothing until the infrastructure ships, whatever "
+            "status it is given"
+        )
+    if _serviceable(state, operation):
+        return None
+    if not state.usable:
+        return (
+            f"is not usable (status {describe(state.status)}, seconds to "
+            f"cutoff {state.seconds_to_cutoff})"
+        )
+    if state.value_cap is not None and operation.notional > state.value_cap:
+        return f"has a value cap of {state.value_cap}, below the notional"
+    return (
+        f"is ledger-final and not continuously available outside business "
+        f"hours for a {operation.settlement_perimeter.value} settlement "
+        f"perimeter"
+    )
+
+
 def _recommend_rail(
     *,
     operation: OperationContext,
@@ -719,9 +759,14 @@ def _recommend_rail(
 
     # 4. Depository linkage — determined, not selected. Evaluated before
     #    the preference rules because there is nothing to prefer: the
-    #    money side of a depository settlement has one rail.
+    #    money side of a depository settlement has one rail. Check 6 is
+    #    skipped for these operations, so this is where the linked rail is
+    #    validated. One that cannot carry the operation returns None and the
+    #    caller holds; it is never replaced by another rail.
     if operation.depository_linked_rail is not None:
         linked = operation.depository_linked_rail
+        if _linked_rail_blocker(linked, rails, operation) is not None:
+            return None
         return linked, (
             f"Depository-linked settlement: rail is determined by the "
             f"linkage ({linked.value}), not selected. Gate validates "
@@ -802,13 +847,17 @@ def _recommend_rail(
             continue
         return rail, "Sole serviceable rail within the settlement window."
 
-    # Reached only where check 6 was bypassed. It previously raised an
-    # AssertionError here, on the reasoning that check 6 made this
-    # unreachable — and check 6 did not, because it tested usability and
-    # this loop tests capacity. Returning None lets the caller hold with a
-    # named reason instead of dying without a decision record. An
-    # "unreachable" assertion inside a governance gate is the wrong failure
-    # mode even when the reasoning behind it is right.
+    # Not reachable through evaluate today. Check 6 holds every operation
+    # that is not depository-linked unless some rail other than PORTS passes
+    # _serviceable, and the loop above applies the same predicate to the same
+    # rails, so it returns. Linked operations never reach the loop: rule 4
+    # returns for them. It previously raised an AssertionError here, on the
+    # reasoning that check 6 made this unreachable, and at the time check 6
+    # did not, because it tested usability and this loop tested capacity.
+    # Returning None lets the caller hold with a named reason instead of
+    # dying without a decision record. An "unreachable" assertion inside a
+    # governance gate is the wrong failure mode even when the reasoning
+    # behind it is right.
     return None
 
 
@@ -1150,8 +1199,10 @@ def evaluate(
     #    of a decision, and an assertion is not a governance outcome.
     #
     #    Skipped where the rail is determined by depository linkage rather
-    #    than selected, because there is nothing to choose among; that path
-    #    is validated in the ladder.
+    #    than selected, because there is nothing to choose among. Ladder
+    #    rule 4 validates the linked rail with the same predicate and holds
+    #    through the "selection is None" handler below if it cannot carry
+    #    the operation.
     #
     #    PORTS_WHOLESALE is excluded: it is a reserved placeholder and is
     #    never a usable rail until the infrastructure ships.
@@ -1248,17 +1299,25 @@ def evaluate(
         operation=operation, rails=rails, ofr_stlfsi4=ofr_stlfsi4
     )
     if selection is None:
-        # The ladder found nothing serviceable. Reachable only where check 6
-        # was skipped for a depository-linked operation whose linked rail
-        # cannot carry it. Hold with the check-6 reason, because that is
-        # what the condition is.
+        # The ladder returns None where check 6 was skipped for a
+        # depository-linked operation whose linked rail cannot carry it
+        # (rule 4). Hold with the check-6 reason, because that is what the
+        # condition is, and name the rail and the specific condition so the
+        # record says which remedy applies.
+        linked = operation.depository_linked_rail
+        why = (
+            f"the linked rail {linked.value} "
+            f"{_linked_rail_blocker(linked, rails, operation)}"
+            if linked is not None
+            else "the rail ladder found no rail able to carry it"
+        )
         return _decide(
             GateDecision.HOLD,
             ReasonCode.NO_RAIL_IN_WINDOW,
-            f"The rail ladder found no rail able to carry "
-            f"{operation.notional} within the settlement window. Hold rather "
-            f"than recommend a rail that cannot carry the operation "
-            f"(CASH-001 SV.B.6).",
+            f"No rail can carry {operation.notional} within the settlement "
+            f"window: {why}. A depository-linked settlement has one rail, so "
+            f"there is no other rail to choose. Hold rather than recommend a "
+            f"rail that cannot carry the operation (CASH-001 SV.C.4, SV.B.6).",
         )
     rail, ladder_rationale = selection
 
