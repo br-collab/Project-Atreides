@@ -44,6 +44,7 @@ from atreides.corporate_actions import (
     JournalMismatchError,
     Lifecycle,
     LifecycleStatus,
+    LifecycleTransitionBody,
     Milestone,
     Participation,
     RefusalReason,
@@ -401,6 +402,7 @@ def test_a_record_separates_the_facts_claim_from_the_outcomes() -> None:
     assert record.claim_label == "EXPERIMENTAL"
     assert record.recorded_dtg == "202610051200"
     assert record.outcome_provenance is Provenance.POLICY_RESULT
+    assert isinstance(record.body, LifecycleTransitionBody)
     assert record.body.event.provenance is Provenance.FACT_SYNTHETIC
     assert record.body.entry.outcome == "refused"
     with pytest.raises(ValidationError):
