@@ -9,12 +9,23 @@ nothing here transmits. Atreides prepares; an entitled member submits.
   which, the journal of requests, and rebuilding a lifecycle from it.
 - :mod:`~atreides.corporate_actions.record`: the DSOR-admissible record of each
   request.
+- :mod:`~atreides.corporate_actions.entitlement`: entitlement arithmetic for cash
+  dividends, stock dividends and forward splits, exact and unrounded, refusing by
+  name every treatment the depository does not state.
 
 This package reconciles and does not invent. Where a depository states a
 condition but not its treatment, the treatment is refused by name rather than
 supplied (see :func:`atreides.rails.cns.absent_entitlement_treatment`).
 """
 
+from atreides.corporate_actions.entitlement import (
+    COMPUTED_EVENT_TYPES,
+    EntitlementResult,
+    HolderEntitlement,
+    HolderPosition,
+    UnavailableTreatment,
+    compute_entitlements,
+)
 from atreides.corporate_actions.events import (
     EVENT_FACT_PROVENANCE,
     CorporateActionEvent,
@@ -43,12 +54,16 @@ from atreides.corporate_actions.record import (
 )
 
 __all__ = [
+    "COMPUTED_EVENT_TYPES",
     "EVENT_FACT_PROVENANCE",
     "CorporateActionEvent",
     "CorporateActionEventRecord",
+    "EntitlementResult",
     "EventDates",
     "EventTerms",
     "EventType",
+    "HolderEntitlement",
+    "HolderPosition",
     "JournalMismatchError",
     "Lifecycle",
     "LifecycleState",
@@ -60,6 +75,8 @@ __all__ = [
     "SourceIdentity",
     "TransitionEntry",
     "TransitionRequest",
+    "UnavailableTreatment",
+    "compute_entitlements",
     "rebuild",
     "rebuild_from_records",
     "record_request",
