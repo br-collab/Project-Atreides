@@ -34,6 +34,7 @@ __all__ = [
     "EventDates",
     "EventTerms",
     "EventType",
+    "OptionType",
     "Participation",
     "SourceIdentity",
 ]
@@ -146,12 +147,27 @@ class EventTerms(Frozen):
         return self
 
 
+class OptionType(StrEnum):
+    """What an option delivers, in the ISO 20022 option type codes the announcement uses."""
+
+    CASH = "CASH"
+    SECU = "SECU"
+    #: Cash and securities.
+    CASE = "CASE"
+    #: No action.
+    NOAC = "NOAC"
+    OTHR = "OTHR"
+
+
 class ElectionOption(Frozen):
     """One option an elective event offers, as the announcement numbers and describes it."""
 
     #: The option's identifier as announced, for example ``"001"``.
     option_id: str = Field(min_length=1)
     description: str = Field(min_length=1)
+    #: What the option delivers, where the announcement states it. ``None`` means not
+    #: stated; such an option cannot be expressed in ISO 20022, which requires a type.
+    option_type: OptionType | None = None
 
 
 class CorporateActionEvent(Frozen):
