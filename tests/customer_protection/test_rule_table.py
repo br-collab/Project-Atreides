@@ -49,7 +49,7 @@ def _row(document: dict[str, Any], rule_id: str) -> dict[str, Any]:
 
 def test_the_committed_table_loads_with_nothing_refused(table: RuleTable) -> None:
     assert table.rejected == ()
-    assert len(table.items) == 87
+    assert len(table.items) == 90
     assert table.table_version == "sc2-rules/0.1"
 
 
@@ -314,6 +314,8 @@ def test_the_row_model_refuses_a_non_finite_value() -> None:
         (RuleKind.CALENDAR_DAYS, "30 calendar days", "30"),
         (RuleKind.BUSINESS_DAYS, "two business days", "2"),
         (RuleKind.BUSINESS_DAYS, "5 business days", "5"),
+        (RuleKind.COUNT, "four successive weekly computations", "4"),
+        (RuleKind.COUNT, "4 computations", "4"),
     ],
 )
 def test_figures_read_exactly(kind: RuleKind, figure: str, value: str) -> None:
@@ -329,6 +331,8 @@ def test_figures_read_exactly(kind: RuleKind, figure: str, value: str) -> None:
         (RuleKind.MONTHS, "3 weeks"),
         (RuleKind.CALENDAR_DAYS, "30 business days"),
         (RuleKind.BUSINESS_DAYS, "many business days"),
+        (RuleKind.COUNT, "many computations"),
+        (RuleKind.COUNT, "$4 computations"),
         (RuleKind.CONTROL_LOCATION, "anything"),
     ],
 )
