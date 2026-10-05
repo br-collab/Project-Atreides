@@ -30,6 +30,7 @@ from atreides.customer_protection.common import Frozen, NonNegativeMoney
 __all__ = [
     "EVENT_FACT_PROVENANCE",
     "CorporateActionEvent",
+    "ElectionOption",
     "EventDates",
     "EventTerms",
     "EventType",
@@ -145,6 +146,14 @@ class EventTerms(Frozen):
         return self
 
 
+class ElectionOption(Frozen):
+    """One option an elective event offers, as the announcement numbers and describes it."""
+
+    #: The option's identifier as announced, for example ``"001"``.
+    option_id: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+
+
 class CorporateActionEvent(Frozen):
     """One announced corporate action on one security."""
 
@@ -154,6 +163,11 @@ class CorporateActionEvent(Frozen):
     participation: Participation
     dates: EventDates
     terms: EventTerms = EventTerms()
+    #: Elective events only: the options as announced. Empty means not stated.
+    options: tuple[ElectionOption, ...] = ()
+    #: Elective events only: the option a holder who does not elect receives, as the
+    #: announcement states it. ``None`` means not stated, and no default is applied.
+    default_option_id: str | None = None
     provenance: Provenance
     source: SourceIdentity
 
@@ -177,4 +191,11 @@ class CorporateActionEvent(Frozen):
             and self.participation is not Participation.VOLUNTARY
         ):
             raise ValueError("a protect deadline belongs to a voluntary event")
+        if not self.participation.elective and (self.options or self.default_option_id):
+            raise ValueError("a mandatory event offers no election options")
+        ids = [option.option_id for option in self.options]
+        if len(set(ids)) != len(ids):
+            raise ValueError("an option identifier appears more than once")
+        if self.default_option_id is not None and self.default_option_id not in ids:
+            raise ValueError(f"the default option {self.default_option_id!r} is not an option")
         return self
