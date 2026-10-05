@@ -40,6 +40,13 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["atreides*"]
 
+# Files the code reads at runtime through Path(__file__). An editable install reads
+# them in place; a built wheel carries only what is declared here. aureon installs
+# Atreides as a package, so an undeclared file is missing there.
+# tests/customer_protection/test_package_data.py keeps this list complete.
+[tool.setuptools.package-data]
+"atreides.customer_protection.rules" = ["table.json", "sources/*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
