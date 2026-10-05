@@ -18,6 +18,8 @@ nothing here transmits. Atreides prepares; an entitled member submits.
   and DTC's ISO 20022 profiles (seev.031, 033, 035, 036) at SR2025 and SR2026, with
   structural validation only; :mod:`~atreides.corporate_actions.dtc_sources` pins the
   DTC material it was built from.
+- :mod:`~atreides.corporate_actions.reconciliation`: entitlements reconciled against
+  movement confirmations, in the depository's break vocabulary where it has one.
 - :mod:`~atreides.corporate_actions.entitlement`: entitlement arithmetic for cash
   dividends, stock dividends and forward splits, exact and unrounded, refusing by
   name every treatment the depository does not state.
@@ -99,17 +101,26 @@ from atreides.corporate_actions.movement import (
     MovementReport,
     SecuritiesMovement,
 )
+from atreides.corporate_actions.reconciliation import (
+    AccountReconciliation,
+    CorporateActionBreakCode,
+    CorporateActionReconciliation,
+    reconcile,
+)
 from atreides.corporate_actions.record import (
     CorporateActionEventRecord,
     DefaultAssignmentBody,
     ElectionBody,
     LifecycleTransitionBody,
+    ReconciliationBody,
     RecordBody,
     rebuild_elections_from_records,
     rebuild_from_records,
     record_defaults,
+    record_reconciliation,
     record_request,
     record_submission,
+    verify_reconciliation,
 )
 
 __all__ = [
@@ -119,11 +130,14 @@ __all__ = [
     "EVENT_FACT_PROVENANCE",
     "PROFILES",
     "AccountDefault",
+    "AccountReconciliation",
     "AdapterRefusalError",
     "AdapterRefusalReason",
     "CashMovement",
+    "CorporateActionBreakCode",
     "CorporateActionEvent",
     "CorporateActionEventRecord",
+    "CorporateActionReconciliation",
     "DefaultAssignment",
     "DefaultAssignmentBody",
     "DefaultRefusal",
@@ -156,6 +170,7 @@ __all__ = [
     "OptionType",
     "Participation",
     "ProtectCover",
+    "ReconciliationBody",
     "RecordBody",
     "RefusalReason",
     "Release",
@@ -178,7 +193,10 @@ __all__ = [
     "rebuild_elections",
     "rebuild_elections_from_records",
     "rebuild_from_records",
+    "reconcile",
     "record_defaults",
+    "record_reconciliation",
     "record_request",
     "record_submission",
+    "verify_reconciliation",
 ]
