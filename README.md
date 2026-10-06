@@ -225,6 +225,10 @@ exists to eliminate.
 | **Settlement Operations Analyst** | `atreides/agents/tier1/settlement_operations_analyst.py` | Deterministic FICC / U.S. Treasury settlement execution with write-through to the decision record. |
 | **Settlement Investigation Analyst** | `atreides/agents/tier1/settlement_investigation_analyst.py` | Reconstructs a break as a provenance-cited timeline across ten evidence sources. Infers nothing — cause ranking is a separate, bounded layer. |
 | **Typed custody contracts** | `atreides/contracts/` | Asset class, custody object, settlement method, failure mode, inherent safety, authority. |
+| **Obligation acceptance** | `atreides/acceptance/` | Accepts, holds, rejects, or declines to decide on an obligation formed elsewhere. It does not rewrite the economics. |
+| **Continuous net settlement** | `atreides/rails/cns.py` | Equities novation, netting, partial allocation, and fails. A fail is a failed net position. The module refuses to attribute that fail to one trade. |
+| **Corporate actions** | `atreides/corporate_actions/` | Experimental. Lifecycle, elections, exact entitlement for the classes that module computes, a synthetic Depository Trust Company (DTC) ISO 20022 adapter (`seev.031`, `seev.033`, `seev.035`, `seev.036` at SR2025 and SR2026), and reconciliation against a movement confirmation. Nothing is transmitted. |
+| **Customer-protection challenger** | `atreides/customer_protection/` | Experimental recomputation of selected net-capital and customer and proprietary-account (PAB) reserve components from caller-classified balances. Advisory. It files nothing and it is not a compliance determination. |
 | **Decision record (DSOR)** | `atreides/dsor/` | Append-only, DTG-stamped, deterministic replay. |
 
 > **Canonical identities.** `cato_cash` here
@@ -287,8 +291,10 @@ provable correctness.
   change, not a code change. `DTCC_SETTLEMENT_PENDING` and
   `FEDWIRE_PENDING` are stubs flagged `UNVERIFIED` rather than populated by
   inference; a guessed profile would look authoritative and be wrong.
-- **Inbound ingest and reconciliation** — the `camt` and `pacs.002` readback
-  direction. Needs a member forwarding settlement output.
+- **Inbound cash readback** — the `camt` and `pacs.002` direction. Needs a
+  member forwarding settlement output. Corporate-action reconciliation
+  against a depository movement confirmation is a separate module and is
+  built.
 - **Cause diagnosis.** Evidence assembly is built; ranking causes against a
   closed inventory is specified and not yet implemented.
 - **Multi-party authority ceremonies** — specified, deliberately inactive
@@ -300,7 +306,11 @@ provable correctness.
 
 The contracts layer is asset-class agnostic and rails are pluggable — a new
 rail is a doctrine-plus-fixtures exercise, not an architecture change. The
-implemented depth today is the U.S. Treasury / FICC complex and the cash leg.
+implemented depth today is the U.S. Treasury / FICC complex, the cash leg,
+equities continuous net settlement, and the corporate-action lifecycle. The
+customer-protection package is an experimental challenger on caller-supplied
+balances, not a rail.
+
 The build order from here is chosen so that each rail forces the
 decision-of-record to prove a different finality class the doctrine already
 names:
