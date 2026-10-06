@@ -164,3 +164,19 @@ jobs:
       - uses: ./.github/actions/publish-agents-snapshot
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-advisories-snapshot:
+    name: Publish customer protection advisory snapshot
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, lint, typecheck, probes]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: advisories-snapshot-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/publish-advisories-snapshot
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

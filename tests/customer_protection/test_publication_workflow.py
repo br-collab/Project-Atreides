@@ -2,14 +2,11 @@
 
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[2]
 ACTION = ROOT / ".github/actions/publish-advisories-snapshot/action.yml"
 ACTION_USE = "uses: ./.github/actions/publish-advisories-snapshot"
 
 
-@pytest.mark.xfail(strict=True, reason="WP-2 publication action is not implemented yet")
 def test_advisory_action_writes_and_publishes_only_changed_bytes() -> None:
     action = ACTION.read_text(encoding="utf-8")
     assert "atreides.customer_protection.publication_writer" in action
@@ -18,7 +15,6 @@ def test_advisory_action_writes_and_publishes_only_changed_bytes() -> None:
     assert "diff --cached --quiet" in action
 
 
-@pytest.mark.xfail(strict=True, reason="WP-2 continuous integration job is not wired yet")
 def test_push_publication_waits_for_every_required_gate() -> None:
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "publish-advisories-snapshot:" in workflow
@@ -27,7 +23,6 @@ def test_push_publication_waits_for_every_required_gate() -> None:
     assert ACTION_USE in workflow
 
 
-@pytest.mark.xfail(strict=True, reason="WP-2 nightly publication job is not wired yet")
 def test_nightly_publication_waits_for_deep_properties() -> None:
     workflow = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
     assert "publish-advisories-snapshot:" in workflow
