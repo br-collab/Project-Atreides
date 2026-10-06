@@ -229,15 +229,20 @@ def test_a_holding_is_in_the_events_security() -> None:
         compute_entitlements(cash(), [other])
 
 
-@pytest.mark.parametrize(
-    "changes",
-    [{"account_id": ""}, {"position": RecordDatePosition(SECURITY, 1.5, D(1))}],  # type: ignore[arg-type]
-    ids=["unnamed", "float"],
-)
-def test_a_holding_is_named_and_exact(changes: dict[str, Any]) -> None:
-    base: dict[str, Any] = {"account_id": "A", "position": RecordDatePosition(SECURITY, D(1), D(1))}
+def test_a_holding_is_named() -> None:
+    """An unnamed account is refused.
+
+    A float balance used to be built in this test and refused by
+    ``HolderPosition``. ``RecordDatePosition`` now refuses that float itself,
+    so the position cannot be constructed. The refusal is tested with the
+    position.
+    """
+    base: dict[str, Any] = {
+        "account_id": "A",
+        "position": RecordDatePosition(SECURITY, D(1), D(1)),
+    }
     with pytest.raises(ValidationError):
-        HolderPosition(**(base | changes))
+        HolderPosition(**(base | {"account_id": ""}))
 
 
 def test_a_holder_has_a_number_or_a_reason() -> None:

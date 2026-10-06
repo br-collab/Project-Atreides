@@ -445,6 +445,28 @@ class FailPosition:
     restated_by_corporate_action: bool = False
 
 
+def _exact_finite_balance(name: str, value: object) -> Decimal:
+    """Return ``value`` as a finite ``Decimal``.
+
+    An integer is exact, so it is stored as ``Decimal``. A boolean is an
+    integer subclass and is not a balance. Anything else, and a non-finite
+    ``Decimal``, is refused. The sign is not a reason to refuse.
+    """
+    if isinstance(value, Decimal):
+        decimal = value
+    elif isinstance(value, int) and not isinstance(value, bool):
+        decimal = Decimal(value)
+    else:
+        raise ValueError(
+            f"{name} must be an exact finite decimal, not {type(value).__name__}"
+        )
+    if not decimal.is_finite():
+        raise ValueError(
+            f"{name} must be an exact finite decimal; {decimal!r} is not finite"
+        )
+    return decimal
+
+
 @dataclass(frozen=True, slots=True)
 class RecordDatePosition:
     """Balances at a corporate-action record date, in the published vocabulary.
@@ -458,6 +480,11 @@ class RecordDatePosition:
     The object holds balances and asserts no outcome. There is no
     ``entitlement`` field and there will not be one - see
     :func:`absent_entitlement_treatment`.
+
+    Each of the six balances is an exact, finite decimal. An integer is
+    exact, so it is accepted and stored as ``Decimal``. A binary float, a
+    boolean, and a non-finite value (``NaN`` or an infinity) are refused.
+    A negative balance is a short position and is kept.
     """
 
     security_id: str
@@ -482,6 +509,19 @@ class RecordDatePosition:
     #: Provenance for the guidance this profile of balances was populated
     #: against. Same discipline as every other registry here.
     provenance: str | None = None
+
+    def __post_init__(self) -> None:
+        for name in (
+            "eligible_balance",
+            "settlement_balance",
+            "pending_delivery_balance",
+            "pending_receipt_balance",
+            "obligated_balance",
+            "uncovered_protect_balance",
+        ):
+            object.__setattr__(
+                self, name, _exact_finite_balance(name, getattr(self, name))
+            )
 
     @property
     def diverges(self) -> bool:

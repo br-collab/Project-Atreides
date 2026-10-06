@@ -20,6 +20,7 @@ from atreides.rails.cns import (
     MarketProfile,
     NetSettlementResult,
     ProcessingDateRule,
+    RecordDatePosition,
     SecuritiesBreak,
     SecuritiesBreakCode,
     absent_market_profile,
@@ -580,6 +581,124 @@ def test_lottery_and_voluntary_balances_are_representable() -> None:
     )
     assert pos.obligated_balance == D("200")
     assert pos.uncovered_protect_balance == D("50")
+
+
+_BALANCE_FIELDS = (
+    "eligible_balance",
+    "settlement_balance",
+    "pending_delivery_balance",
+    "pending_receipt_balance",
+    "obligated_balance",
+    "uncovered_protect_balance",
+)
+
+
+def _record_date(**overrides: object) -> RecordDatePosition:
+    fields: dict[str, object] = {
+        "security_id": "SEC-A",
+        "eligible_balance": D("1"),
+        "settlement_balance": D("1"),
+    }
+    fields.update(overrides)
+    return RecordDatePosition(**fields)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("field", _BALANCE_FIELDS)
+@pytest.mark.parametrize("bad", [0.1, float("nan"), float("inf"), float("-inf")])
+def test_a_record_date_balance_refuses_a_float(field: str, bad: float) -> None:
+    """A binary float is not an exact decimal, including a non-finite one."""
+    with pytest.raises(ValueError, match=f"{field} must be an exact finite decimal"):
+        _record_date(**{field: bad})
+
+
+@pytest.mark.parametrize("field", _BALANCE_FIELDS)
+@pytest.mark.parametrize(
+    "bad",
+    [D("NaN"), D("sNaN"), D("Infinity"), D("-Infinity")],
+)
+def test_a_record_date_balance_refuses_a_non_finite_decimal(
+    field: str, bad: Decimal
+) -> None:
+    with pytest.raises(ValueError, match=f"{field} must be an exact finite decimal"):
+        _record_date(**{field: bad})
+
+
+@pytest.mark.parametrize(
+    ("field", "kept"),
+    [
+        ("eligible_balance", D("0.1")),
+        ("settlement_balance", D("-0.10")),
+        ("pending_delivery_balance", D("1.10")),
+        ("pending_receipt_balance", D("-2")),
+        ("obligated_balance", D("0")),
+        ("uncovered_protect_balance", D("1000.000")),
+    ],
+)
+def test_a_record_date_balance_keeps_a_decimal_exactly(
+    field: str, kept: Decimal
+) -> None:
+    """The value is stored unchanged, including its scale and its sign.
+
+    A negative balance is a short position. It is kept, and the entitlement
+    engine is what answers it.
+    """
+    pos = _record_date(**{field: kept})
+    stored = getattr(pos, field)
+    assert stored is kept
+    assert stored.as_tuple() == kept.as_tuple()
+
+
+def test_tenths_stay_exact_in_the_divergence() -> None:
+    """The defect this check closes: ``0.1`` as a float is not a tenth."""
+    tenth = D("0.1")
+    three_tenths = D("0.3")
+    pos = RecordDatePosition("SEC-A", tenth, three_tenths)
+    assert pos.eligible_balance is tenth
+    assert pos.settlement_balance is three_tenths
+    assert pos.divergence == D("-0.2")
+
+
+def test_an_int_balance_is_accepted_because_it_is_exact() -> None:
+    """An int is an exact decimal, so every balance stores it as ``Decimal``.
+
+    A bool is an int subclass and is not a balance. A decimal string is not
+    accepted here: this constructor is not a JSON boundary, and parsing a
+    string would be a second policy.
+    """
+    pos = RecordDatePosition(
+        security_id="SEC-A",
+        eligible_balance=1000,
+        settlement_balance=400,
+        pending_delivery_balance=0,
+        pending_receipt_balance=600,
+        obligated_balance=-2,
+        uncovered_protect_balance=5,
+    )
+    assert pos.eligible_balance == D("1000")
+    assert isinstance(pos.eligible_balance, Decimal)
+    assert pos.settlement_balance == D("400")
+    assert pos.pending_delivery_balance == D("0")
+    assert pos.pending_receipt_balance == D("600")
+    assert pos.obligated_balance == D("-2")
+    assert pos.uncovered_protect_balance == D("5")
+    assert pos.diverges is True
+    assert pos.divergence == D("600")
+    assert isinstance(pos.divergence, Decimal)
+    with pytest.raises(
+        ValueError,
+        match="eligible_balance must be an exact finite decimal, not bool",
+    ):
+        _record_date(eligible_balance=True)
+    with pytest.raises(
+        ValueError,
+        match="settlement_balance must be an exact finite decimal, not bool",
+    ):
+        _record_date(settlement_balance=False)
+    with pytest.raises(
+        ValueError,
+        match="eligible_balance must be an exact finite decimal, not str",
+    ):
+        _record_date(eligible_balance="0.1")
 
 
 # ---------------------------------------------------------------------------
