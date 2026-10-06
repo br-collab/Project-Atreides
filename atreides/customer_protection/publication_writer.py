@@ -14,6 +14,7 @@ from atreides.customer_protection.scenarios import build_publication
 REQUIRED_DISPOSITIONS = frozenset(
     {Disposition.PASS, Disposition.HOLD, Disposition.INDETERMINATE}
 )
+JSON_INDENT = len("  ")
 
 
 def publication_bytes(taken_at: datetime) -> bytes:
@@ -27,7 +28,7 @@ def publication_bytes(taken_at: datetime) -> bytes:
     if not REQUIRED_DISPOSITIONS <= actual:
         missing = ", ".join(sorted(item.value for item in REQUIRED_DISPOSITIONS - actual))
         raise ValueError(f"synthetic scenarios did not yield required dispositions: {missing}")
-    return (publication.model_dump_json(indent=2) + "\n").encode()
+    return (publication.model_dump_json(indent=JSON_INDENT) + "\n").encode()
 
 
 def write_publication(path: Path, *, taken_at: datetime) -> AdvisoryPublication:
