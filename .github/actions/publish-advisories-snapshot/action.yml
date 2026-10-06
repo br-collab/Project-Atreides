@@ -1,0 +1,52 @@
+name: Publish customer protection advisory snapshot
+description: Write the synthetic advisory document to the stable publication branch.
+
+inputs:
+  token:
+    description: GitHub token allowed to update the generated snapshot branch
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      with:
+        python-version: "3.11"
+        enable-cache: true
+
+    - name: Install from the lock
+      shell: bash
+      run: uv sync --locked
+
+    - name: Write the advisory snapshot
+      shell: bash
+      run: >-
+        uv run python -m atreides.customer_protection.publication_writer
+        "$RUNNER_TEMP/advisories.json"
+
+    - name: Publish the newest good snapshot
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        publish_dir="$RUNNER_TEMP/advisories-snapshot-publication"
+        remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+        if git ls-remote --exit-code --heads "$remote" advisories-snapshot >/dev/null; then
+          git clone --depth 1 --branch advisories-snapshot "$remote" "$publish_dir"
+        else
+          mkdir -p "$publish_dir"
+          git -C "$publish_dir" init --initial-branch=advisories-snapshot
+          git -C "$publish_dir" remote add origin "$remote"
+        fi
+
+        cp "$RUNNER_TEMP/advisories.json" "$publish_dir/advisories.json"
+        git -C "$publish_dir" config user.name "github-actions[bot]"
+        git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git -C "$publish_dir" add advisories.json
+        if git -C "$publish_dir" diff --cached --quiet; then
+          exit 0
+        fi
+        git -C "$publish_dir" commit -m "Publish customer protection advisories"
+        git -C "$publish_dir" push origin HEAD:advisories-snapshot
