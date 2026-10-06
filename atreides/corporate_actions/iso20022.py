@@ -482,6 +482,16 @@ def _terms_option(b: _Builder, event: CorporateActionEvent) -> None:
         b.add(rate, "RateTp/Cd", _INCOME_RATE)
         b.add(rate, "Amt", _decimal(stated_cash, _RATE_DIGITS, "cash rate"),
               {"Ccy": terms.currency})
+        if terms.reinvestment_price_per_share is not None:
+            text = b.add(option, "AddtlInf/AddtlTxt")
+            b.add(text, "Lang", "en")
+            b.add(
+                text,
+                "AddtlInf",
+                "REINVESTMENT PRICE "
+                f"{terms.currency} "
+                f"{_decimal(terms.reinvestment_price_per_share, _AMOUNT_DIGITS, 'price')}",
+            )
         return
     if terms.stock_rate_per_share is not None and terms.split_new is not None:
         raise _refuse(AdapterRefusalReason.NOT_REPRESENTABLE,
@@ -570,10 +580,21 @@ def _read_terms(r: _Reader, option: ET.Element) -> EventTerms:
                           "only a gross income rate is modeled as a cash dividend rate")
         amount = r.find(rate, "Amt")
         assert amount is not None
-        return EventTerms(
+        result = EventTerms(
             cash_rate_per_share=_parse_decimal(r.required(rate, "Amt"), "cash rate"),
             currency=amount.get("Ccy"),
         )
+        text = r.text(option, "AddtlInf/AddtlTxt/AddtlInf")
+        if text is not None and text.startswith("REINVESTMENT PRICE "):
+            parts = text.split(" ")
+            if len(parts) != 4:
+                raise _refuse(AdapterRefusalReason.MALFORMED, "malformed reinvestment price")
+            result = EventTerms(
+                cash_rate_per_share=result.cash_rate_per_share,
+                currency=parts[2],
+                reinvestment_price_per_share=_parse_decimal(parts[3], "reinvestment price"),
+            )
+        return result
     if securities is not None and cash is None:
         for tag in ("AddtlQtyForExstgScties", "NewToOd"):
             node = r.find(securities, f"RateDtls/{tag}/QtyToQty")
