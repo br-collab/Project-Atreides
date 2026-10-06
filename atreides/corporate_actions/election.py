@@ -117,6 +117,8 @@ class ElectionInstruction(Frozen):
     account_id: str = Field(min_length=1)
     option_id: str = Field(min_length=1)
     quantity: Quantity
+    #: ISO 20022 quantity choice. Fixed income instructions use face amount.
+    quantity_basis: Literal["units", "face_amount"] = "units"
     received_date: date
     #: Elected under protect: the shares are promised and delivered later by a cover.
     protect: bool = False

@@ -62,6 +62,13 @@ class EventType(StrEnum):
     RIGHTS = "rights"
     #: A partial redemption allocated by lottery.
     REDEMPTION_LOTTERY = "redemption_lottery"
+    INTEREST_PAYMENT = "interest_payment"
+    FINAL_MATURITY = "final_maturity"
+    PARTIAL_REDEMPTION = "partial_redemption"
+    FULL_CALL = "full_call"
+    CAPITAL_GAINS_DISTRIBUTION = "capital_gains_distribution"
+    CAPITAL_DISTRIBUTION = "capital_distribution"
+    REINVESTMENT = "reinvestment"
 
 
 class Participation(StrEnum):
@@ -137,13 +144,37 @@ class EventTerms(Frozen):
     #: Split ratio as announced, ``split_new`` for ``split_old`` (a 3-for-2 split is 3 and 2).
     split_new: int | None = Field(default=None, gt=0)
     split_old: int | None = Field(default=None, gt=0)
+    #: Fixed income interest amount per unit of face amount.
+    interest_amount_per_face: NonNegativeMoney | None = None
+    #: Fixed income redemption price per unit of face amount.
+    redemption_price_per_face: NonNegativeMoney | None = None
+    #: Reinvestment price per fund share. No price means no share computation.
+    reinvestment_price_per_share: NonNegativeMoney | None = None
 
     @model_validator(mode="after")
     def _paired(self) -> EventTerms:
         if (self.split_new is None) != (self.split_old is None):
             raise ValueError("a split ratio states both sides or neither")
         if (self.cash_rate_per_share is None) != (self.currency is None):
-            raise ValueError("a cash rate is stated with its currency, and only then")
+            other_cash = any(
+                value is not None
+                for value in (
+                    self.interest_amount_per_face,
+                    self.redemption_price_per_face,
+                    self.reinvestment_price_per_share,
+                )
+            )
+            if not other_cash:
+                raise ValueError("a cash rate is stated with its currency, and only then")
+        if self.currency is None and any(
+            value is not None
+            for value in (
+                self.interest_amount_per_face,
+                self.redemption_price_per_face,
+                self.reinvestment_price_per_share,
+            )
+        ):
+            raise ValueError("a stated monetary term requires its currency")
         return self
 
 

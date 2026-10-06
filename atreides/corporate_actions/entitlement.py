@@ -86,7 +86,26 @@ ZERO = Fraction(0)
 
 #: The classes whose arithmetic this module computes.
 COMPUTED_EVENT_TYPES: frozenset[EventType] = frozenset(
-    {EventType.CASH_DIVIDEND, EventType.STOCK_DIVIDEND, EventType.SPLIT}
+    {
+        EventType.CASH_DIVIDEND,
+        EventType.STOCK_DIVIDEND,
+        EventType.SPLIT,
+        EventType.INTEREST_PAYMENT,
+        EventType.FINAL_MATURITY,
+        EventType.PARTIAL_REDEMPTION,
+        EventType.FULL_CALL,
+        EventType.REDEMPTION_LOTTERY,
+    }
+)
+
+FIXED_INCOME_EVENT_TYPES: frozenset[EventType] = frozenset(
+    {
+        EventType.INTEREST_PAYMENT,
+        EventType.FINAL_MATURITY,
+        EventType.PARTIAL_REDEMPTION,
+        EventType.FULL_CALL,
+        EventType.REDEMPTION_LOTTERY,
+    }
 )
 
 
@@ -120,6 +139,8 @@ class HolderPosition(Frozen):
 
     account_id: str
     position: RecordDatePosition
+    #: ISO 20022 quantity choice. Fixed income arithmetic requires face amount.
+    quantity_basis: Literal["units", "face_amount"] = "units"
 
     @field_validator("account_id")
     @classmethod
@@ -220,6 +241,19 @@ def _factor(
             f"entitlement arithmetic for {event.event_type.value} is not computed here: "
             f"only cash dividend, stock dividend and forward split"
         ], []
+    if event.event_type is EventType.INTEREST_PAYMENT:
+        if terms.interest_amount_per_face is None:
+            return None, None, [], ["terms.interest_amount_per_face"]
+        return Fraction(terms.interest_amount_per_face), "cash", [], []
+    if event.event_type in {
+        EventType.FINAL_MATURITY,
+        EventType.PARTIAL_REDEMPTION,
+        EventType.FULL_CALL,
+        EventType.REDEMPTION_LOTTERY,
+    }:
+        if terms.redemption_price_per_face is None:
+            return None, None, [], ["terms.redemption_price_per_face"]
+        return Fraction(terms.redemption_price_per_face), "cash", [], []
     if event.event_type is EventType.CASH_DIVIDEND:
         if terms.cash_rate_per_share is None:
             return None, None, [], ["terms.cash_rate_per_share"]
@@ -289,6 +323,8 @@ def compute_entitlements(
                 f"account {holding.account_id} holds {holding.position.security_id}, "
                 f"not the event's security {event.security_id}"
             )
+        if event.event_type in FIXED_INCOME_EVENT_TYPES and holding.quantity_basis != "face_amount":
+            raise ValueError("a fixed income entitlement requires a face amount quantity")
 
     factor, unit, unavailable_rules, missing = _factor(event)
     if factor is None or unit is None:

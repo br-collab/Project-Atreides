@@ -128,6 +128,13 @@ EVENT_CODES: Final[dict[EventType, str]] = {
     EventType.TENDER_OFFER: "TEND",
     EventType.RIGHTS: "RHDI",
     EventType.REDEMPTION_LOTTERY: "DRAW",
+    EventType.INTEREST_PAYMENT: "INTR",
+    EventType.FINAL_MATURITY: "REDM",
+    EventType.PARTIAL_REDEMPTION: "PRED",
+    EventType.FULL_CALL: "MCAL",
+    EventType.CAPITAL_GAINS_DISTRIBUTION: "CAPG",
+    EventType.CAPITAL_DISTRIBUTION: "CAPD",
+    EventType.REINVESTMENT: "DRIP",
 }
 _EVENT_TYPES: Final = {code: event_type for event_type, code in EVENT_CODES.items()}
 
@@ -448,11 +455,23 @@ def _terms_option(b: _Builder, event: CorporateActionEvent) -> None:
                       "terms are carried on an option whose payment date is required")
     option = b.add(b.root, "CorpActnOptnDtls")
     b.add(option, "OptnNb", "001")
-    cash = terms.cash_rate_per_share is not None
+    stated_cash = next(
+        (
+            value
+            for value in (
+                terms.cash_rate_per_share,
+                terms.interest_amount_per_face,
+                terms.redemption_price_per_face,
+            )
+            if value is not None
+        ),
+        None,
+    )
+    cash = stated_cash is not None
     b.add(option, "OptnTp/Cd", "CASH" if cash else "SECU")
     b.add(option, "DfltPrcgOrStgInstr/DfltOptnInd", "true")
     if cash:
-        assert terms.cash_rate_per_share is not None and terms.currency is not None
+        assert stated_cash is not None and terms.currency is not None
         if any(t is not None for t in (terms.stock_rate_per_share, terms.split_new)):
             raise _refuse(AdapterRefusalReason.NOT_REPRESENTABLE,
                           "one option carries cash or securities terms, not both")
@@ -461,7 +480,7 @@ def _terms_option(b: _Builder, event: CorporateActionEvent) -> None:
         b.date(movement, "DtDtls/PmtDt/Dt", payable)
         rate = b.add(movement, "RateAndAmtDtls/GrssDstrbtnRate/RateTpAndAmtAndRateSts")
         b.add(rate, "RateTp/Cd", _INCOME_RATE)
-        b.add(rate, "Amt", _decimal(terms.cash_rate_per_share, _RATE_DIGITS, "cash rate"),
+        b.add(rate, "Amt", _decimal(stated_cash, _RATE_DIGITS, "cash rate"),
               {"Ccy": terms.currency})
         return
     if terms.stock_rate_per_share is not None and terms.split_new is not None:
@@ -607,6 +626,19 @@ def decode_announcement(
                           "a mandatory event with more than one option is not modeled")
         if options:
             terms = _read_terms(r, options[0])
+            if event_type is EventType.INTEREST_PAYMENT and terms.cash_rate_per_share is not None:
+                terms = EventTerms(
+                    interest_amount_per_face=terms.cash_rate_per_share, currency=terms.currency
+                )
+            elif event_type in {
+                EventType.FINAL_MATURITY,
+                EventType.PARTIAL_REDEMPTION,
+                EventType.FULL_CALL,
+                EventType.REDEMPTION_LOTTERY,
+            } and terms.cash_rate_per_share is not None:
+                terms = EventTerms(
+                    redemption_price_per_face=terms.cash_rate_per_share, currency=terms.currency
+                )
     else:
         for node in options:
             option_id = r.required(node, "OptnNb")
@@ -686,8 +718,16 @@ def encode_instruction(
     detail = b.add(b.root, "CorpActnInstr")
     b.add(detail, "OptnNb/Nb", option.option_id)
     b.add(detail, "OptnTp/Cd", option.option_type.value)
-    b.add(detail, "SctiesQtyOrInstdAmt/SctiesQty/InstdQty/Qty/Unit",
-          _decimal(instruction.quantity, _QUANTITY_DIGITS, "instructed quantity"))
+    quantity_path = (
+        "SctiesQtyOrInstdAmt/FaceAmt"
+        if instruction.quantity_basis == "face_amount"
+        else "SctiesQtyOrInstdAmt/SctiesQty/InstdQty/Qty/Unit"
+    )
+    b.add(
+        detail,
+        quantity_path,
+        _decimal(instruction.quantity, _QUANTITY_DIGITS, "instructed quantity"),
+    )
     return b.encoded()
 
 
@@ -717,6 +757,11 @@ def decode_instruction(
     if account is None:
         raise _refuse(AdapterRefusalReason.NOT_REPRESENTABLE, "the instruction names no account")
     quantity = r.text(r.root, "CorpActnInstr/SctiesQtyOrInstdAmt/SctiesQty/InstdQty/Qty/Unit")
+    face_amount = r.text(r.root, "CorpActnInstr/SctiesQtyOrInstdAmt/FaceAmt")
+    if quantity is not None and face_amount is not None:
+        raise _refuse(AdapterRefusalReason.NOT_REPRESENTABLE,
+                      "an instruction carries one quantity choice")
+    quantity = quantity if quantity is not None else face_amount
     if quantity is None:
         raise _refuse(AdapterRefusalReason.NOT_REPRESENTABLE,
                       "only an instructed quantity in units is modeled")
@@ -726,6 +771,7 @@ def decode_instruction(
             account_id=account,
             option_id=r.required(r.root, "CorpActnInstr/OptnNb/Nb"),
             quantity=_parse_decimal(quantity, "instructed quantity"),
+            quantity_basis="face_amount" if face_amount is not None else "units",
             received_date=received_date,
             provenance=provenance,
             source=source,
