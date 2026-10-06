@@ -10,7 +10,7 @@ import pytest
 from cannae_kernel.disposition import Disposition
 from cannae_kernel.provenance import Provenance
 
-from atreides.corporate_actions.dtc_sources import Release
+from atreides.corporate_actions.dtc_sources import MessageFamily, Release
 from atreides.corporate_actions.entitlement import HolderPosition, compute_entitlements
 from atreides.corporate_actions.events import (
     CorporateActionEvent,
@@ -22,7 +22,6 @@ from atreides.corporate_actions.events import (
     SourceIdentity,
 )
 from atreides.corporate_actions.iso20022 import PROFILES, decode_announcement, encode_announcement
-from atreides.corporate_actions.dtc_sources import MessageFamily
 from atreides.corporate_actions.movement import CashMovement, MovementBalances, MovementReport
 from atreides.corporate_actions.reconciliation import reconcile
 from atreides.rails.cns import RecordDatePosition
