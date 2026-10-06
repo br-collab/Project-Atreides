@@ -95,6 +95,9 @@ COMPUTED_EVENT_TYPES: frozenset[EventType] = frozenset(
         EventType.PARTIAL_REDEMPTION,
         EventType.FULL_CALL,
         EventType.REDEMPTION_LOTTERY,
+        EventType.CAPITAL_GAINS_DISTRIBUTION,
+        EventType.CAPITAL_DISTRIBUTION,
+        EventType.REINVESTMENT,
     }
 )
 
@@ -254,7 +257,24 @@ def _factor(
         if terms.redemption_price_per_face is None:
             return None, None, [], ["terms.redemption_price_per_face"]
         return Fraction(terms.redemption_price_per_face), "cash", [], []
-    if event.event_type is EventType.CASH_DIVIDEND:
+    if event.event_type is EventType.REINVESTMENT:
+        if terms.cash_rate_per_share is None:
+            return None, None, [], ["terms.cash_rate_per_share"]
+        if terms.reinvestment_price_per_share is None:
+            return None, None, [], ["terms.reinvestment_price_per_share"]
+        if terms.reinvestment_price_per_share == 0:
+            return None, None, ["a zero reinvestment price cannot determine shares"], []
+        return (
+            Fraction(terms.cash_rate_per_share) / Fraction(terms.reinvestment_price_per_share),
+            "shares",
+            [],
+            [],
+        )
+    if event.event_type in {
+        EventType.CASH_DIVIDEND,
+        EventType.CAPITAL_GAINS_DISTRIBUTION,
+        EventType.CAPITAL_DISTRIBUTION,
+    }:
         if terms.cash_rate_per_share is None:
             return None, None, [], ["terms.cash_rate_per_share"]
         return Fraction(terms.cash_rate_per_share), "cash", [], []
