@@ -104,3 +104,6 @@ plugins = ["pydantic.mypy"]
 testpaths = ["tests"]
 python_files = "test_*.py"
 addopts = "-ra --strict-markers --cov=atreides --cov-report=term-missing"
+markers = [
+    "requirement(id): link a test to a known requirement-register identifier",
+]

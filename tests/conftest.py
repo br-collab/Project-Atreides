@@ -23,7 +23,22 @@ is to run it once on your own hardware and use that as your baseline.
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
 from hypothesis import HealthCheck, settings
+
+from atreides.traceability import MarkedItem, load_register, validate_requirement_markers
+
+REGISTER_PATH = Path(__file__).resolve().parents[1] / "docs/requirements/register.json"
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Fail collection when a test claims an identifier absent from the register."""
+    register = load_register(REGISTER_PATH)
+    marked_items: list[MarkedItem] = items  # type: ignore[assignment]
+    validate_requirement_markers(marked_items, register.ids)
+
 
 settings.register_profile(
     "default",
