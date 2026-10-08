@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pydantic import ValidationError
@@ -31,7 +31,7 @@ class _Item:
 
 
 def _document() -> dict[str, Any]:
-    return json.loads(REGISTER_PATH.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], json.loads(REGISTER_PATH.read_text(encoding="utf-8")))
 
 
 def test_committed_register_contains_every_supplied_pack_identifier() -> None:

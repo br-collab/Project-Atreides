@@ -23,14 +23,37 @@ is to run it once on your own hardware and use that as your baseline.
 
 from __future__ import annotations
 
+import os
+import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 from hypothesis import HealthCheck, settings
 
-from atreides.traceability import MarkedItem, load_register, validate_requirement_markers
+from atreides.traceability import (
+    MarkedItem,
+    TestOutcome,
+    build_traceability,
+    load_register,
+    validate_requirement_markers,
+    write_traceability,
+)
 
 REGISTER_PATH = Path(__file__).resolve().parents[1] / "docs/requirements/register.json"
+REPOSITORY_ROOT = REGISTER_PATH.parents[2]
+TRACEABILITY_PATH = REPOSITORY_ROOT / "traceability.json"
+
+_node_requirements: dict[str, tuple[str, ...]] = {}
+_outcomes: dict[str, TestOutcome] = {}
+_run_timestamp = [""]
+
+
+def pytest_sessionstart() -> None:
+    """Capture one timestamp for the complete test session."""
+    _node_requirements.clear()
+    _outcomes.clear()
+    _run_timestamp[0] = datetime.now(UTC).isoformat()
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -38,6 +61,50 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     register = load_register(REGISTER_PATH)
     marked_items: list[MarkedItem] = items  # type: ignore[assignment]
     validate_requirement_markers(marked_items, register.ids)
+    for item in items:
+        requirement_ids = tuple(
+            str(marker.args[0]) for marker in item.iter_markers(name="requirement")
+        )
+        if requirement_ids:
+            _node_requirements[item.nodeid] = requirement_ids
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    """Retain the fail-closed terminal outcome of each marked test."""
+    if report.nodeid not in _node_requirements:
+        return
+    if report.failed:
+        _outcomes[report.nodeid] = TestOutcome.FAILED
+    elif report.skipped and _outcomes.get(report.nodeid) is not TestOutcome.FAILED:
+        _outcomes[report.nodeid] = TestOutcome.NOT_RUN
+    elif report.when == "call" and report.passed and report.nodeid not in _outcomes:
+        _outcomes[report.nodeid] = TestOutcome.PASSED
+
+
+def _run_commit_sha() -> str:
+    supplied = os.environ.get("GITHUB_SHA")
+    if supplied:
+        return supplied
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.strip()
+
+
+def pytest_sessionfinish() -> None:
+    """Write traceability evidence after every complete pytest session."""
+    document = build_traceability(
+        load_register(REGISTER_PATH),
+        _node_requirements,
+        _outcomes,
+        run_commit_sha=_run_commit_sha(),
+        run_timestamp=_run_timestamp[0],
+    )
+    write_traceability(TRACEABILITY_PATH, document)
 
 
 settings.register_profile(
