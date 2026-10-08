@@ -77,6 +77,27 @@ This is research software with the public functional facade described below. It 
 governs, and reconciles settlement work, but does not hold submission credentials, connect to a
 rail as an entitled member, submit instructions, or replace legal books and records.
 
+## Maturity and criticality
+
+The programme uses two separate descriptions. **Automation level** describes what
+the software does: 1 is Observe, 2 is Compare, 3 is Recommend, 4 is Execute with
+control, 5 is Exception led, and 6 is Straight through. **Criticality tier**
+describes the consequence-bearing function a component would touch: Tier 0 covers
+money, positions, regulatory calculations and clearing submission, Tier 1 covers
+production workflow or regulated records, Tier 2 covers shared decision support,
+and Tier 3 covers analysis and operator productivity. A tier is not an assurance
+rating.
+
+| Component | Automation level | Criticality tier |
+|---|---:|---:|
+| Customer-protection challenger engines | 2 to 3, Compare to Recommend | 0 |
+| Cato Cash gate and clearing cockpit | 3, Recommend | 0 |
+| Corporate actions and Options Clearing Corporation lifecycle | 2, Compare | 0 for entitlements and positions |
+
+Every component in this table is synthetic and advisory. None meets the assurance,
+operational control or authorization that its tier would require in production,
+and the table makes no compliance claim.
+
 Historical release tags `v0.1.0` through `v0.3.1` have no retained continuous-integration
 evidence. Their historical build status is therefore **Indeterminate**, not proven green; no tag
 has been moved or re-cut to manufacture evidence after the fact.
