@@ -1,0 +1,494 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "enforcement_status": "ADVISORY_ONLY",
+  "claim_label": "EXPERIMENTAL",
+  "run_scope": "FULL",
+  "run_commit_sha": "92f69009dcc829169104e5ab5f106367a6d0155f",
+  "run_timestamp": "2026-10-08T20:10:32.551737+00:00",
+  "requirements": [
+    {
+      "requirement_id": "BR-01",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-02",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-03",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-04",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-05",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-06",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-07",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-08",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-09",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-10",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-11",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-12",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-13",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-14",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-15",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-16",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-17",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-18",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-19",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-20",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-21",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-22",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-23",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-24",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-25",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "BR-26",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "NF-01",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "NF-02",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "NF-03",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "NF-04",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "NF-05",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "NF-06",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "NF-07",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-G-01",
+      "status": "COVERED",
+      "test_node_ids": [
+        "tests/customer_protection/test_advisory_record.py::test_replay_through_the_store_is_byte_identical[control]",
+        "tests/customer_protection/test_advisory_record.py::test_replay_through_the_store_is_byte_identical[net_capital]",
+        "tests/customer_protection/test_advisory_record.py::test_replay_through_the_store_is_byte_identical[reserve]"
+      ]
+    },
+    {
+      "requirement_id": "SC-G-02",
+      "status": "COVERED",
+      "test_node_ids": [
+        "tests/customer_protection/test_rule_table.py::test_an_unloaded_item_is_indeterminate"
+      ]
+    },
+    {
+      "requirement_id": "SC-G-03",
+      "status": "COVERED",
+      "test_node_ids": [
+        "tests/corporate_actions/test_lifecycle.py::test_the_journal_rebuilds_the_lifecycle",
+        "tests/customer_protection/test_advisory_record.py::test_replay_through_the_store_is_byte_identical[control]",
+        "tests/customer_protection/test_advisory_record.py::test_replay_through_the_store_is_byte_identical[net_capital]",
+        "tests/customer_protection/test_advisory_record.py::test_replay_through_the_store_is_byte_identical[reserve]"
+      ]
+    },
+    {
+      "requirement_id": "SC-G-04",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-G-05",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-G-06",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-M-01",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-M-02",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-M-03",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-M-04",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-M-05",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-M-06",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-M-07",
+      "status": "COVERED",
+      "test_node_ids": [
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[advice-cash-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[advice-cash-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[advice-securities-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[advice-securities-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[cash-dividend-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[cash-dividend-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[choice-dividend-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[choice-dividend-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[confirmation-cash-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[confirmation-cash-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[confirmation-securities-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[confirmation-securities-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[instruction-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[instruction-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[lottery-redemption-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[lottery-redemption-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[merger-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[merger-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[reverse-split-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[reverse-split-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[rights-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[rights-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[split-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[split-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[stock-dividend-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[stock-dividend-SR2026]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[tender-offer-SR2025]",
+        "tests/corporate_actions/test_iso20022.py::test_every_family_round_trips_at_both_releases[tender-offer-SR2026]"
+      ]
+    },
+    {
+      "requirement_id": "SC-P-01",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-P-02",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-P-03",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-P-04",
+      "status": "COVERED",
+      "test_node_ids": [
+        "tests/corporate_actions/test_election.py::test_an_instruction_on_the_firm_deadline_is_accepted",
+        "tests/corporate_actions/test_entitlement.py::test_a_cash_dividend_is_rate_times_eligible_balance",
+        "tests/corporate_actions/test_fixed_income.py::test_each_fixed_income_event_reconciles_to_its_confirmation[final_maturity]",
+        "tests/corporate_actions/test_fixed_income.py::test_each_fixed_income_event_reconciles_to_its_confirmation[full_call]",
+        "tests/corporate_actions/test_fixed_income.py::test_each_fixed_income_event_reconciles_to_its_confirmation[interest_payment]",
+        "tests/corporate_actions/test_fixed_income.py::test_each_fixed_income_event_reconciles_to_its_confirmation[partial_redemption]",
+        "tests/corporate_actions/test_fixed_income.py::test_each_fixed_income_event_reconciles_to_its_confirmation[redemption_lottery]",
+        "tests/corporate_actions/test_funds.py::test_each_fund_event_reconciles_to_its_confirmation[capital_distribution]",
+        "tests/corporate_actions/test_funds.py::test_each_fund_event_reconciles_to_its_confirmation[capital_gains_distribution]",
+        "tests/corporate_actions/test_funds.py::test_each_fund_event_reconciles_to_its_confirmation[reinvestment]",
+        "tests/corporate_actions/test_lifecycle.py::test_a_mandatory_event_progresses_to_paid"
+      ]
+    },
+    {
+      "requirement_id": "SC-P-05",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-P-06",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-P-07",
+      "status": "COVERED",
+      "test_node_ids": [
+        "tests/corporate_actions/test_reconciliation.py::test_a_known_break_is_classified_and_holds[cash-for-shares]",
+        "tests/corporate_actions/test_reconciliation.py::test_a_known_break_is_classified_and_holds[currency]",
+        "tests/corporate_actions/test_reconciliation.py::test_a_known_break_is_classified_and_holds[debit]",
+        "tests/corporate_actions/test_reconciliation.py::test_a_known_break_is_classified_and_holds[missing]",
+        "tests/corporate_actions/test_reconciliation.py::test_a_known_break_is_classified_and_holds[other-balance]",
+        "tests/corporate_actions/test_reconciliation.py::test_a_known_break_is_classified_and_holds[security]",
+        "tests/corporate_actions/test_reconciliation.py::test_a_known_break_is_classified_and_holds[shares-for-cash]",
+        "tests/corporate_actions/test_reconciliation.py::test_a_known_break_is_classified_and_holds[unexpected]"
+      ]
+    },
+    {
+      "requirement_id": "SC-P-08",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-R-01",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-R-02",
+      "status": "COVERED",
+      "test_node_ids": [
+        "tests/customer_protection/test_net_capital.py::test_net_capital_below_the_minimum_holds"
+      ]
+    },
+    {
+      "requirement_id": "SC-R-03",
+      "status": "COVERED",
+      "test_node_ids": [
+        "tests/customer_protection/test_reserve.py::test_synthetic_customer_alternative_weekly"
+      ]
+    },
+    {
+      "requirement_id": "SC-R-04",
+      "status": "COVERED",
+      "test_node_ids": [
+        "tests/customer_protection/test_control.py::test_issue_in_control_passes"
+      ]
+    },
+    {
+      "requirement_id": "SC-R-05",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-R-06",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-R-07",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-R-08",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-R-09",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-R-10",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-R-11",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "SC-R-12",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-01",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-02",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-03",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-04",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-05",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-06",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-07",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-08",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-09",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-10",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-11",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-12",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-13",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-14",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-15",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-16",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    },
+    {
+      "requirement_id": "TR-17",
+      "status": "UNTESTED",
+      "test_node_ids": []
+    }
+  ],
+  "digest": "00759fe4d5d9546b4dba21979f5015795a170512f4f645897c11e90c8f22c450"
+}
