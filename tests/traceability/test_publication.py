@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -66,3 +68,24 @@ def test_main_publication_waits_for_every_required_gate() -> None:
     assert "needs: [test, lint, typecheck, probes]" in workflow
     assert "group: traceability-snapshot-publication" in workflow
     assert "uses: ./.github/actions/publish-traceability-snapshot" in workflow
+
+
+def test_publication_runtime_does_not_require_the_pytest_development_extra() -> None:
+    script = """
+import builtins
+original_import = builtins.__import__
+def without_pytest(name, *args, **kwargs):
+    if name == "pytest" or name.startswith("pytest."):
+        raise ModuleNotFoundError("pytest deliberately unavailable")
+    return original_import(name, *args, **kwargs)
+builtins.__import__ = without_pytest
+import atreides.traceability.publication_writer
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
