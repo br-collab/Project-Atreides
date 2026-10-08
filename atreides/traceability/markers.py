@@ -5,8 +5,6 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import Any, Protocol
 
-import pytest
-
 __all__ = ["MarkedItem", "validate_requirement_markers"]
 
 
@@ -18,6 +16,8 @@ class MarkedItem(Protocol):
 
 def validate_requirement_markers(items: Sequence[MarkedItem], known_ids: frozenset[str]) -> None:
     """Reject malformed or unknown requirement markers during collection."""
+    import pytest
+
     for item in items:
         for marker in item.iter_markers(name="requirement"):
             if len(marker.args) != 1 or not isinstance(marker.args[0], str):
