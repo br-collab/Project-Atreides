@@ -69,8 +69,9 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**1,505 collected tests (1,504 passing, 1 expected failure) · 99% measured whole-package line
-coverage, with a 95% gate plus branch-coverage floors on Cato Cash and funding dispositions · MIT**
+**2,378 collected tests (2,333 passing, 44 skipped, 1 expected failure) · 98.83% measured
+whole-package coverage, with a 95% gate plus branch-coverage floors on Cato Cash and funding
+dispositions · MIT**
 
 This is research software with the public functional facade described below. It prepares,
 governs, and reconciles settlement work, but does not hold submission credentials, connect to a
@@ -439,22 +440,23 @@ inline so the code can be followed without it.
 
 ## License and standing
 
-MIT License — Copyright (c) 2026 Guillermo Ravelo. See [LICENSE](LICENSE).
+All source code and documentation in this repository, including the files in
+`doctrine/`, are licensed under the MIT License (see [LICENSE](LICENSE)). No part
+of this repository is offered under any other license, agreement or
+nondisclosure arrangement.
 
-The ISO 20022 schemas in tests/fixtures/iso20022/ are not covered by the MIT
-licence; see the NOTICE there.
+Capstone / Independent Research, Columbia University M.S. Technology Management.
 
-This is academic work. It is produced on the capstone research track of the
-Columbia University M.S. Technology Management programme, the doctrine
-documents carry that framing on their own headers, and the status recorded
-throughout is pre-commercial. The code is released under MIT so the design can
-be read, criticised and reused; that grant covers this repository's own source
-and nothing else.
+Status: research prototype. There is no commercial offering.
 
-Ravelo Strategic Solutions LLC is the author's separate advisory practice. It
-holds no interest in this repository, and no work here is performed for or
-funded by it. Where the two are ever brought together the relationship will be
-stated at that point rather than inferred from a shared surname.
+### Personal research
+
+This repository is personal research by Guillermo Ravelo, developed on his
+own time and his own equipment. It is not affiliated with, sponsored by or
+endorsed by any current or former employer, client or Columbia University.
+It contains no confidential or proprietary information of any employer,
+client or third party. Nothing here describes any firm's actual systems,
+controls or procedures.
 
 Data provenance is stated rather than implied. [DATA-PROVENANCE.md](DATA-PROVENANCE.md)
 accounts for every input this repository distributes or reads, with its source
