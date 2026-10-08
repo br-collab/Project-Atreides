@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "enforcement_status": "ADVISORY_ONLY",
+  "claim_label": "EXPERIMENTAL",
+  "complete": true,
+  "taken_at": "2026-10-08T13:28:12.670227Z",
+  "input_digest": "sha256:e45b0163b482e9b28515b952f471d6a70ca1139549b719bf4f5cbd41365f3240",
+  "records": [
+    {
+      "schema_version": "atreides.break/0.1-experimental",
+      "enforcement_status": "ADVISORY_ONLY",
+      "experimental": true,
+      "synthetic": true,
+      "break_id": "BRK-SYNTHETIC-FUNDING",
+      "operation_id": "00000000-0000-0000-0000-000000000111",
+      "regime": "ccp",
+      "leg": "funding_break",
+      "symptom": "synthetic funding mismatch",
+      "sources": [
+        "synthetic instruction package",
+        "synthetic operator readback"
+      ],
+      "difference": "expected 10, actual 9",
+      "originating_event_at": "2026-10-08T12:00:00Z",
+      "originating_event_ref": "synthetic:readback:funding",
+      "cause_class": "SYNTHETIC_DATA_MISMATCH",
+      "owner": {
+        "actor_id": "act_01M2P20SY00000000000000001",
+        "actor_kind": "HUMAN",
+        "role": "settlement operations",
+        "entitlement_refs": [
+          "synthetic:cockpit"
+        ],
+        "authenticated": true
+      },
+      "owner_absence_reason": null,
+      "sla_target": "2026-10-08T16:00:00Z",
+      "actions": [],
+      "resolution_evidence": null,
+      "state": "INVESTIGATING",
+      "dsor_record_id": "00000000-0000-0000-0000-000000000222"
+    },
+    {
+      "schema_version": "atreides.break/0.1-experimental",
+      "enforcement_status": "ADVISORY_ONLY",
+      "experimental": true,
+      "synthetic": true,
+      "break_id": "BRK-SYNTHETIC-POSITION",
+      "operation_id": "00000000-0000-0000-0000-000000000111",
+      "regime": "ccp",
+      "leg": "position_break",
+      "symptom": "synthetic position mismatch",
+      "sources": [
+        "synthetic instruction package",
+        "synthetic operator readback"
+      ],
+      "difference": "expected 100, actual 99",
+      "originating_event_at": "2026-10-08T12:00:00Z",
+      "originating_event_ref": "synthetic:readback:position",
+      "cause_class": "UNKNOWN",
+      "owner": null,
+      "owner_absence_reason": "no owner recorded",
+      "sla_target": "2026-10-08T14:00:00Z",
+      "actions": [],
+      "resolution_evidence": null,
+      "state": "OPEN",
+      "dsor_record_id": "00000000-0000-0000-0000-000000000222"
+    }
+  ]
+}
