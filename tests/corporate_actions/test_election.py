@@ -170,6 +170,7 @@ def test_the_firm_deadline_is_strictly_earlier() -> None:
 # --- late instructions -----------------------------------------------------------------------
 
 
+@pytest.mark.requirement("SC-P-04")
 def test_an_instruction_on_the_firm_deadline_is_accepted() -> None:
     _, entry = book().submit(instruct(day=FIRM_DEADLINE.day))
     assert entry.outcome == "accepted"

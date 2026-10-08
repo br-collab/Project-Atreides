@@ -85,6 +85,7 @@ def inputs(**changes: Any) -> ReserveInputs:
 # --- worked examples (SYNTHETIC) -----------------------------------------------------
 
 
+@pytest.mark.requirement("SC-R-03")
 def test_synthetic_customer_alternative_weekly() -> None:
     result = compute_reserve(inputs(), TABLE)
     assert result.total_credits == D("12000000")

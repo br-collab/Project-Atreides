@@ -119,6 +119,7 @@ def test_every_sidecar_hash_matches_its_file() -> None:
 # --- unloaded items --------------------------------------------------------------------
 
 
+@pytest.mark.requirement("SC-G-02")
 def test_an_unloaded_item_is_indeterminate(edited_table: TableEditor) -> None:
     rule_id = "15c3-1.a1ii.alternative_floor"
     table = edited_table(without(rule_id))

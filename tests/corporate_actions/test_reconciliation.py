@@ -185,6 +185,7 @@ def test_shares_confirmed_as_entitled_pass() -> None:
     ids=["missing", "unexpected", "cash-for-shares", "shares-for-cash", "currency", "security",
          "debit", "other-balance"],
 )
+@pytest.mark.requirement("SC-P-07")
 def test_a_known_break_is_classified_and_holds(
     built: CorporateActionEvent, holdings: list[HolderPosition],
     reports: list[MovementReport], code: CorporateActionBreakCode,

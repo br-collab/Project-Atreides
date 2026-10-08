@@ -184,6 +184,7 @@ def test_aggregate_indebtedness_over_the_warning_multiple_holds() -> None:
     assert result.disposition is Disposition.HOLD
 
 
+@pytest.mark.requirement("SC-R-02")
 def test_net_capital_below_the_minimum_holds() -> None:
     result = compute_net_capital(inputs(net_worth=D("2900000")), TABLE)
     assert result.net_capital == D("1726250")

@@ -82,6 +82,7 @@ def by_account(result: EntitlementResult) -> dict[str, HolderEntitlement]:
 # --- worked examples (SYNTHETIC) -------------------------------------------------------------
 
 
+@pytest.mark.requirement("SC-P-04")
 def test_a_cash_dividend_is_rate_times_eligible_balance() -> None:
     result = compute_entitlements(cash(), [holding("A", "100"), holding("B", "1000")])
     assert result.disposition is Disposition.PASS

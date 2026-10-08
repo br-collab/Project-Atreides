@@ -156,6 +156,7 @@ def test_terms_are_exact_and_complete(terms: dict[str, Any], message: str) -> No
 # --- allowed progression ------------------------------------------------------------------
 
 
+@pytest.mark.requirement("SC-P-04")
 def test_a_mandatory_event_progresses_to_paid() -> None:
     paid = run(Lifecycle(event=event()), ask(Milestone.ENTITLEMENT_FIXED, 15),
                ask(Milestone.PAID, 30))
@@ -306,6 +307,7 @@ def full_journal() -> Lifecycle:
     )
 
 
+@pytest.mark.requirement("SC-G-03")
 def test_the_journal_rebuilds_the_lifecycle() -> None:
     live = full_journal()
     assert [e.outcome for e in live.journal] == [
