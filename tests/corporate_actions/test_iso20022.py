@@ -196,6 +196,7 @@ CASES = [*ANNOUNCEMENTS, "instruction", *MOVEMENTS]
 
 @pytest.mark.parametrize("release", list(Release))
 @pytest.mark.parametrize("case", CASES)
+@pytest.mark.requirement("SC-M-07")
 def test_every_family_round_trips_at_both_releases(case: str, release: Release) -> None:
     message, original, back = roundtrip(case, release)
     assert back == original

@@ -101,6 +101,7 @@ def test_each_fixed_income_announcement_validates_against_the_pinned_dtc_xsd(
 
 
 @pytest.mark.parametrize("kind", FIXED_TYPES)
+@pytest.mark.requirement("SC-P-04")
 def test_each_fixed_income_event_reconciles_to_its_confirmation(kind: EventType) -> None:
     original = event(kind)
     entitlement = compute_entitlements(original, [holding()])

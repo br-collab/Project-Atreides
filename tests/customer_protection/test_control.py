@@ -62,6 +62,7 @@ def check(*issues: IssueRequirement, table: Any = TABLE) -> ControlResult:
     return check_possession_or_control(ControlInputs(as_of=AS_OF, issues=issues), table)
 
 
+@pytest.mark.requirement("SC-R-04")
 def test_issue_in_control_passes() -> None:
     result = check(issue())
     only = result.issues[0]

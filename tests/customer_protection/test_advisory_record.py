@@ -167,6 +167,8 @@ def test_the_dsor_admits_the_record_kind() -> None:
 
 
 @pytest.mark.parametrize("index", [0, 1, 2], ids=["reserve", "net_capital", "control"])
+@pytest.mark.requirement("SC-G-01")
+@pytest.mark.requirement("SC-G-03")
 def test_replay_through_the_store_is_byte_identical(index: int) -> None:
     inputs = engine_inputs()[index]
     record = record_computation(inputs, TABLE, operation_id=op(10 + index), recorded_at=NOW)
