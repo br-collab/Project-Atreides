@@ -33,6 +33,7 @@ from hypothesis import HealthCheck, settings
 
 from atreides.traceability import (
     MarkedItem,
+    RunScope,
     TestOutcome,
     build_traceability,
     load_register,
@@ -47,6 +48,13 @@ TRACEABILITY_PATH = REPOSITORY_ROOT / "traceability.json"
 _node_requirements: dict[str, tuple[str, ...]] = {}
 _outcomes: dict[str, TestOutcome] = {}
 _run_timestamp = [""]
+_run_scope = [RunScope.FULL]
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Treat every explicitly selected path or node as a partial run."""
+    has_selector = any(not argument.startswith("-") for argument in config.invocation_params.args)
+    _run_scope[0] = RunScope.PARTIAL if has_selector else RunScope.FULL
 
 
 def pytest_sessionstart() -> None:
@@ -101,6 +109,7 @@ def pytest_sessionfinish() -> None:
         load_register(REGISTER_PATH),
         _node_requirements,
         _outcomes,
+        run_scope=_run_scope[0],
         run_commit_sha=_run_commit_sha(),
         run_timestamp=_run_timestamp[0],
     )

@@ -2,10 +2,12 @@
 
 from atreides.traceability.emitter import (
     RequirementEvidence,
+    RunScope,
     TestOutcome,
     TraceabilityDocument,
     TraceStatus,
     build_traceability,
+    traceability_digest,
     write_traceability,
 )
 from atreides.traceability.markers import MarkedItem, validate_requirement_markers
@@ -25,12 +27,14 @@ __all__ = [
     "Requirement",
     "RequirementEvidence",
     "RequirementRegister",
+    "RunScope",
     "TestOutcome",
     "TextSource",
     "TraceStatus",
     "TraceabilityDocument",
     "build_traceability",
     "load_register",
+    "traceability_digest",
     "validate_requirement_markers",
     "write_traceability",
 ]
