@@ -15,10 +15,12 @@ from atreides.traceability.register import RequirementRegister
 
 __all__ = [
     "RequirementEvidence",
+    "RunScope",
     "TestOutcome",
     "TraceStatus",
     "TraceabilityDocument",
     "build_traceability",
+    "traceability_digest",
     "write_traceability",
 ]
 
@@ -40,6 +42,13 @@ class TestOutcome(StrEnum):
     NOT_RUN = "NOT_RUN"
 
 
+class RunScope(StrEnum):
+    """Whether pytest was invoked for the complete repository or a subset."""
+
+    FULL = "FULL"
+    PARTIAL = "PARTIAL"
+
+
 class _Frozen(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
@@ -57,6 +66,7 @@ class TraceabilityDocument(_Frozen):
     synthetic: Literal[True] = True
     enforcement_status: Literal["ADVISORY_ONLY"] = "ADVISORY_ONLY"
     claim_label: Literal["EXPERIMENTAL"] = "EXPERIMENTAL"
+    run_scope: RunScope
     run_commit_sha: str
     run_timestamp: str
     requirements: tuple[RequirementEvidence, ...]
@@ -79,11 +89,30 @@ def _digest(payload: Mapping[str, object]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _document_payload(document: TraceabilityDocument) -> dict[str, object]:
+    return {
+        "schema_version": document.schema_version,
+        "synthetic": document.synthetic,
+        "enforcement_status": document.enforcement_status,
+        "claim_label": document.claim_label,
+        "run_scope": document.run_scope.value,
+        "run_commit_sha": document.run_commit_sha,
+        "run_timestamp": document.run_timestamp,
+        "requirements": [row.model_dump(mode="json") for row in document.requirements],
+    }
+
+
+def traceability_digest(document: TraceabilityDocument) -> str:
+    """Recompute the digest over every field except the digest itself."""
+    return _digest(_document_payload(document))
+
+
 def build_traceability(
     register: RequirementRegister,
     node_requirements: Mapping[str, Iterable[str]],
     outcomes: Mapping[str, TestOutcome],
     *,
+    run_scope: RunScope,
     run_commit_sha: str,
     run_timestamp: str,
 ) -> TraceabilityDocument:
@@ -110,11 +139,13 @@ def build_traceability(
         "synthetic": True,
         "enforcement_status": "ADVISORY_ONLY",
         "claim_label": "EXPERIMENTAL",
+        "run_scope": run_scope.value,
         "run_commit_sha": run_commit_sha,
         "run_timestamp": run_timestamp,
         "requirements": [row.model_dump(mode="json") for row in evidence],
     }
     return TraceabilityDocument(
+        run_scope=run_scope,
         run_commit_sha=run_commit_sha,
         run_timestamp=run_timestamp,
         requirements=evidence,

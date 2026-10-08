@@ -7,6 +7,7 @@ from pathlib import Path
 
 from atreides.traceability import (
     RequirementEvidence,
+    RunScope,
     TraceabilityDocument,
     TraceStatus,
     build_traceability,
@@ -25,6 +26,7 @@ def _build(
         load_register(REGISTER_PATH),
         nodes,
         outcomes,
+        run_scope=RunScope.FULL,
         run_commit_sha="a" * 40,
         run_timestamp="2026-10-08T12:00:00+00:00",
     )
