@@ -91,8 +91,44 @@ Immutable DSOR record wrapping one :data:`SettlementDomainOutput`.
 | `record_id` | `UUID` | no | Unique record identifier. Independent of the embedded output's operation_id — a correction for the same operation gets a new record_id. |
 | `dtg` | `datetime` | yes | UTC DTG stamp at record assembly time. |
 | `kind` | `Literal` | yes | Discriminator matching output.kind. |
-| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_cash_record.CatoCashDecisionRecord \| acceptance.record.ObligationAcceptanceRecord \| dsor.lifecycle_records.HaltRecord \| dsor.lifecycle_records.InstructionPreparedRecord \| dsor.lifecycle_records.RailStatusObservedRecord \| dsor.lifecycle_records.FinalityAssertedRecord \| dsor.lifecycle_records.ReconciliationResultRecord \| customer_protection.record.CustomerProtectionComputationRecord \| corporate_actions.record.CorporateActionEventRecord \| dsor.lifecycle_records.ExternalActionReceiptRecord \| dsor.client_output.ClientOutputRecord` | yes | The agent output this record wraps. |
+| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_cash_record.CatoCashDecisionRecord \| acceptance.record.ObligationAcceptanceRecord \| dsor.lifecycle_records.HaltRecord \| dsor.lifecycle_records.InstructionPreparedRecord \| dsor.lifecycle_records.RailStatusObservedRecord \| dsor.lifecycle_records.FinalityAssertedRecord \| dsor.lifecycle_records.ReconciliationResultRecord \| customer_protection.record.CustomerProtectionComputationRecord \| corporate_actions.record.CorporateActionEventRecord \| dsor.lifecycle_records.ExternalActionReceiptRecord \| dsor.client_output.ClientOutputRecord \| dsor.books.BooksPostingRecord` | yes | The agent output this record wraps. |
 | `correction_of` | `uuid.UUID \| None` | no | record_id of the record this corrects. The original is preserved unchanged per Axiom 4 (immutable lineage). None for initial records. |
+
+### `atreides.dsor.books`
+
+#### `BooksPosting`
+
+One posting observation. Matching a settlement does not create this.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `posted_record_id` | `str` | yes | Identity of the posted record. |
+| `posting_authority` | `ActorRef` | yes | Who posted the record. |
+| `effective_time` | `datetime` | yes | When the posting took effect, in UTC. |
+| `source_event_id` | `EventId` | yes | The source event this posting records. |
+| `provenance` | `Literal` | yes | A fact from outside, or from a synthetic emulator. |
+
+#### `BooksPostingRecord`
+
+A DSOR record of one posting. The embedded posting is the evidence.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `schema_version` | `Literal` | no |  |
+| `operation_id` | `UUID` | yes |  |
+| `lifecycle_id` | `LifecycleId` | yes |  |
+| `kind` | `Literal` | no |  |
+| `doctrine_version` | `Literal` | no |  |
+| `posting` | `BooksPosting` | yes |  |
+
+#### `PostingAssessment`
+
+Whether a posting was observed. A match alone is not a posting.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `disposition` | `Disposition` | yes | PASS, HOLD, or INDETERMINATE. |
+| `reason` | `str` | yes | Why the disposition was reached. |
 
 ### `atreides.dsor.client_output`
 
@@ -410,6 +446,31 @@ Projected position at one point on the intraday ladder.
 | `offset_seconds` | `int` | required |
 | `position` | `Decimal` | required |
 | `label` | `str` | required |
+
+### `atreides.rails.secured_funding`
+
+#### `FundingAssessment`
+
+Whether secured funding was observed. The amount is absent when it was not.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `disposition` | `Disposition` | yes | PASS, HOLD, or INDETERMINATE. |
+| `reason` | `str` | yes | Why the disposition was reached. |
+| `amount` | `decimal.Decimal \| None` | no | The observed amount. Absent when availability is unknown. Never a default of zero. |
+
+#### `SecuredFunding`
+
+One observation that funds were secured. The amount was stated.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `authoritative_source` | `str` | yes | Who reported the secured funds. |
+| `amount` | `Decimal` | yes | The quantified amount that was observed. |
+| `currency` | `str` | yes | ISO currency code of the amount. |
+| `account_or_facility` | `str` | yes | The account or facility where the funds were observed. |
+| `observation_time` | `datetime` | yes | When the secured funds were observed, in UTC. |
+| `provenance` | `Literal` | yes | A fact from outside, or from a synthetic emulator. |
 
 ### `atreides.rails.determination`
 

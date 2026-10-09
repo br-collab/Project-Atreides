@@ -192,6 +192,7 @@ def test_union_carries_every_lifecycle_kind_and_keeps_the_deprecated_alias() -> 
         "CorporateActionEventRecord",
         "ExternalActionReceiptRecord",
         "ClientOutputRecord",
+        "BooksPostingRecord",
     ):
         assert kind in names
 

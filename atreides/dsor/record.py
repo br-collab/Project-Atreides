@@ -38,6 +38,7 @@ from atreides.agents.tier2.outputs import (
 )
 from atreides.corporate_actions.record import CorporateActionEventRecord
 from atreides.customer_protection.record import CustomerProtectionComputationRecord
+from atreides.dsor.books import BooksPostingRecord
 from atreides.dsor.client_output import ClientOutputRecord
 from atreides.dsor.lifecycle_records import (
     ExternalActionReceiptRecord,
@@ -59,6 +60,7 @@ SettlementDomainOutput = (
     | CustomerProtectionComputationRecord | CorporateActionEventRecord
     | ExternalActionReceiptRecord
     | ClientOutputRecord
+    | BooksPostingRecord
 )
 
 #: Deprecated until Wave 3: use ``SettlementDomainOutput``.
@@ -83,6 +85,7 @@ RecordKind = Literal[
     "corporate_action_event",
     "external_action_receipt",
     "client_output",
+    "books_posting",
 ]
 
 
