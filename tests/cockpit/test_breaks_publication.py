@@ -10,6 +10,7 @@ import pytest
 from pydantic import ValidationError
 
 from atreides.cockpit.break_scenarios import build_synthetic_records
+from atreides.cockpit.breaks import BreakState
 from atreides.cockpit.breaks_publication import BreaksPublication
 from atreides.cockpit.breaks_publication_writer import (
     build_publication,
@@ -46,7 +47,8 @@ def test_tampered_record_fails_digest_validation() -> None:
 def test_missing_owner_survives_publication_as_absent() -> None:
     publication = BreaksPublication.model_validate_json(publication_bytes(TAKEN_AT))
     unowned = next(record for record in publication.records if record.owner is None)
-    assert unowned.owner_absence_reason == "no owner recorded"
+    assert unowned.owner_absence_reason == "awaiting production owner assignment"
+    assert unowned.state is BreakState.INTAKE_UNASSIGNED
     assert unowned.owner_missing is True
 
 
