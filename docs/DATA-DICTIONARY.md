@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**196 of 196 enumeration values (100%) state what they mean in
+**202 of 202 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -1159,5 +1159,32 @@ Whether a receipt is usable evidence. PASS is never finality.
 | --- | --- | --- | --- |
 | `disposition` | `Disposition` | yes | PASS, HOLD, or INDETERMINATE. |
 | `reason` | `str` | yes | Why the disposition was reached. |
+
+### `atreides.messaging.finality_evidence`
+
+#### `EvidenceState` (enumeration)
+
+How far a readback can be read. Final is the only state that asserts.
+
+| Value | Meaning |
+| --- | --- |
+| `UNREAD` | Nothing usable was read. Absence and an unrecognised code land here. |
+| `MATCHED` | The venue has the instruction. Received is not accepted and not final. |
+| `ACCEPTED` | The venue accepted the instruction. Accepted is not settled and not final. |
+| `REFUSED` | The venue rejected or cancelled the instruction. Refusal is not finality. |
+| `SETTLED` | The venue said settled. Settled is not yet a finality assertion. |
+| `FINAL` | An authoritative settled readback emitted a kernel finality assertion. |
+
+#### `FinalityEvidence`
+
+One reading of a readback. PASS exists only beside a final assertion.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `state` | `EvidenceState` | yes | How far this readback can be read. |
+| `disposition` | `Disposition` | yes | PASS only beside a final assertion. Otherwise HOLD or INDETERMINATE. |
+| `reason` | `str` | yes | Why the disposition was reached. |
+| `leg` | `Literal` | yes | Which leg the caller asked to read, asset or cash. |
+| `assertion` | `cannae_kernel.finality.FinalityAssertion \| None` | no | The kernel assertion. Present only when the state is FINAL. |
 
 ---
