@@ -56,11 +56,11 @@ def _write_table(tmp_path: Path, *, citation: str = "17 CFR 999.1") -> DeadlineR
     return load_rule_table(table_path, sources)
 
 
-def test_committed_empty_table_loads_without_refusals() -> None:
+def test_committed_table_loads_without_refusals() -> None:
     table = load_rule_table()
-    assert table.table_version == "deadline-rules/0.1"
-    assert table.sources == ()
-    assert table.rules == ()
+    assert table.table_version == "deadline-rules/0.2-rule-204"
+    assert len(table.sources) == 1
+    assert len(table.rules) == 4
     assert table.rejected == ()
 
 
