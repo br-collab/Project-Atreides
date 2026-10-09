@@ -50,6 +50,7 @@ SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
             "atreides.rails.finality",
             "atreides.rails.cato_cash",
             "atreides.rails.funding_state",
+            "atreides.rails.secured_funding",
             "atreides.rails.determination",
             "atreides.rails.cns",
         ),
