@@ -87,6 +87,7 @@ from atreides.corporate_actions.events import (
 )
 from atreides.corporate_actions.movement import (
     CashMovement,
+    MovementAuthorityReference,
     MovementBalances,
     MovementReport,
     SecuritiesMovement,
@@ -876,6 +877,7 @@ def decode_movement(
     *,
     provenance: Provenance,
     source: SourceIdentity,
+    authority: MovementAuthorityReference,
 ) -> MovementReport:
     """Read a DTC seev.035 advice or seev.036 confirmation in ``release``."""
     _source_check(provenance)
@@ -963,6 +965,7 @@ def decode_movement(
             movement_date=moved,
             provenance=provenance,
             source=source,
+            authority=authority,
         )
     except ValidationError as error:
         raise _refuse(AdapterRefusalReason.NOT_REPRESENTABLE,

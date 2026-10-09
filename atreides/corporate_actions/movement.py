@@ -21,6 +21,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal
 
+from cannae_kernel.actor import ActorRef
 from cannae_kernel.provenance import Provenance
 from pydantic import Field, field_validator, model_validator
 
@@ -35,6 +36,7 @@ from atreides.customer_protection.common import Frozen, Money, NonNegativeMoney
 
 __all__ = [
     "CashMovement",
+    "MovementAuthorityReference",
     "MovementBalances",
     "MovementReport",
     "SecuritiesMovement",
@@ -76,6 +78,21 @@ class SecuritiesMovement(Frozen):
 Movement = Annotated[CashMovement | SecuritiesMovement, Field(discriminator="movement_type")]
 
 
+class MovementAuthorityReference(Frozen):
+    """The authenticated authority record under which a movement was produced."""
+
+    governed_event_id: str = Field(min_length=1)
+    authorizing_actor: ActorRef
+    authority_record_uri: str = Field(pattern=r"^[a-z][a-z0-9+.-]*://[^\s]+$")
+    provenance: Provenance
+
+    @model_validator(mode="after")
+    def _actor_is_authenticated(self) -> MovementAuthorityReference:
+        if not self.authorizing_actor.authenticated:
+            raise ValueError("a movement authority actor must be authenticated")
+        return self
+
+
 class MovementReport(Frozen):
     """One movement advice or confirmation, for one account and one option."""
 
@@ -97,6 +114,7 @@ class MovementReport(Frozen):
     movement_date: date
     provenance: Provenance
     source: SourceIdentity
+    authority: MovementAuthorityReference
 
     @field_validator("provenance")
     @classmethod
@@ -110,6 +128,8 @@ class MovementReport(Frozen):
 
     @model_validator(mode="after")
     def _fits_its_stage(self) -> MovementReport:
+        if self.authority.governed_event_id != self.event_id:
+            raise ValueError("movement authority governs another event")
         advice = self.stage == "preliminary_advice"
         if advice and (self.participation is None or self.default_option is None):
             raise ValueError("a preliminary advice states participation and the default option")
