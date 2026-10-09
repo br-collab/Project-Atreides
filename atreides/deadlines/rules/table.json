@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "table_version": "deadline-rules/0.2-rule-204",
+  "table_version": "deadline-rules/0.3-acats",
   "sources": [
     {
       "source_id": "17cfr242.204",
@@ -11,6 +11,16 @@
       "retrieval_dtg": "202610091044",
       "effective_date": "2024-05-28",
       "expires_at": null
+    },
+    {
+      "source_id": "finra-11870",
+      "citation": "FINRA Rule 11870",
+      "url": "https://www.finra.org/rules-guidance/rulebooks/finra-rules/11870",
+      "filename": "FINRA-11870.html",
+      "sha256": "ce5f85f26523ec8cba337851eae7c53b0f887d0621dc586fa0d38474a326b34b",
+      "retrieval_dtg": "202610091100",
+      "effective_date": "2010-12-15",
+      "expires_at": "2026-10-09"
     }
   ],
   "rules": [
@@ -61,6 +71,30 @@
       "value": "35",
       "unit": "CALENDAR_DAYS",
       "requires_caller_opening_time": true
+    },
+    {
+      "rule_id": "finra_11870.validation",
+      "citation": "FINRA Rule 11870(b)(1)",
+      "source_id": "finra-11870",
+      "source_sha256": "ce5f85f26523ec8cba337851eae7c53b0f887d0621dc586fa0d38474a326b34b",
+      "quote": "within one business day following",
+      "figure": "one business day",
+      "applicability": "carrying member validation or exception after establishment of an ACATS instruction",
+      "value": "1",
+      "unit": "BUSINESS_DAYS",
+      "requires_caller_opening_time": false
+    },
+    {
+      "rule_id": "finra_11870.completion",
+      "citation": "FINRA Rule 11870(e)",
+      "source_id": "finra-11870",
+      "source_sha256": "ce5f85f26523ec8cba337851eae7c53b0f887d0621dc586fa0d38474a326b34b",
+      "quote": "Within three business days following the validation of a transfer instruction",
+      "figure": "three business days",
+      "applicability": "carrying member completion after validation of an ACATS transfer instruction",
+      "value": "3",
+      "unit": "BUSINESS_DAYS",
+      "requires_caller_opening_time": false
     }
   ]
 }
