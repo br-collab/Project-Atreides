@@ -12,8 +12,11 @@ from cannae_kernel.provenance import Provenance
 from atreides.cockpit.breaks import (
     BreakRecord,
     BreakState,
+    ResolutionEvidence,
+    ResolutionEvidenceKind,
     assign_break_owner,
     break_record_from_ticket,
+    resolve_break,
 )
 from atreides.cockpit.clearing_cockpit import BreakLeg, BreakTicket, PortalRegime
 
@@ -62,7 +65,19 @@ def build_synthetic_records() -> tuple[BreakRecord, ...]:
     )
     owned_values = assigned.model_dump()
     owned_values["state"] = BreakState.INVESTIGATING
-    owned = BreakRecord.model_validate(owned_values)
+    investigating = BreakRecord.model_validate(owned_values)
+    owned = resolve_break(
+        investigating,
+        evidence=ResolutionEvidence(
+            break_id=investigating.break_id,
+            recorded_at=event_at + timedelta(hours=1),
+            recorded_by=_owner(),
+            provenance=Provenance.FACT_SYNTHETIC,
+            evidence_kind=ResolutionEvidenceKind.CORRECTIVE_ACTION_VERIFIED,
+            evidence_ref="synthetic:corrective-action:funding",
+            detail="synthetic cause corrected and replay verified",
+        ),
+    )
     unowned = break_record_from_ticket(
         BreakTicket(break_id="BRK-SYNTHETIC-POSITION", leg=BreakLeg.POSITION, **common),
         symptom="synthetic position mismatch",
