@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**202 of 202 enumeration values (100%) state what they mean in
+**209 of 209 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -1186,5 +1186,37 @@ One reading of a readback. PASS exists only beside a final assertion.
 | `reason` | `str` | yes | Why the disposition was reached. |
 | `leg` | `Literal` | yes | Which leg the caller asked to read, asset or cash. |
 | `assertion` | `cannae_kernel.finality.FinalityAssertion \| None` | no | The kernel assertion. Present only when the state is FINAL. |
+
+### `atreides.messaging.settlement_join`
+
+#### `JoinedStage` (enumeration)
+
+How far the four pieces of evidence join. Final is the only pass.
+
+| Value | Meaning |
+| --- | --- |
+| `UNREAD` | Nothing usable was joined. Absence lands here. |
+| `INSTRUCTED` | An entitled member instructed settlement. Instructed is not a venue status. |
+| `MATCHED` | The venue received the instruction. Matched is not accepted or final. |
+| `ACCEPTED` | The venue accepted the instruction. Accepted is not settled or final. |
+| `REFUSED` | The venue rejected or cancelled the instruction. Refusal is not finality. |
+| `SETTLED` | The venue said settled. Settled is not yet a published finality assertion. |
+| `FINAL` | Artifact, entitled member action, readback, and a kernel finality assertion join. |
+
+#### `SettlementJoin`
+
+One join. PASS exists only beside a published final assertion.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `stage` | `JoinedStage` | yes | How far the evidence joins. |
+| `disposition` | `Disposition` | yes | PASS only beside a joined final assertion. Otherwise HOLD or INDETERMINATE. |
+| `reason` | `str` | yes | Why the disposition was reached. |
+| `leg` | `Literal` | yes | Which leg the caller asked to join, asset or cash. |
+| `artifact_digest` | `str` | yes | Digest of the prepared artifact header then document. |
+| `receipt_disposition` | `Disposition` | yes | Grade of the external action receipts. |
+| `venue_state` | `EvidenceState` | yes | How far the readback adapter could read. |
+| `venue_disposition` | `Disposition` | yes | Grade returned by the finality adapter. |
+| `assertion` | `cannae_kernel.finality.FinalityAssertion \| None` | no | The kernel assertion. Present only when the stage is FINAL. |
 
 ---
