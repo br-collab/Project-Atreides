@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "table_version": "deadline-rules/0.3-acats",
+  "table_version": "deadline-rules/0.4-rule-17a-13",
   "sources": [
     {
       "source_id": "17cfr242.204",
@@ -21,6 +21,16 @@
       "retrieval_dtg": "202610091100",
       "effective_date": "2010-12-15",
       "expires_at": "2026-10-09"
+    },
+    {
+      "source_id": "17cfr240.17a-13",
+      "citation": "17 CFR 240.17a-13",
+      "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-07/title-17.xml?part=240&section=240.17a-13",
+      "filename": "17-CFR-240.17a-13.xml",
+      "sha256": "85c88c8a834c42d508252964dd069d2099bb01a42a0d1ef8a5e6030630838f5b",
+      "retrieval_dtg": "202610091106",
+      "effective_date": null,
+      "expires_at": null
     }
   ],
   "rules": [
@@ -93,6 +103,42 @@
       "figure": "three business days",
       "applicability": "carrying member completion after validation of an ACATS transfer instruction",
       "value": "3",
+      "unit": "BUSINESS_DAYS",
+      "requires_caller_opening_time": false
+    },
+    {
+      "rule_id": "rule_17a_13.minimum_spacing",
+      "citation": "17 CFR 240.17a-13(b)(5) and (c)",
+      "source_id": "17cfr240.17a-13",
+      "source_sha256": "85c88c8a834c42d508252964dd069d2099bb01a42a0d1ef8a5e6030630838f5b",
+      "quote": "no security shall be examined, counted, verified, or compared for the purpose of this rule less than 2 months or more than 4 months after a prior examination, count, verification, and comparison",
+      "figure": "2 months",
+      "applicability": "minimum spacing after the prior examination, count, verification, and comparison",
+      "value": "2",
+      "unit": "MONTHS",
+      "requires_caller_opening_time": false
+    },
+    {
+      "rule_id": "rule_17a_13.maximum_spacing",
+      "citation": "17 CFR 240.17a-13(b)(5) and (c)",
+      "source_id": "17cfr240.17a-13",
+      "source_sha256": "85c88c8a834c42d508252964dd069d2099bb01a42a0d1ef8a5e6030630838f5b",
+      "quote": "no security shall be examined, counted, verified, or compared for the purpose of this rule less than 2 months or more than 4 months after a prior examination, count, verification, and comparison",
+      "figure": "4 months",
+      "applicability": "maximum spacing after the prior examination, count, verification, and comparison",
+      "value": "4",
+      "unit": "MONTHS",
+      "requires_caller_opening_time": false
+    },
+    {
+      "rule_id": "rule_17a_13.difference_recording",
+      "citation": "17 CFR 240.17a-13(b)(5) and (c)",
+      "source_id": "17cfr240.17a-13",
+      "source_sha256": "85c88c8a834c42d508252964dd069d2099bb01a42a0d1ef8a5e6030630838f5b",
+      "quote": "Record on the books and records of the member, broker, or dealer all unresolved differences setting forth the security involved and date of comparison in a security count difference account no later than 7 business days after the date of each required quarterly security examination",
+      "figure": "7 business days",
+      "applicability": "recording unresolved differences after each required quarterly examination, count, and verification",
+      "value": "7",
       "unit": "BUSINESS_DAYS",
       "requires_caller_opening_time": false
     }

@@ -8,6 +8,11 @@ from atreides.deadlines.model import (
     DeadlineRuleTable,
     RuleUnit,
 )
+from atreides.deadlines.rule_17a_13 import (
+    SecurityCountAssessment,
+    SecurityCountInput,
+    assess_security_count,
+)
 from atreides.deadlines.rule_204 import (
     Rule204Assessment,
     Rule204Fail,
@@ -28,8 +33,11 @@ __all__ = [
     "Rule204Fail",
     "Rule204Origin",
     "RuleUnit",
+    "SecurityCountAssessment",
+    "SecurityCountInput",
     "assess",
     "assess_acats",
     "assess_rule_204",
+    "assess_security_count",
     "load_rule_table",
 ]
