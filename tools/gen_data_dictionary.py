@@ -76,6 +76,7 @@ SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
             "atreides.messaging.profile",
             "atreides.messaging.emit",
             "atreides.messaging.readback",
+            "atreides.messaging.receipt",
             "atreides.messaging.finality_evidence",
         ),
     ),

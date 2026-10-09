@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**200 of 200 enumeration values (100%) state what they mean in
+**202 of 202 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -91,7 +91,7 @@ Immutable DSOR record wrapping one :data:`SettlementDomainOutput`.
 | `record_id` | `UUID` | no | Unique record identifier. Independent of the embedded output's operation_id — a correction for the same operation gets a new record_id. |
 | `dtg` | `datetime` | yes | UTC DTG stamp at record assembly time. |
 | `kind` | `Literal` | yes | Discriminator matching output.kind. |
-| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_cash_record.CatoCashDecisionRecord \| acceptance.record.ObligationAcceptanceRecord \| dsor.lifecycle_records.HaltRecord \| dsor.lifecycle_records.InstructionPreparedRecord \| dsor.lifecycle_records.RailStatusObservedRecord \| dsor.lifecycle_records.FinalityAssertedRecord \| dsor.lifecycle_records.ReconciliationResultRecord \| customer_protection.record.CustomerProtectionComputationRecord \| corporate_actions.record.CorporateActionEventRecord` | yes | The agent output this record wraps. |
+| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_cash_record.CatoCashDecisionRecord \| acceptance.record.ObligationAcceptanceRecord \| dsor.lifecycle_records.HaltRecord \| dsor.lifecycle_records.InstructionPreparedRecord \| dsor.lifecycle_records.RailStatusObservedRecord \| dsor.lifecycle_records.FinalityAssertedRecord \| dsor.lifecycle_records.ReconciliationResultRecord \| customer_protection.record.CustomerProtectionComputationRecord \| corporate_actions.record.CorporateActionEventRecord \| dsor.lifecycle_records.ExternalActionReceiptRecord` | yes | The agent output this record wraps. |
 | `correction_of` | `uuid.UUID \| None` | no | record_id of the record this corrects. The original is preserved unchanged per Axiom 4 (immutable lineage). None for initial records. |
 
 ---
@@ -1122,6 +1122,43 @@ A parsed ``pacs.002``.
 | `group_status_code` | `str \| None` | required |
 | `entries` | `tuple[StatusEntry, ...]` | required |
 | `malformed` | `tuple[MalformedEntry, ...]` | `()` |
+
+### `atreides.messaging.receipt`
+
+#### `ExternalAction` (enumeration)
+
+An action an entitled member performed outside Atreides.
+
+| Value | Meaning |
+| --- | --- |
+| `CLEARING_SUBMISSION` | The entitled member submitted the artifact to clearing. |
+| `SETTLEMENT_INSTRUCTION` | The entitled member instructed settlement of the artifact. |
+
+#### `ExternalActionReceipt`
+
+One observed external action, tied to one prepared artifact.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `entitled_member_id` | `str` | yes | Who performed the action. |
+| `event_id` | `EventId` | yes | Event identifier carried on the evidence. Not minted here. |
+| `action` | `ExternalAction` | yes | Which external action was observed. |
+| `artifact_digest` | `str` | yes | Exact sha256 digest of the prepared artifact header bytes then document bytes. |
+| `observation_time` | `datetime` | yes | When the action was observed, in UTC. |
+| `provenance` | `Literal` | yes | A fact from outside, or from a synthetic emulator. Never a forecast. |
+| `message_id` | `str` | yes | Message identifier of the prepared instruction this action used. |
+| `end_to_end_id` | `str` | yes | End-to-end identifier of the prepared instruction this action used. |
+| `authorizes_action` | `Literal` | no | Always false. A receipt does not authorize the action it records. |
+| `is_submission` | `Literal` | no | Always false. Atreides does not submit, and a receipt is not a submission. |
+
+#### `ReceiptAssessment`
+
+Whether a receipt is usable evidence. PASS is never finality.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `disposition` | `Disposition` | yes | PASS, HOLD, or INDETERMINATE. |
+| `reason` | `str` | yes | Why the disposition was reached. |
 
 ### `atreides.messaging.finality_evidence`
 

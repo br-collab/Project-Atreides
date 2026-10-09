@@ -26,8 +26,10 @@ from cannae_kernel.provenance import Provenance
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atreides.messaging.readback import SettlementStatus
+from atreides.messaging.receipt import ExternalActionReceipt
 
 __all__ = [
+    "ExternalActionReceiptRecord",
     "FinalityAssertedRecord",
     "HaltRecord",
     "InstructionPreparedRecord",
@@ -119,3 +121,18 @@ class ReconciliationResultRecord(_LifecycleRecord):
         if self.matched == bool(self.break_codes):
             raise ValueError("a matched reconciliation has no breaks; an unmatched one names them")
         return self
+
+
+class ExternalActionReceiptRecord(_LifecycleRecord):
+    """Evidence that an entitled member performed an action outside Atreides.
+
+    The embedded receipt is the evidence. This record does not authorize the
+    action and does not instruct anyone to perform it. ``lifecycle_id`` is
+    required because a receipt that names no lifecycle cannot be joined to
+    the artifact it claims to evidence.
+    """
+
+    kind: Literal["external_action_receipt"] = "external_action_receipt"
+    doctrine_version: Literal["external-action-receipt/0.1"] = "external-action-receipt/0.1"
+    lifecycle_id: LifecycleId
+    receipt: ExternalActionReceipt

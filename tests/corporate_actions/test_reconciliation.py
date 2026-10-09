@@ -58,6 +58,7 @@ from atreides.corporate_actions import (
 from atreides.corporate_actions import reconciliation as reconciliation_module
 from atreides.dsor import DSORStore
 from atreides.rails.cns import RecordDatePosition, SecuritiesBreakCode
+from tests.corporate_actions.conftest import movement_authority
 
 D = Decimal
 ISIN = "USSYNTHETIC0"
@@ -113,7 +114,9 @@ def confirmation(
         "direction": "credit", "movement_date": date(2026, 10, 30),
         "provenance": Provenance.FACT_EXTERNAL, "source": DTC,
     }
-    return MovementReport(**(base | changes))
+    values = base | changes
+    values.setdefault("authority", movement_authority(str(values["event_id"])))
+    return MovementReport(**values)
 
 
 def run(
@@ -379,6 +382,30 @@ def test_a_reconciliation_record_round_trips_through_the_store() -> None:
     assert isinstance(replayed, CorporateActionEventRecord)
     assert replayed == record
     assert verify_reconciliation(replayed) is True
+    assert isinstance(replayed.body, ReconciliationBody)
+    assert replayed.body.confirmations[0].authority == record.body.confirmations[0].authority
+
+
+def test_a_movement_requires_matching_authenticated_authority() -> None:
+    valid = confirmation()
+    dumped = valid.model_dump()
+    dumped.pop("authority")
+    with pytest.raises(ValidationError, match="authority"):
+        MovementReport.model_validate(dumped)
+    with pytest.raises(ValidationError, match="governs another event"):
+        confirmation(authority=movement_authority("ANOTHER-EVENT"))
+    actor = valid.authority.authorizing_actor.model_copy(update={"authenticated": False})
+    with pytest.raises(ValidationError, match="must be authenticated"):
+        valid.authority.__class__.model_validate(
+            valid.authority.model_dump() | {"authorizing_actor": actor}
+        )
+    with pytest.raises(ValidationError, match="pattern"):
+        valid.authority.__class__(
+            governed_event_id=valid.event_id,
+            authorizing_actor=valid.authority.authorizing_actor,
+            authority_record_uri="not-a-reference",
+            provenance=Provenance.FACT_SYNTHETIC,
+        )
 
 
 def test_an_altered_reconciliation_record_does_not_verify() -> None:
@@ -402,7 +429,8 @@ def test_a_confirmation_read_from_iso_20022_reconciles(release: Release) -> None
     comparison, so the reconciliation reads what the message says."""
     sent = confirmation(balances=MovementBalances(confirmed_balance=D(100)))
     received = decode_movement(encode_movement(sent, release).xml, release, "confirmation",
-                               provenance=Provenance.FACT_EXTERNAL, source=DTC)
+                               provenance=Provenance.FACT_EXTERNAL, source=DTC,
+                               authority=sent.authority)
     result = run(CASH_EVENT, entitled(CASH_EVENT, holding("ACCT-A", "100")), received)
     assert result.disposition is Disposition.PASS
 

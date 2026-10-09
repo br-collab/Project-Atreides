@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
+from cannae_kernel.actor import ActorKind, ActorRef
+from cannae_kernel.ids import ActorId
 from cannae_kernel.provenance import Provenance
 
 from atreides.corporate_actions import (
@@ -17,10 +19,26 @@ from atreides.corporate_actions import (
     SourceIdentity,
     TransitionRequest,
 )
+from atreides.corporate_actions.movement import MovementAuthorityReference
 
 ADAPTER = SourceIdentity(source_id="synthetic-dtc-adapter", reference="SYNTHETIC-ANN-1")
 OPERATOR = SourceIdentity(source_id="SYNTHETIC operations desk")
 ANNOUNCED = date(2026, 10, 1)
+
+
+def movement_authority(event_id: str) -> MovementAuthorityReference:
+    return MovementAuthorityReference(
+        governed_event_id=event_id,
+        authorizing_actor=ActorRef(
+            actor_id=ActorId("act_01K6A7C8D9E0F1G2H3J4K5M6N7"),
+            actor_kind=ActorKind.DETERMINISTIC_SERVICE,
+            role="synthetic-corporate-action-authority",
+            entitlement_refs=("SYNTHETIC-AUTHORITY-1",),
+            authenticated=True,
+        ),
+        authority_record_uri="dsor://synthetic/corporate-action-authority/1",
+        provenance=Provenance.FACT_SYNTHETIC,
+    )
 
 
 def event(
