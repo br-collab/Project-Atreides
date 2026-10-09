@@ -25,6 +25,7 @@ from decimal import Decimal
 from typing import Literal, cast
 from xml.etree import ElementTree as ET
 
+from cannae_kernel.canonical import digest_bytes
 from cannae_kernel.disposition import Disposition
 from cannae_kernel.domains import Domain
 from cannae_kernel.halt import HaltContext, gate_under_halt
@@ -38,6 +39,7 @@ __all__ = [
     "emit_business_application_header",
     "emit_fi_credit_transfer",
     "emit_instruction_artifact",
+    "instruction_artifact_digest",
 ]
 
 def _iso_datetime(value: datetime) -> str:
@@ -205,3 +207,13 @@ def emit_instruction_artifact(
         profile_verified=profile.verified_against_published_spec,
         dsor_lineage_uri=instruction.dsor_lineage_uri,
     )
+
+
+def instruction_artifact_digest(artifact: InstructionArtifact) -> str:
+    """Digest of the header bytes followed by the document bytes.
+
+    This is the digest ``InstructionPreparedRecord.artifact_digest`` names.
+    One definition, shared with the external action receipt, rather than a
+    second way of hashing the same artifact.
+    """
+    return digest_bytes(artifact.header_xml + artifact.document_xml)

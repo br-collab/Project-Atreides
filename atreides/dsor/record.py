@@ -39,6 +39,7 @@ from atreides.agents.tier2.outputs import (
 from atreides.corporate_actions.record import CorporateActionEventRecord
 from atreides.customer_protection.record import CustomerProtectionComputationRecord
 from atreides.dsor.lifecycle_records import (
+    ExternalActionReceiptRecord,
     FinalityAssertedRecord,
     HaltRecord,
     InstructionPreparedRecord,
@@ -55,6 +56,7 @@ SettlementDomainOutput = (
     | InstructionPreparedRecord | RailStatusObservedRecord
     | FinalityAssertedRecord | ReconciliationResultRecord
     | CustomerProtectionComputationRecord | CorporateActionEventRecord
+    | ExternalActionReceiptRecord
 )
 
 #: Deprecated until Wave 3: use ``SettlementDomainOutput``.
@@ -77,6 +79,7 @@ RecordKind = Literal[
     "reconciliation_result",
     "customer_protection_computation",
     "corporate_action_event",
+    "external_action_receipt",
 ]
 
 
