@@ -40,7 +40,11 @@ SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "Decision of record",
         "The append-only lineage record and the union of agent outputs it "
         "wraps. This is the only thing that persists.",
-        ("atreides.dsor.record", "atreides.dsor.books"),
+        (
+            "atreides.dsor.record",
+            "atreides.dsor.books",
+            "atreides.dsor.client_output",
+        ),
     ),
     (
         "Settlement rails",
