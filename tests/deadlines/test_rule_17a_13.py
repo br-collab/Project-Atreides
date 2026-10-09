@@ -37,7 +37,7 @@ def test_next_count_window_uses_loaded_two_and_four_month_limits() -> None:
     assert result.disposition is Disposition.PASS
     assert result.next_count_earliest == date(2026, 8, 30)
     assert result.next_count_latest == date(2026, 10, 30)
-    assert result.table_version == "deadline-rules/0.4-rule-17a-13"
+    assert result.table_version == "deadline-rules/0.5-reserve-deposit"
     assert (
         result.source_sha256 == "85c88c8a834c42d508252964dd069d2099bb01a42a0d1ef8a5e6030630838f5b"
     )

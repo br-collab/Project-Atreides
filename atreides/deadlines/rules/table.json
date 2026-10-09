@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "table_version": "deadline-rules/0.4-rule-17a-13",
+  "table_version": "deadline-rules/0.5-reserve-deposit",
   "sources": [
     {
       "source_id": "17cfr242.204",
@@ -29,6 +29,16 @@
       "filename": "17-CFR-240.17a-13.xml",
       "sha256": "85c88c8a834c42d508252964dd069d2099bb01a42a0d1ef8a5e6030630838f5b",
       "retrieval_dtg": "202610091106",
+      "effective_date": null,
+      "expires_at": null
+    },
+    {
+      "source_id": "17cfr240.15c3-3",
+      "citation": "17 CFR 240.15c3-3",
+      "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-07/title-17.xml?part=240&section=240.15c3-3",
+      "filename": "17-CFR-240.15c3-3.xml",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "retrieval_dtg": "202610091117",
       "effective_date": null,
       "expires_at": null
     }
@@ -141,6 +151,78 @@
       "value": "7",
       "unit": "BUSINESS_DAYS",
       "requires_caller_opening_time": false
+    },
+    {
+      "rule_id": "rule_15c3_3.reserve.weekly",
+      "citation": "17 CFR 240.15c3-3(e)(3)(i)(A)",
+      "source_id": "17cfr240.15c3-3",
+      "source_sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "the deposit so computed must be made no later than one hour after the opening of banking business on the second following business day",
+      "figure": "second following business day",
+      "applicability": "weekly Customer and PAB Reserve Bank Account computation under paragraph (e)(3)(i)(A)",
+      "value": "2",
+      "unit": "BUSINESS_DAYS",
+      "requires_caller_opening_time": true
+    },
+    {
+      "rule_id": "rule_15c3_3.reserve.required_daily",
+      "citation": "17 CFR 240.15c3-3(e)(3)(i)(B)(1)",
+      "source_id": "17cfr240.15c3-3",
+      "source_sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "the deposit so computed must be made no later than one hour after the opening of banking business on the second following business day",
+      "figure": "second following business day",
+      "applicability": "required daily computation for a broker or dealer meeting paragraph (e)(3)(i)(B)(1)",
+      "value": "2",
+      "unit": "BUSINESS_DAYS",
+      "requires_caller_opening_time": true
+    },
+    {
+      "rule_id": "rule_15c3_3.reserve.qualifying_monthly",
+      "citation": "17 CFR 240.15c3-3(e)(3)(i)(C)",
+      "source_id": "17cfr240.15c3-3",
+      "source_sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "must deposit not less than 105% of the amount so computed no later than one hour after the opening of banking business on the second following business day",
+      "figure": "second following business day",
+      "applicability": "qualifying monthly computation under paragraph (e)(3)(i)(C), including its eligibility conditions",
+      "value": "2",
+      "unit": "BUSINESS_DAYS",
+      "requires_caller_opening_time": true
+    },
+    {
+      "rule_id": "rule_15c3_3.reserve.additional",
+      "citation": "17 CFR 240.15c3-3(e)(3)(iv)",
+      "source_id": "17cfr240.15c3-3",
+      "source_sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "the deposits so computed must be made no later than one hour after the opening of banking business on the second following business day",
+      "figure": "second following business day",
+      "applicability": "additional computation under paragraph (e)(3)(iv), excluding required daily computations",
+      "value": "2",
+      "unit": "BUSINESS_DAYS",
+      "requires_caller_opening_time": true
+    },
+    {
+      "rule_id": "rule_15c3_3.reserve.voluntary_daily",
+      "citation": "17 CFR 240.15c3-3(e)(3)(iv)-(v)",
+      "source_id": "17cfr240.15c3-3",
+      "source_sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "the deposits so computed must be made no later than one hour after the opening of banking business on the second following business day",
+      "figure": "second following business day",
+      "applicability": "voluntary daily computation elected under paragraph (e)(3)(v), with deposit timing under paragraph (e)(3)(iv)",
+      "value": "2",
+      "unit": "BUSINESS_DAYS",
+      "requires_caller_opening_time": true
+    },
+    {
+      "rule_id": "rule_15c3_3.reserve.opening_offset",
+      "citation": "17 CFR 240.15c3-3(e)(3)(i)(A), (e)(3)(i)(B)(1), (e)(3)(i)(C), and (e)(3)(iv)",
+      "source_id": "17cfr240.15c3-3",
+      "source_sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "no later than one hour after the opening of banking business",
+      "figure": "one hour",
+      "applicability": "deposit clock offset after caller-supplied opening of banking business",
+      "value": "1",
+      "unit": "CLOCK_TIME",
+      "requires_caller_opening_time": true
     }
   ]
 }
