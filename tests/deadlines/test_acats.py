@@ -65,7 +65,7 @@ def test_output_records_functional_table_version_and_provenance() -> None:
         instruction_at=datetime(2026, 10, 8, 15, tzinfo=UTC),
     )
     result = assess_acats(transfer, evaluated_at=AS_OF, calendar=HolidayCalendar())
-    assert result.table_version == "deadline-rules/0.4-rule-17a-13"
+    assert result.table_version == "deadline-rules/0.5-reserve-deposit"
     assert result.rule_citations == ("FINRA Rule 11870(b)(1)", "FINRA Rule 11870(e)")
     assert (
         result.source_sha256 == "ce5f85f26523ec8cba337851eae7c53b0f887d0621dc586fa0d38474a326b34b"

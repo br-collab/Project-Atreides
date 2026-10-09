@@ -156,6 +156,6 @@ def test_unloaded_rule_is_indeterminate() -> None:
 
 def test_rule_204_table_is_hash_pinned_and_loads_without_refusal() -> None:
     table = load_rule_table(as_of=date(2026, 10, 9))
-    assert table.table_version == "deadline-rules/0.4-rule-17a-13"
-    assert len(table.rules) == 9
+    assert table.table_version == "deadline-rules/0.5-reserve-deposit"
+    assert len(table.rules) == 15
     assert table.rejected == ()

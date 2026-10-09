@@ -8,6 +8,12 @@ from atreides.deadlines.model import (
     DeadlineRuleTable,
     RuleUnit,
 )
+from atreides.deadlines.reserve_deposit import (
+    ReserveComputation,
+    ReserveComputationBasis,
+    ReserveDepositAssessment,
+    assess_reserve_deposit,
+)
 from atreides.deadlines.rule_17a_13 import (
     SecurityCountAssessment,
     SecurityCountInput,
@@ -29,6 +35,9 @@ __all__ = [
     "DeadlineCalendar",
     "DeadlineRule",
     "DeadlineRuleTable",
+    "ReserveComputation",
+    "ReserveComputationBasis",
+    "ReserveDepositAssessment",
     "Rule204Assessment",
     "Rule204Fail",
     "Rule204Origin",
@@ -37,6 +46,7 @@ __all__ = [
     "SecurityCountInput",
     "assess",
     "assess_acats",
+    "assess_reserve_deposit",
     "assess_rule_204",
     "assess_security_count",
     "load_rule_table",
