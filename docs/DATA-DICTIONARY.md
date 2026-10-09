@@ -352,6 +352,31 @@ Projected position at one point on the intraday ladder.
 | `position` | `Decimal` | required |
 | `label` | `str` | required |
 
+### `atreides.rails.secured_funding`
+
+#### `FundingAssessment`
+
+Whether secured funding was observed. The amount is absent when it was not.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `disposition` | `Disposition` | yes | PASS, HOLD, or INDETERMINATE. |
+| `reason` | `str` | yes | Why the disposition was reached. |
+| `amount` | `decimal.Decimal \| None` | no | The observed amount. Absent when availability is unknown. Never a default of zero. |
+
+#### `SecuredFunding`
+
+One observation that funds were secured. The amount was stated.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `authoritative_source` | `str` | yes | Who reported the secured funds. |
+| `amount` | `Decimal` | yes | The quantified amount that was observed. |
+| `currency` | `str` | yes | ISO currency code of the amount. |
+| `account_or_facility` | `str` | yes | The account or facility where the funds were observed. |
+| `observation_time` | `datetime` | yes | When the secured funds were observed, in UTC. |
+| `provenance` | `Literal` | yes | A fact from outside, or from a synthetic emulator. |
+
 ### `atreides.rails.determination`
 
 #### `DeterminationOutcome` (enumeration)
