@@ -141,7 +141,7 @@ def test_missing_settlement_calendar_is_hold() -> None:
 
 
 def test_unloaded_rule_is_indeterminate() -> None:
-    empty = load_rule_table()
+    empty = load_rule_table(as_of=date(2026, 10, 9))
     empty = empty.model_copy(update={"rules": ()})
     result = assess_rule_204(
         _fail(Rule204Origin.LONG),
@@ -155,7 +155,7 @@ def test_unloaded_rule_is_indeterminate() -> None:
 
 
 def test_rule_204_table_is_hash_pinned_and_loads_without_refusal() -> None:
-    table = load_rule_table()
-    assert table.table_version == "deadline-rules/0.2-rule-204"
-    assert len(table.rules) == 4
+    table = load_rule_table(as_of=date(2026, 10, 9))
+    assert table.table_version == "deadline-rules/0.3-acats"
+    assert len(table.rules) == 6
     assert table.rejected == ()

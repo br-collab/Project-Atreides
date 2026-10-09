@@ -93,7 +93,7 @@ def assess_rule_204(
     table: DeadlineRuleTable | None = None,
 ) -> Rule204Assessment:
     """Compute the advisory close-out due time from loaded rule data."""
-    loaded = table or load_rule_table()
+    loaded = table or load_rule_table(as_of=evaluated_at.date())
     if fail.origin_class is None:
         return _result(
             fail,

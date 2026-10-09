@@ -1,5 +1,6 @@
 """Deterministic regulatory deadline foundations (EXPERIMENTAL, advisory only)."""
 
+from atreides.deadlines.acats import AcatsAssessment, AcatsTransfer, assess_acats
 from atreides.deadlines.calendar import DeadlineCalendar
 from atreides.deadlines.model import (
     DeadlineAssessment,
@@ -17,6 +18,8 @@ from atreides.deadlines.rules import load_rule_table
 from atreides.deadlines.status import assess
 
 __all__ = [
+    "AcatsAssessment",
+    "AcatsTransfer",
     "DeadlineAssessment",
     "DeadlineCalendar",
     "DeadlineRule",
@@ -26,6 +29,7 @@ __all__ = [
     "Rule204Origin",
     "RuleUnit",
     "assess",
+    "assess_acats",
     "assess_rule_204",
     "load_rule_table",
 ]
