@@ -24,8 +24,10 @@ __all__ = [
     "BreakState",
     "OwnershipChange",
     "ResolutionEvidence",
+    "ResolutionEvidenceKind",
     "assign_break_owner",
     "break_record_from_ticket",
+    "resolve_break",
 ]
 
 
@@ -57,6 +59,13 @@ class BreakAction(_Frozen):
         return self
 
 
+class ResolutionEvidenceKind(StrEnum):
+    """Closed evidence kinds that can support operational closure."""
+
+    CORRECTIVE_ACTION_VERIFIED = "CORRECTIVE_ACTION_VERIFIED"
+    AUTHORITY_CONFIRMATION = "AUTHORITY_CONFIRMATION"
+
+
 class OwnershipChange(_Frozen):
     """One attributable owner assignment in append-only order."""
 
@@ -82,8 +91,11 @@ class OwnershipChange(_Frozen):
 class ResolutionEvidence(_Frozen):
     """Evidence supporting a claimed resolution."""
 
+    break_id: str = Field(min_length=1)
     recorded_at: datetime
     recorded_by: ActorRef
+    provenance: Provenance
+    evidence_kind: ResolutionEvidenceKind
     evidence_ref: str = Field(min_length=1)
     detail: str = Field(min_length=1)
 
@@ -91,6 +103,8 @@ class ResolutionEvidence(_Frozen):
     def _time_is_aware(self) -> Self:
         if self.recorded_at.tzinfo is None:
             raise ValueError("resolution evidence time must be timezone-aware")
+        if not self.recorded_by.authenticated:
+            raise ValueError("resolution actor must be authenticated")
         return self
 
 
@@ -148,6 +162,13 @@ class BreakRecord(_Frozen):
             previous = change.assigned_owner
         if self.state is BreakState.RESOLVED and self.resolution_evidence is None:
             raise ValueError("a resolved break must carry resolution evidence")
+        if self.state is not BreakState.RESOLVED and self.resolution_evidence is not None:
+            raise ValueError("resolution evidence is set only by the closure transition")
+        if (
+            self.resolution_evidence is not None
+            and self.resolution_evidence.break_id != self.break_id
+        ):
+            raise ValueError("resolution evidence belongs to another break")
         return self
 
     @property
@@ -222,4 +243,21 @@ def assign_break_owner(
         ownership_history=(*record.ownership_history, change),
         state=(BreakState.OPEN if record.state is BreakState.INTAKE_UNASSIGNED else record.state),
     )
+    return BreakRecord.model_validate(updated)
+
+
+def resolve_break(record: BreakRecord, *, evidence: ResolutionEvidence) -> BreakRecord:
+    """Close an investigated break from attributable, break-bound evidence."""
+    if record.state is not BreakState.INVESTIGATING:
+        raise ValueError("only an investigating break can be resolved")
+    if record.owner is None:
+        raise ValueError("an ownerless break cannot be resolved")
+    if evidence.break_id != record.break_id:
+        raise ValueError("resolution evidence belongs to another break")
+    if evidence.recorded_at < record.originating_event_at:
+        raise ValueError("resolution evidence predates the break")
+    if record.ownership_history and evidence.recorded_at < record.ownership_history[-1].changed_at:
+        raise ValueError("resolution evidence predates the current ownership")
+    updated = record.model_dump()
+    updated.update(state=BreakState.RESOLVED, resolution_evidence=evidence)
     return BreakRecord.model_validate(updated)
