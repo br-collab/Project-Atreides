@@ -51,7 +51,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -332,7 +332,9 @@ class InstructionPackage(_Frozen):
             )
         return value
 
-    def model_copy(self, *, update: dict[str, Any] | None = None, deep: bool = False) -> Self:
+    def model_copy(
+        self, *, update: Mapping[str, Any] | None = None, deep: bool = False
+    ) -> Self:
         """Copy with validation, so an update cannot produce a submission."""
         if not update:
             return super().model_copy(deep=deep)
@@ -434,7 +436,7 @@ class ClearingCockpit:
         self._csd_context: dict[UUID, CockpitTasking] = {}
 
         # Per-operation replayable cycle ledger (Section IV Audit).
-        self._ledger: dict[UUID, list[dict]] = {}
+        self._ledger: dict[UUID, list[dict[str, Any]]] = {}
 
         # The break workbench (Section VII).
         self._workbench: list[BreakTicket] = []
@@ -465,7 +467,7 @@ class ClearingCockpit:
     def _context_for(self, regime: PortalRegime) -> dict[UUID, CockpitTasking]:
         return self._ccp_context if regime is PortalRegime.CCP else self._csd_context
 
-    def _ledger_append(self, operation_id: UUID, beat: CycleBeat, obj) -> None:
+    def _ledger_append(self, operation_id: UUID, beat: CycleBeat, obj: Any) -> None:
         self._ledger.setdefault(operation_id, []).append(
             {"beat": beat.value, "at": datetime.now(tz=UTC).isoformat(), "record": obj}
         )
@@ -744,7 +746,7 @@ class ClearingCockpit:
 
         tasking = self._context_for(readback.regime).get(readback.operation_id)
         breaks: list[BreakLeg] = []
-        detail: dict = {}
+        detail: dict[str, Any] = {}
 
         # NET_OBLIGATION leg: CCP net obligation vs expected net payment.
         if (
@@ -866,7 +868,7 @@ class ClearingCockpit:
 
     # -- Audit (cross-cutting) --------------------------------------------
 
-    def get_cycle_ledger(self, operation_id: UUID) -> list[dict]:
+    def get_cycle_ledger(self, operation_id: UUID) -> list[dict[str, Any]]:
         """Return the replayable gather->validate->prepare->reconcile
         lineage for one operation (Section IV Audit)."""
         return list(self._ledger.get(operation_id, []))
