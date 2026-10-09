@@ -35,6 +35,7 @@ from cannae_kernel.ids import ActorId, EventId, LifecycleId, encode_ulid
 from cannae_kernel.provenance import Provenance
 from pydantic import BaseModel, ConfigDict, Field
 
+from atreides.dsor.client_output import ClientOutputRecord
 from atreides.dsor.lifecycle_records import (
     ExternalActionReceiptRecord,
     FinalityAssertedRecord,
@@ -94,6 +95,8 @@ def _event_id(record: DSORRecord) -> EventId:
 def _provenance_and_actor(output: Any) -> tuple[Provenance, ActorRef]:
     if isinstance(output, ExternalActionReceiptRecord):
         return output.receipt.provenance, ATREIDES_DSOR_ACTOR
+    if isinstance(output, ClientOutputRecord):
+        return output.client_output.provenance, ATREIDES_DSOR_ACTOR
     if isinstance(output, RailStatusObservedRecord):
         return output.provenance, ATREIDES_DSOR_ACTOR
     if isinstance(output, FinalityAssertedRecord):

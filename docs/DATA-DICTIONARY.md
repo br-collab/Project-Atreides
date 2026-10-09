@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**202 of 202 enumeration values (100%) state what they mean in
+**205 of 205 enumeration values (100%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -91,8 +91,67 @@ Immutable DSOR record wrapping one :data:`SettlementDomainOutput`.
 | `record_id` | `UUID` | no | Unique record identifier. Independent of the embedded output's operation_id — a correction for the same operation gets a new record_id. |
 | `dtg` | `datetime` | yes | UTC DTG stamp at record assembly time. |
 | `kind` | `Literal` | yes | Discriminator matching output.kind. |
-| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_cash_record.CatoCashDecisionRecord \| acceptance.record.ObligationAcceptanceRecord \| dsor.lifecycle_records.HaltRecord \| dsor.lifecycle_records.InstructionPreparedRecord \| dsor.lifecycle_records.RailStatusObservedRecord \| dsor.lifecycle_records.FinalityAssertedRecord \| dsor.lifecycle_records.ReconciliationResultRecord \| customer_protection.record.CustomerProtectionComputationRecord \| corporate_actions.record.CorporateActionEventRecord \| dsor.lifecycle_records.ExternalActionReceiptRecord` | yes | The agent output this record wraps. |
+| `output` | `agents.tier2.outputs.RoutingDecision \| agents.tier2.outputs.EscalationRequired \| agents.tier2.outputs.QuorumAuthorityRequired \| agents.tier1.outputs.SettlementTelemetry \| agents.tier1.outputs.SettlementEscalation \| agents.tier1.investigation_outputs.EvidenceTimeline \| agents.tier1.investigation_outputs.InvestigationEscalation \| rails.cato_cash_record.CatoCashDecisionRecord \| acceptance.record.ObligationAcceptanceRecord \| dsor.lifecycle_records.HaltRecord \| dsor.lifecycle_records.InstructionPreparedRecord \| dsor.lifecycle_records.RailStatusObservedRecord \| dsor.lifecycle_records.FinalityAssertedRecord \| dsor.lifecycle_records.ReconciliationResultRecord \| customer_protection.record.CustomerProtectionComputationRecord \| corporate_actions.record.CorporateActionEventRecord \| dsor.lifecycle_records.ExternalActionReceiptRecord \| dsor.client_output.ClientOutputRecord` | yes | The agent output this record wraps. |
 | `correction_of` | `uuid.UUID \| None` | no | record_id of the record this corrects. The original is preserved unchanged per Axiom 4 (immutable lineage). None for initial records. |
+
+### `atreides.dsor.client_output`
+
+#### `ClientOutputEvidence`
+
+One produced output. Delivery is present only when it was observed.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `artifact_digest` | `str` | yes | Digest of the produced output artifact. |
+| `recipient_class` | `str` | yes | The intended recipient class. |
+| `source_event_id` | `EventId` | yes | The source event this output was produced from. |
+| `generation_time` | `datetime` | yes | When the output was generated, in UTC. |
+| `provenance` | `Literal` | yes | A fact from outside, or from a synthetic emulator. |
+| `delivery` | `dsor.client_output.DeliveryObservation \| None` | no | Delivery evidence. Absent means the output was not observed as delivered. |
+
+#### `ClientOutputRecord`
+
+A DSOR record of one client output. The embedded evidence is the output.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `schema_version` | `Literal` | no |  |
+| `operation_id` | `UUID` | yes |  |
+| `lifecycle_id` | `LifecycleId` | yes |  |
+| `kind` | `Literal` | no |  |
+| `doctrine_version` | `Literal` | no |  |
+| `client_output` | `ClientOutputEvidence` | yes |  |
+
+#### `DeliveryObservation`
+
+A separate fact that an output was delivered. Production does not imply it.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `observation_time` | `datetime` | yes | When delivery was observed, in UTC. |
+| `provenance` | `Literal` | yes | A fact from outside, or from a synthetic emulator. |
+| `recipient_ref` | `str` | yes | Who the delivery observation names. |
+
+#### `OutputReading`
+
+One reading of client output. Delivery is its own stage.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `stage` | `OutputStage` | yes | Unread, produced, or delivered. |
+| `disposition` | `Disposition` | yes | PASS, HOLD, or INDETERMINATE. |
+| `reason` | `str` | yes | Why the disposition was reached. |
+| `delivered` | `bool` | yes | True only when delivery evidence joined and passed. |
+
+#### `OutputStage` (enumeration)
+
+How far client output evidence goes. Produced is not delivered.
+
+| Value | Meaning |
+| --- | --- |
+| `UNREAD` | No client output was read. |
+| `PRODUCED` | An output artifact was produced. Produced is not delivered. |
+| `DELIVERED` | Separate delivery evidence says the output was delivered. |
 
 ---
 
