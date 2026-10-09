@@ -15,8 +15,10 @@ from atreides.cockpit.breaks import (
     BreakState,
     OwnershipChange,
     ResolutionEvidence,
+    ResolutionEvidenceKind,
     assign_break_owner,
     break_record_from_ticket,
+    resolve_break,
 )
 from atreides.cockpit.clearing_cockpit import BreakLeg, BreakTicket, PortalRegime
 
@@ -86,14 +88,63 @@ def test_resolved_without_resolution_evidence_is_refused() -> None:
 
 def test_resolved_with_resolution_evidence_is_accepted() -> None:
     evidence = ResolutionEvidence(
+        break_id=_ticket().break_id,
         recorded_at=RAISED_AT + timedelta(hours=1),
         recorded_by=_actor(),
+        provenance=Provenance.HUMAN_JUDGMENT,
+        evidence_kind=ResolutionEvidenceKind.CORRECTIVE_ACTION_VERIFIED,
         evidence_ref="synthetic:reconciliation:1",
         detail="balances match on replay",
     )
     record = _record(state=BreakState.RESOLVED, resolution_evidence=evidence)
     assert record.state is BreakState.RESOLVED
     assert record.resolution_evidence == evidence
+
+
+def _evidence(**changes: object) -> ResolutionEvidence:
+    values: dict[str, object] = {
+        "break_id": _ticket().break_id,
+        "recorded_at": RAISED_AT + timedelta(hours=1),
+        "recorded_by": _actor("2"),
+        "provenance": Provenance.HUMAN_JUDGMENT,
+        "evidence_kind": ResolutionEvidenceKind.CORRECTIVE_ACTION_VERIFIED,
+        "evidence_ref": "synthetic:corrective-action:1",
+        "detail": "cause corrected and independently replayed",
+    }
+    values.update(changes)
+    return ResolutionEvidence.model_validate(values)
+
+
+def test_closure_requires_investigation_and_break_bound_evidence() -> None:
+    with pytest.raises(ValueError, match="only an investigating"):
+        resolve_break(_record(), evidence=_evidence())
+    investigating = _record(state=BreakState.INVESTIGATING)
+    with pytest.raises(ValueError, match="another break"):
+        resolve_break(
+            investigating,
+            evidence=_evidence(break_id="BRK-ANOTHER"),
+        )
+    resolved = resolve_break(investigating, evidence=_evidence())
+    assert resolved.state is BreakState.RESOLVED
+    assert resolved.resolution_evidence == _evidence()
+
+
+def test_matching_alone_is_not_a_legal_closure_evidence_kind() -> None:
+    with pytest.raises(ValidationError):
+        _evidence(evidence_kind="SETTLEMENT_MATCH")
+
+
+def test_closure_refuses_missing_unauthenticated_or_illegally_timed_evidence() -> None:
+    investigating = _record(state=BreakState.INVESTIGATING)
+    with pytest.raises(ValidationError, match="resolution actor must be authenticated"):
+        _evidence(recorded_by=_actor("3").model_copy(update={"authenticated": False}))
+    with pytest.raises(ValueError, match="predates the current ownership"):
+        resolve_break(
+            investigating,
+            evidence=_evidence(recorded_at=RAISED_AT + timedelta(minutes=1)),
+        )
+    with pytest.raises(ValidationError, match="resolution evidence"):
+        BreakRecord.model_validate({**investigating.model_dump(), "state": BreakState.RESOLVED})
 
 
 def test_absent_owner_is_explicit_and_survives_round_trip() -> None:
