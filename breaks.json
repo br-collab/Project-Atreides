@@ -4,7 +4,7 @@
   "enforcement_status": "ADVISORY_ONLY",
   "claim_label": "EXPERIMENTAL",
   "complete": true,
-  "taken_at": "2026-10-09T19:01:22.671891Z",
+  "taken_at": "2026-10-09T19:20:42.333501Z",
   "input_digest": "sha256:3395c2b0c80896100cf17a1d9fd6324c19d395f8ed30c0c05e65aab56558d74e",
   "records": [
     {
