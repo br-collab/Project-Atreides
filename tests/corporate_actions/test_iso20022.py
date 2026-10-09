@@ -65,6 +65,7 @@ from atreides.corporate_actions import (
     encode_movement,
 )
 from atreides.corporate_actions import dtc_sources as sources_module
+from tests.corporate_actions.conftest import movement_authority
 
 D = Decimal
 ISIN = "USSYNTHETIC0"
@@ -148,7 +149,9 @@ def movement(
         "direction": "credit", "movement_date": date(2026, 10, 30),
         "provenance": Provenance.FACT_SYNTHETIC, "source": ADAPTER,
     }
-    return MovementReport(**(base | changes))
+    values = base | changes
+    values.setdefault("authority", movement_authority(str(values["event_id"])))
+    return MovementReport(**values)
 
 
 MOVEMENTS = {
@@ -184,7 +187,8 @@ def roundtrip(case: str, release: Release) -> tuple[EncodedMessage, object, obje
         report = MOVEMENTS[case]
         original, message = report, encode_movement(report, release)
         back = decode_movement(message.xml, release, report.stage,
-                               provenance=Provenance.FACT_SYNTHETIC, source=ADAPTER)
+                               provenance=Provenance.FACT_SYNTHETIC, source=ADAPTER,
+                               authority=report.authority)
     return message, original, back
 
 
@@ -222,7 +226,7 @@ def test_a_message_of_the_other_release_is_refused(
         else:
             stage = MOVEMENTS[case].stage
             decode_movement(message.xml, read, stage, provenance=Provenance.FACT_SYNTHETIC,
-                            source=ADAPTER)
+                            source=ADAPTER, authority=MOVEMENTS[case].authority)
     assert refused.value.reason is AdapterRefusalReason.WRONG_VERSION
     assert PROFILES[(read, message.family)].message_id in refused.value.detail
 
@@ -231,7 +235,8 @@ def test_a_message_of_another_family_is_refused() -> None:
     announcement = encode_announcement(ANNOUNCEMENTS["cash-dividend"], Release.SR2026)
     with pytest.raises(AdapterRefusalError) as refused:
         decode_movement(announcement.xml, Release.SR2026, "confirmation",
-                        provenance=Provenance.FACT_SYNTHETIC, source=ADAPTER)
+                        provenance=Provenance.FACT_SYNTHETIC, source=ADAPTER,
+                        authority=movement_authority("SYN-DVCA-1"))
     assert refused.value.reason is AdapterRefusalReason.WRONG_MESSAGE
 
 
@@ -406,7 +411,8 @@ def read(case: str, xml: bytes) -> object:
                                   received_date=date(2026, 10, 15),
                                   provenance=Provenance.FACT_EXTERNAL, source=DTC)
     return decode_movement(xml, Release.SR2026, MOVEMENTS[case].stage,
-                           provenance=Provenance.FACT_SYNTHETIC, source=ADAPTER)
+                           provenance=Provenance.FACT_SYNTHETIC, source=ADAPTER,
+                           authority=MOVEMENTS[case].authority)
 
 
 @pytest.mark.parametrize(
@@ -607,7 +613,8 @@ def test_property_movements_round_trip(release: Release, quantity: Decimal,
                  MovementBalances(eligible_balance=balance), option_type=OptionType.SECU),
     ):
         back = decode_movement(encode_movement(report, release).xml, release, report.stage,
-                               provenance=Provenance.FACT_SYNTHETIC, source=ADAPTER)
+                               provenance=Provenance.FACT_SYNTHETIC, source=ADAPTER,
+                               authority=report.authority)
         assert back == report
 
 

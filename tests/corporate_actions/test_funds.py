@@ -32,6 +32,7 @@ from atreides.corporate_actions.movement import (
 )
 from atreides.corporate_actions.reconciliation import reconcile
 from atreides.rails.cns import RecordDatePosition
+from tests.corporate_actions.conftest import movement_authority
 
 D = Decimal
 ISIN = "US0000000001"
@@ -136,6 +137,7 @@ def test_each_fund_event_reconciles_to_its_confirmation(kind: EventType) -> None
         ),
         direction="credit",
         movement_date=date(2026, 10, 20), provenance=Provenance.FACT_SYNTHETIC, source=SOURCE,
+        authority=movement_authority(original.event_id),
     )
     result = reconcile(
         original, entitlement, [report], reconciled_at=datetime(2026, 10, 20, tzinfo=UTC)
