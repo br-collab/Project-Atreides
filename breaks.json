@@ -4,8 +4,8 @@
   "enforcement_status": "ADVISORY_ONLY",
   "claim_label": "EXPERIMENTAL",
   "complete": true,
-  "taken_at": "2026-10-09T17:29:56.139284Z",
-  "input_digest": "sha256:e45b0163b482e9b28515b952f471d6a70ca1139549b719bf4f5cbd41365f3240",
+  "taken_at": "2026-10-09T18:30:47.298795Z",
+  "input_digest": "sha256:3395c2b0c80896100cf17a1d9fd6324c19d395f8ed30c0c05e65aab56558d74e",
   "records": [
     {
       "schema_version": "atreides.break/0.1-experimental",
@@ -35,10 +35,51 @@
         "authenticated": true
       },
       "owner_absence_reason": null,
+      "ownership_history": [
+        {
+          "changed_at": "2026-10-08T12:05:00Z",
+          "changed_by": {
+            "actor_id": "act_01M2P20SY00000000000000001",
+            "actor_kind": "HUMAN",
+            "role": "settlement operations",
+            "entitlement_refs": [
+              "synthetic:cockpit"
+            ],
+            "authenticated": true
+          },
+          "previous_owner": null,
+          "assigned_owner": {
+            "actor_id": "act_01M2P20SY00000000000000001",
+            "actor_kind": "HUMAN",
+            "role": "settlement operations",
+            "entitlement_refs": [
+              "synthetic:cockpit"
+            ],
+            "authenticated": true
+          },
+          "provenance": "FACT_SYNTHETIC"
+        }
+      ],
       "sla_target": "2026-10-08T16:00:00Z",
       "actions": [],
-      "resolution_evidence": null,
-      "state": "INVESTIGATING",
+      "resolution_evidence": {
+        "break_id": "BRK-SYNTHETIC-FUNDING",
+        "recorded_at": "2026-10-08T13:00:00Z",
+        "recorded_by": {
+          "actor_id": "act_01M2P20SY00000000000000001",
+          "actor_kind": "HUMAN",
+          "role": "settlement operations",
+          "entitlement_refs": [
+            "synthetic:cockpit"
+          ],
+          "authenticated": true
+        },
+        "provenance": "FACT_SYNTHETIC",
+        "evidence_kind": "CORRECTIVE_ACTION_VERIFIED",
+        "evidence_ref": "synthetic:corrective-action:funding",
+        "detail": "synthetic cause corrected and replay verified"
+      },
+      "state": "RESOLVED",
       "dsor_record_id": "00000000-0000-0000-0000-000000000222"
     },
     {
@@ -60,11 +101,12 @@
       "originating_event_ref": "synthetic:readback:position",
       "cause_class": "UNKNOWN",
       "owner": null,
-      "owner_absence_reason": "no owner recorded",
+      "owner_absence_reason": "awaiting production owner assignment",
+      "ownership_history": [],
       "sla_target": "2026-10-08T14:00:00Z",
       "actions": [],
       "resolution_evidence": null,
-      "state": "OPEN",
+      "state": "INTAKE_UNASSIGNED",
       "dsor_record_id": "00000000-0000-0000-0000-000000000222"
     }
   ]
