@@ -1,6 +1,66 @@
 {
   "schema_version": 1,
-  "table_version": "deadline-rules/0.1",
-  "sources": [],
-  "rules": []
+  "table_version": "deadline-rules/0.2-rule-204",
+  "sources": [
+    {
+      "source_id": "17cfr242.204",
+      "citation": "17 CFR 242.204",
+      "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-07/title-17.xml?part=242&section=242.204",
+      "filename": "17-CFR-242.204.xml",
+      "sha256": "4c4223552ab13f947bbc2c2cec19af70fc4ee1ea5b1baeb9443c3e2665a581bf",
+      "retrieval_dtg": "202610091044",
+      "effective_date": "2024-05-28",
+      "expires_at": null
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "rule_204.short_or_general",
+      "citation": "17 CFR 242.204(a)",
+      "source_id": "17cfr242.204",
+      "source_sha256": "4c4223552ab13f947bbc2c2cec19af70fc4ee1ea5b1baeb9443c3e2665a581bf",
+      "quote": "beginning of regular trading hours on the settlement day following the settlement date",
+      "figure": "settlement day following",
+      "applicability": "fail to deliver from a long or short sale unless paragraph (a)(1), (a)(2), or (a)(3) applies",
+      "value": "1",
+      "unit": "SETTLEMENT_DAYS",
+      "requires_caller_opening_time": true
+    },
+    {
+      "rule_id": "rule_204.long",
+      "citation": "17 CFR 242.204(a)(1)",
+      "source_id": "17cfr242.204",
+      "source_sha256": "4c4223552ab13f947bbc2c2cec19af70fc4ee1ea5b1baeb9443c3e2665a581bf",
+      "quote": "beginning of regular trading hours on the third consecutive settlement day following the settlement date",
+      "figure": "third consecutive settlement day",
+      "applicability": "participant demonstrates on its books and records that the fail resulted from a long sale",
+      "value": "3",
+      "unit": "SETTLEMENT_DAYS",
+      "requires_caller_opening_time": true
+    },
+    {
+      "rule_id": "rule_204.market_making",
+      "citation": "17 CFR 242.204(a)(3)",
+      "source_id": "17cfr242.204",
+      "source_sha256": "4c4223552ab13f947bbc2c2cec19af70fc4ee1ea5b1baeb9443c3e2665a581bf",
+      "quote": "beginning of regular trading hours on the third consecutive settlement day following the settlement date",
+      "figure": "third consecutive settlement day",
+      "applicability": "fail attributable to bona fide market making activities described by paragraph (a)(3)",
+      "value": "3",
+      "unit": "SETTLEMENT_DAYS",
+      "requires_caller_opening_time": true
+    },
+    {
+      "rule_id": "rule_204.deemed_owned",
+      "citation": "17 CFR 242.204(a)(2)",
+      "source_id": "17cfr242.204",
+      "source_sha256": "4c4223552ab13f947bbc2c2cec19af70fc4ee1ea5b1baeb9443c3e2665a581bf",
+      "quote": "begining of regular trading hours on the thirty-fifth consecutive calendar day following the trade date",
+      "figure": "thirty-fifth consecutive calendar day",
+      "applicability": "security deemed owned under 17 CFR 242.200 with delivery intended when restrictions are removed",
+      "value": "35",
+      "unit": "CALENDAR_DAYS",
+      "requires_caller_opening_time": true
+    }
+  ]
 }

@@ -75,11 +75,18 @@ def source_url(source: Source, as_of: str) -> str:
     return f"{ECFR}/full/{as_of}/title-17.xml?part={part}&section={source.section}"
 
 
-def fetch_all(fetch: Fetch, as_of: str | None, now: datetime) -> dict[str, bytes]:
+def fetch_all(
+    fetch: Fetch,
+    as_of: str | None,
+    now: datetime,
+    source_ids: frozenset[str] | None = None,
+) -> dict[str, bytes]:
     ecfr_as_of = as_of or _ecfr_date(fetch)
     dtg = now.astimezone(UTC).strftime("%Y%m%d%H%M")
     files: dict[str, bytes] = {}
     for source in SOURCES:
+        if source_ids is not None and source.source_id not in source_ids:
+            continue
         url = source_url(source, ecfr_as_of)
         body = fetch(url)
         if not body:
@@ -112,9 +119,16 @@ def main(argv: list[str] | None = None, fetch: Fetch = http_get) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--date", help="eCFR point-in-time date, YYYY-MM-DD")
     parser.add_argument("--out", type=pathlib.Path, default=SOURCES_DIR)
+    parser.add_argument(
+        "--source-id",
+        action="append",
+        choices=[source.source_id for source in SOURCES],
+        help="fetch only this configured source; repeat to select more than one",
+    )
     args = parser.parse_args(argv)
     try:
-        files = fetch_all(fetch, args.date, datetime.now(tz=UTC))
+        source_ids = frozenset(args.source_id) if args.source_id else None
+        files = fetch_all(fetch, args.date, datetime.now(tz=UTC), source_ids)
     except Exception as exc:
         print(f"FETCH FAILED, nothing written: {exc}", file=sys.stderr)
         return 1

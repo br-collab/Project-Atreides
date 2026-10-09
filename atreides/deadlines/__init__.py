@@ -7,6 +7,12 @@ from atreides.deadlines.model import (
     DeadlineRuleTable,
     RuleUnit,
 )
+from atreides.deadlines.rule_204 import (
+    Rule204Assessment,
+    Rule204Fail,
+    Rule204Origin,
+    assess_rule_204,
+)
 from atreides.deadlines.rules import load_rule_table
 from atreides.deadlines.status import assess
 
@@ -15,7 +21,11 @@ __all__ = [
     "DeadlineCalendar",
     "DeadlineRule",
     "DeadlineRuleTable",
+    "Rule204Assessment",
+    "Rule204Fail",
+    "Rule204Origin",
     "RuleUnit",
     "assess",
+    "assess_rule_204",
     "load_rule_table",
 ]
