@@ -97,6 +97,7 @@ from atreides.corporate_actions.lifecycle import (
 )
 from atreides.corporate_actions.movement import (
     CashMovement,
+    MovementAuthorityReference,
     MovementBalances,
     MovementReport,
     SecuritiesMovement,
@@ -165,6 +166,7 @@ __all__ = [
     "MessageFamily",
     "MessageProfile",
     "Milestone",
+    "MovementAuthorityReference",
     "MovementBalances",
     "MovementReport",
     "OptionType",
