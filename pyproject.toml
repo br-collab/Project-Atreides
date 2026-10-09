@@ -46,6 +46,7 @@ include = ["atreides*"]
 # tests/customer_protection/test_package_data.py keeps this list complete.
 [tool.setuptools.package-data]
 "atreides.customer_protection.rules" = ["table.json", "sources/*"]
+"atreides.deadlines.rules" = ["table.json", "sources/*"]
 
 [tool.ruff]
 line-length = 100
