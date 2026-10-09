@@ -9,14 +9,13 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal, Self
+from typing import Literal, Protocol, Self
+from uuid import UUID
 
 from cannae_kernel.actor import ActorRef
 from cannae_kernel.canonical import canonical_bytes
 from cannae_kernel.provenance import Provenance
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-
-from atreides.cockpit.clearing_cockpit import BreakTicket
 
 __all__ = [
     "BreakAction",
@@ -29,6 +28,17 @@ __all__ = [
     "break_record_from_ticket",
     "resolve_break",
 ]
+
+
+class _BreakTicket(Protocol):
+    """Fields the evidence boundary consumes from a cockpit ticket."""
+
+    break_id: str
+    operation_id: UUID
+    regime: StrEnum
+    leg: StrEnum
+    raised_at: datetime
+    dsor_record_id: UUID | None
 
 
 class _Frozen(BaseModel):
@@ -182,7 +192,7 @@ class BreakRecord(_Frozen):
 
 
 def break_record_from_ticket(
-    ticket: BreakTicket,
+    ticket: _BreakTicket,
     *,
     symptom: str,
     sources: tuple[str, ...],
