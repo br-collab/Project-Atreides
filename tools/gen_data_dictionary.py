@@ -44,6 +44,7 @@ SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
             "atreides.dsor.record",
             "atreides.dsor.books",
             "atreides.dsor.client_output",
+            "atreides.dsor.lifecycle_evidence",
         ),
     ),
     (

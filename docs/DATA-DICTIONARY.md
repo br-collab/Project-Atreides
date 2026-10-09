@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**212 of 212 enumeration values (100%) state what they mean in
+**212 of 219 enumeration values (97%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -23,9 +23,15 @@ unattributed registry entry - and the guess will be made by whoever is
 furthest from the decision.
 
 <details>
-<summary>Values with no stated meaning (0)</summary>
+<summary>Values with no stated meaning (7)</summary>
 
-
+- `lifecycle_evidence.EvidenceStage.UNREAD`
+- `lifecycle_evidence.EvidenceStage.EXECUTION_RECEIVED`
+- `lifecycle_evidence.EvidenceStage.FUNDING_SECURED`
+- `lifecycle_evidence.EvidenceStage.SETTLEMENT_FINAL`
+- `lifecycle_evidence.EvidenceStage.BOOKS_POSTED`
+- `lifecycle_evidence.EvidenceStage.OUTPUT_PRODUCED`
+- `lifecycle_evidence.EvidenceStage.OUTPUT_DELIVERED`
 
 </details>
 
@@ -188,6 +194,36 @@ How far client output evidence goes. Produced is not delivered.
 | `UNREAD` | No client output was read. |
 | `PRODUCED` | An output artifact was produced. Produced is not delivered. |
 | `DELIVERED` | Separate delivery evidence says the output was delivered. |
+
+### `atreides.dsor.lifecycle_evidence`
+
+#### `CrossStageAssessment`
+
+One assessment; exception closure remains a separate dimension.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `stage` | `EvidenceStage` | yes | Furthest contiguous evidenced stage. |
+| `disposition` | `Disposition` | yes | Grade of that cross-stage assessment. |
+| `reason` | `str` | yes | Why the grade was reached. |
+| `finality_assertion` | `cannae_kernel.finality.FinalityAssertion \| None` | no | The delivered kernel assertion, present from settlement final onward. |
+| `output_delivered` | `bool` | no | True only when separate delivery evidence is present. |
+| `exception_closure` | `Disposition` | yes | Grade of exception closure, independent of the settlement stage. |
+| `exception_reason` | `str` | yes | Why exception closure did or did not pass. |
+
+#### `EvidenceStage` (enumeration)
+
+Furthest contiguous settlement stage supported by direct evidence.
+
+| Value | Meaning |
+| --- | --- |
+| `UNREAD` |  |
+| `EXECUTION_RECEIVED` |  |
+| `FUNDING_SECURED` |  |
+| `SETTLEMENT_FINAL` |  |
+| `BOOKS_POSTED` |  |
+| `OUTPUT_PRODUCED` |  |
+| `OUTPUT_DELIVERED` |  |
 
 ---
 
