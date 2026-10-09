@@ -7,13 +7,18 @@ from uuid import UUID
 
 import pytest
 from cannae_kernel.actor import ActorId, ActorKind, ActorRef
+from cannae_kernel.provenance import Provenance
 from pydantic import ValidationError
 
 from atreides.cockpit.breaks import (
     BreakRecord,
     BreakState,
+    OwnershipChange,
     ResolutionEvidence,
+    ResolutionEvidenceKind,
+    assign_break_owner,
     break_record_from_ticket,
+    resolve_break,
 )
 from atreides.cockpit.clearing_cockpit import BreakLeg, BreakTicket, PortalRegime
 
@@ -23,9 +28,9 @@ OPERATION_ID = UUID("00000000-0000-0000-0000-000000000111")
 DSOR_ID = UUID("00000000-0000-0000-0000-000000000222")
 
 
-def _actor() -> ActorRef:
+def _actor(suffix: str = "1") -> ActorRef:
     return ActorRef(
-        actor_id=ActorId("act_01M2P20SY00000000000000001"),
+        actor_id=ActorId(f"act_01M2P20SY0000000000000000{suffix}"),
         actor_kind=ActorKind.HUMAN,
         role="settlement operations",
         entitlement_refs=("synthetic:cockpit",),
@@ -45,7 +50,7 @@ def _ticket() -> BreakTicket:
     )
 
 
-def _record(**changes: object) -> BreakRecord:
+def _intake(**changes: object) -> BreakRecord:
     values: dict[str, object] = {
         "ticket": _ticket(),
         "symptom": "cash balance mismatch",
@@ -53,12 +58,27 @@ def _record(**changes: object) -> BreakRecord:
         "difference": "expected 10, actual 9",
         "originating_event_ref": "readback:00000000",
         "cause_class": "UNKNOWN",
-        "owner": _actor(),
-        "owner_absence_reason": None,
+        "owner": None,
+        "owner_absence_reason": "awaiting production owner assignment",
         "sla_target": SLA_TARGET,
     }
     values.update(changes)
     return break_record_from_ticket(**values)  # type: ignore[arg-type]
+
+
+def _record(**changes: object) -> BreakRecord:
+    assigned = assign_break_owner(
+        _intake(),
+        owner=_actor(),
+        changed_by=_actor("2"),
+        changed_at=RAISED_AT + timedelta(minutes=5),
+        provenance=Provenance.HUMAN_JUDGMENT,
+    )
+    if not changes:
+        return assigned
+    values = assigned.model_dump()
+    values.update(changes)
+    return BreakRecord.model_validate(values)
 
 
 def test_resolved_without_resolution_evidence_is_refused() -> None:
@@ -68,8 +88,11 @@ def test_resolved_without_resolution_evidence_is_refused() -> None:
 
 def test_resolved_with_resolution_evidence_is_accepted() -> None:
     evidence = ResolutionEvidence(
+        break_id=_ticket().break_id,
         recorded_at=RAISED_AT + timedelta(hours=1),
         recorded_by=_actor(),
+        provenance=Provenance.HUMAN_JUDGMENT,
+        evidence_kind=ResolutionEvidenceKind.CORRECTIVE_ACTION_VERIFIED,
         evidence_ref="synthetic:reconciliation:1",
         detail="balances match on replay",
     )
@@ -78,17 +101,106 @@ def test_resolved_with_resolution_evidence_is_accepted() -> None:
     assert record.resolution_evidence == evidence
 
 
+def _evidence(**changes: object) -> ResolutionEvidence:
+    values: dict[str, object] = {
+        "break_id": _ticket().break_id,
+        "recorded_at": RAISED_AT + timedelta(hours=1),
+        "recorded_by": _actor("2"),
+        "provenance": Provenance.HUMAN_JUDGMENT,
+        "evidence_kind": ResolutionEvidenceKind.CORRECTIVE_ACTION_VERIFIED,
+        "evidence_ref": "synthetic:corrective-action:1",
+        "detail": "cause corrected and independently replayed",
+    }
+    values.update(changes)
+    return ResolutionEvidence.model_validate(values)
+
+
+def test_closure_requires_investigation_and_break_bound_evidence() -> None:
+    with pytest.raises(ValueError, match="only an investigating"):
+        resolve_break(_record(), evidence=_evidence())
+    investigating = _record(state=BreakState.INVESTIGATING)
+    with pytest.raises(ValueError, match="another break"):
+        resolve_break(
+            investigating,
+            evidence=_evidence(break_id="BRK-ANOTHER"),
+        )
+    resolved = resolve_break(investigating, evidence=_evidence())
+    assert resolved.state is BreakState.RESOLVED
+    assert resolved.resolution_evidence == _evidence()
+
+
+def test_matching_alone_is_not_a_legal_closure_evidence_kind() -> None:
+    with pytest.raises(ValidationError):
+        _evidence(evidence_kind="SETTLEMENT_MATCH")
+
+
+def test_closure_refuses_missing_unauthenticated_or_illegally_timed_evidence() -> None:
+    investigating = _record(state=BreakState.INVESTIGATING)
+    with pytest.raises(ValidationError, match="resolution actor must be authenticated"):
+        _evidence(recorded_by=_actor("3").model_copy(update={"authenticated": False}))
+    with pytest.raises(ValueError, match="predates the current ownership"):
+        resolve_break(
+            investigating,
+            evidence=_evidence(recorded_at=RAISED_AT + timedelta(minutes=1)),
+        )
+    with pytest.raises(ValidationError, match="resolution evidence"):
+        BreakRecord.model_validate({**investigating.model_dump(), "state": BreakState.RESOLVED})
+
+
 def test_absent_owner_is_explicit_and_survives_round_trip() -> None:
-    record = _record(owner=None, owner_absence_reason="no owner recorded")
+    record = _intake()
     replayed = BreakRecord.model_validate_json(record.model_dump_json())
     assert replayed.owner is None
     assert replayed.owner_missing is True
-    assert replayed.owner_absence_reason == "no owner recorded"
+    assert replayed.owner_absence_reason == "awaiting production owner assignment"
+    assert replayed.state is BreakState.INTAKE_UNASSIGNED
 
 
 def test_absent_owner_without_reason_is_refused() -> None:
     with pytest.raises(ValidationError, match="explicit absence reason"):
-        _record(owner=None, owner_absence_reason=None)
+        _intake(owner_absence_reason=None)
+
+
+def test_actionable_ownerless_break_is_refused() -> None:
+    with pytest.raises(ValidationError, match="fail-closed intake"):
+        _intake(state=BreakState.OPEN)
+
+
+def test_assignment_and_reassignment_are_attributable_and_contiguous() -> None:
+    first = _record()
+    second_owner = _actor("3")
+    reassigned = assign_break_owner(
+        first,
+        owner=second_owner,
+        changed_by=_actor("2"),
+        changed_at=RAISED_AT + timedelta(minutes=10),
+        provenance=Provenance.HUMAN_JUDGMENT,
+    )
+    assert reassigned.owner == second_owner
+    assert reassigned.state is BreakState.OPEN
+    assert len(reassigned.ownership_history) == 2
+    assert reassigned.ownership_history[1].previous_owner == _actor()
+    assert reassigned.ownership_history[1].changed_by == _actor("2")
+
+
+def test_assignment_refuses_unauthenticated_actor_and_same_owner() -> None:
+    unauthenticated = _actor("3").model_copy(update={"authenticated": False})
+    with pytest.raises(ValidationError, match="must be authenticated"):
+        assign_break_owner(
+            _intake(),
+            owner=_actor(),
+            changed_by=unauthenticated,
+            changed_at=RAISED_AT,
+            provenance=Provenance.HUMAN_JUDGMENT,
+        )
+    with pytest.raises(ValidationError, match="different owner"):
+        OwnershipChange(
+            changed_at=RAISED_AT,
+            changed_by=_actor("2"),
+            previous_owner=_actor(),
+            assigned_owner=_actor(),
+            provenance=Provenance.HUMAN_JUDGMENT,
+        )
 
 
 def test_same_inputs_produce_identical_canonical_bytes() -> None:
@@ -104,5 +216,5 @@ def test_same_inputs_produce_identical_canonical_bytes() -> None:
 
 def test_builder_does_not_change_ticket_status() -> None:
     ticket = _ticket()
-    _record(ticket=ticket)
+    _intake(ticket=ticket)
     assert ticket.status == "OPEN_ON_WORKBENCH"
