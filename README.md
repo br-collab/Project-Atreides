@@ -341,7 +341,7 @@ names:
 | --- | --- | --- | --- |
 | U.S. Treasury / FICC | GROSS_FINAL — queues, WILL_QUEUE | FICC GSD, Fedwire Securities | **Built** |
 | Equities | DEFERRED_NET — finality at end-of-day netting | Continuous net settlement, central depository | **Netting, fails and corporate-action overlay built**; market profiles unpopulated |
-| Digital assets | LEDGER_FINAL — no queue; atomic DvP | Tokenized DvP; DTCC Tokenization Service-aware | Next build |
+| Digital assets | LEDGER_FINAL — no queue; atomic DvP | Tokenized DvP; DTCC Tokenization Service-aware | Tokenized custody contracts and tokenized cash rails built; tokenized MMF with XRPL testnet DvP in Aureon; Atreides LEDGER_FINAL rail gates next. |
 | Credit | Gross / deferred hybrid; TRACE reporting obligation | DTC / NSCC | Next build |
 | FX | CORRESPONDENT_DEPENDENT — PvP; finality not directly observable | CLS, correspondent network | Following build |
 | Event contracts | DETERMINATION_DEPENDENT — obligation-level; rail finality holds, entitlement is revocable | DCM-listed event contract venues | Contracts and gate branches built; venue profiles unpopulated |
