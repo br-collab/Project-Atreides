@@ -33,12 +33,23 @@ __all__ = [
 class _BreakTicket(Protocol):
     """Fields the evidence boundary consumes from a cockpit ticket."""
 
-    break_id: str
-    operation_id: UUID
-    regime: StrEnum
-    leg: StrEnum
-    raised_at: datetime
-    dsor_record_id: UUID | None
+    @property
+    def break_id(self) -> str: ...
+
+    @property
+    def operation_id(self) -> UUID: ...
+
+    @property
+    def regime(self) -> StrEnum: ...
+
+    @property
+    def leg(self) -> StrEnum: ...
+
+    @property
+    def raised_at(self) -> datetime: ...
+
+    @property
+    def dsor_record_id(self) -> UUID | None: ...
 
 
 class _Frozen(BaseModel):
