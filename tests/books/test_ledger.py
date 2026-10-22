@@ -267,6 +267,24 @@ def test_protection_classification_covers_fully_paid_and_closed_positions() -> N
     )
     assert closed.control.issues[0].fully_paid == 0
 
+    firm_books = EquitiesBooks(break_owner="owner")
+    firm_lines = tuple(
+        line.model_copy(update={"account_id": "FIRM", "account_type": AccountType.FIRM_PROPRIETARY})
+        if line.account_type is AccountType.CUSTOMER_MARGIN
+        else line
+        for line in entry().lines
+    )
+    firm_books.post(entry("3", "firm-entry", lines=firm_lines))
+    firm = project_customer_protection(
+        firm_books,
+        as_of=date(2026, 10, 22),
+        prices={"ACME": Decimal(100)},
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=(),
+    )
+    assert firm.control.issues[0].fully_paid == 0
+
 
 def _reserve_entry(
     *,
