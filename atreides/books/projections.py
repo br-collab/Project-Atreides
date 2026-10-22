@@ -6,11 +6,11 @@ import json
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict
 
-from atreides.books.ledger import AccountType, EquitiesBooks, RecordSide
+from atreides.books.ledger import AccountType, EquitiesBooks, RecordSide, ReserveActivity
 from atreides.customer_protection.control import ControlInputs, Holding, IssueRequirement
 from atreides.customer_protection.net_capital import (
     AssetClass,
@@ -27,7 +27,18 @@ from atreides.customer_protection.reserve import (
     ReserveAccounts,
     ReserveInputs,
 )
+from atreides.deadlines.calendar import MarketCalendar
 from atreides.margin.engine import MarginAccount, MarginPosition
+
+
+class ProjectionExclusion(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    source_event_id: str
+    account_type: AccountType
+    issue: str
+    activity: ReserveActivity
+    reason: str
+    age_calendar_days: int | None = None
 
 
 class ProjectionAudit(BaseModel):
@@ -37,11 +48,14 @@ class ProjectionAudit(BaseModel):
     not_derived: tuple[str, ...]
     reasons: dict[str, str]
     books_digest: str
+    review_label: Literal["FINOP review required"] = "FINOP review required"
+    exclusions: tuple[ProjectionExclusion, ...] = ()
 
 
 class ProtectionInputs(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     reserve: ReserveInputs
+    pab_reserve: ReserveInputs
     net_capital: NetCapitalInputs
     control: ControlInputs
     audit: ProjectionAudit
@@ -52,18 +66,20 @@ def _mapping() -> dict[str, object]:
     return cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
 
 
-def project_customer_protection(
+def project_customer_protection(  # noqa: PLR0915 - each projection source remains explicit
     books: EquitiesBooks,
     *,
     as_of: date,
     prices: dict[str, Decimal],
     net_worth: Decimal,
+    calendar: MarketCalendar,
 ) -> ProtectionInputs:
     """Build all three engine inputs from the same journal replay."""
     mapping = _mapping()
-    lines: dict[str, Decimal | None] = {
+    customer_lines: dict[str, Decimal | None] = {
         rule_id: None for rule_id in (*EXHIBIT_A_CREDITS, *EXHIBIT_A_DEBITS)
     }
+    pab_lines = customer_lines.copy()
     customer_cash: dict[str, Decimal] = {}
     positions: dict[str, Decimal] = {}
     holdings: dict[str, list[Holding]] = {}
@@ -99,27 +115,74 @@ def project_customer_protection(
         (max(-balance, Decimal(0)) for balance in customer_cash.values()), Decimal(0)
     )
     free_credits = sum((max(balance, Decimal(0)) for balance in customer_cash.values()), Decimal(0))
-    fail_to_receive = Decimal(0)
-    stock_borrowed = Decimal(0)
-    fail_to_deliver = Decimal(0)
+    exclusions: list[ProjectionExclusion] = []
+    special_rule = {
+        AccountType.FAIL_TO_RECEIVE: str(mapping["customer_fail_to_receive_rule_id"]),
+        AccountType.STOCK_BORROWED: str(mapping["customer_stock_borrowed_rule_id"]),
+        AccountType.FAIL_TO_DELIVER: str(mapping["customer_fail_to_deliver_rule_id"]),
+    }
+
+    def add_line(target: dict[str, Decimal | None], rule_id: str, amount: Decimal) -> None:
+        target[rule_id] = (target[rule_id] or Decimal(0)) + amount
+
     for entry in books.entries:
+        source_facts = {
+            (fact.account_type, fact.issue): fact for fact in entry.reserve_source_facts
+        }
         for line in entry.lines:
-            if line.issue is None:
+            if line.issue is None or line.account_type not in special_rule:
                 continue
-            market_value = abs(line.quantity) * prices[line.issue]
-            if line.account_type is AccountType.FAIL_TO_RECEIVE:
-                fail_to_receive += market_value
-            elif line.account_type is AccountType.STOCK_BORROWED:
-                stock_borrowed += market_value
-            elif line.account_type is AccountType.FAIL_TO_DELIVER:
-                fail_to_deliver += market_value
-    lines[str(mapping["customer_free_credit_rule_id"])] = free_credits
-    lines[str(mapping["customer_fail_to_receive_rule_id"])] = fail_to_receive
-    lines[str(mapping["customer_margin_debit_rule_id"])] = customer_debits
-    lines[str(mapping["customer_stock_borrowed_rule_id"])] = stock_borrowed
-    lines[str(mapping["customer_fail_to_deliver_rule_id"])] = fail_to_deliver
-    derived = tuple(sorted(rule_id for rule_id, value in lines.items() if value is not None))
-    not_derived = tuple(sorted(rule_id for rule_id, value in lines.items() if value is None))
+            fact = source_facts[(line.account_type, line.issue)]
+            if not calendar.is_business_day(fact.settlement_date):
+                raise ValueError("reserve source settlement date must be a loaded business day")
+            age = (as_of - fact.settlement_date).days
+            if age < 0:
+                raise ValueError("reserve source settlement date cannot be after the computation")
+            contract_value = abs(line.quantity) * fact.contract_price
+            if line.account_type is AccountType.FAIL_TO_DELIVER and age > 30:
+                exclusions.append(
+                    ProjectionExclusion(
+                        source_event_id=entry.source_event_id,
+                        account_type=line.account_type,
+                        issue=line.issue,
+                        activity=fact.activity,
+                        reason="fail to deliver older than 30 calendar days excluded from item 12",
+                        age_calendar_days=age,
+                    )
+                )
+                continue
+            value = contract_value
+            if line.account_type is AccountType.FAIL_TO_RECEIVE and age > 30:
+                market_value = abs(line.quantity) * prices[line.issue]
+                value += max(market_value - contract_value, Decimal(0))
+            target = (
+                customer_lines
+                if fact.activity is ReserveActivity.CUSTOMER
+                else pab_lines
+                if fact.activity is ReserveActivity.PAB
+                else None
+            )
+            if target is None:
+                exclusions.append(
+                    ProjectionExclusion(
+                        source_event_id=entry.source_event_id,
+                        account_type=line.account_type,
+                        issue=line.issue,
+                        activity=fact.activity,
+                        reason="firm proprietary activity is outside customer and PAB computations",
+                        age_calendar_days=age,
+                    )
+                )
+                continue
+            add_line(target, special_rule[line.account_type], value)
+    customer_lines[str(mapping["customer_free_credit_rule_id"])] = free_credits
+    customer_lines[str(mapping["customer_margin_debit_rule_id"])] = customer_debits
+    derived = tuple(
+        sorted(rule_id for rule_id, value in customer_lines.items() if value is not None)
+    )
+    not_derived = tuple(
+        sorted(rule_id for rule_id, value in customer_lines.items() if value is None)
+    )
     reasons = {
         rule_id: "not derivable from currently wired equities sources" for rule_id in not_derived
     }
@@ -128,7 +191,18 @@ def project_customer_protection(
         as_of=as_of,
         standard=NetCapitalStandard.ALTERNATIVE,
         mode=ComputationMode.WEEKLY,
-        lines=tuple(LineBalance(rule_id=key, amount=value) for key, value in lines.items()),
+        lines=tuple(
+            LineBalance(rule_id=key, amount=value) for key, value in customer_lines.items()
+        ),
+        average_total_credits=None,
+        qualified_securities_deposit=None,
+    )
+    pab_reserve = ReserveInputs(
+        accounts=ReserveAccounts.PAB,
+        as_of=as_of,
+        standard=NetCapitalStandard.ALTERNATIVE,
+        mode=ComputationMode.WEEKLY,
+        lines=tuple(LineBalance(rule_id=key, amount=value) for key, value in pab_lines.items()),
         average_total_credits=None,
         qualified_securities_deposit=None,
     )
@@ -171,8 +245,15 @@ def project_customer_protection(
         not_derived=not_derived,
         reasons=reasons,
         books_digest=books.digest(),
+        exclusions=tuple(exclusions),
     )
-    return ProtectionInputs(reserve=reserve, net_capital=net_capital, control=control, audit=audit)
+    return ProtectionInputs(
+        reserve=reserve,
+        pab_reserve=pab_reserve,
+        net_capital=net_capital,
+        control=control,
+        audit=audit,
+    )
 
 
 def project_margin_accounts(

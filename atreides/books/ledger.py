@@ -54,6 +54,32 @@ class PostingSource(StrEnum):
     REVERSAL = "REVERSAL"
 
 
+class ReserveActivity(StrEnum):
+    CUSTOMER = "CUSTOMER"
+    PAB = "PAB"
+    FIRM = "FIRM"
+
+
+class ReserveSourceFact(_Frozen):
+    """Source-trade facts needed to classify and value Exhibit A lines."""
+
+    account_type: AccountType
+    issue: str = Field(min_length=1)
+    activity: ReserveActivity
+    settlement_date: date
+    contract_price: Decimal = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _is_reserve_source(self) -> Self:
+        if self.account_type not in {
+            AccountType.FAIL_TO_RECEIVE,
+            AccountType.STOCK_BORROWED,
+            AccountType.FAIL_TO_DELIVER,
+        }:
+            raise ValueError("reserve source fact must name a fail or stock borrow account type")
+        return self
+
+
 class LedgerLine(_Frozen):
     account_id: str = Field(min_length=1)
     account_type: AccountType
@@ -85,6 +111,7 @@ class JournalEntry(_Frozen):
     authority: str = Field(min_length=1)
     lines: tuple[LedgerLine, ...] = Field(min_length=2)
     posting: BooksPosting
+    reserve_source_facts: tuple[ReserveSourceFact, ...] = ()
     reverses_entry_id: str | None = None
     synthetic: bool = False
 
@@ -112,6 +139,19 @@ class JournalEntry(_Frozen):
             raise ValueError("only a reversal may name a reversed entry")
         if self.source is PostingSource.MARGIN_INTEREST and not self.synthetic:
             raise ValueError("margin interest accrual must be labelled synthetic")
+        reserve_lines = {
+            (line.account_type, line.issue)
+            for line in self.lines
+            if line.account_type
+            in {
+                AccountType.FAIL_TO_RECEIVE,
+                AccountType.STOCK_BORROWED,
+                AccountType.FAIL_TO_DELIVER,
+            }
+        }
+        reserve_facts = {(fact.account_type, fact.issue) for fact in self.reserve_source_facts}
+        if reserve_lines != reserve_facts:
+            raise ValueError("every fail and stock borrow line requires one matching source fact")
         return self
 
 

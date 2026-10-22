@@ -18,6 +18,8 @@ from atreides.books.ledger import (
     LedgerLine,
     PostingSource,
     RecordSide,
+    ReserveActivity,
+    ReserveSourceFact,
 )
 from atreides.books.projections import project_customer_protection, project_margin_accounts
 from atreides.customer_protection.control import check_possession_or_control
@@ -88,6 +90,7 @@ def _entry(
     basis: str,
     *,
     synthetic: bool = False,
+    reserve_source_facts: tuple[ReserveSourceFact, ...] = (),
 ) -> JournalEntry:
     alphabet = "12345678ABCDEFGHJKMNPQRSTVWXYZ"
     event_id = EventId("evt_0" + alphabet[number] * 25)
@@ -107,6 +110,7 @@ def _entry(
             source_event_id=event_id,
             provenance=Provenance.FACT_SYNTHETIC,
         ),
+        reserve_source_facts=reserve_source_facts,
         synthetic=synthetic,
     )
 
@@ -273,10 +277,43 @@ def _post_scenario(books: EquitiesBooks, at: datetime) -> None:
             ),
         ),
     )
+    reserve_sources = {
+        5: (
+            ReserveSourceFact(
+                account_type=AccountType.FAIL_TO_DELIVER,
+                issue="ACME",
+                activity=ReserveActivity.CUSTOMER,
+                settlement_date=at.date(),
+                contract_price=Decimal(100),
+            ),
+            ReserveSourceFact(
+                account_type=AccountType.FAIL_TO_RECEIVE,
+                issue="ACME",
+                activity=ReserveActivity.CUSTOMER,
+                settlement_date=at.date(),
+                contract_price=Decimal(100),
+            ),
+        ),
+        6: (
+            ReserveSourceFact(
+                account_type=AccountType.STOCK_BORROWED,
+                issue="PENNY",
+                activity=ReserveActivity.CUSTOMER,
+                settlement_date=at.date(),
+                contract_price=Decimal(4),
+            ),
+        ),
+    }
     for number, (source, basis, lines) in enumerate(entries, 1):
         books.post(
             _entry(
-                number, source, lines, at, basis, synthetic=source is PostingSource.MARGIN_INTEREST
+                number,
+                source,
+                lines,
+                at,
+                basis,
+                synthetic=source is PostingSource.MARGIN_INTEREST,
+                reserve_source_facts=reserve_sources.get(number, ()),
             )
         )
 
@@ -319,13 +356,20 @@ def build_equities_publications(taken_at: datetime) -> dict[str, bytes]:
         accounts=accounts,
     )
     protection_inputs = project_customer_protection(
-        books, as_of=taken_at.date(), prices=MOVED_PRICES, net_worth=Decimal(10_000_000)
+        books,
+        as_of=taken_at.date(),
+        prices=MOVED_PRICES,
+        net_worth=Decimal(10_000_000),
+        calendar=calendar,
     )
     rules = load_rule_table()
     protection = {
         "books_digest": protection_inputs.audit.books_digest,
         "projection": protection_inputs.audit.model_dump(mode="json"),
         "reserve": compute_reserve(protection_inputs.reserve, rules).model_dump(mode="json"),
+        "pab_reserve": compute_reserve(protection_inputs.pab_reserve, rules).model_dump(
+            mode="json"
+        ),
         "net_capital": compute_net_capital(protection_inputs.net_capital, rules).model_dump(
             mode="json"
         ),
