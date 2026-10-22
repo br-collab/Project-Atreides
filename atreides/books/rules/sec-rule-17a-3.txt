@@ -1,0 +1,40 @@
+Source: electronic Code of Federal Regulations, 17 CFR 240.17a-3(a)(1)-(5)
+URL: https://www.ecfr.gov/current/title-17/chapter-II/part-240/section-240.17a-3
+eCFR issue date: 2026-10-20
+Retrieved: 2026-10-22
+
+(a) Every member of a national securities exchange who transacts a business in securities
+directly with others than members of a national securities exchange, every broker or dealer who
+transacts a business in securities through the medium of any such member, and every broker or
+dealer registered pursuant to section 15 of the Act must make and keep current the following
+books and records relating to its business:
+
+(1) Blotters (or other records of original entry) containing an itemized daily record of all
+purchases and sales of securities, all receipts and deliveries of securities, all receipts and
+disbursements of cash and all other debits and credits. Such records must show the account for
+which each purchase or sale was effected, the name and amount of securities, the unit and
+aggregate purchase or sale price, the trade date, and the counterparty designation.
+
+(2) Ledgers (or other records) reflecting all assets and liabilities, income and expense and
+capital accounts.
+
+(3) Ledger accounts (or other records) itemizing separately as to each cash or margin account of
+every customer and of the member, broker or dealer and its partners, all purchases, sales,
+receipts and deliveries of securities and commodities for the account, and all other debits and
+credits to the account.
+
+(4) Ledgers (or other records) reflecting securities in transfer; dividends and interest
+received; securities borrowed and securities loaned; moneys borrowed and moneys loaned;
+securities failed to receive and failed to deliver; all long and short securities record
+differences; and repurchase and reverse repurchase agreements.
+
+(5) A securities record or ledger reflecting separately for each security, as of the clearance
+dates, all long or short positions carried by the member, broker or dealer for its account or for
+the account of customers, partners, or others, and showing the location of all securities long
+and the offsetting position to all securities short, including long and short security count
+differences, and the account in which each position is carried.
+
+Scope note: This pinned excerpt retains the provisions implemented by EQ-1's journal and
+two-sided stock record. The authoritative eCFR source above controls; this file is evidence, not
+legal advice and not a representation that the implementation satisfies every part of Rule
+17a-3.

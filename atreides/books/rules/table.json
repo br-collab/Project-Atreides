@@ -1,0 +1,11 @@
+{
+  "schema_version": "atreides.books_rule_sources/1",
+  "rules": [
+    {
+      "rule_id": "sec.17a-3.books-and-securities-record",
+      "citation": "17 CFR 240.17a-3(a)(1)-(5)",
+      "source_file": "sec-rule-17a-3.txt",
+      "source_sha256": "187ba7285d79a0ef49a9d678e0319d485fe4ba49413bbb76752c95299ab378d7"
+    }
+  ]
+}
