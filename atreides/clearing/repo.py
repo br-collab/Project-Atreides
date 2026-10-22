@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Decimal
 from enum import StrEnum
 from typing import Self, cast
 
@@ -101,9 +101,14 @@ class RepoTrade(_Model):
         if self.close_date is None:
             return None
         days = Decimal((self.close_date - self.start_date).days)
-        return self.start_money + self.start_money * self.repo_rate_percent / Decimal(
-            100
-        ) * days / Decimal(self.day_count_basis)
+        return (
+            self.start_money
+            + self.start_money
+            * self.repo_rate_percent
+            / Decimal(100)
+            * days
+            / Decimal(self.day_count_basis)
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
 
 
 class RepoLegObligation(_Model):

@@ -361,10 +361,12 @@ def build_equities_publications(taken_at: datetime) -> dict[str, bytes]:
         prices=MOVED_PRICES,
         net_worth=Decimal(10_000_000),
         calendar=calendar,
+        margin_results=moved_results,
     )
     rules = load_rule_table()
     protection = {
         "books_digest": protection_inputs.audit.books_digest,
+        "firm_profile": protection_inputs.firm_profile.model_dump(mode="json"),
         "projection": protection_inputs.audit.model_dump(mode="json"),
         "reserve": compute_reserve(protection_inputs.reserve, rules).model_dump(mode="json"),
         "pab_reserve": compute_reserve(protection_inputs.pab_reserve, rules).model_dump(
@@ -456,7 +458,7 @@ def build_equities_publications(taken_at: datetime) -> dict[str, bytes]:
         ),
         "equities-protection-from-books.json": _json(
             {
-                "schema_version": "atreides.equities_protection_from_books/2",
+                "schema_version": "atreides.equities_protection_from_books/3",
                 "as_of": taken_at.isoformat(),
                 "synthetic": True,
                 **protection,
