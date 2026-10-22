@@ -318,8 +318,11 @@ provable correctness.
   against a depository movement confirmation is a separate module and is
   built.
 - **FICC GSD post-netting operations.** Treasury access assessment, novation and
-  member/CUSIP/settlement-date netting are built. Fails, close out, buy in and
-  intraday FICC funding are not built.
+  member/CUSIP/settlement-date delivery-versus-payment netting are built from the
+  FICC member seat. Each position carries conserved signed par and signed settlement
+  money with currency and lineage. A mixed-member request is indeterminate rather
+  than being presented as an unbalanced central-counterparty view. Fails, close out,
+  buy in and intraday FICC funding are not built.
 - **Cause diagnosis.** Evidence assembly is built; ranking causes against a
   closed inventory is specified and not yet implemented.
 - **Multi-party authority ceremonies** — specified, deliberately inactive
@@ -342,7 +345,7 @@ names:
 
 | Rail | Finality class exercised | Venue complex | Status |
 | --- | --- | --- | --- |
-| U.S. Treasury / FICC | GROSS_FINAL for bilateral gross; separately recorded instruction and finality after FICC netting | FICC GSD, Fedwire Securities | **Bilateral gross and FICC GSD novation/netting built**; fails, close out, buy in and intraday FICC funding not built |
+| U.S. Treasury / FICC | GROSS_FINAL for bilateral gross; separately recorded instruction and finality after FICC netting | FICC GSD, Fedwire Securities | **Bilateral gross and member-seat FICC GSD novation/netting of both par and settlement money built**; fails, close out, buy in and intraday FICC funding not built |
 | Equities | DEFERRED_NET — finality at end-of-day netting | Continuous net settlement, central depository | **Netting, fails and corporate-action overlay built**; market profiles unpopulated |
 | Digital assets | LEDGER_FINAL — no queue; atomic DvP | Tokenized DvP; DTCC Tokenization Service-aware | Tokenized custody contracts and tokenized cash rails built; tokenized MMF with XRPL testnet DvP in Aureon; Atreides LEDGER_FINAL rail gates next. |
 | Credit | Gross / deferred hybrid; TRACE reporting obligation | DTC / NSCC | Next build |

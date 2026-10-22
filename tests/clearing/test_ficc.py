@@ -28,6 +28,7 @@ from atreides.clearing.ficc import (
     FiccGsdNettingDocument,
     FiccGsdNettingRequest,
     NovatedObligation,
+    ObservationSeat,
     produce_ficc_gsd_result,
 )
 
@@ -98,6 +99,7 @@ def _obligation(
     trade_id: str,
     member_id: str,
     quantity: str,
+    settlement_amount: str,
     *,
     cusip: str = "91282CJL6",
     settlement_date: date = SETTLEMENT_DATE,
@@ -109,6 +111,8 @@ def _obligation(
         cusip=cusip,
         settlement_date=settlement_date,
         signed_quantity=Decimal(quantity),
+        signed_settlement_amount=Decimal(settlement_amount),
+        settlement_currency="USD",
         novation_evidence_id=f"novation-{obligation_id}",
     )
 
@@ -128,9 +132,8 @@ def _request(
         clearing_agency=agency,
         access=determination,
         obligations=(
-            _obligation("obligation-1", "trade-1", "member-a", "100"),
-            _obligation("obligation-2", "trade-2", "member-a", "-35"),
-            _obligation("obligation-3", "trade-3", "member-b", "-65"),
+            _obligation("obligation-1", "trade-1", "member-a", "100", "-99.00"),
+            _obligation("obligation-2", "trade-2", "member-a", "-35", "34.65"),
         ),
         clearing_acceptance_evidence_id="acceptance-1",
         netting_evidence_id="netting-1",
@@ -165,16 +168,40 @@ def test_cme_is_declared_but_its_rules_are_not_built() -> None:
     assert result.reason == "clearing agency declared, rules not built"
 
 
-def test_netting_conserves_quantity_by_member_cusip_and_date_with_full_lineage() -> None:
+def test_member_seat_conserves_both_legs_with_full_lineage() -> None:
     result = produce_ficc_gsd_result(_request())
     assert result.payload is not None
     document = FiccGsdNettingDocument.model_validate_json(result.payload)
-    positions = {position.member_id: position for position in document.net_settlement_obligations}
-    assert positions["member-a"].net_quantity == Decimal("65")
-    assert positions["member-b"].net_quantity == Decimal("-65")
-    assert sum((position.net_quantity for position in positions.values()), Decimal(0)) == 0
-    assert positions["member-a"].source_obligation_ids == ("obligation-1", "obligation-2")
-    assert positions["member-a"].source_trade_ids == ("trade-1", "trade-2")
+    assert document.observation_seat is ObservationSeat.FICC_MEMBER
+    assert document.observed_member_id == "member-a"
+    assert len(document.net_settlement_obligations) == 1
+    position = document.net_settlement_obligations[0]
+    assert position.net_quantity == Decimal("65")
+    assert position.net_settlement_amount == Decimal("-64.35")
+    assert position.settlement_currency == "USD"
+    assert position.net_quantity == sum(
+        (item.signed_quantity for item in document.novated_obligations), Decimal(0)
+    )
+    assert position.net_settlement_amount == sum(
+        (item.signed_settlement_amount for item in document.novated_obligations), Decimal(0)
+    )
+    assert position.source_obligation_ids == ("obligation-1", "obligation-2")
+    assert position.source_trade_ids == ("trade-1", "trade-2")
+
+
+def test_member_seat_refuses_a_mixed_member_request() -> None:
+    request = _request().model_copy(
+        update={
+            "obligations": (
+                *_request().obligations,
+                _obligation("obligation-3", "trade-3", "member-b", "-65", "64.35"),
+            )
+        }
+    )
+    result = produce_ficc_gsd_result(request)
+    assert result.status is ClearingStatus.INDETERMINATE
+    assert result.reason is not None
+    assert "member-seat result" in result.reason
 
 
 def test_each_fact_has_its_own_evidence_and_no_stage_implies_the_next() -> None:
@@ -185,7 +212,7 @@ def test_each_fact_has_its_own_evidence_and_no_stage_implies_the_next() -> None:
 
     assert facts[EvidenceStage.CLEARING_ACCEPTANCE].evidence_id == "acceptance-1"
     assert facts[EvidenceStage.NOVATION].evidence_id == (
-        "novation-obligation-1,novation-obligation-2,novation-obligation-3"
+        "novation-obligation-1,novation-obligation-2"
     )
     assert facts[EvidenceStage.NETTING].evidence_id == "netting-1"
     assert facts[EvidenceStage.SETTLEMENT_INSTRUCTION].status is FactStatus.NOT_RECORDED
@@ -218,13 +245,14 @@ def test_grouping_never_crosses_cusip_or_settlement_date() -> None:
     request = _request().model_copy(
         update={
             "obligations": (
-                _obligation("a", "trade-a", "member-a", "10"),
-                _obligation("b", "trade-b", "member-a", "20", cusip="91282CJM4"),
+                _obligation("a", "trade-a", "member-a", "10", "-9.90"),
+                _obligation("b", "trade-b", "member-a", "20", "-19.80", cusip="91282CJM4"),
                 _obligation(
                     "c",
                     "trade-c",
                     "member-a",
                     "30",
+                    "-29.70",
                     settlement_date=date(2026, 10, 23),
                 ),
             )
