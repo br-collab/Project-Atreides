@@ -29,6 +29,7 @@ __all__ = [
     "FiccGsdResultHeader",
     "NetSettlementObligation",
     "NovatedObligation",
+    "ObservationSeat",
     "produce_ficc_gsd_result",
 ]
 
@@ -47,6 +48,12 @@ class ClearingAgency(StrEnum):
 class ClearingStatus(StrEnum):
     ESTABLISHED = "ESTABLISHED"
     INDETERMINATE = "INDETERMINATE"
+
+
+class ObservationSeat(StrEnum):
+    """Perspective represented by the net settlement result."""
+
+    FICC_MEMBER = "FICC_MEMBER"
 
 
 class EvidenceStage(StrEnum):
@@ -89,12 +96,18 @@ class NovatedObligation(_Model):
     cusip: str = Field(pattern=r"^[0-9A-Z*@#]{9}$")
     settlement_date: date
     signed_quantity: Decimal
+    signed_settlement_amount: Decimal
+    settlement_currency: str = Field(pattern=r"^[A-Z]{3}$")
     novation_evidence_id: str = Field(min_length=1)
 
     @model_validator(mode="after")
     def _quantity_and_lineage_are_real(self) -> Self:
         if self.signed_quantity == 0:
             raise ValueError("a novated obligation cannot have zero quantity")
+        if self.signed_settlement_amount == 0:
+            raise ValueError("a DvP obligation cannot have zero settlement amount")
+        if self.signed_quantity * self.signed_settlement_amount > 0:
+            raise ValueError("security and money legs must have opposite signs")
         if len(set(self.trade_ids)) != len(self.trade_ids):
             raise ValueError("trade_ids must be unique within an obligation")
         return self
@@ -107,6 +120,8 @@ class NetSettlementObligation(_Model):
     cusip: str
     settlement_date: date
     net_quantity: Decimal
+    net_settlement_amount: Decimal
+    settlement_currency: str = Field(pattern=r"^[A-Z]{3}$")
     source_obligation_ids: tuple[str, ...] = Field(min_length=1)
     source_trade_ids: tuple[str, ...] = Field(min_length=1)
 
@@ -131,9 +146,11 @@ class FiccGsdNettingRequest(_Model):
 
 
 class FiccGsdNettingDocument(_Model):
-    schema_version: str = "atreides.ficc_gsd_netting/1"
+    schema_version: str = "atreides.ficc_gsd_netting/2"
     clearing_agency: ClearingAgency
     clearing_method: str = "FICC_GSD_NOVATED_NETTED"
+    observation_seat: ObservationSeat = ObservationSeat.FICC_MEMBER
+    observed_member_id: str = Field(min_length=1)
     access_path: str
     rule_set_version: str
     processing_calendar_id: str
@@ -143,7 +160,7 @@ class FiccGsdNettingDocument(_Model):
 
 
 class FiccGsdResultHeader(_Model):
-    schema_version: str = "atreides.ficc_gsd_netting_header/1"
+    schema_version: str = "atreides.ficc_gsd_netting_header/2"
     payload_digest: Digest
     clearing_agency: ClearingAgency
     clearing_method: str = "FICC_GSD_NOVATED_NETTED"
@@ -186,6 +203,10 @@ def _net(obligations: tuple[NovatedObligation, ...]) -> tuple[NetSettlementOblig
                 cusip=cusip,
                 settlement_date=settlement_date,
                 net_quantity=sum((item.signed_quantity for item in members), Decimal(0)),
+                net_settlement_amount=sum(
+                    (item.signed_settlement_amount for item in members), Decimal(0)
+                ),
+                settlement_currency=members[0].settlement_currency,
                 source_obligation_ids=tuple(sorted(item.obligation_id for item in members)),
                 source_trade_ids=tuple(
                     sorted(trade_id for item in members for trade_id in item.trade_ids)
@@ -213,9 +234,32 @@ def produce_ficc_gsd_result(request: FiccGsdNettingRequest) -> FiccGsdResult:
     if arrangement is None:  # Defensive even though AccessDetermination validates this.
         return FiccGsdResult(status=ClearingStatus.INDETERMINATE, reason="access is absent")
 
+    observed_member_id = arrangement.clearing_member.party_id
+    member_ids = {item.member_id for item in request.obligations}
+    if member_ids != {observed_member_id}:
+        return FiccGsdResult(
+            status=ClearingStatus.INDETERMINATE,
+            reason=(
+                "member-seat result requires every obligation to belong to clearing member "
+                f"{observed_member_id}; received {','.join(sorted(member_ids))}"
+            ),
+        )
+
+    currencies_by_position: dict[tuple[str, str, date], set[str]] = defaultdict(set)
+    for obligation in request.obligations:
+        currencies_by_position[
+            (obligation.member_id, obligation.cusip, obligation.settlement_date)
+        ].add(obligation.settlement_currency)
+    if any(len(currencies) != 1 for currencies in currencies_by_position.values()):
+        return FiccGsdResult(
+            status=ClearingStatus.INDETERMINATE,
+            reason="one member/CUSIP/settlement-date position cannot mix settlement currencies",
+        )
+
     novation_ids = sorted({item.novation_evidence_id for item in request.obligations})
     document = FiccGsdNettingDocument(
         clearing_agency=request.clearing_agency,
+        observed_member_id=observed_member_id,
         access_path=arrangement.path.value,
         rule_set_version=arrangement.rule_set_version,
         processing_calendar_id=arrangement.processing_calendar_id,
