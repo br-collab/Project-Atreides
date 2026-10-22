@@ -18,6 +18,16 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from atreides.deadlines.calendar import DeadlineCalendar
 
+# 12 CFR Part 220 and FINRA Rule 4210(c), quoted from the pinned sources beside
+# the calculation they govern.
+REG_T_INITIAL_MARGIN_PARAGRAPH = (
+    "The maximum loan value of a margin equity security is fifty per cent of its "
+    "current market value."
+)
+FINRA_4210_MAINTENANCE_PARAGRAPH = (
+    "25 percent of the current market value of all margin securities long in the account."
+)
+
 
 class _Frozen(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")

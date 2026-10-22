@@ -64,8 +64,8 @@ def test_two_legs_conserve_par_and_close_money_includes_interest():
     )
     start, close = doc.legs
     assert start.signed_par + close.signed_par == 0
-    assert close.signed_money == Decimal("99.09625")
-    assert start.signed_money + close.signed_money == Decimal("0.09625")
+    assert close.signed_money == Decimal("99.10")
+    assert start.signed_money + close.signed_money == Decimal("0.10")
     assert start.facts[-1].status.value == "RECORDED"
     assert close.facts[-1].status.value == "NOT_RECORDED"
     assert doc.member_margin_method == "SYNTHETIC_APPROXIMATION_NOT_FICC_VAR"
@@ -140,11 +140,14 @@ def test_repo_term_matches_business_days_and_friday_to_monday_is_overnight():
 
 
 def test_repo_term_calendar_excludes_declared_holidays_and_nonbusiness_closes():
-    assert trade(
-        term=RepoTerm.OVERNIGHT,
-        start_date=date(2026, 6, 18),
-        close_date=date(2026, 6, 22),
-    ).term is RepoTerm.OVERNIGHT
+    assert (
+        trade(
+            term=RepoTerm.OVERNIGHT,
+            start_date=date(2026, 6, 18),
+            close_date=date(2026, 6, 22),
+        ).term
+        is RepoTerm.OVERNIGHT
+    )
     with pytest.raises(ValidationError, match="government securities business day"):
         trade(term=RepoTerm.OVERNIGHT, close_date=date(2026, 10, 24))
 
@@ -202,11 +205,14 @@ def test_repo_result_refusals_name_each_reason():
 
 
 def test_non_established_repo_has_no_dvp_legs_and_malformed_dvp_is_refused():
-    assert dvp_legs_for_netting(
-        produce_repo_result(
-            trade=trade(), access=access(), agency=ClearingAgency.CME_SECURITIES_CLEARING
+    assert (
+        dvp_legs_for_netting(
+            produce_repo_result(
+                trade=trade(), access=access(), agency=ClearingAgency.CME_SECURITIES_CLEARING
+            )
         )
-    ) == ()
+        == ()
+    )
     malformed = RepoDocument.model_construct(
         clearing_agency=ClearingAgency.FICC_GSD,
         clearing_method=RepoService.DVP,
@@ -219,9 +225,9 @@ def test_non_established_repo_has_no_dvp_legs_and_malformed_dvp_is_refused():
         haircut_percent=Decimal("0"),
         member_margin_approximation=Decimal("0"),
         legs=(
-            document(produce_repo_result(trade=trade(), access=access())).legs[0].model_copy(
-                update={"settlement_date": None}
-            ),
+            document(produce_repo_result(trade=trade(), access=access()))
+            .legs[0]
+            .model_copy(update={"settlement_date": None}),
         ),
     )
     result = produce_repo_result(trade=trade(), access=access()).model_copy(

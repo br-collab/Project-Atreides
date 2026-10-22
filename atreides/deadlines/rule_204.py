@@ -14,6 +14,14 @@ from atreides.deadlines.calendar import DeadlineCalendar
 from atreides.deadlines.model import DeadlineAssessment, DeadlineRule, DeadlineRuleTable, _Frozen
 from atreides.deadlines.rules import load_rule_table
 
+# 17 CFR 242.204(a), quoted from the pinned eCFR source beside the deadline
+# calculation. The omitted provisos are represented by the origin-specific table.
+RULE_204_PARAGRAPH = (
+    "the participant shall, by no later than the beginning of regular trading hours "
+    "on the settlement day following the settlement date, immediately close out its "
+    "fail to deliver position by borrowing or purchasing securities of like kind and quantity"
+)
+
 
 class Rule204Origin(StrEnum):
     SHORT_OR_GENERAL = "SHORT_OR_GENERAL"

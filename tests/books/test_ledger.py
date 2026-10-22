@@ -17,13 +17,14 @@ from atreides.books.ledger import (
     ReserveActivity,
     ReserveSourceFact,
 )
-from atreides.books.projections import project_customer_protection
+from atreides.books.projections import project_customer_protection, project_margin_accounts
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import ReserveInputs, compute_reserve
 from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.dsor.books import BooksPosting
+from atreides.margin.engine import MarginResult, compute_margin
 
 NOW = datetime(2026, 10, 22, 14, tzinfo=UTC)
 ACTOR = ActorRef(
@@ -165,6 +166,20 @@ def test_synthetic_margin_interest_is_accepted() -> None:
     assert entry(source=PostingSource.MARGIN_INTEREST, synthetic=True).synthetic
 
 
+def _margin_results(books: EquitiesBooks) -> tuple[MarginResult, ...]:
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    return tuple(
+        compute_margin(
+            account,
+            trade_date=date(2026, 10, 22),
+            calendar=calendar,
+            house_maintenance_rate=Decimal("0.30"),
+            maintenance_call_due_business_days=2,
+        )
+        for account in project_margin_accounts(books, prices={"ACME": Decimal(100)})
+    )
+
+
 def test_all_protection_inputs_project_from_one_replay_byte_for_byte() -> None:
     books = EquitiesBooks(break_owner="owner")
     books.post(entry())
@@ -174,6 +189,7 @@ def test_all_protection_inputs_project_from_one_replay_byte_for_byte() -> None:
         prices={"ACME": Decimal(100)},
         net_worth=Decimal(1_000_000),
         calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=_margin_results(books),
     )
     second = project_customer_protection(
         books,
@@ -181,9 +197,12 @@ def test_all_protection_inputs_project_from_one_replay_byte_for_byte() -> None:
         prices={"ACME": Decimal(100)},
         net_worth=Decimal(1_000_000),
         calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=_margin_results(books),
     )
     assert first.model_dump_json() == second.model_dump_json()
     assert first.audit.derived == ("15c3-3a.item.01", "15c3-3a.item.10")
+    assert first.firm_profile.synthetic
+    assert first.audit.synthetic_firm_profile == first.firm_profile.profile_name
     assert "15c3-3a.item.02" in first.audit.not_derived
     rules = load_rule_table()
     reserve = compute_reserve(first.reserve, rules)
@@ -191,7 +210,83 @@ def test_all_protection_inputs_project_from_one_replay_byte_for_byte() -> None:
     control = check_possession_or_control(first.control, rules)
     assert reserve.missing_inputs
     assert capital.net_capital is not None
+    assert "reports_lending_activity_monthly" in capital.missing_inputs
+    assert "securities_loaned_and_repo_payable" in capital.missing_inputs
+    assert "securities_borrowed_and_reverse_repo_value" in capital.missing_inputs
     assert control.issues[0].conserved is True
+
+
+def test_protection_classification_covers_fully_paid_and_closed_positions() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    books.post(entry())
+    paid = tuple(
+        result.model_copy(update={"debit_balance": Decimal(0)})
+        for result in _margin_results(books)
+    )
+    projected = project_customer_protection(
+        books,
+        as_of=date(2026, 10, 22),
+        prices={"ACME": Decimal(100)},
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=paid,
+    )
+    assert projected.control.issues[0].fully_paid == 10
+
+    absent = project_customer_protection(
+        books,
+        as_of=date(2026, 10, 22),
+        prices={"ACME": Decimal(100)},
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=(),
+    )
+    assert absent.control.issues[0].excess_margin is None
+    assert "margin result for account CUSTOMER-1 is absent" in absent.audit.reasons.values()
+
+    first = books.entries[0]
+    books.post(
+        entry(
+            "2",
+            "reversal-1",
+            source=PostingSource.REVERSAL,
+            reverses_entry_id="entry-1",
+            lines=tuple(
+                line.model_copy(update={"quantity": -line.quantity, "money": -line.money})
+                for line in first.lines
+            ),
+        )
+    )
+    closed = project_customer_protection(
+        books,
+        as_of=date(2026, 10, 22),
+        prices={"ACME": Decimal(100)},
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=(),
+    )
+    assert closed.control.issues[0].fully_paid == 0
+
+    firm_books = EquitiesBooks(break_owner="owner")
+    firm_lines = tuple(
+        line.model_copy(update={"account_id": "FIRM", "account_type": AccountType.FIRM_PROPRIETARY})
+        if line.account_type is AccountType.CUSTOMER_MARGIN
+        else line.model_copy(update={"account_type": AccountType.STOCK_LOANED})
+        if line.account_type is AccountType.DTC
+        else line
+        for line in entry().lines
+    )
+    firm_books.post(entry("3", "firm-entry", lines=firm_lines))
+    firm = project_customer_protection(
+        firm_books,
+        as_of=date(2026, 10, 22),
+        prices={"ACME": Decimal(100)},
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=(),
+    )
+    assert firm.control.issues[0].fully_paid == 0
+    assert firm.audit.derived_values["stock_loaned_market_value"] == 1000
 
 
 def _reserve_entry(
@@ -288,6 +383,7 @@ def test_exhibit_a_classifies_contract_value_ages_fails_and_requires_finop_revie
         prices={"ACME": Decimal(100)},
         net_worth=Decimal(1_000_000),
         calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=(),
     )
     assert _line_amount(projected.reserve, "15c3-3a.item.04") == 1000
     assert _line_amount(projected.reserve, "15c3-3a.item.11") is None
@@ -364,4 +460,5 @@ def test_reserve_source_date_must_be_a_past_business_day(
             prices={"ACME": Decimal(100)},
             net_worth=Decimal(1_000_000),
             calendar=MarketCalendar.load(Market.US_EQUITIES),
+            margin_results=(),
         )

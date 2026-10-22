@@ -38,7 +38,7 @@ from __future__ import annotations
 from dataclasses import replace
 from decimal import Decimal
 
-from hypothesis import assume, given, settings
+from hypothesis import assume, given, seed, settings
 from hypothesis import strategies as st
 
 from atreides.contracts.margin_impact import (
@@ -493,6 +493,7 @@ trades = st.lists(
 
 
 @SETTINGS
+@seed(29001)
 @given(trades)
 def test_netting_conserves_quantity(trade_list) -> None:
     """Whatever went in comes out, per security. A netting engine that

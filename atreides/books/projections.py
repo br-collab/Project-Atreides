@@ -8,7 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Literal, cast
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from atreides.books.ledger import AccountType, EquitiesBooks, RecordSide, ReserveActivity
 from atreides.customer_protection.control import ControlInputs, Holding, IssueRequirement
@@ -28,7 +28,44 @@ from atreides.customer_protection.reserve import (
     ReserveInputs,
 )
 from atreides.deadlines.calendar import MarketCalendar
-from atreides.margin.engine import MarginAccount, MarginPosition
+from atreides.margin.engine import MarginAccount, MarginPosition, MarginResult
+
+
+class SyntheticFirmProfile(BaseModel):
+    """Declared elections for the synthetic broker-dealer used in publications."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    profile_name: str
+    synthetic: Literal[True] = True
+    net_capital_standard: NetCapitalStandard
+    broker_dealer_category: BrokerDealerCategory
+
+
+SYNTHETIC_FIRM_PROFILE = SyntheticFirmProfile(
+    profile_name="ATREIDES_EQ1_SYNTHETIC_CARRYING_ALTERNATIVE",
+    net_capital_standard=NetCapitalStandard.ALTERNATIVE,
+    broker_dealer_category=BrokerDealerCategory.CARRYING,
+)
+
+# 17 CFR 240.15c3-3a, Exhibit A, quoted from the pinned source beside the
+# projection that implements each line.
+EXHIBIT_A_PARAGRAPHS = {
+    "15c3-3a.item.01": (
+        "Free credit balances and other credit balances in customers' security accounts."
+    ),
+    "15c3-3a.item.04": "Customers' securities failed to receive",
+    "15c3-3a.item.10": (
+        "Debit balances in customers' cash and margin accounts excluding unsecured accounts "
+        "and accounts doubtful of collection."
+    ),
+    "15c3-3a.item.11": (
+        "Securities borrowed to effectuate short sales by customers and securities borrowed "
+        "to make delivery on customers' securities failed to deliver"
+    ),
+    "15c3-3a.item.12": (
+        "Failed to deliver of customers' securities not older than 30 calendar days"
+    ),
+}
 
 
 class ProjectionExclusion(BaseModel):
@@ -50,6 +87,8 @@ class ProjectionAudit(BaseModel):
     books_digest: str
     review_label: Literal["FINOP review required"] = "FINOP review required"
     exclusions: tuple[ProjectionExclusion, ...] = ()
+    derived_values: dict[str, Decimal] = Field(default_factory=dict)
+    synthetic_firm_profile: str
 
 
 class ProtectionInputs(BaseModel):
@@ -59,6 +98,7 @@ class ProtectionInputs(BaseModel):
     net_capital: NetCapitalInputs
     control: ControlInputs
     audit: ProjectionAudit
+    firm_profile: SyntheticFirmProfile
 
 
 def _mapping() -> dict[str, object]:
@@ -73,6 +113,8 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     prices: dict[str, Decimal],
     net_worth: Decimal,
     calendar: MarketCalendar,
+    margin_results: tuple[MarginResult, ...],
+    firm_profile: SyntheticFirmProfile = SYNTHETIC_FIRM_PROFILE,
 ) -> ProtectionInputs:
     """Build all three engine inputs from the same journal replay."""
     mapping = _mapping()
@@ -84,6 +126,9 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     positions: dict[str, Decimal] = {}
     holdings: dict[str, list[Holding]] = {}
     ownership: dict[str, Decimal] = {}
+    customer_positions: dict[str, dict[str, Decimal]] = {}
+    stock_loaned_market_value = Decimal(0)
+    stock_borrowed_contract_value = Decimal(0)
     for entry in books.entries:
         for line in entry.lines:
             if (
@@ -100,6 +145,12 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
             if line.issue is not None and line.record_side is RecordSide.OWNERSHIP:
                 ownership[line.issue] = ownership.get(line.issue, Decimal(0)) + line.quantity
                 positions[line.issue] = positions.get(line.issue, Decimal(0)) + line.quantity
+                if line.account_type in {
+                    AccountType.CUSTOMER_CASH,
+                    AccountType.CUSTOMER_MARGIN,
+                }:
+                    by_issue = customer_positions.setdefault(line.account_id, {})
+                    by_issue[line.issue] = by_issue.get(line.issue, Decimal(0)) + line.quantity
             if line.issue is not None and line.record_side is RecordSide.LOCATION:
                 location_rule = {
                     AccountType.DTC: "15c3-3.control.c1",
@@ -139,6 +190,8 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
             if age < 0:
                 raise ValueError("reserve source settlement date cannot be after the computation")
             contract_value = abs(line.quantity) * fact.contract_price
+            if line.account_type is AccountType.STOCK_BORROWED:
+                stock_borrowed_contract_value += contract_value
             if line.account_type is AccountType.FAIL_TO_DELIVER and age > 30:
                 exclusions.append(
                     ProjectionExclusion(
@@ -175,6 +228,10 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 )
                 continue
             add_line(target, special_rule[line.account_type], value)
+    for entry in books.entries:
+        for line in entry.lines:
+            if line.account_type is AccountType.STOCK_LOANED and line.issue is not None:
+                stock_loaned_market_value += abs(line.quantity) * prices[line.issue]
     customer_lines[str(mapping["customer_free_credit_rule_id"])] = free_credits
     customer_lines[str(mapping["customer_margin_debit_rule_id"])] = customer_debits
     derived = tuple(
@@ -186,10 +243,24 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     reasons = {
         rule_id: "not derivable from currently wired equities sources" for rule_id in not_derived
     }
+    reasons.update(
+        {
+            "17a-11.reports_lending_activity_monthly": (
+                "the books do not state whether the firm files monthly lending reports"
+            ),
+            "17a-11.securities_loaned_and_repo_payable": (
+                "stock-loan value is derived, but repo payable is not wired to the equities books"
+            ),
+            "17a-11.securities_borrowed_and_reverse_repo_value": (
+                "stock-borrow value is derived, but reverse-repo value is not wired to the "
+                "equities books"
+            ),
+        }
+    )
     reserve = ReserveInputs(
         accounts=ReserveAccounts.CUSTOMER,
         as_of=as_of,
-        standard=NetCapitalStandard.ALTERNATIVE,
+        standard=firm_profile.net_capital_standard,
         mode=ComputationMode.WEEKLY,
         lines=tuple(
             LineBalance(rule_id=key, amount=value) for key, value in customer_lines.items()
@@ -200,7 +271,7 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     pab_reserve = ReserveInputs(
         accounts=ReserveAccounts.PAB,
         as_of=as_of,
-        standard=NetCapitalStandard.ALTERNATIVE,
+        standard=firm_profile.net_capital_standard,
         mode=ComputationMode.WEEKLY,
         lines=tuple(LineBalance(rule_id=key, amount=value) for key, value in pab_lines.items()),
         average_total_credits=None,
@@ -217,22 +288,48 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     )
     net_capital = NetCapitalInputs(
         as_of=as_of,
-        standard=NetCapitalStandard.ALTERNATIVE,
-        category=BrokerDealerCategory.CARRYING,
+        standard=firm_profile.net_capital_standard,
+        category=firm_profile.broker_dealer_category,
         net_worth=net_worth,
         positions=net_positions,
         aggregate_debit_items=customer_debits,
-        reports_lending_activity_monthly=True,
-        securities_loaned_and_repo_payable=Decimal(0),
-        securities_borrowed_and_reverse_repo_value=Decimal(0),
+        reports_lending_activity_monthly=None,
+        # The equities journal can value the securities component, but it has no
+        # authoritative repo/reverse-repo source. The combined Rule 17a-11 inputs
+        # therefore remain absent instead of silently treating the missing leg as zero.
+        securities_loaned_and_repo_payable=None,
+        securities_borrowed_and_reverse_repo_value=None,
     )
+    margin_by_account = {result.account_id: result for result in margin_results}
+    fully_paid_by_issue: dict[str, Decimal] = {}
+    excess_margin_by_issue: dict[str, Decimal | None] = {}
+    for account_id, by_issue in customer_positions.items():
+        result = margin_by_account.get(account_id)
+        for issue, quantity in by_issue.items():
+            if quantity <= 0:
+                continue
+            if result is None:
+                excess_margin_by_issue[issue] = None
+                reasons[f"15c3-3.excess_margin[{issue}]"] = (
+                    f"margin result for account {account_id} is absent"
+                )
+            elif result.debit_balance == 0:
+                fully_paid_by_issue[issue] = fully_paid_by_issue.get(issue, Decimal(0)) + quantity
+            else:
+                # The margin engine computes money requirements, not the security
+                # quantity that is "excess margin" under Rule 15c3-3. Do not invent it.
+                excess_margin_by_issue[issue] = None
+                reasons[f"15c3-3.excess_margin[{issue}]"] = (
+                    "the margin result computes money requirements but not excess-margin "
+                    "security quantity"
+                )
     control = ControlInputs(
         as_of=as_of,
         issues=tuple(
             IssueRequirement(
                 issue=issue,
-                fully_paid=max(quantity, Decimal(0)),
-                excess_margin=Decimal(0),
+                fully_paid=fully_paid_by_issue.get(issue, Decimal(0)),
+                excess_margin=excess_margin_by_issue.get(issue, Decimal(0)),
                 books_total=quantity,
                 holdings=tuple(holdings.get(issue, ())),
             )
@@ -246,6 +343,11 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
         reasons=reasons,
         books_digest=books.digest(),
         exclusions=tuple(exclusions),
+        derived_values={
+            "stock_loaned_market_value": stock_loaned_market_value,
+            "stock_borrowed_contract_value": stock_borrowed_contract_value,
+        },
+        synthetic_firm_profile=firm_profile.profile_name,
     )
     return ProtectionInputs(
         reserve=reserve,
@@ -253,6 +355,7 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
         net_capital=net_capital,
         control=control,
         audit=audit,
+        firm_profile=firm_profile,
     )
 
 
