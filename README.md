@@ -322,7 +322,13 @@ provable correctness.
   FICC member seat. Each position carries conserved signed par and signed settlement
   money with currency and lineage. A mixed-member request is indeterminate rather
   than being presented as an unbalanced central-counterparty view. Fails, close out,
-  buy in and intraday FICC funding are not built.
+  buy in and intraday FICC funding are not built. Synthetic FICC DVP repo now
+  models start and close securities/money legs, rate/day-count interest, direct,
+  sponsored (done-with and done-away), and agent access, and nets dated repo legs
+  with cash Treasury positions. Synthetic GCF repo uses a separate CUSIP-less
+  tri-party allocation/return path. Haircuts are inputs and member margin is
+  explicitly an approximation, not FICC's VaR methodology. Repo fails, closeout,
+  cross-margining, and participant submission remain unbuilt.
 - **Cause diagnosis.** Evidence assembly is built; ranking causes against a
   closed inventory is specified and not yet implemented.
 - **Multi-party authority ceremonies** — specified, deliberately inactive
