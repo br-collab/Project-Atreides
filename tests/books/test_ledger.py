@@ -271,6 +271,8 @@ def test_protection_classification_covers_fully_paid_and_closed_positions() -> N
     firm_lines = tuple(
         line.model_copy(update={"account_id": "FIRM", "account_type": AccountType.FIRM_PROPRIETARY})
         if line.account_type is AccountType.CUSTOMER_MARGIN
+        else line.model_copy(update={"account_type": AccountType.STOCK_LOANED})
+        if line.account_type is AccountType.DTC
         else line
         for line in entry().lines
     )
@@ -284,6 +286,7 @@ def test_protection_classification_covers_fully_paid_and_closed_positions() -> N
         margin_results=(),
     )
     assert firm.control.issues[0].fully_paid == 0
+    assert firm.audit.derived_values["stock_loaned_market_value"] == 1000
 
 
 def _reserve_entry(
