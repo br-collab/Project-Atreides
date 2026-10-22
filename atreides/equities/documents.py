@@ -6,8 +6,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal, Self
 
-from cannae_kernel.canonical import canonical_bytes, digest_bytes
+from cannae_kernel.canonical import canonical_bytes, digest, digest_bytes
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from atreides.margin.engine import MarginAccount, MarginResult
 
 
 class _Wire(BaseModel):
@@ -23,16 +25,18 @@ class AccountCapacity(_Wire):
     account_id: str = Field(min_length=1)
     buying_power: Decimal = Field(ge=0)
     margin_excess: Decimal
+    margin_result_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     positions: tuple[AccountPosition, ...]
 
 
 class AccountCapacityDocument(_Wire):
-    schema_version: Literal["atreides.equities_account_capacity/1"] = (
-        "atreides.equities_account_capacity/1"
+    schema_version: Literal["atreides.equities_account_capacity/2"] = (
+        "atreides.equities_account_capacity/2"
     )
     as_of: datetime
     maximum_age_seconds: int = Field(gt=0)
     synthetic: Literal[True] = True
+    journal_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     accounts: tuple[AccountCapacity, ...]
 
     @model_validator(mode="after")
@@ -80,6 +84,47 @@ def attest_capacity(document: AccountCapacityDocument) -> AttestedDocument:
     payload = canonical_bytes(document)
     return AttestedDocument(
         document_type="ACCOUNT_CAPACITY", payload_digest=digest_bytes(payload), payload=payload
+    )
+
+
+def project_capacity(
+    *,
+    journal_digest: str,
+    as_of: datetime,
+    maximum_age_seconds: int,
+    margin_results: tuple[MarginResult, ...],
+    accounts: tuple[MarginAccount, ...],
+) -> AccountCapacityDocument:
+    """Project remaining capacity only from the journal-derived margin results."""
+    by_account = {account.account_id: account for account in accounts}
+    projected: list[AccountCapacity] = []
+    for result in margin_results:
+        if result.excess_or_deficiency is None:
+            raise ValueError("capacity requires a determinate margin result")
+        initial_rate = next(
+            (trace.value for trace in result.rules_used if trace.rule_id == "reg_t.initial"), None
+        )
+        if initial_rate is None or initial_rate <= 0:
+            raise ValueError("capacity requires the pinned Reg T initial rate")
+        account = by_account[result.account_id]
+        excess = result.excess_or_deficiency
+        projected.append(
+            AccountCapacity(
+                account_id=result.account_id,
+                buying_power=max(excess, Decimal(0)) / initial_rate,
+                margin_excess=excess,
+                margin_result_digest=digest(result),
+                positions=tuple(
+                    AccountPosition(issue=position.issue, quantity=position.quantity)
+                    for position in account.positions
+                ),
+            )
+        )
+    return AccountCapacityDocument(
+        as_of=as_of,
+        maximum_age_seconds=maximum_age_seconds,
+        journal_digest=journal_digest,
+        accounts=tuple(projected),
     )
 
 

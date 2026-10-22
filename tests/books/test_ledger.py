@@ -172,8 +172,14 @@ def test_all_protection_inputs_project_from_one_replay_byte_for_byte() -> None:
         books, as_of=date(2026, 10, 22), prices={"ACME": Decimal(100)}, net_worth=Decimal(1_000_000)
     )
     assert first.model_dump_json() == second.model_dump_json()
-    assert first.audit.derived == ("15c3-3a.item.10",)
-    assert "15c3-3a.item.01" in first.audit.not_derived
+    assert first.audit.derived == (
+        "15c3-3a.item.01",
+        "15c3-3a.item.04",
+        "15c3-3a.item.10",
+        "15c3-3a.item.11",
+        "15c3-3a.item.12",
+    )
+    assert "15c3-3a.item.02" in first.audit.not_derived
     rules = load_rule_table()
     reserve = compute_reserve(first.reserve, rules)
     capital = compute_net_capital(first.net_capital, rules)

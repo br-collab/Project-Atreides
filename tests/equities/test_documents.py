@@ -18,11 +18,13 @@ def test_real_emitters_attest_capacity_and_locates() -> None:
     capacity = AccountCapacityDocument(
         as_of=NOW,
         maximum_age_seconds=300,
+        journal_digest="sha256:" + "1" * 64,
         accounts=(
             AccountCapacity(
                 account_id="A",
                 buying_power=1000,
                 margin_excess=200,
+                margin_result_digest="sha256:" + "2" * 64,
                 positions=(AccountPosition(issue="ACME", quantity=10),),
             ),
         ),
