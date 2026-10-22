@@ -23,6 +23,7 @@ def test_margin_traces_rules_calls_and_advisory_liquidation() -> None:
         trade_date=date(2026, 10, 22),
         calendar=MarketCalendar.load(Market.US_EQUITIES),
         house_maintenance_rate=Decimal("0.40"),
+        maintenance_call_due_business_days=2,
     )
     assert result.long_market_value == 1000
     assert result.short_market_value == 500
@@ -32,6 +33,9 @@ def test_margin_traces_rules_calls_and_advisory_liquidation() -> None:
     assert result.disposition is Disposition.HOLD
     assert {call.kind for call in result.calls} == {"REG_T", "MAINTENANCE"}
     assert result.calls[0].due_date == date(2026, 10, 28)
+    maintenance = next(call for call in result.calls if call.kind == "MAINTENANCE")
+    assert maintenance.due_date == date(2026, 10, 26)
+    assert maintenance.due_period_authority == "INTERNAL_POLICY"
     assert result.liquidation is not None and result.liquidation.advisory_only
     assert len(result.rules_used) == 7
 
@@ -45,6 +49,7 @@ def test_house_call_and_pass() -> None:
         trade_date=date(2026, 10, 22),
         calendar=MarketCalendar.load(Market.US_EQUITIES),
         house_maintenance_rate=Decimal("1.1"),
+        maintenance_call_due_business_days=2,
     )
     assert {call.kind for call in hold.calls} == {"HOUSE"}
     strong = weak.model_copy(update={"cash_balance": Decimal(100)})
@@ -53,6 +58,7 @@ def test_house_call_and_pass() -> None:
         trade_date=date(2026, 10, 22),
         calendar=MarketCalendar.load(Market.US_EQUITIES),
         house_maintenance_rate=Decimal("0.30"),
+        maintenance_call_due_business_days=2,
     )
     assert passed.disposition is Disposition.PASS and passed.liquidation is None
 
@@ -67,6 +73,7 @@ def test_missing_or_changed_pinned_source_is_indeterminate() -> None:
             trade_date=date(2026, 10, 22),
             calendar=MarketCalendar.load(Market.US_EQUITIES),
             house_maintenance_rate=Decimal("0.30"),
+            maintenance_call_due_business_days=2,
         )
         assert result.disposition is Disposition.INDETERMINATE
         assert result.finra_maintenance_requirement is None

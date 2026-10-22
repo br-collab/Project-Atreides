@@ -41,6 +41,7 @@ class MarginCall(_Frozen):
     amount: Decimal
     due_date: date | None
     authority: str
+    due_period_authority: str | None = None
 
 
 class LiquidationRecommendation(_Frozen):
@@ -106,6 +107,7 @@ def compute_margin(
     trade_date: date,
     calendar: DeadlineCalendar,
     house_maintenance_rate: Decimal,
+    maintenance_call_due_business_days: int,
 ) -> MarginResult:
     values, traces, missing = _load_rules()
     long_value = sum(
@@ -201,8 +203,9 @@ def compute_margin(
             MarginCall(
                 kind="MAINTENANCE",
                 amount=maintenance - equity,
-                due_date=None,
+                due_date=calendar.add_business_days(trade_date, maintenance_call_due_business_days),
                 authority="FINRA Rule 4210(c)",
+                due_period_authority="INTERNAL_POLICY",
             )
         )
     if house > maintenance and equity < house:

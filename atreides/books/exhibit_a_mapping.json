@@ -1,7 +1,11 @@
 {
-  "mapping_version": "eq1-exhibit-a/1",
+  "mapping_version": "eq1b-exhibit-a/2",
   "claim_label": "SYNTHETIC",
+  "customer_free_credit_rule_id": "15c3-3a.item.01",
+  "customer_fail_to_receive_rule_id": "15c3-3a.item.04",
   "customer_margin_debit_rule_id": "15c3-3a.item.10",
-  "account_type": "CUSTOMER_MARGIN",
-  "note": "All unmapped Exhibit A lines remain null with a reason; they are never inferred as zero."
+  "customer_stock_borrowed_rule_id": "15c3-3a.item.11",
+  "customer_fail_to_deliver_rule_id": "15c3-3a.item.12",
+  "account_types": ["CUSTOMER_CASH", "CUSTOMER_MARGIN", "FAIL_TO_RECEIVE", "STOCK_BORROWED", "FAIL_TO_DELIVER"],
+  "note": "Only balances supported by the complete equities journal replay are derived. All other Exhibit A lines remain null with a reason; they are never inferred as zero."
 }

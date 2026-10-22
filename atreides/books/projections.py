@@ -27,6 +27,7 @@ from atreides.customer_protection.reserve import (
     ReserveAccounts,
     ReserveInputs,
 )
+from atreides.margin.engine import MarginAccount, MarginPosition
 
 
 class ProjectionAudit(BaseModel):
@@ -63,14 +64,23 @@ def project_customer_protection(
     lines: dict[str, Decimal | None] = {
         rule_id: None for rule_id in (*EXHIBIT_A_CREDITS, *EXHIBIT_A_DEBITS)
     }
-    customer_debits = Decimal(0)
+    customer_cash: dict[str, Decimal] = {}
     positions: dict[str, Decimal] = {}
     holdings: dict[str, list[Holding]] = {}
     ownership: dict[str, Decimal] = {}
     for entry in books.entries:
         for line in entry.lines:
-            if line.account_type is AccountType.CUSTOMER_MARGIN and line.currency == "USD":
-                customer_debits += max(-line.money, Decimal(0))
+            if (
+                line.account_type
+                in {
+                    AccountType.CUSTOMER_CASH,
+                    AccountType.CUSTOMER_MARGIN,
+                }
+                and line.currency == "USD"
+            ):
+                customer_cash[line.account_id] = (
+                    customer_cash.get(line.account_id, Decimal(0)) + line.money
+                )
             if line.issue is not None and line.record_side is RecordSide.OWNERSHIP:
                 ownership[line.issue] = ownership.get(line.issue, Decimal(0)) + line.quantity
                 positions[line.issue] = positions.get(line.issue, Decimal(0)) + line.quantity
@@ -85,7 +95,29 @@ def project_customer_protection(
                 holdings.setdefault(line.issue, []).append(
                     Holding(location=location_rule, quantity=abs(line.quantity))
                 )
+    customer_debits = sum(
+        (max(-balance, Decimal(0)) for balance in customer_cash.values()), Decimal(0)
+    )
+    free_credits = sum((max(balance, Decimal(0)) for balance in customer_cash.values()), Decimal(0))
+    fail_to_receive = Decimal(0)
+    stock_borrowed = Decimal(0)
+    fail_to_deliver = Decimal(0)
+    for entry in books.entries:
+        for line in entry.lines:
+            if line.issue is None:
+                continue
+            market_value = abs(line.quantity) * prices[line.issue]
+            if line.account_type is AccountType.FAIL_TO_RECEIVE:
+                fail_to_receive += market_value
+            elif line.account_type is AccountType.STOCK_BORROWED:
+                stock_borrowed += market_value
+            elif line.account_type is AccountType.FAIL_TO_DELIVER:
+                fail_to_deliver += market_value
+    lines[str(mapping["customer_free_credit_rule_id"])] = free_credits
+    lines[str(mapping["customer_fail_to_receive_rule_id"])] = fail_to_receive
     lines[str(mapping["customer_margin_debit_rule_id"])] = customer_debits
+    lines[str(mapping["customer_stock_borrowed_rule_id"])] = stock_borrowed
+    lines[str(mapping["customer_fail_to_deliver_rule_id"])] = fail_to_deliver
     derived = tuple(sorted(rule_id for rule_id, value in lines.items() if value is not None))
     not_derived = tuple(sorted(rule_id for rule_id, value in lines.items() if value is None))
     reasons = {
@@ -141,3 +173,44 @@ def project_customer_protection(
         books_digest=books.digest(),
     )
     return ProtectionInputs(reserve=reserve, net_capital=net_capital, control=control, audit=audit)
+
+
+def project_margin_accounts(
+    books: EquitiesBooks,
+    *,
+    prices: dict[str, Decimal],
+    new_trades: frozenset[tuple[str, str]] = frozenset(),
+) -> tuple[MarginAccount, ...]:
+    """Project customer cash and positions from one canonical journal replay."""
+    cash: dict[str, Decimal] = {}
+    positions: dict[str, dict[str, Decimal]] = {}
+    customer_types = {AccountType.CUSTOMER_CASH, AccountType.CUSTOMER_MARGIN}
+    for entry in books.entries:
+        for line in entry.lines:
+            if line.account_type not in customer_types:
+                continue
+            if line.currency == "USD":
+                cash[line.account_id] = cash.get(line.account_id, Decimal(0)) + line.money
+            if line.issue is not None and line.record_side is RecordSide.OWNERSHIP:
+                account_positions = positions.setdefault(line.account_id, {})
+                account_positions[line.issue] = (
+                    account_positions.get(line.issue, Decimal(0)) + line.quantity
+                )
+    account_ids = sorted(set(cash) | set(positions))
+    return tuple(
+        MarginAccount(
+            account_id=account_id,
+            cash_balance=cash.get(account_id, Decimal(0)),
+            positions=tuple(
+                MarginPosition(
+                    issue=issue,
+                    quantity=quantity,
+                    price=prices[issue],
+                    new_trade=(account_id, issue) in new_trades,
+                )
+                for issue, quantity in sorted(positions.get(account_id, {}).items())
+                if quantity
+            ),
+        )
+        for account_id in account_ids
+    )
