@@ -8,6 +8,9 @@ import sys
 from pathlib import Path
 
 MINIMUM_BRANCH_COVERAGE = {
+    "atreides/clearing/access.py": 100.0,
+    "atreides/clearing/ficc.py": 100.0,
+    "atreides/clearing/repo.py": 100.0,
     "atreides/rails/cato_cash.py": 93.0,
     "atreides/rails/funding_state.py": 100.0,
 }

@@ -2,6 +2,46 @@
 
 Versions before 0.4.0 were tagged without a changelog; their contents are in the pull requests and in the commit history. This file starts at the Wave 2 release.
 
+## 0.6.0 — 22 Oct 2026
+
+Everything merged since 0.5.0 is collected here by its governing order.
+
+### Settlement lifecycle and evidence
+
+- **W3 adoption and agent activation:** adopted the frozen kernel envelopes at the acceptance
+  and instruction boundaries, added real contract crossings, and published activation evidence.
+- **G1 and G2:** added external receipts, finality and reconciliation joins, secured-funding
+  evidence, books posting, client output, and cross-stage lifecycle evidence.
+- **C2 and C3:** made movement authority explicit and added owned, evidence-backed exception
+  closure and break publication.
+- **TRACE-1 and DEADLINE-1:** added requirement-to-test traceability plus deadline engines for
+  Regulation SHO Rule 204, ACATS, Rule 17a-13, and customer-reserve deposits.
+
+### Clearing capabilities
+
+- **SC-1:** corporate-action event state, entitlement arithmetic, DTC/ISO 20022 adapters, funds,
+  fixed income, and reconciliation.
+- **SC-2:** customer-protection reserve and net-capital computations on supplied balances,
+  claims, rule sources, and challenger evidence.
+- **SC-3:** listed-options clearing at the Options Clearing Corporation.
+- **R15 and R15B:** FICC Government Securities Division access, novation, member-seat netting,
+  and signed security and cash settlement legs.
+- **R16:** delivery-versus-payment and General Collateral Finance repo, including direct,
+  sponsored, and agent access, two-leg economics, evidence, and exact publication bytes.
+- **FIX-7:** repo terms now agree with a declared 2026 government-securities business-day
+  calendar; every refusal in `atreides.clearing` is tested and that package is held at 100%
+  branch coverage in continuous integration.
+
+### Build, governance, and public truth
+
+- **W5/R14 and COP work:** added participant-access evidence and publication surfaces used by
+  the Common Operating Picture.
+- **VOC-1 and hygiene orders:** aligned maturity and criticality vocabulary, corrected package
+  data and record-date positions, restored strict typing across the full package, and hardened
+  dependency and workflow checks.
+- **Documentation:** aligned the README and digital-asset status with committed behavior and
+  kept the no-submission boundary explicit.
+
 ## 0.5.0 — 19 Sep 2026
 
 Wave 3, tasking order `W3-contract-freeze.md`. **Breaking**: a required field is removed from a public model. Aureon pins this tag.

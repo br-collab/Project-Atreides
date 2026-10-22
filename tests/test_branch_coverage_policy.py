@@ -17,6 +17,9 @@ def _summary(covered: int, total: int) -> dict[str, object]:
 
 def test_branch_coverage_policy_accepts_measured_floors(tmp_path: Path) -> None:
     files = {
+        "atreides/clearing/access.py": _summary(32, 32),
+        "atreides/clearing/ficc.py": _summary(42, 42),
+        "atreides/clearing/repo.py": _summary(42, 42),
         "atreides/rails/cato_cash.py": _summary(121, 130),
         "atreides/rails/funding_state.py": _summary(52, 52),
     }

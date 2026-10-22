@@ -162,6 +162,94 @@ def test_indeterminate_status_cannot_carry_an_arrangement() -> None:
         )
 
 
+def test_established_status_requires_only_an_arrangement() -> None:
+    with pytest.raises(ValidationError, match="ESTABLISHED requires"):
+        AccessDetermination(status=AccessStatus.ESTABLISHED)
+
+
+@pytest.mark.parametrize(
+    ("path", "acting", "clearing", "intermediary", "evidence", "reason"),
+    [
+        (
+            AccessPath.FICC_DIRECT,
+            party("customer", PartyRole.SPONSORED_MEMBER),
+            party("customer", PartyRole.SPONSORED_MEMBER),
+            None,
+            (authority("customer"),),
+            "DIRECT_NETTING_MEMBER acting party",
+        ),
+        (
+            AccessPath.FICC_DIRECT,
+            party("member-a", PartyRole.DIRECT_NETTING_MEMBER),
+            party("member-b", PartyRole.DIRECT_NETTING_MEMBER),
+            None,
+            (authority("member-a"),),
+            "acting party must be the clearing member",
+        ),
+        (
+            AccessPath.FICC_DIRECT,
+            party("member-a", PartyRole.DIRECT_NETTING_MEMBER),
+            party("member-a", PartyRole.DIRECT_NETTING_MEMBER),
+            party("member-b", PartyRole.SPONSORING_MEMBER),
+            (authority("member-a"),),
+            "no indirect intermediary",
+        ),
+        (
+            AccessPath.FICC_SPONSORED,
+            party("customer", PartyRole.EXECUTING_FIRM_CUSTOMER),
+            party("member", PartyRole.SPONSORING_MEMBER),
+            party("member", PartyRole.SPONSORING_MEMBER),
+            (authority("customer"), authority("member")),
+            "SPONSORED_MEMBER acting party",
+        ),
+        (
+            AccessPath.FICC_SPONSORED,
+            party("customer", PartyRole.SPONSORED_MEMBER),
+            party("other", PartyRole.SPONSORING_MEMBER),
+            party("member", PartyRole.SPONSORING_MEMBER),
+            (authority("customer"), authority("member")),
+            "sponsoring member must be the relied-on clearing member",
+        ),
+        (
+            AccessPath.FICC_AGENT,
+            party("customer", PartyRole.SPONSORED_MEMBER),
+            party("agent", PartyRole.AGENT_CLEARING_MEMBER),
+            party("agent", PartyRole.AGENT_CLEARING_MEMBER),
+            (authority("customer"), authority("agent")),
+            "EXECUTING_FIRM_CUSTOMER acting party",
+        ),
+        (
+            AccessPath.FICC_AGENT,
+            party("customer", PartyRole.EXECUTING_FIRM_CUSTOMER),
+            party("agent", PartyRole.AGENT_CLEARING_MEMBER),
+            party("sponsor", PartyRole.SPONSORING_MEMBER),
+            (authority("customer"), authority("sponsor")),
+            "AGENT_CLEARING_MEMBER intermediary",
+        ),
+        (
+            AccessPath.FICC_AGENT,
+            party("customer", PartyRole.EXECUTING_FIRM_CUSTOMER),
+            party("other", PartyRole.AGENT_CLEARING_MEMBER),
+            party("agent", PartyRole.AGENT_CLEARING_MEMBER),
+            (authority("customer"), authority("agent")),
+            "agent clearing member must be the relied-on clearing member",
+        ),
+    ],
+)
+def test_each_access_shape_refusal_names_its_reason(
+    path, acting, clearing, intermediary, evidence, reason
+) -> None:
+    with pytest.raises(ValidationError, match=reason):
+        AccessArrangement(
+            path=path,
+            acting_party=acting,
+            clearing_member=clearing,
+            intermediary=intermediary,
+            authority_evidence=evidence,
+            **common(),
+        )
+
+
 def test_public_package_exposes_no_effectful_operation() -> None:
     prohibited = ("authorize", "release", "submit", "settle", "net", "novate")
     assert not any(name.lower().startswith(prohibited) for name in clearing.__all__)

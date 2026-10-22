@@ -23,10 +23,12 @@ from atreides.clearing import (
 from atreides.clearing.ficc import (
     ClearingAgency,
     ClearingStatus,
+    EvidenceFact,
     EvidenceStage,
     FactStatus,
     FiccGsdNettingDocument,
     FiccGsdNettingRequest,
+    FiccGsdResult,
     NovatedObligation,
     ObservationSeat,
     produce_ficc_gsd_result,
@@ -263,3 +265,85 @@ def test_grouping_never_crosses_cusip_or_settlement_date() -> None:
     document = FiccGsdNettingDocument.model_validate_json(result.payload)
     positions = document.net_settlement_obligations
     assert len(positions) == 3
+
+
+@pytest.mark.parametrize(
+    ("status", "evidence_id", "reason", "message"),
+    [
+        (FactStatus.RECORDED, None, None, "RECORDED requires evidence_id"),
+        (FactStatus.RECORDED, "evidence", "contradiction", "RECORDED requires evidence_id"),
+        (FactStatus.NOT_RECORDED, "evidence", None, "NOT_RECORDED requires a reason"),
+        (FactStatus.NOT_RECORDED, None, None, "NOT_RECORDED requires a reason"),
+    ],
+)
+def test_evidence_fact_refusals_name_the_reason(status, evidence_id, reason, message) -> None:
+    with pytest.raises(ValidationError, match=message):
+        EvidenceFact(
+            stage=EvidenceStage.NOVATION,
+            status=status,
+            evidence_id=evidence_id,
+            reason=reason,
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"signed_quantity": "0"}, "cannot have zero quantity"),
+        ({"signed_settlement_amount": "0"}, "cannot have zero settlement amount"),
+        ({"signed_settlement_amount": "99"}, "opposite signs"),
+        ({"trade_ids": ("trade-1", "trade-1")}, "trade_ids must be unique"),
+    ],
+)
+def test_novated_obligation_refusals_name_the_reason(changes, message) -> None:
+    values = {
+        "obligation_id": "obligation-1",
+        "trade_ids": ("trade-1",),
+        "member_id": "member-a",
+        "cusip": "91282CJL6",
+        "settlement_date": SETTLEMENT_DATE,
+        "signed_quantity": "100",
+        "signed_settlement_amount": "-99",
+        "settlement_currency": "USD",
+        "novation_evidence_id": "novation-1",
+    }
+    values.update(changes)
+    with pytest.raises(ValidationError, match=message):
+        NovatedObligation(**values)
+
+
+def test_request_refuses_duplicate_obligation_ids() -> None:
+    first = _request().obligations[0]
+    duplicate = first.model_copy(update={"trade_ids": ("trade-2",)})
+    values = _request().model_dump()
+    values["obligations"] = (first, duplicate)
+    with pytest.raises(ValidationError, match="obligation_id must be unique"):
+        FiccGsdNettingRequest.model_validate(values)
+
+
+def test_result_shape_refusals_name_the_reason() -> None:
+    with pytest.raises(ValidationError, match="ESTABLISHED requires header and payload"):
+        FiccGsdResult(status=ClearingStatus.ESTABLISHED)
+    with pytest.raises(ValidationError, match="INDETERMINATE requires only a reason"):
+        FiccGsdResult(status=ClearingStatus.INDETERMINATE)
+
+
+def test_defensive_absent_arrangement_is_reasoned_indeterminate() -> None:
+    invalid_access = AccessDetermination.model_construct(
+        status=AccessStatus.ESTABLISHED, arrangement=None, reason=None
+    )
+    result = produce_ficc_gsd_result(_request().model_copy(update={"access": invalid_access}))
+    assert result.status is ClearingStatus.INDETERMINATE
+    assert result.reason == "access is absent"
+
+
+def test_one_net_position_cannot_mix_currencies() -> None:
+    first, second = _request().obligations
+    euro = second.model_copy(update={"settlement_currency": "EUR"})
+    result = produce_ficc_gsd_result(
+        _request().model_copy(update={"obligations": (first, euro)})
+    )
+    assert result.status is ClearingStatus.INDETERMINATE
+    assert result.reason == (
+        "one member/CUSIP/settlement-date position cannot mix settlement currencies"
+    )
