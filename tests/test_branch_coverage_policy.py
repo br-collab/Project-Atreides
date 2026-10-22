@@ -20,6 +20,9 @@ def test_branch_coverage_policy_accepts_measured_floors(tmp_path: Path) -> None:
         "atreides/clearing/access.py": _summary(32, 32),
         "atreides/clearing/ficc.py": _summary(42, 42),
         "atreides/clearing/repo.py": _summary(42, 42),
+        "atreides/books/ledger.py": _summary(36, 36),
+        "atreides/books/projections.py": _summary(10, 10),
+        "atreides/margin/engine.py": _summary(20, 20),
         "atreides/rails/cato_cash.py": _summary(121, 130),
         "atreides/rails/funding_state.py": _summary(52, 52),
     }

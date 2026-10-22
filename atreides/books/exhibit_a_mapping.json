@@ -1,0 +1,7 @@
+{
+  "mapping_version": "eq1-exhibit-a/1",
+  "claim_label": "SYNTHETIC",
+  "customer_margin_debit_rule_id": "15c3-3a.item.10",
+  "account_type": "CUSTOMER_MARGIN",
+  "note": "All unmapped Exhibit A lines remain null with a reason; they are never inferred as zero."
+}

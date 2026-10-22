@@ -11,6 +11,9 @@ MINIMUM_BRANCH_COVERAGE = {
     "atreides/clearing/access.py": 100.0,
     "atreides/clearing/ficc.py": 100.0,
     "atreides/clearing/repo.py": 100.0,
+    "atreides/books/ledger.py": 100.0,
+    "atreides/books/projections.py": 100.0,
+    "atreides/margin/engine.py": 100.0,
     "atreides/rails/cato_cash.py": 93.0,
     "atreides/rails/funding_state.py": 100.0,
 }
@@ -36,9 +39,7 @@ def check(report_path: Path) -> list[str]:
         percent = covered / total * 100
         print(f"{source}: {covered}/{total} branches ({percent:.2f}%; minimum {minimum:.2f}%)")
         if percent < minimum:
-            failures.append(
-                f"{source}: branch coverage {percent:.2f}% is below {minimum:.2f}%"
-            )
+            failures.append(f"{source}: branch coverage {percent:.2f}% is below {minimum:.2f}%")
 
     return failures
 

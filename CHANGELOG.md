@@ -2,6 +2,21 @@
 
 Versions before 0.4.0 were tagged without a changelog; their contents are in the pull requests and in the commit history. This file starts at the Wave 2 release.
 
+## Unreleased — EQ-1
+
+- Replaced the embedded 2026 repo holiday set with one data-backed, fail-closed market calendar
+  for United States equities and government securities, including the 2026-2027 year boundary.
+- Added the append-only, balanced equities journal and two-sided stock record, duplicate and
+  reversal semantics, owned breaks, and versioned projections into the existing reserve,
+  net-capital, and possession-or-control engines.
+- Added Regulation T and FINRA Rule 4210 customer margin with pinned source hashes, calls, and
+  advisory-only liquidation recommendations.
+- Added attested account-capacity and synthetic locate documents, quantity-limited locate use,
+  and order/locate linkage on Rule 204 close-out evidence.
+- Added a deterministic publication scenario connecting CNS fails, books, margin and customer
+  protection. Special memorandum accounts, portfolio margin, day-trading requirements, options
+  and fixed-income margin, Rule 201, and live NSCC/DTC messages remain declared, not built.
+
 ## 0.6.0 — 22 Oct 2026
 
 Everything merged since 0.5.0 is collected here by its governing order.
