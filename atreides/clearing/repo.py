@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 from typing import Self, cast
@@ -19,6 +19,7 @@ from atreides.clearing.ficc import (
     FactStatus,
     NovatedObligation,
 )
+from atreides.deadlines.calendar import Market, MarketCalendar
 
 
 class _Model(BaseModel):
@@ -46,40 +47,7 @@ class SponsoredExecution(StrEnum):
     DONE_AWAY = "DONE_AWAY"
 
 
-# Minimal, declared calendar for the FIX-7 repo-term invariant. These are the
-# 2026 full-day United States government securities market holidays used by
-# this build. Weekends are excluded separately. Extend this dated set before
-# validating trades whose term crosses a later calendar year.
-US_GOVERNMENT_SECURITIES_HOLIDAYS_2026 = frozenset(
-    {
-        date(2026, 1, 1),
-        date(2026, 1, 19),
-        date(2026, 2, 16),
-        date(2026, 4, 3),
-        date(2026, 5, 25),
-        date(2026, 6, 19),
-        date(2026, 7, 3),
-        date(2026, 9, 7),
-        date(2026, 10, 12),
-        date(2026, 11, 11),
-        date(2026, 11, 26),
-        date(2026, 12, 25),
-    }
-)
-
-
-def _is_repo_business_day(value: date) -> bool:
-    return value.weekday() < 5 and value not in US_GOVERNMENT_SECURITIES_HOLIDAYS_2026
-
-
-def _repo_business_days_after(start: date, close: date) -> int:
-    cursor = start
-    days = 0
-    while cursor < close:
-        cursor += timedelta(days=1)
-        if _is_repo_business_day(cursor):
-            days += 1
-    return days
+_REPO_CALENDAR = MarketCalendar.load(Market.US_GOVERNMENT_SECURITIES)
 
 
 class RepoTrade(_Model):
@@ -109,10 +77,10 @@ class RepoTrade(_Model):
             self.close_date is None or self.close_date <= self.start_date
         ):
             raise ValueError("overnight and term repo require a later close date")
-        if self.close_date is not None and not _is_repo_business_day(self.close_date):
+        if self.close_date is not None and not _REPO_CALENDAR.is_business_day(self.close_date):
             raise ValueError("repo close date must be a government securities business day")
         if self.close_date is not None:
-            business_days = _repo_business_days_after(self.start_date, self.close_date)
+            business_days = _REPO_CALENDAR.business_days_after(self.start_date, self.close_date)
             if self.term is RepoTerm.OVERNIGHT and business_days != 1:
                 raise ValueError("OVERNIGHT repo must close exactly one business day after start")
             if self.term is RepoTerm.TERM and business_days <= 1:

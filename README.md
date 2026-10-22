@@ -250,7 +250,9 @@ exists to eliminate.
 | **Obligation acceptance** | `atreides/acceptance/` | Accepts, holds, rejects, or declines to decide on an obligation formed elsewhere. It does not rewrite the economics. |
 | **Continuous net settlement** | `atreides/rails/cns.py` | Equities novation, netting, partial allocation, and fails. A fail is a failed net position. The module refuses to attribute that fail to one trade. |
 | **Corporate actions** | `atreides/corporate_actions/` | Experimental. Lifecycle, elections, exact entitlement for the classes that module computes, a synthetic Depository Trust Company (DTC) ISO 20022 adapter (`seev.031`, `seev.033`, `seev.035`, `seev.036` at SR2025 and SR2026), and reconciliation against a movement confirmation. Nothing is transmitted. |
-| **Customer-protection challenger** | `atreides/customer_protection/` | Experimental recomputation of selected net-capital and customer and proprietary-account (PAB) reserve components from caller-classified balances. Advisory. It files nothing and it is not a compliance determination. |
+| **Equities books and customer protection** | `atreides/books/`, `atreides/customer_protection/` | An append-only, double-entry synthetic equities book projects its balances into reserve, net-capital and possession-or-control inputs. Unmapped Exhibit A lines remain missing and therefore HOLD. The engines remain advisory and file nothing. |
+| **Customer margin** | `atreides/margin/` | Regulation T initial and payment-period calculations plus FINRA Rule 4210 maintenance margin, calls, and advisory liquidation recommendations from the equities books. |
+| **Equities capacity and locates** | `atreides/equities/` | Attested account-capacity and synthetic locate documents for L.C.'s separate firm market-access gate. |
 | **Decision record (DSOR)** | `atreides/dsor/` | Append-only, DTG-stamped, deterministic replay. |
 
 > **Canonical identities.** `cato_cash` here
@@ -342,7 +344,10 @@ The contracts layer is asset-class agnostic and rails are pluggable — a new
 rail is a doctrine-plus-fixtures exercise, not an architecture change. The
 implemented depth today is the U.S. Treasury / FICC complex, the cash leg,
 equities continuous net settlement, and the corporate-action lifecycle. The
-customer-protection package is an experimental challenger on caller-supplied
+customer-protection package is an experimental challenger whose EQ-1 equities run reads
+versioned projections from the same append-only books that receive settlement postings;
+its public low-level API still accepts explicit inputs for isolated replay and testing. Unmapped
+balances remain missing rather than being invented. The
 balances, not a rail.
 
 The build order from here is chosen so that each rail forces the
@@ -352,7 +357,7 @@ names:
 | Rail | Finality class exercised | Venue complex | Status |
 | --- | --- | --- | --- |
 | U.S. Treasury / FICC | GROSS_FINAL for bilateral gross; separately recorded instruction and finality after FICC netting | FICC GSD, Fedwire Securities | **Bilateral gross and member-seat FICC GSD novation/netting of both par and settlement money built**; fails, close out, buy in and intraday FICC funding not built |
-| Equities | DEFERRED_NET — finality at end-of-day netting | Continuous net settlement, central depository | **Netting, fails and corporate-action overlay built**; market profiles unpopulated |
+| Equities | DEFERRED_NET — finality at end-of-day netting | Continuous net settlement, central depository | **Netting, fails, corporate-action overlay, append-only books, customer margin, capacity and locates built for the deterministic synthetic run**; real NSCC/DTC messaging is not built |
 | Digital assets | LEDGER_FINAL — no queue; atomic DvP | Tokenized DvP; DTCC Tokenization Service-aware | Tokenized custody contracts and tokenized cash rails built; tokenized MMF with XRPL testnet DvP in Aureon; Atreides LEDGER_FINAL rail gates next. |
 | Credit | Gross / deferred hybrid; TRACE reporting obligation | DTC / NSCC | Next build |
 | FX | CORRESPONDENT_DEPENDENT — PvP; finality not directly observable | CLS, correspondent network | Following build |

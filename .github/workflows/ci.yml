@@ -212,3 +212,19 @@ jobs:
       - uses: ./.github/actions/publish-traceability-snapshot
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-equities-snapshot:
+    name: Publish equities self-clearing snapshot
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, lint, typecheck, probes]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: equities-snapshot-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/publish-equities-snapshot
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

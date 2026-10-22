@@ -1,0 +1,6 @@
+Source: electronic Code of Federal Regulations, 12 CFR Part 220 (Regulation T)
+URL: https://www.ecfr.gov/current/title-12/chapter-II/subchapter-A/part-220
+Retrieved: 2026-10-22
+
+The maximum loan value of a margin equity security is fifty per cent of its current market value.
+Payment period means four business days after the trade date.

@@ -1,0 +1,7 @@
+Source: FINRA Rulebook, Rule 4210(c), self-regulatory organization rule
+URL: https://www.finra.org/rules-guidance/rulebooks/finra-rules/4210
+Retrieved: 2026-10-22
+
+25 percent of the current market value of all margin securities long in the account.
+$2.50 per share or 100 percent of current market value, whichever is greater, for stock short below $5.00.
+$5.00 per share or 30 percent of current market value, whichever is greater, for stock short at $5.00 or above.

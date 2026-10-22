@@ -36,6 +36,8 @@ class Rule204Fail(_Frozen):
     settlement_date: date
     fail_quantity: Decimal = Field(gt=0, allow_inf_nan=False)
     origin_class: Rule204Origin | str | None
+    originating_order_id: str | None = None
+    locate_id: str | None = None
 
 
 class Rule204Assessment(DeadlineAssessment):
@@ -47,6 +49,8 @@ class Rule204Assessment(DeadlineAssessment):
     rule_citation: str | None
     source_sha256: str | None
     preborrow_condition_applies: bool
+    originating_order_id: str | None
+    locate_id: str | None
 
 
 def _result(
@@ -74,6 +78,8 @@ def _result(
         rule_citation=values.pop("rule_citation", None),
         source_sha256=values.pop("source_sha256", None),
         preborrow_condition_applies=values.pop("preborrow_condition_applies", False),
+        originating_order_id=fail.originating_order_id,
+        locate_id=fail.locate_id,
         **values,
     )
 
