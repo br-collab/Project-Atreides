@@ -233,6 +233,17 @@ def test_protection_classification_covers_fully_paid_and_closed_positions() -> N
     )
     assert projected.control.issues[0].fully_paid == 10
 
+    absent = project_customer_protection(
+        books,
+        as_of=date(2026, 10, 22),
+        prices={"ACME": Decimal(100)},
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=(),
+    )
+    assert absent.control.issues[0].excess_margin is None
+    assert "margin result for account CUSTOMER-1 is absent" in absent.audit.reasons.values()
+
     first = books.entries[0]
     books.post(
         entry(
