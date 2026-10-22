@@ -65,8 +65,8 @@ class RepoTrade(_Model):
     cusip: str | None = Field(default=None, pattern=r"^[0-9A-Z*@#]{9}$")
     collateral_class: str | None = None
     clearing_bank: str | None = None
-    haircut_percent: Decimal = Field(default=Decimal("0"), ge=0)
-    member_margin_approximation: Decimal = Field(default=Decimal("0"), ge=0)
+    haircut_percent: Decimal = Field(ge=0)
+    member_margin_approximation: Decimal = Field(ge=0)
     sponsored_execution: SponsoredExecution | None = None
 
     @model_validator(mode="after")

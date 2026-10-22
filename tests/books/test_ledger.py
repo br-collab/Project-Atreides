@@ -216,6 +216,47 @@ def test_all_protection_inputs_project_from_one_replay_byte_for_byte() -> None:
     assert control.issues[0].conserved is True
 
 
+def test_protection_classification_covers_fully_paid_and_closed_positions() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    books.post(entry())
+    paid = tuple(
+        result.model_copy(update={"debit_balance": Decimal(0)})
+        for result in _margin_results(books)
+    )
+    projected = project_customer_protection(
+        books,
+        as_of=date(2026, 10, 22),
+        prices={"ACME": Decimal(100)},
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=paid,
+    )
+    assert projected.control.issues[0].fully_paid == 10
+
+    first = books.entries[0]
+    books.post(
+        entry(
+            "2",
+            "reversal-1",
+            source=PostingSource.REVERSAL,
+            reverses_entry_id="entry-1",
+            lines=tuple(
+                line.model_copy(update={"quantity": -line.quantity, "money": -line.money})
+                for line in first.lines
+            ),
+        )
+    )
+    closed = project_customer_protection(
+        books,
+        as_of=date(2026, 10, 22),
+        prices={"ACME": Decimal(100)},
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=(),
+    )
+    assert closed.control.issues[0].fully_paid == 0
+
+
 def _reserve_entry(
     *,
     event: str,
