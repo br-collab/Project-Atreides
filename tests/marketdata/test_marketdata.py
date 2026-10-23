@@ -23,7 +23,7 @@ from marketdata.cli import main as cli_main
 from marketdata.guard import check_repository
 from marketdata.normalize import normalize, reconcile, validate_rows
 from marketdata.packs import build_pack, verify_pack, write_pack_lock
-from marketdata.store import _AdmittedRedirect, ingest, initialize
+from marketdata.store import _AdmittedRedirect, _ensure_free_space, ingest, initialize
 from marketdata.sync import sync_to_bucket, sync_to_ssd
 from simulator.calibration.loader import load_calibration_pack
 from simulator.runner import run_simulation
@@ -133,6 +133,19 @@ def test_ingest_is_write_once_with_provenance_and_size_refusal(
     )
     with pytest.raises(ValueError, match="below 10 percent free"):
         ingest("test", root=tmp_path / "small", catalog_path=path)
+
+
+def test_streaming_free_space_accepts_exact_threshold_and_refuses_one_byte_more(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    paths = initialize(tmp_path / "store")
+    monkeypatch.setattr(
+        "marketdata.store.shutil.disk_usage",
+        lambda _path: SimpleNamespace(total=1000, used=899, free=101),
+    )
+    _ensure_free_space(paths, 1)
+    with pytest.raises(ValueError, match="below 10 percent free"):
+        _ensure_free_space(paths, 2)
 
 
 def test_interrupted_raw_is_quarantined_and_catalog_refusal_is_logged(

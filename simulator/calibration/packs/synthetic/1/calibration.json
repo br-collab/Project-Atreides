@@ -47,8 +47,8 @@
         "locate_refusal_rate": "0.0600",
         "ex_date_interval": 19,
         "buy_in_interval": 23,
-        "customer_credit_min": 600000000,
-        "customer_credit_max": 800000000
+        "customer_credit_min": 50000000,
+        "customer_credit_max": 900000000
       }
     },
     {

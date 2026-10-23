@@ -18,7 +18,7 @@ from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.rails.cns import absent_entitlement_treatment
 from simulator.calibration import CalibrationPack, load_calibration_pack
-from simulator.estate import drive_estate
+from simulator.estate import drive_estate, simulated_filed_credit_total
 from simulator.invariants import InvariantEvidence, evaluate_invariants
 from simulator.market import (
     PriceTimeBook,
@@ -93,6 +93,34 @@ def _add_months(day: date, months: int) -> date:
     year = day.year + month // 12
     month = month % 12 + 1
     return date(year, month, min(day.day, monthrange(year, month)[1]))
+
+
+def _opening_filed_credit_history(start: date) -> list[dict[str, object]]:
+    """Create 11 synthetic pre-run FOCUS stand-ins through Atreides books."""
+    history: list[dict[str, object]] = []
+    cursor = date(start.year, start.month, 1)
+    for position, months_back in enumerate(range(11, 0, -1)):
+        month_start = _add_months(cursor, -months_back)
+        month_end = date(
+            month_start.year,
+            month_start.month,
+            monthrange(month_start.year, month_start.month)[1],
+        )
+        # The oldest six low months roll off during phase-in.  The five later
+        # high months keep the computed average above the threshold until the
+        # daily regime starts, then roll off to exercise the prescribed exit.
+        filed_credit = Decimal("50000000") if position < 6 else Decimal("1000000000")
+        customer, pab = simulated_filed_credit_total(month_end, filed_credit)
+        history.append(
+            {
+                "month_end": month_end,
+                "customer_total_credits": customer,
+                "pab_total_credits": pab,
+                "total_credits": customer + pab,
+                "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+            }
+        )
+    return history
 
 
 def treasury_clean_price(
@@ -301,25 +329,27 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         ("LIMIT" if limit_refusal_event else None, "LIMIT" if limit_refusal else None),
         ("LOCATE" if locate_refusal_event else None, "LOCATE" if locate_refusal else None),
     )
-    credit_min = int(pack.value("generator", "customer_credit_min"))
-    credit_max = int(pack.value("generator", "customer_credit_max"))
-    # A separate deterministic stream preserves the pre-SIM-1D event draws.
-    customer_credit = Decimal(
-        credit_min + ((index * 104729 + 7919) % (credit_max - credit_min + 1))
-    )
+    credit_min = Decimal(str(pack.value("generator", "customer_credit_min")))
+    credit_max = Decimal(str(pack.value("generator", "customer_credit_max")))
     current_month = (business_date.year, business_date.month)
+    first_month = reserve_history["first_month"]
+    assert isinstance(first_month, tuple)
+    month_index = (business_date.year - first_month[0]) * 12 + business_date.month - first_month[1]
+    customer_credit = credit_max if month_index < 1 else credit_min
     prior_month = reserve_history.get("month")
     if prior_month is not None and prior_month != current_month:
-        snapshots = reserve_history.setdefault("snapshots", [])
+        snapshots = reserve_history["snapshots"]
         assert isinstance(snapshots, list)
-        snapshots.append(reserve_history["last_credit"])
+        filed = reserve_history.get("last_filed")
+        assert isinstance(filed, dict)
+        snapshots.append(filed)
     reserve_history["month"] = current_month
-    reserve_history["last_credit"] = customer_credit
-    snapshots = reserve_history.setdefault("snapshots", [])
+    snapshots = reserve_history["snapshots"]
     assert isinstance(snapshots, list)
     trailing = snapshots[-12:]
     average_credits = (
-        sum((Decimal(str(value)) for value in trailing), Decimal()) / Decimal(12)
+        sum((Decimal(str(value["total_credits"])) for value in trailing), Decimal())
+        / Decimal(12)
         if len(trailing) == 12
         else None
     )
@@ -338,17 +368,36 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
     crossed = reserve_history.get("crossed")
     phase_months = int(phase_item.value)
     effective = _add_months(crossed, phase_months) if isinstance(crossed, date) else None
+    daily_started = bool(reserve_history.get("daily_started"))
+    if (
+        effective is not None
+        and business_date >= effective
+        and average_credits is not None
+        and average_credits >= threshold
+    ):
+        daily_started = True
+        reserve_history["daily_started"] = True
+    exit_notice = reserve_history.get("exit_notice")
+    if (
+        average_credits is not None
+        and average_credits < threshold
+        and daily_started
+        and exit_notice is None
+    ):
+        exit_notice = business_date
+        reserve_history["exit_notice"] = exit_notice
+    exit_item = rules.get("15c3-3.e3iB2.exit_notice")
+    assert exit_item is not None and exit_item.value is not None
+    exit_active = isinstance(exit_notice, date) and business_date < exit_notice + timedelta(
+        days=int(exit_item.value)
+    )
+    average_above_threshold = average_credits is not None and average_credits >= threshold
     mode = (
         ComputationMode.DAILY
-        if effective is not None and business_date >= effective
+        if daily_started and (average_above_threshold or exit_active)
         else ComputationMode.WEEKLY
     )
     protection_inputs_missing = default_event or stale_event
-    reserve_hold_required = (
-        protection_inputs_missing
-        or average_credits is None
-        or (effective is not None and business_date < effective)
-    )
     estate = drive_estate(
         run_number=index,
         business_date=business_date,
@@ -362,9 +411,19 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         average_total_credits=average_credits,
         daily_requirement_effective_date=effective,
         computation_mode=mode,
+        previously_daily_required=daily_started,
+        daily_exit_notice_date=exit_notice if isinstance(exit_notice, date) else None,
         financing_charge=financing_charge,
         post_financing=post_financing,
     )
+    reserve_hold_required = estate.reserve_disposition == "HOLD"
+    reserve_history["last_filed"] = {
+        "month_end": business_date,
+        "customer_total_credits": estate.customer_total_credits,
+        "pab_total_credits": estate.pab_total_credits,
+        "total_credits": estate.customer_total_credits + estate.pab_total_credits,
+        "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+    }
     breaks: list[Break] = [
         Break(
             invariant="I3_STOCK_RECORD_EQUALS_STREET",
@@ -570,8 +629,15 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             "financing_charge": financing_charge,
             "customer_credit_balance": customer_credit,
             "average_total_credits": average_credits,
+            "filed_credit_history_count": len(snapshots),
+            "book_customer_total_credits": estate.customer_total_credits,
+            "book_pab_total_credits": estate.pab_total_credits,
             "reserve_mode": mode.value,
             "daily_requirement_effective_date": effective.isoformat() if effective else None,
+            "previously_daily_required": daily_started,
+            "daily_exit_notice_date": (
+                exit_notice.isoformat() if isinstance(exit_notice, date) else None
+            ),
         },
     )
 
@@ -579,23 +645,46 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
 def run_simulation(
     *,
     seed: int,
-    days: int,
-    start: date = date(2026, 12, 28),
+    days: int | None,
+    start: date | None = None,
+    end: date | None = None,
     repository_shas: dict[str, str] | None = None,
     calibration_uri: str | None = None,
 ) -> dict[str, object]:
-    if days < 1 or days > 250:
+    if days is not None and (days < 1 or days > 250):
         raise ValueError("SIM-1 run length must be 1..250 business days")
     rng = random.Random(seed)
     pack = load_calibration_pack(calibration_uri)
-    dates = pack.observation_dates or _business_dates(start, days)
-    if len(dates) < days:
+    if pack.observation_dates:
+        dates = tuple(
+            day
+            for day in pack.observation_dates
+            if (start is None or day >= start) and (end is None or day <= end)
+        )
+        if end is not None and not dates:
+            raise ValueError("explicit calibration window contains no observations")
+        if end is None and days is not None:
+            dates = dates[:days]
+        elif days is not None and days != len(dates):
+            raise ValueError("days must equal the exact number of dates in the explicit window")
+    else:
+        if days is None:
+            raise ValueError("synthetic simulation requires days")
+        if end is not None:
+            raise ValueError("end is only valid for a dated calibration pack")
+        dates = _business_dates(start or date(2026, 12, 28), days)
+    if not dates:
         raise ValueError("calibration pack does not contain enough dated observations")
-    reserve_history: dict[str, object] = {}
+    reserve_history: dict[str, object] = {
+        "snapshots": _opening_filed_credit_history(dates[0]),
+        "first_month": (dates[0].year, dates[0].month),
+    }
     closes = tuple(
         _simulate_close(rng, day, index, pack, reserve_history)
-        for index, day in enumerate(dates[:days])
+        for index, day in enumerate(dates)
     )
+    history_snapshots = reserve_history["snapshots"]
+    assert isinstance(history_snapshots, list)
     digest = _digest([close.economics_digest for close in closes])
     exercised = sorted({scenario for close in closes for scenario in close.scenarios})
     scenario_counts = {
@@ -605,7 +694,19 @@ def run_simulation(
         "schema_version": "sim.run/1",
         "disclaimer": DISCLAIMER,
         "seed": seed,
-        "days": days,
+        "days": len(dates),
+        "window_start": dates[0].isoformat(),
+        "window_end": dates[-1].isoformat(),
+        "filed_credit_history": [
+            {
+                **snapshot,
+                "month_end": snapshot["month_end"].isoformat(),
+                "customer_total_credits": str(snapshot["customer_total_credits"]),
+                "pab_total_credits": str(snapshot["pab_total_credits"]),
+                "total_credits": str(snapshot["total_credits"]),
+            }
+            for snapshot in history_snapshots
+        ],
         "repository_shas": repository_shas or {},
         "calibration_pack_id": pack.pack_id,
         "calibration_pack_version": pack.version,

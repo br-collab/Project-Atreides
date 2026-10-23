@@ -492,6 +492,21 @@ def test_250_day_budget_and_year_end() -> None:
     averages = [close["market_data"]["average_total_credits"] for close in closes]
     assert averages.count(None) > 0
     assert any(value is not None for value in averages)
+    modes = [close["market_data"]["reserve_mode"] for close in closes]
+    assert "daily" in modes
+    daily_start = modes.index("daily")
+    weekly_exit = modes.index("weekly", daily_start)
+    assert weekly_exit > daily_start
+    exit_notices = [close["market_data"]["daily_exit_notice_date"] for close in closes]
+    assert any(value is not None for value in exit_notices)
+    assert closes[daily_start]["market_data"]["previously_daily_required"] is True
+    history = cast(list[dict[str, str]], run["filed_credit_history"])
+    assert len(history) >= 12
+    assert all(
+        item["source"] == "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS"
+        for item in history
+    )
+    assert all("customer_total_credits" in item and "pab_total_credits" in item for item in history)
 
 
 def test_i7_is_green_with_no_halts_and_with_several_halts() -> None:
