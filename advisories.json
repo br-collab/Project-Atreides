@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "synthetic": true,
-  "taken_at": "2026-10-23T16:25:19.556487Z",
+  "taken_at": "2026-10-23T17:24:57.950988Z",
   "scenarios": [
     {
       "scenario_id": "sc2-control-pass",
@@ -26,7 +26,7 @@
             }
           ],
           "rule_table_version": "sc2-rules/0.1",
-          "rule_table_digest": "sha256:6b84e2520c7e511967cea11a56d5c1c7038033a99c95484693ab5f70c7014d17",
+          "rule_table_digest": "sha256:2295ce55928cf2ed3bdecb414dedf53b3f8aed4fdb62d7dd508caa48c14f751d",
           "input_digest": "sha256:7744ae0d34a2a742b84f85f2baab4277fbdb831ba31be56ba4a5cd120829721b",
           "result_digest": "sha256:efc125f54cadf7e647d1fcc0e8e1f448fc712f2da3fe105f9339a2cb0d06b206"
         }
@@ -57,7 +57,7 @@
             }
           ],
           "rule_table_version": "sc2-rules/0.1",
-          "rule_table_digest": "sha256:6b84e2520c7e511967cea11a56d5c1c7038033a99c95484693ab5f70c7014d17",
+          "rule_table_digest": "sha256:2295ce55928cf2ed3bdecb414dedf53b3f8aed4fdb62d7dd508caa48c14f751d",
           "input_digest": "sha256:e407febb2ff29ab119695731405046c14acd80665f411f6e935add574d851b4e",
           "result_digest": "sha256:35f9c4bed9480a2939c412e3ce6655c8318429f582dfc7d0cbdae2ddd6541718"
         }
@@ -88,7 +88,7 @@
             }
           ],
           "rule_table_version": "sc2-rules/0.1",
-          "rule_table_digest": "sha256:6b84e2520c7e511967cea11a56d5c1c7038033a99c95484693ab5f70c7014d17",
+          "rule_table_digest": "sha256:2295ce55928cf2ed3bdecb414dedf53b3f8aed4fdb62d7dd508caa48c14f751d",
           "input_digest": "sha256:b74a78b93f85f3160781ff7d7179927d6fc5eb56a57da58c7523bd179f68393f",
           "result_digest": "sha256:ce6257302789629ec732a0cda60e70ff73e30b0c9ad838362211667e50c0bbc4"
         }
