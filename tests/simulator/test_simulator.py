@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import os
 import subprocess
 import sys
@@ -318,15 +319,14 @@ def test_seed_replay_and_scenario_coverage(tmp_path: Path) -> None:
     assert first["all_invariants_pass"] is True
     assert first["repository_shas"] == shas
     publish_run(first, tmp_path)
-    for name in ("daily-close.json", "run-summary.json", "trend.json", "SUMMARY.md"):
-        assert (tmp_path / name).read_text().splitlines()[0] == DISCLAIMER
-    notice = (
-        "SIM-1 v1 invariants are not yet independent checks; green results are not evidence "
-        "(see SIM-1B)."
-    )
-    assert first["interim_notice"] == notice
-    assert notice in (tmp_path / "SUMMARY.md").read_text()
-    assert notice in (tmp_path / "run-summary.json").read_text()
+    for name in ("daily-close.json", "run-summary.json", "trend.json"):
+        document = json.loads((tmp_path / name).read_text())
+        assert document["disclaimer"] == DISCLAIMER
+    assert (tmp_path / "SUMMARY.md").read_text().splitlines()[0] == DISCLAIMER
+    for name in ("run-summary.json", "SUMMARY.md"):
+        assert "SIM-1 v1 invariants are not yet independent checks" not in (
+            tmp_path / name
+        ).read_text()
 
 
 def test_reference_defect_classes_are_rediscovered_by_named_invariants() -> None:
