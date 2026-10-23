@@ -38,6 +38,7 @@ from atreides.books.ledger import (
     LedgerLine,
     PostingSource,
     RecordSide,
+    StockRecordBreak,
 )
 from atreides.books.projections import project_customer_protection, project_margin_accounts
 from atreides.customer_protection.control import check_possession_or_control
@@ -64,7 +65,7 @@ class EstateResult:
     allocated_money: Decimal
     books_quantity: Decimal
     books_money: Decimal
-    stock_breaks: tuple[object, ...]
+    stock_breaks: tuple[StockRecordBreak, ...]
     reserve_disposition: str
     net_capital_disposition: str
     control_disposition: str

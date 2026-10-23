@@ -32,7 +32,7 @@ dev = [
     "hypothesis>=6.100",
     # SIM-1B is source-only test infrastructure. It drives the committed L.C.
     # lifecycle/capture/allocation package; production imports still refuse simulator/.
-    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@54dd01aee3f1bae53b9901477c7c2aebac1e921a",
+    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@a6d748523507a76990ecbc034ce3bffbd287fdf6",
 ]
 
 [build-system]
