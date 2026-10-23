@@ -3,14 +3,14 @@
   "calibration_classes_used": [
     "SYNTHETIC"
   ],
-  "calibration_manifest_digest": "sha256:4f656b18cbf5adb0d7b9a91c3332cbefbb7354ffb0e3c047a6024eaf92c8ef1a",
+  "calibration_manifest_digest": "sha256:56cb41f12e3461af66c44c5f6f46e711fbc9ff99928d0b1144d90e2afcc15fc1",
   "calibration_pack_id": "synthetic",
   "calibration_pack_version": "1",
   "closes": [
     {
       "breaks": [],
       "business_date": "2026-12-28",
-      "economics_digest": "sha256:ac4f6efd9db412545f040a5e342566bf2eaa27184da668c6f5675a917a54223e",
+      "economics_digest": "sha256:1a7af2ffacd5c4f0333a1e87091918edbd6de80d4e87948663e85dfba811aa0e",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -30,10 +30,15 @@
       },
       "market_data": {
         "average_total_credits": null,
-        "customer_credit_balance": "600007919",
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
         "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
         "financing_charge": null,
         "financing_need": null,
+        "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
         "sofr_source": null,
@@ -53,14 +58,14 @@
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999584.5000",
-          "reserve_requirement": "600007919.00"
+          "reserve_requirement": "900000000.00"
         },
         "reasons": {
           "net_capital": [],
           "possession_or_control": [],
           "reserve": [
             "average_total_credits",
-            "customer reserve deposit is short of the requirement by 600007919.00"
+            "customer reserve deposit is short of the requirement by 900000000.00"
           ]
         },
         "required_hold": true
@@ -86,7 +91,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-29",
-      "economics_digest": "sha256:e4282aae6fb9d26c22deff4f5f130989aab7d02cf6326046e07ba602e46cc7d9",
+      "economics_digest": "sha256:d1a368f5bb88db7b20de6b094c88a1d7fa04245ce5a7d9f006d01a6cc365192c",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -104,10 +109,15 @@
       "market_access_refusals": {},
       "market_data": {
         "average_total_credits": null,
-        "customer_credit_balance": "600112648",
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
         "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
         "financing_charge": null,
         "financing_need": null,
+        "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
         "sofr_source": null,
@@ -127,14 +137,14 @@
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999773.5000",
-          "reserve_requirement": "600112648.00"
+          "reserve_requirement": "900000000.00"
         },
         "reasons": {
           "net_capital": [],
           "possession_or_control": [],
           "reserve": [
             "average_total_credits",
-            "customer reserve deposit is short of the requirement by 600112648.00"
+            "customer reserve deposit is short of the requirement by 900000000.00"
           ]
         },
         "required_hold": true
@@ -158,7 +168,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-30",
-      "economics_digest": "sha256:572155f31448975abeb2efda0dbacab9f634b6ed7df31e29422e3f383840a41c",
+      "economics_digest": "sha256:8c66d96a250c2dbac657227a45328f1990ae5793b7601b537e82e5d06975a637",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -176,10 +186,15 @@
       "market_access_refusals": {},
       "market_data": {
         "average_total_credits": null,
-        "customer_credit_balance": "600217377",
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
         "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
         "financing_charge": null,
         "financing_need": null,
+        "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
         "sofr_source": null,
@@ -199,14 +214,14 @@
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999679.0000",
-          "reserve_requirement": "600217377.00"
+          "reserve_requirement": "900000000.00"
         },
         "reasons": {
           "net_capital": [],
           "possession_or_control": [],
           "reserve": [
             "average_total_credits",
-            "customer reserve deposit is short of the requirement by 600217377.00"
+            "customer reserve deposit is short of the requirement by 900000000.00"
           ]
         },
         "required_hold": true
@@ -230,7 +245,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-31",
-      "economics_digest": "sha256:de4286b2489ded6c985d56dc70536aed957a4a3738a54d6b68386039a32c10d5",
+      "economics_digest": "sha256:4f04f723e2a3a08e2c4b50ab355080be529bf33d90857ce7c78b0424076109d6",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -248,10 +263,15 @@
       "market_access_refusals": {},
       "market_data": {
         "average_total_credits": null,
-        "customer_credit_balance": "600322106",
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
         "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
         "financing_charge": null,
         "financing_need": null,
+        "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
         "sofr_source": null,
@@ -307,7 +327,7 @@
     {
       "breaks": [],
       "business_date": "2027-01-04",
-      "economics_digest": "sha256:71e45b26f9fb9c55cefada362644e49466ee1c6f2f296c06c8afcdfbde28501d",
+      "economics_digest": "sha256:80af192468f085834144524f2a8e29bb74160a127bcdcc6f1b3f8e36189ebd5f",
       "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL",
@@ -327,11 +347,16 @@
         "HALT": 1
       },
       "market_data": {
-        "average_total_credits": null,
-        "customer_credit_balance": "600426835",
-        "daily_requirement_effective_date": null,
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2027-07-04",
+        "filed_credit_history_count": 12,
         "financing_charge": null,
         "financing_need": null,
+        "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
         "sofr_source": null,
@@ -351,14 +376,14 @@
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999790.0000",
-          "reserve_requirement": "600426835.00"
+          "reserve_requirement": "50000000.00"
         },
         "reasons": {
           "net_capital": [],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 600426835.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
           ]
         },
         "required_hold": true
@@ -384,7 +409,93 @@
   ],
   "days": 5,
   "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
-  "economics_digest": "sha256:6012aaac2825f0915c0e00b3a9b0b5e1e6ea351ead2e37beaf55b2b6da326650",
+  "economics_digest": "sha256:d6fd33ceef94365d3fdb96f564eab0c6baf08915fa88fd06ebf496e49b6f3799",
+  "filed_credit_history": [
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2026-01-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2026-02-28",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2026-03-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2026-04-30",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2026-05-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2026-06-30",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2026-07-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2026-08-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2026-09-30",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2026-10-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2026-11-30",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "900000000.00",
+      "month_end": "2026-12-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "900000000.00"
+    }
+  ],
   "normal_day_count": 2,
   "not_tested": [
     "second venue",
@@ -397,7 +508,7 @@
   "repository_shas": {
     "Cato-FICC-MCP": "ae356bd822952bffb0fa9be2d5960d5064ed5a62",
     "L.C.": "418303c515c73c511dfb5a997a449fbe3042a169",
-    "atreides": "d13e491c95d54dea773b7d6398c44d31e11a1a40",
+    "atreides": "91128f9d1ba7b8502b7bf7424a6ba35d95708476",
     "aureon": "254713b5c411e9c83ced17a61cb800f9bfae3998",
     "cannae-kernel": "549604c1af78ac7aace64d7fefb68d22d99bc394"
   },
@@ -479,5 +590,7 @@
     "STALE_DATA_HOLD"
   ],
   "schema_version": "sim.run/1",
-  "seed": 20261023
+  "seed": 20261023,
+  "window_end": "2027-01-04",
+  "window_start": "2026-12-28"
 }
