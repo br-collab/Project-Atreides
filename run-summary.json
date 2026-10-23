@@ -3,16 +3,18 @@
   "calibration_classes_used": [
     "SYNTHETIC"
   ],
-  "calibration_manifest_digest": "sha256:5d55aeff3dd9ca9b32b2c1e28df4a2c4124e65bd53d5d31cc945f0379e8f0464",
+  "calibration_manifest_digest": "sha256:4f656b18cbf5adb0d7b9a91c3332cbefbb7354ffb0e3c047a6024eaf92c8ef1a",
   "calibration_pack_id": "synthetic",
   "calibration_pack_version": "1",
   "closes": [
     {
       "breaks": [],
       "business_date": "2026-12-28",
-      "economics_digest": "sha256:1b966e62e5b9fd9f993d9389b73f6fc52e2d1fda05ecc73927756da6ca20c55e",
+      "economics_digest": "sha256:ac4f6efd9db412545f040a5e342566bf2eaa27184da668c6f5675a917a54223e",
       "fails_by_age": {},
-      "holds": [],
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -26,25 +28,42 @@
       "market_access_refusals": {
         "LIMIT": 1
       },
+      "market_data": {
+        "average_total_credits": null,
+        "customer_credit_balance": "600007919",
+        "daily_requirement_effective_date": null,
+        "financing_charge": null,
+        "financing_need": null,
+        "reserve_mode": "weekly",
+        "sofr_percent": null,
+        "sofr_source": null,
+        "treasury_clean_price_64ths": null,
+        "treasury_par_yield_percent": null,
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": null
+      },
       "money_residual": "0.00",
       "normal_day": false,
       "protection": {
         "dispositions": {
           "net_capital": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "PASS"
+          "reserve": "HOLD"
         },
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999584.5000",
-          "reserve_requirement": "0.00"
+          "reserve_requirement": "600007919.00"
         },
         "reasons": {
           "net_capital": [],
           "possession_or_control": [],
-          "reserve": []
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 600007919.00"
+          ]
         },
-        "required_hold": false
+        "required_hold": true
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -67,9 +86,11 @@
     {
       "breaks": [],
       "business_date": "2026-12-29",
-      "economics_digest": "sha256:b95d17d25d89bd5d285f9ba9150432872555075b25b9efaac2517cc77d2e2b67",
+      "economics_digest": "sha256:e4282aae6fb9d26c22deff4f5f130989aab7d02cf6326046e07ba602e46cc7d9",
       "fails_by_age": {},
-      "holds": [],
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -81,25 +102,42 @@
         "I8_REPLAY_DIGEST": true
       },
       "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "customer_credit_balance": "600112648",
+        "daily_requirement_effective_date": null,
+        "financing_charge": null,
+        "financing_need": null,
+        "reserve_mode": "weekly",
+        "sofr_percent": null,
+        "sofr_source": null,
+        "treasury_clean_price_64ths": null,
+        "treasury_par_yield_percent": null,
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": null
+      },
       "money_residual": "0.00",
       "normal_day": true,
       "protection": {
         "dispositions": {
           "net_capital": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "PASS"
+          "reserve": "HOLD"
         },
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999773.5000",
-          "reserve_requirement": "0.00"
+          "reserve_requirement": "600112648.00"
         },
         "reasons": {
           "net_capital": [],
           "possession_or_control": [],
-          "reserve": []
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 600112648.00"
+          ]
         },
-        "required_hold": false
+        "required_hold": true
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -120,9 +158,11 @@
     {
       "breaks": [],
       "business_date": "2026-12-30",
-      "economics_digest": "sha256:0b23d0e360068ddfdebdfdef2f07eb6b70a2dacfdb0127dd3b3e72a34c5727cc",
+      "economics_digest": "sha256:572155f31448975abeb2efda0dbacab9f634b6ed7df31e29422e3f383840a41c",
       "fails_by_age": {},
-      "holds": [],
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -134,25 +174,42 @@
         "I8_REPLAY_DIGEST": true
       },
       "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "customer_credit_balance": "600217377",
+        "daily_requirement_effective_date": null,
+        "financing_charge": null,
+        "financing_need": null,
+        "reserve_mode": "weekly",
+        "sofr_percent": null,
+        "sofr_source": null,
+        "treasury_clean_price_64ths": null,
+        "treasury_par_yield_percent": null,
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": null
+      },
       "money_residual": "0.00",
       "normal_day": true,
       "protection": {
         "dispositions": {
           "net_capital": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "PASS"
+          "reserve": "HOLD"
         },
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999679.0000",
-          "reserve_requirement": "0.00"
+          "reserve_requirement": "600217377.00"
         },
         "reasons": {
           "net_capital": [],
           "possession_or_control": [],
-          "reserve": []
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 600217377.00"
+          ]
         },
-        "required_hold": false
+        "required_hold": true
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -173,7 +230,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-31",
-      "economics_digest": "sha256:353df50872b07342b2bdb38c7dc1e2fb78b662d791e7953e3b54d337ff7e54f9",
+      "economics_digest": "sha256:de4286b2489ded6c985d56dc70536aed957a4a3738a54d6b68386039a32c10d5",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -189,6 +246,20 @@
         "I8_REPLAY_DIGEST": true
       },
       "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "customer_credit_balance": "600322106",
+        "daily_requirement_effective_date": null,
+        "financing_charge": null,
+        "financing_need": null,
+        "reserve_mode": "weekly",
+        "sofr_percent": null,
+        "sofr_source": null,
+        "treasury_clean_price_64ths": null,
+        "treasury_par_yield_percent": null,
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": null
+      },
       "money_residual": "0.00",
       "normal_day": false,
       "protection": {
@@ -210,7 +281,8 @@
             "fully_paid[SYN-EQ-2361]"
           ],
           "reserve": [
-            "15c3-3a.item.01"
+            "15c3-3a.item.01",
+            "average_total_credits"
           ]
         },
         "required_hold": true
@@ -235,10 +307,11 @@
     {
       "breaks": [],
       "business_date": "2027-01-04",
-      "economics_digest": "sha256:eabcf71508e15d1e66254e554698233fb7b0c352af8cb3417a25ac73c85590bc",
+      "economics_digest": "sha256:71e45b26f9fb9c55cefada362644e49466ee1c6f2f296c06c8afcdfbde28501d",
       "fails_by_age": {},
       "holds": [
-        "DTC_CAP_OR_COLLATERAL"
+        "DTC_CAP_OR_COLLATERAL",
+        "PROTECTION_INPUTS"
       ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
@@ -253,25 +326,42 @@
       "market_access_refusals": {
         "HALT": 1
       },
+      "market_data": {
+        "average_total_credits": null,
+        "customer_credit_balance": "600426835",
+        "daily_requirement_effective_date": null,
+        "financing_charge": null,
+        "financing_need": null,
+        "reserve_mode": "weekly",
+        "sofr_percent": null,
+        "sofr_source": null,
+        "treasury_clean_price_64ths": null,
+        "treasury_par_yield_percent": null,
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": null
+      },
       "money_residual": "0.00",
       "normal_day": false,
       "protection": {
         "dispositions": {
           "net_capital": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "PASS"
+          "reserve": "HOLD"
         },
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999790.0000",
-          "reserve_requirement": "0.00"
+          "reserve_requirement": "600426835.00"
         },
         "reasons": {
           "net_capital": [],
           "possession_or_control": [],
-          "reserve": []
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 600426835.00"
+          ]
         },
-        "required_hold": false
+        "required_hold": true
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -294,7 +384,7 @@
   ],
   "days": 5,
   "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
-  "economics_digest": "sha256:19194d56c1ff630e99096d9c493131d4275e3b03fb431c95cacfba30b379b6c6",
+  "economics_digest": "sha256:6012aaac2825f0915c0e00b3a9b0b5e1e6ea351ead2e37beaf55b2b6da326650",
   "normal_day_count": 2,
   "not_tested": [
     "second venue",
@@ -307,7 +397,7 @@
   "repository_shas": {
     "Cato-FICC-MCP": "ae356bd822952bffb0fa9be2d5960d5064ed5a62",
     "L.C.": "418303c515c73c511dfb5a997a449fbe3042a169",
-    "atreides": "e7dd9a2c99ab2f1bab4be8785f15c306cc96ef06",
+    "atreides": "d13e491c95d54dea773b7d6398c44d31e11a1a40",
     "aureon": "254713b5c411e9c83ced17a61cb800f9bfae3998",
     "cannae-kernel": "549604c1af78ac7aace64d7fefb68d22d99bc394"
   },
