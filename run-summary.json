@@ -3,20 +3,16 @@
   "calibration_classes_used": [
     "SYNTHETIC"
   ],
-  "calibration_manifest_digest": "sha256:d1feae65e29ecd203d6b4878479ffbc569050280994adfc877cfe602eb468b1c",
+  "calibration_manifest_digest": "sha256:5d55aeff3dd9ca9b32b2c1e28df4a2c4124e65bd53d5d31cc945f0379e8f0464",
   "calibration_pack_id": "synthetic",
   "calibration_pack_version": "1",
   "closes": [
     {
       "breaks": [],
       "business_date": "2026-12-28",
-      "economics_digest": "sha256:6cfb741f74eb1f3fc82d6dea50190ba64ca9288d9531469799e9c1550cc971ac",
+      "economics_digest": "sha256:1b966e62e5b9fd9f993d9389b73f6fc52e2d1fda05ecc73927756da6ca20c55e",
       "fails_by_age": {},
-      "holds": [
-        "DTC_CAP_OR_COLLATERAL",
-        "STALE_MARKET_DATA",
-        "RESERVE_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -28,10 +24,28 @@
         "I8_REPLAY_DIGEST": true
       },
       "market_access_refusals": {
-        "HALT": 1,
-        "RULE_204_B": 1
+        "LIMIT": 1
       },
       "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "PASS"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999584.5000",
+          "reserve_requirement": "0.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": []
+        },
+        "required_hold": false
+      },
       "replay_digest_check": true,
       "scenarios": [
         "CASH_RAIL",
@@ -39,31 +53,23 @@
         "CNS_BUY_IN",
         "CNS_DAY",
         "CNS_NIGHT",
-        "DEFAULT_CNS",
-        "DTC_CAP_HOLD",
         "EX_DATE_REFUSAL",
         "FINRA_11810_BUY_IN",
         "GSD_FUNDS_ONLY",
         "GSD_SECURITIES_NET",
-        "HALT",
         "MULTI_PRINT",
         "ODD_LOT",
         "OPEN_AUCTION",
         "QUEUE_PRIORITY",
-        "RULE_204_SHORT",
-        "STALE_DATA_HOLD",
         "TREASURY_64TH"
       ]
     },
     {
       "breaks": [],
       "business_date": "2026-12-29",
-      "economics_digest": "sha256:67c73de83ddb8310051867f882897b4ab33841ffd7b34efcc4854d3c4ab3e321",
+      "economics_digest": "sha256:b95d17d25d89bd5d285f9ba9150432872555075b25b9efaac2517cc77d2e2b67",
       "fails_by_age": {},
-      "holds": [
-        "DTC_CAP_OR_COLLATERAL",
-        "RESERVE_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -74,39 +80,49 @@
         "I7_MARKET_ACCESS_REFUSES": true,
         "I8_REPLAY_DIGEST": true
       },
-      "market_access_refusals": {
-        "HALT": 1,
-        "RULE_204_B": 1
-      },
+      "market_access_refusals": {},
       "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "PASS"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999773.5000",
+          "reserve_requirement": "0.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": []
+        },
+        "required_hold": false
+      },
       "replay_digest_check": true,
       "scenarios": [
         "CASH_RAIL",
         "CLOSE_AUCTION",
         "CNS_DAY",
         "CNS_NIGHT",
-        "DTC_CAP_HOLD",
         "GSD_FUNDS_ONLY",
         "GSD_SECURITIES_NET",
-        "HALT",
         "LATE_REPORT",
         "MULTI_PRINT",
         "ODD_LOT",
         "OPEN_AUCTION",
         "QUEUE_PRIORITY",
-        "RULE_204_SHORT",
         "TREASURY_64TH"
       ]
     },
     {
       "breaks": [],
       "business_date": "2026-12-30",
-      "economics_digest": "sha256:c09a28a8b6c29d655a08b239836e0fcdd157037020a90260527d40fba1808e00",
+      "economics_digest": "sha256:0b23d0e360068ddfdebdfdef2f07eb6b70a2dacfdb0127dd3b3e72a34c5727cc",
       "fails_by_age": {},
-      "holds": [
-        "DTC_CAP_OR_COLLATERAL",
-        "RESERVE_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -117,40 +133,50 @@
         "I7_MARKET_ACCESS_REFUSES": true,
         "I8_REPLAY_DIGEST": true
       },
-      "market_access_refusals": {
-        "HALT": 1,
-        "RULE_204_B": 1
-      },
+      "market_access_refusals": {},
       "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "PASS"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999679.0000",
+          "reserve_requirement": "0.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": []
+        },
+        "required_hold": false
+      },
       "replay_digest_check": true,
       "scenarios": [
         "CASH_RAIL",
         "CLOSE_AUCTION",
         "CNS_DAY",
         "CNS_NIGHT",
-        "DTC_CAP_HOLD",
         "GSD_FUNDS_ONLY",
         "GSD_SECURITIES_NET",
-        "HALT",
         "LATE_REPORT",
         "MULTI_PRINT",
         "ODD_LOT",
         "OPEN_AUCTION",
         "QUEUE_PRIORITY",
-        "RULE_204_SHORT",
         "TREASURY_64TH"
       ]
     },
     {
       "breaks": [],
       "business_date": "2026-12-31",
-      "economics_digest": "sha256:283c7c7a9e7cbdfd052264c7f00b41baf4f9b6a8df3c4811c51545089abb7ecb",
-      "fails_by_age": {
-        "age_1": 1
-      },
+      "economics_digest": "sha256:353df50872b07342b2bdb38c7dc1e2fb78b662d791e7953e3b54d337ff7e54f9",
+      "fails_by_age": {},
       "holds": [
-        "DTC_CAP_OR_COLLATERAL",
-        "RESERVE_INPUTS"
+        "PROTECTION_INPUTS"
       ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
@@ -162,39 +188,57 @@
         "I7_MARKET_ACCESS_REFUSES": true,
         "I8_REPLAY_DIGEST": true
       },
-      "market_access_refusals": {
-        "HALT": 1,
-        "RULE_204_B": 1
-      },
+      "market_access_refusals": {},
       "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "reserve_requirement": null
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-2361]"
+          ],
+          "reserve": [
+            "15c3-3a.item.01"
+          ]
+        },
+        "required_hold": true
+      },
       "replay_digest_check": true,
       "scenarios": [
         "CASH_RAIL",
         "CLOSE_AUCTION",
         "CNS_DAY",
         "CNS_NIGHT",
-        "DTC_CAP_HOLD",
+        "DEFAULT_CNS",
         "GSD_FUNDS_ONLY",
         "GSD_SECURITIES_NET",
-        "HALT",
         "LATE_REPORT",
         "MULTI_PRINT",
         "ODD_LOT",
         "OPEN_AUCTION",
         "QUEUE_PRIORITY",
-        "RULE_204_LONG",
-        "RULE_204_SHORT",
         "TREASURY_64TH"
       ]
     },
     {
       "breaks": [],
       "business_date": "2027-01-04",
-      "economics_digest": "sha256:f0689fae6f5cb0989820ffeb4a9cd0eb96322ae8b47382996e503b33a76c7789",
+      "economics_digest": "sha256:eabcf71508e15d1e66254e554698233fb7b0c352af8cb3417a25ac73c85590bc",
       "fails_by_age": {},
       "holds": [
-        "DTC_CAP_OR_COLLATERAL",
-        "RESERVE_INPUTS"
+        "DTC_CAP_OR_COLLATERAL"
       ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
@@ -207,10 +251,28 @@
         "I8_REPLAY_DIGEST": true
       },
       "market_access_refusals": {
-        "HALT": 1,
-        "RULE_204_B": 1
+        "HALT": 1
       },
       "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "PASS"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999790.0000",
+          "reserve_requirement": "0.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": []
+        },
+        "required_hold": false
+      },
       "replay_digest_check": true,
       "scenarios": [
         "CASH_RAIL",
@@ -226,14 +288,14 @@
         "ODD_LOT",
         "OPEN_AUCTION",
         "QUEUE_PRIORITY",
-        "RULE_204_SHORT",
         "TREASURY_64TH"
       ]
     }
   ],
   "days": 5,
   "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
-  "economics_digest": "sha256:a3d1adb4b697e75112fad0488c7accdf2210f69cee317d5d10476c335e3d474d",
+  "economics_digest": "sha256:19194d56c1ff630e99096d9c493131d4275e3b03fb431c95cacfba30b379b6c6",
+  "normal_day_count": 2,
   "not_tested": [
     "second venue",
     "best execution",
@@ -245,7 +307,7 @@
   "repository_shas": {
     "Cato-FICC-MCP": "ae356bd822952bffb0fa9be2d5960d5064ed5a62",
     "L.C.": "418303c515c73c511dfb5a997a449fbe3042a169",
-    "atreides": "ab7d70cbf363b3e7c6aadb5f9cc2581395d9ae5c",
+    "atreides": "963a6100bb4751aed99698dc30d6b89e2d530a14",
     "aureon": "254713b5c411e9c83ced17a61cb800f9bfae3998",
     "cannae-kernel": "549604c1af78ac7aace64d7fefb68d22d99bc394"
   },
@@ -258,20 +320,20 @@
     "DEFAULT_CNS": 1,
     "DEFAULT_DTC": 0,
     "DEFAULT_GSD": 0,
-    "DTC_CAP_HOLD": 5,
+    "DTC_CAP_HOLD": 1,
     "EX_DATE_REFUSAL": 1,
     "FINRA_11810_BUY_IN": 1,
     "GSD_FUNDS_ONLY": 5,
     "GSD_SECURITIES_NET": 5,
-    "HALT": 5,
+    "HALT": 1,
     "LATE_REPORT": 4,
     "MULTI_PRINT": 5,
     "ODD_LOT": 5,
     "OPEN_AUCTION": 5,
     "QUEUE_PRIORITY": 5,
-    "RULE_204_LONG": 1,
-    "RULE_204_SHORT": 5,
-    "STALE_DATA_HOLD": 1,
+    "RULE_204_LONG": 0,
+    "RULE_204_SHORT": 0,
+    "STALE_DATA_HOLD": 0,
     "TREASURY_64TH": 5
   },
   "scenarios_declared": [
@@ -317,14 +379,14 @@
     "ODD_LOT",
     "OPEN_AUCTION",
     "QUEUE_PRIORITY",
-    "RULE_204_LONG",
-    "RULE_204_SHORT",
-    "STALE_DATA_HOLD",
     "TREASURY_64TH"
   ],
   "scenarios_not_exercised": [
     "DEFAULT_DTC",
-    "DEFAULT_GSD"
+    "DEFAULT_GSD",
+    "RULE_204_LONG",
+    "RULE_204_SHORT",
+    "STALE_DATA_HOLD"
   ],
   "schema_version": "sim.run/1",
   "seed": 20261023

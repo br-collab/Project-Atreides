@@ -4,7 +4,7 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 
 - Seed: `20261023`
 - Pack: `synthetic` version `1`
-- Manifest: `sha256:d1feae65e29ecd203d6b4878479ffbc569050280994adfc877cfe602eb468b1c`
+- Manifest: `sha256:5d55aeff3dd9ca9b32b2c1e28df4a2c4124e65bd53d5d31cc945f0379e8f0464`
 - Classes: `SYNTHETIC`
 
 ## New York Fed notices
