@@ -1,0 +1,78 @@
+{
+  "schema_version": "cfma.sources/1",
+  "deferred_sources": [
+    {
+      "id": "ofr_repo_market_volume",
+      "catalog_url": "https://www.financialresearch.gov/short-term-funding-monitor/datasets/repo/",
+      "data_host": "data.financialresearch.gov",
+      "status": "NOT_ADMITTED_HOST",
+      "reason": "DATA-1 v0.2 names the OFR site but not its separate data host; no fetch is permitted until that host is expressly admitted"
+    }
+  ],
+  "notices": {
+    "nyfed_reference_rates": "Reference-rate data is subject to the Terms of Use at newyorkfed.org. The Federal Reserve Bank of New York does not endorse, sanction, or accept responsibility for this use or any derived work. Distributed content remains subject to the same permissions, conditions, and restrictions."
+  },
+  "sources": [
+    {
+      "id": "treasury_yield_2019",
+      "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv",
+      "license_class": "A",
+      "kind": "treasury_yield_csv",
+      "citation": "U.S. Department of the Treasury daily par yield curve rates, 2019"
+    },
+    {
+      "id": "nyfed_sofr_2019",
+      "url": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published SOFR values, 2019",
+      "notice_id": "nyfed_reference_rates"
+    },
+    {
+      "id": "nyfed_bgcr_2019",
+      "url": "https://markets.newyorkfed.org/api/rates/secured/bgcr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published BGCR values, 2019",
+      "notice_id": "nyfed_reference_rates"
+    },
+    {
+      "id": "nyfed_tgcr_2019",
+      "url": "https://markets.newyorkfed.org/api/rates/secured/tgcr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published TGCR values, 2019",
+      "notice_id": "nyfed_reference_rates"
+    },
+    {
+      "id": "nyfed_effr_2019",
+      "url": "https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published EFFR values, 2019",
+      "notice_id": "nyfed_reference_rates"
+    },
+    {
+      "id": "nyfed_obfr_2019",
+      "url": "https://markets.newyorkfed.org/api/rates/unsecured/obfr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published OBFR values, 2019",
+      "notice_id": "nyfed_reference_rates"
+    },
+    {
+      "id": "treasury_fiscal_auctions",
+      "url": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query",
+      "license_class": "A",
+      "kind": "fiscal_json",
+      "citation": "U.S. Treasury Fiscal Data auctions query"
+    },
+    {
+      "id": "sec_fails_to_deliver",
+      "url": "https://www.sec.gov/files/data/fails-deliver-data/cnsfails202609a.zip",
+      "license_class": "A",
+      "kind": "sec_ftd",
+      "citation": "U.S. Securities and Exchange Commission fails-to-deliver data"
+    }
+  ]
+}

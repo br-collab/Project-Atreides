@@ -9,3 +9,14 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# DATA-1 zones and credential files never belong in a repository.
+cfma-data/
+00_raw/
+10_normalized/
+20_curated/
+40_runs/
+quarantine/
+*.pem
+*.key
+.env*

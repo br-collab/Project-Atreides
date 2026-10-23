@@ -1,0 +1,21 @@
+{
+  "current": {
+    "baseline-2019-q2": "3",
+    "repo-spike-2019": "3"
+  },
+  "packs": {
+    "baseline-2019-q2/1": "sha256:dec6be4c0c9fe354a607cbfb8a92fd7f0e9f9a3e3087edb86c6a688d8e09f4d0",
+    "baseline-2019-q2/2": "sha256:eddda2266767b270cf2b3acd078faa1ebf0b33ec2701ed507c9f9985d271f36d",
+    "baseline-2019-q2/3": "sha256:080097df804420f267884d873e1b9c185dbaddbb09ba6930d18f4801610bee15",
+    "repo-spike-2019/1": "sha256:14ccf5a074c6ece7fcfb4a1ba91bc785e7bda5eb589db632700112c47f9d7902",
+    "repo-spike-2019/2": "sha256:52c066b2f18eabfd95732002fe487f9b6bc2092956539ac638ade58ccb74820f",
+    "repo-spike-2019/3": "sha256:fd5f1ca78d8936afbacc7f99a553325c04fe1559886311b7747ba0bad1650bd9"
+  },
+  "schema_version": "cfma.pack-locks/1",
+  "superseded": {
+    "baseline-2019-q2/1": "pre-attack pack: source order was descending and only SOFR was present",
+    "baseline-2019-q2/2": "pre-attack pack: chronological, but BGCR, TGCR, EFFR and OBFR were absent",
+    "repo-spike-2019/1": "pre-attack pack: source order was descending and only SOFR was present",
+    "repo-spike-2019/2": "pre-attack pack: chronological, but BGCR, TGCR, EFFR and OBFR were absent"
+  }
+}
