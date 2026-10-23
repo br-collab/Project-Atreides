@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cfma.normalized/1",
+  "required": ["date", "metric", "value", "unit", "source_id", "license_class"],
+  "properties": {
+    "date": {"type": "string", "format": "date"},
+    "metric": {"type": "string"},
+    "value": {"type": "number"},
+    "unit": {"enum": ["percent", "basis_points", "usd", "count", "ratio"]},
+    "source_id": {"type": "string"},
+    "license_class": {"enum": ["A", "B"]}
+  }
+}
