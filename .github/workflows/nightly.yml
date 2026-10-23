@@ -110,3 +110,27 @@ jobs:
       - uses: ./.github/actions/publish-breaks-snapshot
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  simulation-250-day:
+    name: SIM-1 250-business-day close and publish
+    needs: [deep-properties]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    concurrency:
+      group: simulation-snapshot-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/publish-simulation-snapshot
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          days: "250"
+          seed: ${{ github.run_id }}
+      - name: Replay every saved failing seed
+        run: |
+          shopt -s nullglob
+          for seed_file in tests/simulator/regressions/*.seed; do
+            uv run python -m tools.run_simulator --seed "$(cat "$seed_file")" --days 250 --output "$RUNNER_TEMP/regression-$(basename "$seed_file")"
+          done

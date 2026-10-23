@@ -1,0 +1,8 @@
+{
+  "schema_version": "cfma.calibration-manifest/1",
+  "pack_id": "synthetic",
+  "version": "1",
+  "files": {
+    "calibration.json": "43e101314c278893ad1c85e7d81354d39f465c728592d6b9703260a5313e8b09"
+  }
+}

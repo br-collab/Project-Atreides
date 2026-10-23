@@ -476,6 +476,27 @@ inline so the code can be followed without it.
 
 ---
 
+## Synthetic market and settlement-day simulator (SIM-1)
+
+The source-only `simulator/` package generates deterministic synthetic trading and
+settlement days. It has no network client: all calibration enters through one integrity-checked
+local pack selected by `CFMA_DATA_URI`. The loader admits only `SYNTHETIC`, U.S. federal
+government class `A`, and published New York Fed class `B` inputs, while every generated fact
+remains `FACT_SYNTHETIC`. The package is excluded from the Atreides wheel, and
+`ATREIDES_PROFILE=production` refuses its import.
+
+- Pull requests run five business days across year end.
+- Nightly CI runs 250 business days with the workflow run identifier as the recorded seed.
+- Every saved failing seed is replayed by the nightly workflow.
+- `daily-close.json`, `run-summary.json`, and `trend.json` are published to the stable
+  `simulation-snapshot` branch only after a successful run.
+
+Every document begins: `SYNTHETIC SIMULATION: invariants held on generated data; this is
+not evidence of production correctness`. A green run makes no claim about a second venue,
+protected quotes, best execution, options, repo, or the clearing-fund waterfall.
+
+---
+
 ## License and standing
 
 All source code and documentation in this repository, including the files in
