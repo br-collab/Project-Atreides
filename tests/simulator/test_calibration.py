@@ -78,6 +78,21 @@ def test_class_b_requires_notice(tmp_path: Path) -> None:
         load_calibration_pack(copied.as_uri())
 
 
+def test_synthetic_class_refuses_a_real_catalog_url(tmp_path: Path) -> None:
+    copied = _copy_pack(tmp_path)
+    source = load_catalog(CATALOG_PATH)["nyfed_sofr_2019"]
+    _rewrite(copied, lambda doc: doc["inputs"][0].update(source_url=source.url))
+    with pytest.raises(ValueError, match="must use a synthetic:// source identity"):
+        load_calibration_pack(copied.as_uri())
+
+
+def test_synthetic_class_refuses_a_new_york_fed_notice(tmp_path: Path) -> None:
+    copied = _copy_pack(tmp_path)
+    _rewrite(copied, lambda doc: doc["inputs"][0].update(ny_fed_notice="not synthetic"))
+    with pytest.raises(ValueError, match="must not carry a New York Fed notice"):
+        load_calibration_pack(copied.as_uri())
+
+
 def test_class_b_notice_is_carried_into_summary(tmp_path: Path) -> None:
     copied = _copy_pack(tmp_path)
     source = load_catalog(CATALOG_PATH)["nyfed_sofr_2019"]

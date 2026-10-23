@@ -597,6 +597,19 @@ def test_publication_installs_the_real_lc_simulator_dependency() -> None:
     assert "uv sync --locked --extra dev" in action
 
 
+def test_publication_copies_the_committed_spike_outputs_without_the_pack() -> None:
+    action = (
+        Path(__file__).parents[2]
+        / ".github"
+        / "actions"
+        / "publish-simulation-snapshot"
+        / "action.yml"
+    ).read_text()
+    assert "simulator/publication/spike-2019" in action
+    assert '"$publish_dir/spike-2019"' in action
+    assert "repo-spike-2019/5/calibration.json" not in action
+
+
 def test_configuration_is_synthetic_and_forbidden_sources_absent_from_imports() -> None:
     root = Path(__file__).parents[2] / "simulator"
     pack = load_calibration_pack()

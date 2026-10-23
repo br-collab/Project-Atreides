@@ -176,6 +176,10 @@ def load_calibration_pack(uri: str | None = None) -> CalibrationPack:  # noqa: P
             source_url = str(row["source_url"])
             if (urlparse(source_url).hostname or "").lower() in FORBIDDEN_HOSTS:
                 raise ValueError(f"FRED source refused: {source_url}")
+            if license_class == "SYNTHETIC" and urlparse(source_url).scheme != "synthetic":
+                raise ValueError("synthetic calibration must use a synthetic:// source identity")
+            if license_class == "SYNTHETIC" and row.get("ny_fed_notice") is not None:
+                raise ValueError("synthetic calibration must not carry a New York Fed notice")
             notice = row.get("ny_fed_notice")
             if license_class == "B" and not isinstance(notice, str):
                 raise ValueError("class B calibration requires the NY Fed notice")
