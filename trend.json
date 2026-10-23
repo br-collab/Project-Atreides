@@ -1,5 +1,5 @@
-SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness
 {
+  "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
   "failures_found_this_week": 0,
   "green_nights_in_row": 1,
   "never_failed_invariants": [

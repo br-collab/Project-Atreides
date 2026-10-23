@@ -1,4 +1,3 @@
-SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness
 {
   "closes": [
     {
@@ -225,6 +224,7 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
       ]
     }
   ],
+  "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
   "not_tested": [
     "second venue",
     "best execution",

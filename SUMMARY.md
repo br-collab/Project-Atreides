@@ -1,7 +1,5 @@
 SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness
 
-SIM-1 v1 invariants are not yet independent checks; green results are not evidence (see SIM-1B).
-
 # SIM-1 run summary
 
 - Seed: `20261023`

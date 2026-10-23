@@ -1,4 +1,3 @@
-SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness
 {
   "all_invariants_pass": true,
   "calibration_classes_used": [
@@ -235,7 +234,6 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
   "days": 5,
   "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
   "economics_digest": "sha256:a3d1adb4b697e75112fad0488c7accdf2210f69cee317d5d10476c335e3d474d",
-  "interim_notice": "SIM-1 v1 invariants are not yet independent checks; green results are not evidence (see SIM-1B).",
   "not_tested": [
     "second venue",
     "best execution",
@@ -247,7 +245,7 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
   "repository_shas": {
     "Cato-FICC-MCP": "ae356bd822952bffb0fa9be2d5960d5064ed5a62",
     "L.C.": "418303c515c73c511dfb5a997a449fbe3042a169",
-    "atreides": "d1daff1c2413120ef6edc7e67645f7db145e40cf",
+    "atreides": "ab7d70cbf363b3e7c6aadb5f9cc2581395d9ae5c",
     "aureon": "254713b5c411e9c83ced17a61cb800f9bfae3998",
     "cannae-kernel": "549604c1af78ac7aace64d7fefb68d22d99bc394"
   },
