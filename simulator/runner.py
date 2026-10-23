@@ -42,6 +42,7 @@ DISCLAIMER = (
     "this is not evidence of production correctness"
 )
 NOT_TESTED = ("second venue", "best execution", "options", "repo", "clearing fund waterfall")
+SYNTHETIC_START = date(2026, 12, 28)
 ALL_SCENARIOS = (
     "QUEUE_PRIORITY",
     "LATE_REPORT",
@@ -650,12 +651,15 @@ def run_simulation(
     end: date | None = None,
     repository_shas: dict[str, str] | None = None,
     calibration_uri: str | None = None,
+    require_explicit_dated_window: bool = False,
 ) -> dict[str, object]:
     if days is not None and (days < 1 or days > 250):
         raise ValueError("SIM-1 run length must be 1..250 business days")
     rng = random.Random(seed)
     pack = load_calibration_pack(calibration_uri)
     if pack.observation_dates:
+        if require_explicit_dated_window and (start is None or end is None):
+            raise ValueError("dated calibration packs require explicit --start and --end")
         dates = tuple(
             day
             for day in pack.observation_dates
@@ -672,7 +676,7 @@ def run_simulation(
             raise ValueError("synthetic simulation requires days")
         if end is not None:
             raise ValueError("end is only valid for a dated calibration pack")
-        dates = _business_dates(start or date(2026, 12, 28), days)
+        dates = _business_dates(start or SYNTHETIC_START, days)
     if not dates:
         raise ValueError("calibration pack does not contain enough dated observations")
     reserve_history: dict[str, object] = {
@@ -697,6 +701,11 @@ def run_simulation(
         "days": len(dates),
         "window_start": dates[0].isoformat(),
         "window_end": dates[-1].isoformat(),
+        "window_basis": (
+            "explicit dated-pack window"
+            if pack.observation_dates
+            else "declared synthetic start"
+        ),
         "filed_credit_history": [
             {
                 **snapshot,
@@ -765,13 +774,23 @@ def publish_run(run: dict[str, object], output: Path) -> None:
     notice_lines = "\n".join(f"- {notice}" for notice in notices) if notices else "- None"
     classes = run["calibration_classes_used"]
     assert isinstance(classes, list)
+    final_close = closes[-1]
+    assert isinstance(final_close, dict)
+    final_market = final_close["market_data"]
+    assert isinstance(final_market, dict)
     (output / "SUMMARY.md").write_text(
         f"{DISCLAIMER}\n\n"
         "# SIM-1 run summary\n\n"
         f"- Seed: `{run['seed']}`\n"
         f"- Pack: `{run['calibration_pack_id']}` version `{run['calibration_pack_version']}`\n"
         f"- Manifest: `{run['calibration_manifest_digest']}`\n"
-        f"- Classes: `{', '.join(str(value) for value in classes)}`\n\n"
+        f"- Classes: `{', '.join(str(value) for value in classes)}`\n"
+        f"- Closes: `{run['days']}`\n"
+        f"- Window: `{run['window_start']}` through `{run['window_end']}` "
+        f"(`{run['window_basis']}`)\n"
+        f"- Final SOFR: `{final_market.get('sofr_percent')}` percent\n"
+        f"- Final financing need: `${final_market.get('financing_need')}`\n"
+        f"- Final financing charge: `${final_market.get('financing_charge')}`\n\n"
         f"## New York Fed notices\n\n{notice_lines}\n\n"
         "## Not tested\n\n- " + "\n- ".join(NOT_TESTED) + "\n"
     )

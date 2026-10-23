@@ -6,8 +6,9 @@ from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+
 from atreides.deadlines.calendar import Market, MarketCalendar
-from marketdata.catalog import CATALOG_PATH, load_catalog
 from simulator.calibration.loader import PACKS_ROOT
 from simulator.runner import daily_financing_charge, publish_run, run_simulation
 
@@ -21,14 +22,14 @@ def _spike_pack(tmp_path: Path) -> Path:
             dates.append(cursor)
         cursor += timedelta(days=1)
     assert len(dates) == 21
-    catalog = load_catalog(CATALOG_PATH)
     synthetic = json.loads((PACKS_ROOT / "synthetic/1/calibration.json").read_text())
     inputs = list(synthetic["inputs"])
-    for source_id, metric, value, license_class in (
-        ("treasury_yield_2019", "2 Yr", "1.72", "A"),
-        ("nyfed_sofr_2019", "SOFR", "2.43", "B"),
+    # These invented observations prove window arithmetic only. They do not
+    # impersonate the published Treasury or New York Fed series.
+    for input_id, metric, value in (
+        ("synthetic_2y_window", "2 Yr", "1.72"),
+        ("synthetic_sofr_window", "SOFR", "2.43"),
     ):
-        source = catalog[source_id]
         observations = [
             {
                 "date": day.isoformat(),
@@ -40,29 +41,28 @@ def _spike_pack(tmp_path: Path) -> Path:
         ]
         inputs.append(
             {
-                "input_id": source.source_id,
-                "source_url": source.url,
-                "citation": source.citation,
-                "license_class": license_class,
-                "ny_fed_notice": source.ny_fed_notice,
+                "input_id": input_id,
+                "source_url": f"synthetic://sim-1f/{input_id}",
+                "citation": "SYNTHETIC window fixture, not a published series",
+                "license_class": "SYNTHETIC",
                 "values": {"observations": observations},
             }
         )
-    destination = tmp_path / "20_curated/packs/repo-spike-2019/5"
+    destination = tmp_path / "20_curated/packs/synthetic-spike-window/1"
     destination.mkdir(parents=True)
     calibration = destination / "calibration.json"
     calibration.write_text(json.dumps({"inputs": inputs}, sort_keys=True) + "\n")
     manifest = {
         "schema_version": "cfma.calibration-manifest/1",
-        "pack_id": "repo-spike-2019",
-        "version": "5",
+        "pack_id": "synthetic-spike-window",
+        "version": "1",
         "files": {"calibration.json": hashlib.sha256(calibration.read_bytes()).hexdigest()},
     }
     (destination / "manifest.json").write_text(json.dumps(manifest, sort_keys=True) + "\n")
     return destination
 
 
-def test_explicit_spike_window_runs_all_21_published_business_days(tmp_path: Path) -> None:
+def test_explicit_synthetic_window_runs_all_21_business_days(tmp_path: Path) -> None:
     output = tmp_path / "run"
     run = run_simulation(
         seed=20261023,
@@ -81,8 +81,15 @@ def test_explicit_spike_window_runs_all_21_published_business_days(tmp_path: Pat
         need, Decimal("5.25")
     )
     publish_run(run, output)
-    notice = load_catalog(CATALOG_PATH)["nyfed_sofr_2019"].ny_fed_notice
-    assert notice is not None and notice in (output / "SUMMARY.md").read_text()
+    assert "New York Fed notices\n\n- None" in (output / "SUMMARY.md").read_text()
+
+
+def test_notice_format_fixture_is_explicitly_not_market_data(tmp_path: Path) -> None:
+    run = run_simulation(seed=20261023, days=1)
+    notice = "NOTICE-FORMAT TEST ONLY — not a market-data provenance claim"
+    run["ny_fed_notices"] = [notice]
+    publish_run(run, tmp_path)
+    assert notice in (tmp_path / "SUMMARY.md").read_text()
 
 
 def test_explicit_window_rejects_a_mismatched_days_count(tmp_path: Path) -> None:
@@ -99,3 +106,37 @@ def test_explicit_window_rejects_a_mismatched_days_count(tmp_path: Path) -> None
         assert "exact number of dates" in str(error)
     else:
         raise AssertionError("mismatched explicit window was accepted")
+
+
+def test_cli_boundary_requires_both_dates_for_a_dated_pack(tmp_path: Path) -> None:
+    pack = _spike_pack(tmp_path)
+    with pytest.raises(ValueError, match="require explicit --start and --end"):
+        run_simulation(
+            seed=20261023,
+            days=21,
+            calibration_uri=pack.as_uri(),
+            require_explicit_dated_window=True,
+        )
+
+
+def test_committed_spike_publication_is_output_only_and_complete() -> None:
+    publication = Path(__file__).parents[2] / "simulator/publication/spike-2019"
+    assert {path.name for path in publication.iterdir()} == {
+        "SUMMARY.md",
+        "daily-close.json",
+        "run-summary.json",
+        "trend.json",
+    }
+    run = json.loads((publication / "run-summary.json").read_text())
+    assert run["calibration_pack_id"] == "repo-spike-2019"
+    assert run["calibration_pack_version"] == "5"
+    assert run["calibration_classes_used"] == ["A", "B", "SYNTHETIC"]
+    assert run["days"] == 21
+    assert (run["window_start"], run["window_end"]) == ("2019-08-19", "2019-09-17")
+    final = run["closes"][-1]["market_data"]
+    assert final["sofr_percent"] == "5.25"
+    assert final["financing_charge"] == "14.83"
+    assert "repo" in run["not_tested"]
+    summary = (publication / "SUMMARY.md").read_text()
+    assert summary.count("New York Fed is not responsible for publication") == 5
+    assert "run outputs only, not the pack or its data" in summary

@@ -50,9 +50,14 @@ runs:
           git -C "$publish_dir" remote add origin "$remote"
         fi
         cp "$RUNNER_TEMP/simulation/"*.json "$RUNNER_TEMP/simulation/SUMMARY.md" "$publish_dir/"
+        spike_source="simulator/publication/spike-2019"
+        test "$(find "$spike_source" -maxdepth 1 -type f | wc -l | tr -d ' ')" = 4
+        rm -rf "$publish_dir/spike-2019"
+        mkdir -p "$publish_dir/spike-2019"
+        cp "$spike_source/"*.json "$spike_source/SUMMARY.md" "$publish_dir/spike-2019/"
         git -C "$publish_dir" config user.name "github-actions[bot]"
         git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git -C "$publish_dir" add '*.json' 'SUMMARY.md'
+        git -C "$publish_dir" add '*.json' 'SUMMARY.md' 'spike-2019/'
         if git -C "$publish_dir" diff --cached --quiet; then exit 0; fi
         git -C "$publish_dir" commit -m "Publish SIM-1 simulation snapshot"
         git -C "$publish_dir" push origin HEAD:simulation-snapshot

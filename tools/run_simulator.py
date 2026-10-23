@@ -10,7 +10,7 @@ from simulator.runner import publish_run, run_simulation
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, required=True)
 parser.add_argument("--days", type=int, choices=range(1, 251))
-parser.add_argument("--start", type=date.fromisoformat, default=date(2026, 12, 28))
+parser.add_argument("--start", type=date.fromisoformat)
 parser.add_argument("--end", type=date.fromisoformat)
 parser.add_argument("--calibration-uri")
 parser.add_argument("--output", type=Path, required=True)
@@ -25,6 +25,7 @@ publish_run(
         end=args.end,
         calibration_uri=args.calibration_uri,
         repository_shas=repository_shas,
+        require_explicit_dated_window=True,
     ),
     args.output,
 )
