@@ -4,8 +4,8 @@
   "enforcement_status": "ADVISORY_ONLY",
   "claim_label": "EXPERIMENTAL",
   "run_scope": "FULL",
-  "run_commit_sha": "91128f9d1ba7b8502b7bf7424a6ba35d95708476",
-  "run_timestamp": "2026-10-23T18:54:26.766498+00:00",
+  "run_commit_sha": "901d88a20d642cfe4d67df96f2cc7d791aa3c92f",
+  "run_timestamp": "2026-10-23T20:16:48.931674+00:00",
   "requirements": [
     {
       "requirement_id": "BR-01",
@@ -490,5 +490,5 @@
       "test_node_ids": []
     }
   ],
-  "digest": "9d4da5b864b402c0bcbf5ff2204bf3051c7bcdd65b47fa8073e1d290d148745f"
+  "digest": "d718c247bf1975be458d2ca585f18a703179d4ede26a3d32c19dbc9f35351102"
 }
