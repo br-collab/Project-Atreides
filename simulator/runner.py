@@ -38,10 +38,6 @@ DISCLAIMER = (
     "SYNTHETIC SIMULATION: invariants held on generated data; "
     "this is not evidence of production correctness"
 )
-INTERIM_NOTICE = (
-    "SIM-1 v1 invariants are not yet independent checks; green results are not evidence "
-    "(see SIM-1B)."
-)
 NOT_TESTED = ("second venue", "best execution", "options", "repo", "clearing fund waterfall")
 ALL_SCENARIOS = (
     "QUEUE_PRIORITY",
@@ -403,7 +399,6 @@ def run_simulation(
     return {
         "schema_version": "sim.run/1",
         "disclaimer": DISCLAIMER,
-        "interim_notice": INTERIM_NOTICE,
         "seed": seed,
         "days": days,
         "repository_shas": repository_shas or {},
@@ -428,14 +423,13 @@ def publish_run(run: dict[str, object], output: Path) -> None:
     closes = run["closes"]
     assert isinstance(closes, list)
     (output / "run-summary.json").write_text(
-        DISCLAIMER + "\n" + json.dumps(run, indent=2, sort_keys=True) + "\n"
+        json.dumps(run, indent=2, sort_keys=True) + "\n"
     )
     (output / "daily-close.json").write_text(
-        DISCLAIMER
-        + "\n"
-        + json.dumps(
+        json.dumps(
             {
                 "schema_version": "sim.daily-close/1",
+                "disclaimer": DISCLAIMER,
                 "closes": closes,
                 "not_tested": list(NOT_TESTED),
             },
@@ -445,11 +439,10 @@ def publish_run(run: dict[str, object], output: Path) -> None:
         + "\n"
     )
     (output / "trend.json").write_text(
-        DISCLAIMER
-        + "\n"
-        + json.dumps(
+        json.dumps(
             {
                 "schema_version": "sim.trend/1",
+                "disclaimer": DISCLAIMER,
                 "green_nights_in_row": 1 if run["all_invariants_pass"] else 0,
                 "failures_found_this_week": 0,
                 "time_to_merged_fix": None,
@@ -468,7 +461,7 @@ def publish_run(run: dict[str, object], output: Path) -> None:
     classes = run["calibration_classes_used"]
     assert isinstance(classes, list)
     (output / "SUMMARY.md").write_text(
-        f"{DISCLAIMER}\n\n{INTERIM_NOTICE}\n\n"
+        f"{DISCLAIMER}\n\n"
         "# SIM-1 run summary\n\n"
         f"- Seed: `{run['seed']}`\n"
         f"- Pack: `{run['calibration_pack_id']}` version `{run['calibration_pack_version']}`\n"
