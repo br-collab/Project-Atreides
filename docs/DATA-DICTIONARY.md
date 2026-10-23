@@ -579,7 +579,10 @@ An open fail carried forward, in the units it is actually owed in.
 | --- | --- | --- |
 | `security_id` | `str` | required |
 | `quantity` | `Decimal` | required |
-| `aged_days` | `int` | required |
+| `cash` | `Decimal` | required |
+| `settlement_date` | `date` | required |
+| `as_of_date` | `date` | required |
+| `aged_business_days` | `int` | required |
 | `close_out_deadline_offset_days` | `int \| None` | required |
 | `restated_by_corporate_action` | `bool` | `False` |
 
@@ -620,6 +623,7 @@ The outcome for one net position, with the evidence behind it.
 | `disposition` | `CNSDisposition` | required |
 | `position` | `NetPosition` | required |
 | `allocated_quantity` | `Decimal` | required |
+| `allocated_cash` | `Decimal` | required |
 | `residual` | `FailPosition \| None` | required |
 | `breaks` | `tuple[SecuritiesBreak, ...]` | `()` |
 | `rationale` | `str` | `''` |

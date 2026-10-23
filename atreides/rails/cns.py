@@ -75,10 +75,12 @@ arrives as a value.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 from typing import Final
 
+from atreides.deadlines.calendar import MarketCalendar
 from atreides.rails.finality import FinalityClass
 
 __all__ = [
@@ -437,7 +439,10 @@ class FailPosition:
 
     security_id: str
     quantity: Decimal
-    aged_days: int
+    cash: Decimal
+    settlement_date: date
+    as_of_date: date
+    aged_business_days: int
     close_out_deadline_offset_days: int | None
     #: True where a corporate action has restated this quantity. Recorded so
     #: an operator can tell a restated fail from an original one; the two
@@ -620,6 +625,7 @@ class NetSettlementResult:
     disposition: CNSDisposition
     position: NetPosition
     allocated_quantity: Decimal
+    allocated_cash: Decimal
     residual: FailPosition | None
     breaks: tuple[SecuritiesBreak, ...] = ()
     rationale: str = ""
@@ -710,8 +716,11 @@ def settle_net_position(
     profile: MarketProfile,
     *,
     allocated_quantity: Decimal | None = None,
-    aged_days: int = 0,
-    current_offset_days: int | None = None,
+    signed_cash: Decimal,
+    allocated_cash: Decimal | None,
+    settlement_date: date,
+    as_of_date: date,
+    calendar: MarketCalendar,
     spans_record_date: bool = False,
     corporate_action_ratio_applied: bool = False,
     quantity_restated: bool = False,
@@ -755,6 +764,7 @@ def settle_net_position(
     def build(
         disposition: CNSDisposition,
         allocated: Decimal,
+        cash_allocated: Decimal,
         residual: FailPosition | None,
         rationale: str,
     ) -> NetSettlementResult:
@@ -762,13 +772,14 @@ def settle_net_position(
             disposition=disposition,
             position=position,
             allocated_quantity=allocated,
+            allocated_cash=cash_allocated,
             residual=residual,
             breaks=tuple(breaks),
             rationale=rationale,
         )
 
     # 1. Nothing reported. Fail-safe, and the first check for that reason.
-    if allocated_quantity is None:
+    if allocated_quantity is None or allocated_cash is None:
         breaks.append(
             SecuritiesBreak(
                 SecuritiesBreakCode.OUTCOME_NOT_REPORTED,
@@ -779,6 +790,7 @@ def settle_net_position(
         )
         return build(
             CNSDisposition.INDETERMINATE,
+            Decimal(0),
             Decimal(0),
             None,
             "No reported outcome. INDETERMINATE, never settled.",
@@ -797,7 +809,7 @@ def settle_net_position(
     #    above exists to prevent, running the other way: there the framework
     #    refuses to infer settlement from silence, and here it was inferring
     #    silence from a settlement it had been told about.
-    if position.quantity == 0:
+    if position.quantity == 0 and signed_cash == 0:
         if allocated_quantity != 0:
             breaks.append(
                 SecuritiesBreak(
@@ -815,6 +827,7 @@ def settle_net_position(
         return build(
             CNSDisposition.FLAT,
             allocated_quantity,
+            allocated_cash,
             None,
             f"Net position in {position.security_id} is zero across "
             f"{position.constituent_trade_count} trades. Netted out."
@@ -828,15 +841,19 @@ def settle_net_position(
         )
 
     outstanding = position.quantity - allocated_quantity
-    fully_settled = outstanding == 0
-    nothing_moved = allocated_quantity == 0
+    outstanding_cash = signed_cash - allocated_cash
+    fully_settled = outstanding == 0 and outstanding_cash == 0
+    nothing_moved = allocated_quantity == 0 and allocated_cash == 0
 
     residual: FailPosition | None = None
     if not fully_settled:
         residual = FailPosition(
             security_id=position.security_id,
             quantity=outstanding,
-            aged_days=aged_days,
+            cash=outstanding_cash,
+            settlement_date=settlement_date,
+            as_of_date=as_of_date,
+            aged_business_days=calendar.business_days_after(settlement_date, as_of_date),
             close_out_deadline_offset_days=close_out_deadline(
                 profile, position.settlement_date_offset_days
             ),
@@ -847,7 +864,6 @@ def settle_net_position(
                 position=position,
                 profile=profile,
                 residual=residual,
-                current_offset_days=current_offset_days,
                 spans_record_date=spans_record_date,
                 corporate_action_ratio_applied=corporate_action_ratio_applied,
                 quantity_restated=quantity_restated,
@@ -858,6 +874,7 @@ def settle_net_position(
         return build(
             CNSDisposition.SETTLED_IN_FULL,
             allocated_quantity,
+            allocated_cash,
             None,
             f"Net position in {position.security_id} settled in full on a "
             f"{CNS_FINALITY.value} basis.",
@@ -879,21 +896,19 @@ def settle_net_position(
         return build(
             CNSDisposition.PARTIAL_ALLOCATION,
             allocated_quantity,
+            allocated_cash,
             residual,
             f"Partial allocation: {allocated_quantity} of {position.quantity} "
             f"in {position.security_id}. The residual is a live obligation, "
             f"not a rounding remainder.",
         )
 
-    disposition = (
-        CNSDisposition.FAILED_TO_RECEIVE
-        if position.is_receive
-        else CNSDisposition.FAILED_TO_DELIVER
-    )
+    receives = position.is_receive or (position.quantity == 0 and signed_cash > 0)
+    disposition = CNSDisposition.FAILED_TO_RECEIVE if receives else CNSDisposition.FAILED_TO_DELIVER
     breaks.append(
         SecuritiesBreak(
             SecuritiesBreakCode.FAIL_TO_RECEIVE
-            if position.is_receive
+            if receives
             else SecuritiesBreakCode.FAIL_TO_DELIVER,
             f"{position.security_id}: nothing allocated against a net "
             f"position of {position.quantity}",
@@ -902,6 +917,7 @@ def settle_net_position(
     )
     return build(
         disposition,
+        Decimal(0),
         Decimal(0),
         residual,
         f"Nothing allocated. {disposition.value} on the net position, which "
@@ -915,7 +931,6 @@ def _open_fail_breaks(
     position: NetPosition,
     profile: MarketProfile,
     residual: FailPosition,
-    current_offset_days: int | None,
     spans_record_date: bool,
     corporate_action_ratio_applied: bool,
     quantity_restated: bool,
@@ -935,9 +950,8 @@ def _open_fail_breaks(
             )
         )
     elif (
-        residual.close_out_deadline_offset_days is not None
-        and current_offset_days is not None
-        and current_offset_days > residual.close_out_deadline_offset_days
+        profile.close_out_deadline_days is not None
+        and residual.aged_business_days > profile.close_out_deadline_days
     ):
         out.append(
             SecuritiesBreak(

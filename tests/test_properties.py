@@ -36,6 +36,7 @@ line of code being wrong.
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import date
 from decimal import Decimal
 
 from hypothesis import assume, given, seed, settings
@@ -53,6 +54,7 @@ from atreides.contracts.margin_impact import (
     sort_by_margin_consequence,
 )
 from atreides.contracts.margin_profile import CollectionModel
+from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.messaging.readback import (
     RECOGNISED_STATUS_CODES,
     ingest_readback,
@@ -78,8 +80,8 @@ from atreides.rails.cns import (
     SecuritiesBreakCode,
     net_positions,
     processing_date_offset,
-    settle_net_position,
 )
+from atreides.rails.cns import settle_net_position as _settle_net_position
 from atreides.rails.determination import (
     DeterminationOutcome,
     DeterminationProfile,
@@ -95,6 +97,24 @@ from atreides.rails.funding_state import (
     FundingInputs,
     project_funding,
 )
+
+
+def settle_net_position(position, profile, *, allocated_quantity=None, **kwargs):
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    settlement_date = date(2026, 10, 1)
+    kwargs.pop("aged_days", None)
+    kwargs.pop("current_offset_days", None)
+    return _settle_net_position(
+        position,
+        profile,
+        allocated_quantity=allocated_quantity,
+        signed_cash=position.quantity,
+        allocated_cash=allocated_quantity,
+        settlement_date=settlement_date,
+        as_of_date=settlement_date,
+        calendar=calendar,
+        **kwargs,
+    )
 
 #: Example count comes from the active Hypothesis profile - see
 #: ``tests/conftest.py``. Run ``pytest --hypothesis-profile=deep`` to hunt
