@@ -23,7 +23,7 @@ from simulator.market import (
     auction_print,
     treasury_consideration,
 )
-from simulator.model import AssetClass, Break, CloseResult, Order, Side
+from simulator.model import AssetClass, Break, CloseResult, Order, ProtectionResults, Side
 from simulator.settlement import (
     buy_in_cash_difference,
     cash_rail_movement,
@@ -79,6 +79,10 @@ def _business_dates(start: date, days: int) -> tuple[date, ...]:
             result.append(cursor)
         cursor += timedelta(days=1)
     return tuple(result)
+
+
+def _draw(rng: random.Random, pack: CalibrationPack, key: str) -> bool:
+    return Decimal(str(rng.random())) < Decimal(str(pack.value("generator", key)))
 
 
 def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source visible
@@ -177,12 +181,36 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         coupon=Decimal(rng.randrange(1, 500)) / Decimal(100),
         mark=Decimal(rng.randrange(1, 500)) / Decimal(100),
     )
+    halt_event = _draw(rng, pack, "halt_rate")
+    rule_204_fail_event = _draw(rng, pack, "rule_204_restriction_rate")
+    closeout_settled = _draw(rng, pack, "rule_204_settled_rate")
+    dtc_shortfall_event = _draw(rng, pack, "dtc_shortfall_rate")
+    default_event = _draw(rng, pack, "default_rate")
+    stale_event = _draw(rng, pack, "stale_rate")
+    limit_refusal_event = _draw(rng, pack, "limit_refusal_rate")
+    locate_refusal_event = _draw(rng, pack, "locate_refusal_rate")
     dtc = dtc_dvp_status(
         issue=issue,
         quantity=50,
         money=Decimal("1000.00"),
-        net_debit_cap=Decimal(str(pack.value("market", "dtc_net_debit_cap"))),
-        collateral=Decimal(str(pack.value("market", "dtc_collateral"))),
+        net_debit_cap=Decimal(
+            str(
+                pack.value(
+                    "market",
+                    "dtc_net_debit_cap"
+                    if dtc_shortfall_event
+                    else "dtc_normal_net_debit_cap",
+                )
+            )
+        ),
+        collateral=Decimal(
+            str(
+                pack.value(
+                    "market",
+                    "dtc_collateral" if dtc_shortfall_event else "dtc_normal_collateral",
+                )
+            )
+        ),
     )
     cash = cash_rail_movement(issue=treasury_issue, money=gsd[0].money + gsd[1].money)
     calendar = MarketCalendar.load(Market.US_EQUITIES)
@@ -193,7 +221,9 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         settlement_date=business_date, sale_kind="LONG", calendar=calendar
     )
     restriction_active = short_sale_restricted(
-        deadline=rule_204_short, close_date=rule_204_short, closeout_settled=False
+        deadline=rule_204_short,
+        close_date=rule_204_short if rule_204_fail_event else business_date,
+        closeout_settled=closeout_settled,
     )
     cns_buy_in = buy_in_cash_difference(
         quantity=101, original_price=order_price, buy_in_price=order_price + Decimal("0.13")
@@ -204,12 +234,25 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
     ex_date_refusal = absent_entitlement_treatment(issue)
     halted = PriceTimeBook()
     halted.rest(order.model_copy(update={"order_id": f"ORD-{index}-HALT"}))
-    halted.halt(issue, cancel_resting=True)
+    if halt_event:
+        halted.halt(issue, cancel_resting=True)
     halt_refusal = False
     try:
         halted.rest(order.model_copy(update={"order_id": f"ORD-{index}-DURING-HALT"}))
     except ValueError:
         halt_refusal = True
+    limit_refusal = limit_refusal_event and order_price + price_spread > order.limit_price
+    locate_refusal = locate_refusal_event
+    access_events = (
+        ("HALT" if halt_event else None, "HALT" if halt_refusal else None),
+        (
+            "RULE_204_B" if rule_204_fail_event and not closeout_settled else None,
+            "RULE_204_B" if restriction_active else None,
+        ),
+        ("LIMIT" if limit_refusal_event else None, "LIMIT" if limit_refusal else None),
+        ("LOCATE" if locate_refusal_event else None, "LOCATE" if locate_refusal else None),
+    )
+    protection_hold_required = default_event or stale_event
     estate = drive_estate(
         run_number=index,
         business_date=business_date,
@@ -218,6 +261,10 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         account_weights=account_weights,
         street_quantity=Decimal(sum(m.securities for m in cns)),
         prior_close=prior_close,
+        protection_inputs_missing=protection_hold_required,
+        previously_daily_required=bool(
+            pack.value("market", "previously_daily_required")
+        ),
     )
     breaks: list[Break] = [
         Break(
@@ -256,24 +303,27 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
                 reason="cent residual",
             )
         )
-    protection_holds = {
+    protection_dispositions = (
         estate.reserve_disposition,
         estate.net_capital_disposition,
         estate.control_disposition,
-    }
+    )
+    protection_figures = (
+        estate.reserve_figure,
+        estate.net_capital_figure,
+        estate.control_figure,
+    )
     gate_holds = tuple(
         reason
         for reason, held in (
             ("DTC_CAP_OR_COLLATERAL", dtc.status == "HELD_CAP_OR_COLLATERAL"),
-            ("STALE_MARKET_DATA", index % int(pack.value("generator", "stale_interval")) == 0),
-            ("RESERVE_INPUTS", "HOLD" in protection_holds),
+            ("STALE_MARKET_DATA", stale_event),
+            ("PROTECTION_INPUTS", "HOLD" in protection_dispositions),
         )
         if held
     )
     refusal_events = tuple(
-        reason
-        for reason, refused in (("HALT", halt_refusal), ("RULE_204_B", restriction_active))
-        if refused
+        actual for _, actual in access_events if actual is not None
     )
     fail_age = calendar.business_days_after(business_date, rule_204_short)
     fails = (
@@ -303,7 +353,7 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         scenario_events.add("RULE_204_LONG")
     if dtc.status == "HELD_CAP_OR_COLLATERAL":
         scenario_events.add("DTC_CAP_HOLD")
-    if index % int(pack.value("generator", "default_interval")) == 0:
+    if default_event:
         scenario_events.add(("DEFAULT_CNS", "DEFAULT_GSD", "DEFAULT_DTC")[index % 3])
     if "STALE_MARKET_DATA" in gate_holds:
         scenario_events.add("STALE_DATA_HOLD")
@@ -330,6 +380,8 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         "estate": asdict(estate),
         "holds": gate_holds,
         "refusals": refusal_events,
+        "access_events": access_events,
+        "protection_hold_required": protection_hold_required,
         "fails": fails,
     }
     digest = _digest(economics)
@@ -350,8 +402,11 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
                 and all(m.money is not None for m in gsd)
             ),
             holds=gate_holds,
-            protection_dispositions=frozenset(protection_holds),
+            protection_dispositions=protection_dispositions,
+            protection_figures=protection_figures,
+            protection_hold_required=protection_hold_required,
             refusals=refusal_events,
+            access_events=access_events,
             deadlines_are_business_days=(
                 calendar.is_business_day(rule_204_short) and calendar.is_business_day(rule_204_long)
             ),
@@ -372,6 +427,31 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         replay_digest_check=replay_digest == digest,
         economics_digest=digest,
         scenarios=tuple(sorted(scenario_events)),
+        normal_day=not any(
+            (
+                halt_event,
+                restriction_active,
+                dtc_shortfall_event,
+                default_event,
+                stale_event,
+                limit_refusal_event,
+                locate_refusal_event,
+            )
+        ),
+        protection=ProtectionResults(
+            required_hold=protection_hold_required,
+            dispositions={
+                "reserve": estate.reserve_disposition,
+                "net_capital": estate.net_capital_disposition,
+                "possession_or_control": estate.control_disposition,
+            },
+            figures={
+                "reserve_requirement": estate.reserve_figure,
+                "net_capital": estate.net_capital_figure,
+                "control_shortfall": estate.control_figure,
+            },
+            reasons=estate.protection_reasons,
+        ),
     )
 
 
@@ -412,6 +492,7 @@ def run_simulation(
         "scenarios_declared": list(ALL_SCENARIOS),
         "scenarios_exercised": exercised,
         "scenario_counts": scenario_counts,
+        "normal_day_count": sum(close.normal_day for close in closes),
         "scenarios_not_exercised": sorted(set(ALL_SCENARIOS) - set(exercised)),
         "not_tested": list(NOT_TESTED),
         "all_invariants_pass": all(all(close.invariant_results.values()) for close in closes),

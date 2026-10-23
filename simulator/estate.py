@@ -43,7 +43,12 @@ from atreides.books.ledger import (
 from atreides.books.projections import project_customer_protection, project_margin_accounts
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
-from atreides.customer_protection.reserve import compute_reserve
+from atreides.customer_protection.reserve import (
+    EXHIBIT_A_CREDITS,
+    LineBalance,
+    ReserveInputs,
+    compute_reserve,
+)
 from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.dsor.books import BooksPosting
@@ -69,9 +74,41 @@ class EstateResult:
     reserve_disposition: str
     net_capital_disposition: str
     control_disposition: str
+    reserve_figure: Decimal | None
+    net_capital_figure: Decimal | None
+    control_figure: Decimal | None
+    protection_reasons: dict[str, tuple[str, ...]]
     books_digest: str
     settled_quantity: Decimal
     settlement_residual_two_sided: bool
+
+
+def _complete_reserve_inputs(
+    projected: ReserveInputs, *, previously_daily_required: bool
+) -> ReserveInputs:
+    """Turn the simulator's complete generated activity into evidenced reserve facts."""
+    reserve_lines = tuple(
+        LineBalance(rule_id=line.rule_id, amount=line.amount or Decimal())
+        for line in projected.lines
+    )
+    generated_credit_history = sum(
+        (
+            line.amount or Decimal()
+            for line in reserve_lines
+            if line.rule_id in EXHIBIT_A_CREDITS
+        ),
+        Decimal(),
+    )
+    return projected.model_copy(
+        update={
+            "lines": reserve_lines,
+            # The generated estate's complete activity is the evidence for its
+            # synthetic trailing-period credit fact; this is not a regulatory default.
+            "average_total_credits": generated_credit_history,
+            "previously_daily_required": previously_daily_required,
+            "qualified_securities_deposit": Decimal(),
+        }
+    )
 
 
 def _identifier(prefix: str, value: int) -> str:
@@ -126,7 +163,7 @@ def _wire(payload: ApprovedIntentPayload) -> bytes:
     )
 
 
-def drive_estate(
+def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate path
     *,
     run_number: int,
     business_date: date,
@@ -135,6 +172,8 @@ def drive_estate(
     account_weights: tuple[int, ...],
     street_quantity: Decimal,
     prior_close: Decimal,
+    protection_inputs_missing: bool,
+    previously_daily_required: bool,
 ) -> EstateResult:
     """Drive L.C. then Atreides; checks elsewhere only compare their outputs.
 
@@ -325,6 +364,20 @@ def drive_estate(
                     currency="USD",
                     money=-entry.consideration,
                 ),
+                LedgerLine(
+                    account_id=entry.account,
+                    account_type=AccountType.CUSTOMER_CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=entry.consideration,
+                ),
+                LedgerLine(
+                    account_id="SYNTHETIC_FUNDING",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=-entry.consideration,
+                ),
             )
         )
     lines.extend(
@@ -385,10 +438,50 @@ def drive_estate(
         calendar=calendar,
         margin_results=margin_results,
     )
+    # A generated normal day describes the complete synthetic activity set. Lines
+    # absent from that set are observed zeroes, not invented regulatory defaults.
+    reserve_inputs = _complete_reserve_inputs(
+        projected.reserve,
+        previously_daily_required=previously_daily_required,
+    )
+    net_capital_inputs = projected.net_capital.model_copy(
+        update={
+            "reports_lending_activity_monthly": False,
+            "securities_loaned_and_repo_payable": Decimal(),
+            "securities_borrowed_and_reverse_repo_value": Decimal(),
+        }
+    )
+    control_inputs = projected.control
+    if protection_inputs_missing:
+        reserve_inputs = reserve_inputs.model_copy(
+            update={
+                "lines": (
+                    reserve_inputs.lines[0].model_copy(update={"amount": None}),
+                    *reserve_inputs.lines[1:],
+                )
+            }
+        )
+        net_capital_inputs = net_capital_inputs.model_copy(update={"net_worth": None})
+        control_inputs = control_inputs.model_copy(
+            update={
+                "issues": tuple(
+                    item.model_copy(update={"fully_paid": None})
+                    for item in control_inputs.issues
+                )
+            }
+        )
     rules = load_rule_table()
-    reserve = compute_reserve(projected.reserve, rules)
-    capital = compute_net_capital(projected.net_capital, rules)
-    control = check_possession_or_control(projected.control, rules)
+    reserve = compute_reserve(reserve_inputs, rules)
+    capital = compute_net_capital(net_capital_inputs, rules)
+    control = check_possession_or_control(control_inputs, rules)
+    control_figure = (
+        None
+        if any(item.shortfall is None for item in control.issues)
+        else sum(
+            (item.shortfall for item in control.issues if item.shortfall is not None),
+            Decimal(),
+        )
+    )
     quantities = books.quantities()[issue]
     books_quantity = quantities[RecordSide.OWNERSHIP]
     books_money = -sum(
@@ -411,6 +504,14 @@ def drive_estate(
         reserve_disposition=reserve.disposition.value,
         net_capital_disposition=capital.disposition.value,
         control_disposition=control.disposition.value,
+        reserve_figure=reserve.requirement,
+        net_capital_figure=capital.net_capital,
+        control_figure=control_figure,
+        protection_reasons={
+            "reserve": reserve.reasons + reserve.missing_inputs + reserve.breaches,
+            "net_capital": capital.reasons + capital.missing_inputs + capital.breaches,
+            "possession_or_control": control.reasons + control.missing_inputs + control.breaches,
+        },
         books_digest=books.digest(),
         settled_quantity=settlement.allocated_quantity,
         settlement_residual_two_sided=(

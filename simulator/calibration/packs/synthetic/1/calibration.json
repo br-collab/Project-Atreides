@@ -16,7 +16,10 @@
         "treasury_price_64ths": "99.515625",
         "treasury_accrued_interest": "123.456",
         "dtc_net_debit_cap": "900.00",
-        "dtc_collateral": "950.00"
+        "dtc_collateral": "950.00",
+        "dtc_normal_net_debit_cap": "1250.00",
+        "dtc_normal_collateral": "1200.00",
+        "previously_daily_required": false
       }
     },
     {
@@ -33,8 +36,14 @@
         "price_spread": "0.001",
         "size_ahead_max": 20,
         "report_delay_max": 30,
-        "stale_interval": 11,
-        "default_interval": 17,
+        "halt_rate": "0.0800",
+        "rule_204_restriction_rate": "0.1000",
+        "rule_204_settled_rate": "0.4500",
+        "dtc_shortfall_rate": "0.1200",
+        "default_rate": "0.0250",
+        "stale_rate": "0.0700",
+        "limit_refusal_rate": "0.0600",
+        "locate_refusal_rate": "0.0600",
         "ex_date_interval": 19,
         "buy_in_interval": 23
       }
