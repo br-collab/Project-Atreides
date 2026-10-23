@@ -507,8 +507,8 @@
   "ny_fed_notices": [],
   "repository_shas": {
     "Cato-FICC-MCP": "ae356bd822952bffb0fa9be2d5960d5064ed5a62",
-    "L.C.": "418303c515c73c511dfb5a997a449fbe3042a169",
-    "atreides": "91128f9d1ba7b8502b7bf7424a6ba35d95708476",
+    "L.C.": "f9f95474a7dff6123c9e8788ec6a7949864b353b",
+    "atreides": "901d88a20d642cfe4d67df96f2cc7d791aa3c92f",
     "aureon": "254713b5c411e9c83ced17a61cb800f9bfae3998",
     "cannae-kernel": "549604c1af78ac7aace64d7fefb68d22d99bc394"
   },
@@ -591,6 +591,7 @@
   ],
   "schema_version": "sim.run/1",
   "seed": 20261023,
+  "window_basis": "declared synthetic start",
   "window_end": "2027-01-04",
   "window_start": "2026-12-28"
 }
