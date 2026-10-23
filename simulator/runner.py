@@ -238,7 +238,7 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         == estate.captured_quantity
         == estate.allocated_quantity
         == estate.books_quantity
-        == Decimal(sum(m.securities for m in cns))
+        == estate.settled_quantity
     )
     money_residual = venue_money - estate.books_money
     money_ok = money_residual == Decimal()
@@ -344,12 +344,15 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             captured_quantity=estate.captured_quantity,
             allocated_quantity=estate.allocated_quantity,
             books_quantity=estate.books_quantity,
-            street_quantity=Decimal(sum(m.securities for m in cns)),
+            street_quantity=estate.settled_quantity,
             venue_money=venue_money,
             books_money=estate.books_money,
             stock_break_count=len(estate.stock_breaks),
             difference_ownership=tuple((item.owner, item.age_business_days) for item in breaks),
-            residuals_two_sided=all(m.money is not None for m in (*cns, *gsd)),
+            residuals_two_sided=(
+                estate.settlement_residual_two_sided
+                and all(m.money is not None for m in gsd)
+            ),
             holds=gate_holds,
             protection_dispositions=frozenset(protection_holds),
             refusals=refusal_events,

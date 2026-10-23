@@ -47,6 +47,12 @@ from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.dsor.books import BooksPosting
 from atreides.margin.engine import compute_margin
+from atreides.rails.cns import (
+    CloseOutRegime,
+    MarketProfile,
+    net_positions,
+    settle_net_position,
+)
 from simulator.model import Print
 
 
@@ -63,6 +69,8 @@ class EstateResult:
     net_capital_disposition: str
     control_disposition: str
     books_digest: str
+    settled_quantity: Decimal
+    settlement_residual_two_sided: bool
 
 
 def _identifier(prefix: str, value: int) -> str:
@@ -273,6 +281,31 @@ def drive_estate(
         ),
     )
     books = EquitiesBooks(break_owner="SIM_SETTLEMENT_OPS")
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    net_position = net_positions(
+        ((issue, total_quantity),),
+        market_id="NSCC_SYNTHETIC",
+        settlement_date_offset_days=1,
+    )[0]
+    signed_cash = (total_quantity * prior_close).quantize(Decimal("0.01"))
+    allocated_cash = (street_quantity * prior_close).quantize(Decimal("0.01"))
+    settlement = settle_net_position(
+        net_position,
+        MarketProfile(
+            market_id="NSCC_SYNTHETIC",
+            settlement_cycle_days=1,
+            close_out_regime=CloseOutRegime.MANDATORY_DEADLINE,
+            close_out_deadline_days=3,
+            allocation_rule_published=True,
+            provenance="SIM-1B synthetic market profile",
+        ),
+        allocated_quantity=street_quantity,
+        signed_cash=signed_cash,
+        allocated_cash=allocated_cash,
+        settlement_date=business_date,
+        as_of_date=business_date,
+        calendar=calendar,
+    )
     lines: list[LedgerLine] = []
     for entry in allocation.entries:
         lines.extend(
@@ -330,8 +363,9 @@ def drive_estate(
             ),
         )
     )
-    stock_breaks = books.verify_stock_record(observed_locations={issue: street_quantity})
-    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    stock_breaks = books.verify_stock_record(
+        observed_locations={issue: settlement.allocated_quantity}
+    )
     margin_results = tuple(
         compute_margin(
             account,
@@ -377,4 +411,12 @@ def drive_estate(
         net_capital_disposition=capital.disposition.value,
         control_disposition=control.disposition.value,
         books_digest=books.digest(),
+        settled_quantity=settlement.allocated_quantity,
+        settlement_residual_two_sided=(
+            settlement.residual is None
+            or (
+                settlement.residual.quantity is not None
+                and settlement.residual.cash is not None
+            )
+        ),
     )
