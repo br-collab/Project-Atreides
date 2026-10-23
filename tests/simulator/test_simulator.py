@@ -350,6 +350,18 @@ def test_production_profile_refuses_import() -> None:
     assert "unavailable in the production profile" in result.stderr
 
 
+def test_publication_resolves_the_real_lc_repository_slug() -> None:
+    action = (
+        Path(__file__).parents[2]
+        / ".github"
+        / "actions"
+        / "publish-simulation-snapshot"
+        / "action.yml"
+    ).read_text()
+    assert "Cato-FICC-MCP L.C. aureon" in action
+    assert "Legiones-Cannenses" not in action
+
+
 def test_configuration_is_synthetic_and_forbidden_sources_absent_from_imports() -> None:
     root = Path(__file__).parents[2] / "simulator"
     pack = load_calibration_pack()

@@ -26,7 +26,7 @@ runs:
       run: |
         set -euo pipefail
         args=(--repository-sha "atreides=${GITHUB_SHA}")
-        for repository in cannae-kernel Cato-FICC-MCP Legiones-Cannenses aureon; do
+        for repository in cannae-kernel Cato-FICC-MCP L.C. aureon; do
           sha="$(git ls-remote "https://github.com/br-collab/${repository}.git" refs/heads/main | cut -f1)"
           test -n "$sha"
           args+=(--repository-sha "${repository}=${sha}")
