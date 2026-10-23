@@ -38,6 +38,8 @@ from atreides.books.ledger import (
     LedgerLine,
     PostingSource,
     RecordSide,
+    ReserveActivity,
+    ReserveSourceFact,
     StockRecordBreak,
 )
 from atreides.books.projections import project_customer_protection, project_margin_accounts
@@ -49,6 +51,7 @@ from atreides.customer_protection.reserve import (
     LineBalance,
     ReserveInputs,
     compute_reserve,
+    with_customer_excess_debits,
 )
 from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
@@ -73,9 +76,11 @@ class EstateResult:
     books_money: Decimal
     stock_breaks: tuple[StockRecordBreak, ...]
     reserve_disposition: str
+    pab_reserve_disposition: str
     net_capital_disposition: str
     control_disposition: str
     reserve_figure: Decimal | None
+    pab_reserve_figure: Decimal | None
     net_capital_figure: Decimal | None
     control_figure: Decimal | None
     protection_reasons: dict[str, tuple[str, ...]]
@@ -260,6 +265,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     daily_exit_notice_date: date | None,
     financing_charge: Decimal | None,
     post_financing: bool = True,
+    pab_fail_to_receive: tuple[Decimal, Decimal] | None = None,
 ) -> EstateResult:
     """Drive L.C. then Atreides; checks elsewhere only compare their outputs.
 
@@ -574,6 +580,58 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 synthetic=True,
             )
         )
+    if pab_fail_to_receive is not None:
+        # CLOSE-1 WP5: a synthetic correspondent broker-dealer (PAB account) purchase
+        # that fails to receive. Exhibit A item 4 is a credit in the PAB computation
+        # when the source activity is PAB; the real projection routes it
+        # (atreides/books/projections.py). Posted on its own synthetic issue as a
+        # location-only pair, so the trade issue's stock record is untouched.
+        pab_quantity, pab_price = pab_fail_to_receive
+        pab_issue = f"SYN-PAB-{run_number}"
+        pab_event_id = _identifier("evt_", 300_000_000 + run_number)
+        books.post(
+            JournalEntry(
+                entry_id=f"CLOSE-1-PAB-FTR-{run_number}",
+                source_event_id=pab_event_id,
+                source=PostingSource.CNS_FAIL,
+                effective_date=business_date,
+                effective_date_basis="SETTLEMENT_DATE",
+                authority="CLOSE-1_SYNTHETIC_PAB_CORRESPONDENT",
+                lines=(
+                    LedgerLine(
+                        account_id="PAB-CORRESPONDENT-FAIL_TO_RECEIVE",
+                        account_type=AccountType.FAIL_TO_RECEIVE,
+                        record_side=RecordSide.LOCATION,
+                        issue=pab_issue,
+                        quantity=pab_quantity,
+                    ),
+                    LedgerLine(
+                        account_id="DTC",
+                        account_type=AccountType.DTC,
+                        record_side=RecordSide.LOCATION,
+                        issue=pab_issue,
+                        quantity=-pab_quantity,
+                    ),
+                ),
+                reserve_source_facts=(
+                    ReserveSourceFact(
+                        account_type=AccountType.FAIL_TO_RECEIVE,
+                        issue=pab_issue,
+                        activity=ReserveActivity.PAB,
+                        settlement_date=business_date,
+                        contract_price=pab_price,
+                    ),
+                ),
+                posting=BooksPosting(
+                    posted_record_id=f"CLOSE-1-PAB-FTR-{run_number}",
+                    posting_authority=actor,
+                    effective_time=base,
+                    source_event_id=EventId(pab_event_id),
+                    provenance=Provenance.FACT_SYNTHETIC,
+                ),
+                synthetic=True,
+            )
+        )
     stock_breaks = books.verify_stock_record(
         observed_locations={issue: settlement.allocated_quantity}
     )
@@ -594,6 +652,14 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         net_worth=Decimal("1000000"),
         calendar=calendar,
         margin_results=margin_results,
+    )
+    pab_reserve_inputs = _complete_reserve_inputs(
+        projected.pab_reserve,
+        average_total_credits=average_total_credits,
+        daily_requirement_effective_date=daily_requirement_effective_date,
+        computation_mode=computation_mode,
+        previously_daily_required=previously_daily_required,
+        daily_exit_notice_date=daily_exit_notice_date,
     )
     # A generated normal day describes the complete synthetic activity set. Lines
     # absent from that set are observed zeroes, not invented regulatory defaults.
@@ -622,6 +688,14 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 )
             }
         )
+        pab_reserve_inputs = pab_reserve_inputs.model_copy(
+            update={
+                "lines": (
+                    pab_reserve_inputs.lines[0].model_copy(update={"amount": None}),
+                    *pab_reserve_inputs.lines[1:],
+                )
+            }
+        )
         net_capital_inputs = net_capital_inputs.model_copy(update={"net_worth": None})
         control_inputs = control_inputs.model_copy(
             update={
@@ -633,6 +707,9 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         )
     rules = load_rule_table()
     reserve = compute_reserve(reserve_inputs, rules)
+    # Rule 15c3-3(e)(4): the PAB computation is run with the same-date customer
+    # computation's excess debits attached (with_customer_excess_debits).
+    pab_reserve = compute_reserve(with_customer_excess_debits(pab_reserve_inputs, reserve), rules)
     capital = compute_net_capital(net_capital_inputs, rules)
     control = check_possession_or_control(control_inputs, rules)
     control_figure = (
@@ -689,13 +766,16 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         books_money=trade_books_money + financing_booked,
         stock_breaks=stock_breaks,
         reserve_disposition=reserve.disposition.value,
+        pab_reserve_disposition=pab_reserve.disposition.value,
         net_capital_disposition=capital.disposition.value,
         control_disposition=control.disposition.value,
         reserve_figure=reserve.requirement,
+        pab_reserve_figure=pab_reserve.requirement,
         net_capital_figure=capital.net_capital,
         control_figure=control_figure,
         protection_reasons={
             "reserve": reserve.reasons + reserve.missing_inputs + reserve.breaches,
+            "pab_reserve": pab_reserve.reasons + pab_reserve.missing_inputs + pab_reserve.breaches,
             "net_capital": capital.reasons + capital.missing_inputs + capital.breaches,
             "possession_or_control": control.reasons + control.missing_inputs + control.breaches,
         },

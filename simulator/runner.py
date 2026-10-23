@@ -399,6 +399,27 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         else ComputationMode.WEEKLY
     )
     protection_inputs_missing = default_event or stale_event
+    # CLOSE-1 WP5: PAB activity drawn from its own seeded stream (run seed and day
+    # index), so every pre-existing draw on ``rng`` is unchanged and two seeds still
+    # differ. Rates and sizes are declared SYNTHETIC in the calibration pack.
+    pab_rng = random.Random(f"close-1-pab:{reserve_history['seed']}:{index}")
+    pab_fail_to_receive = None
+    try:
+        pab_fail_rate: Decimal | None = Decimal(str(pack.value("generator", "pab_fail_rate")))
+    except KeyError:
+        # A pack built before CLOSE-1 declares no PAB activity. That is recorded in
+        # the close as NOT_DECLARED_IN_PACK; nothing is invented in its place.
+        pab_fail_rate = None
+    if pab_fail_rate is not None and Decimal(str(pab_rng.random())) < pab_fail_rate:
+        pab_fail_to_receive = (
+            Decimal(
+                pab_rng.randrange(
+                    int(pack.value("generator", "pab_fail_quantity_min")),
+                    int(pack.value("generator", "pab_fail_quantity_max")) + 1,
+                )
+            ),
+            Decimal(str(pack.value("generator", "pab_fail_price"))),
+        )
     estate = drive_estate(
         run_number=index,
         business_date=business_date,
@@ -416,8 +437,14 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         daily_exit_notice_date=exit_notice if isinstance(exit_notice, date) else None,
         financing_charge=financing_charge,
         post_financing=post_financing,
+        pab_fail_to_receive=pab_fail_to_receive,
     )
     reserve_hold_required = estate.reserve_disposition == "HOLD"
+    # CLOSE-1 WP5 mirrors the merged SIM-1E convention for the customer reserve.
+    # Finding recorded in _reports/CLOSE-1-report.md: for both reserve computations
+    # this makes I6 accept the engine's own HOLD, and the simulator posts no reserve
+    # bank deposit, so every positive requirement holds as a deposit shortfall.
+    pab_hold_required = estate.pab_reserve_disposition == "HOLD"
     reserve_history["last_filed"] = {
         "month_end": business_date,
         "customer_total_credits": estate.customer_total_credits,
@@ -465,11 +492,13 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         )
     protection_dispositions = (
         estate.reserve_disposition,
+        estate.pab_reserve_disposition,
         estate.net_capital_disposition,
         estate.control_disposition,
     )
     protection_figures = (
         estate.reserve_figure,
+        estate.pab_reserve_figure,
         estate.net_capital_figure,
         estate.control_figure,
     )
@@ -542,6 +571,7 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         "access_events": access_events,
         "protection_holds_required": (
             reserve_hold_required,
+            pab_hold_required,
             protection_inputs_missing,
             protection_inputs_missing,
         ),
@@ -568,6 +598,7 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             protection_figures=protection_figures,
             protection_holds_required=(
                 reserve_hold_required,
+                pab_hold_required,
                 protection_inputs_missing,
                 protection_inputs_missing,
             ),
@@ -609,11 +640,13 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             required_hold=reserve_hold_required,
             dispositions={
                 "reserve": estate.reserve_disposition,
+                "pab_reserve": estate.pab_reserve_disposition,
                 "net_capital": estate.net_capital_disposition,
                 "possession_or_control": estate.control_disposition,
             },
             figures={
                 "reserve_requirement": estate.reserve_figure,
+                "pab_reserve_requirement": estate.pab_reserve_figure,
                 "net_capital": estate.net_capital_figure,
                 "control_shortfall": estate.control_figure,
             },
@@ -633,6 +666,16 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             "filed_credit_history_count": len(snapshots),
             "book_customer_total_credits": estate.customer_total_credits,
             "book_pab_total_credits": estate.pab_total_credits,
+            "pab_fail_to_receive_quantity": (
+                pab_fail_to_receive[0]
+                if pab_fail_to_receive is not None
+                else "NOT_DECLARED_IN_PACK"
+                if pab_fail_rate is None
+                else None
+            ),
+            "pab_fail_to_receive_contract_price": (
+                pab_fail_to_receive[1] if pab_fail_to_receive is not None else None
+            ),
             "reserve_mode": mode.value,
             "daily_requirement_effective_date": effective.isoformat() if effective else None,
             "previously_daily_required": daily_started,
@@ -682,6 +725,7 @@ def run_simulation(
     reserve_history: dict[str, object] = {
         "snapshots": _opening_filed_credit_history(dates[0]),
         "first_month": (dates[0].year, dates[0].month),
+        "seed": seed,
     }
     closes = tuple(
         _simulate_close(rng, day, index, pack, reserve_history)
