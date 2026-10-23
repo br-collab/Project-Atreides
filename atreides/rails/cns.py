@@ -80,8 +80,8 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Final
 
-from atreides.rails.finality import FinalityClass
 from atreides.deadlines.calendar import MarketCalendar
+from atreides.rails.finality import FinalityClass
 
 __all__ = [
     "DOCTRINE_VERSION",

@@ -80,21 +80,8 @@ from atreides.rails.cns import (
     SecuritiesBreakCode,
     net_positions,
     processing_date_offset,
-    settle_net_position as _settle_net_position,
 )
-
-
-def settle_net_position(position, profile, *, allocated_quantity=None, **kwargs):
-    calendar = MarketCalendar.load(Market.US_EQUITIES)
-    settlement_date = date(2026, 10, 1)
-    kwargs.pop("aged_days", None)
-    kwargs.pop("current_offset_days", None)
-    return _settle_net_position(
-        position, profile, allocated_quantity=allocated_quantity,
-        signed_cash=position.quantity, allocated_cash=allocated_quantity,
-        settlement_date=settlement_date, as_of_date=settlement_date,
-        calendar=calendar, **kwargs,
-    )
+from atreides.rails.cns import settle_net_position as _settle_net_position
 from atreides.rails.determination import (
     DeterminationOutcome,
     DeterminationProfile,
@@ -110,6 +97,24 @@ from atreides.rails.funding_state import (
     FundingInputs,
     project_funding,
 )
+
+
+def settle_net_position(position, profile, *, allocated_quantity=None, **kwargs):
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    settlement_date = date(2026, 10, 1)
+    kwargs.pop("aged_days", None)
+    kwargs.pop("current_offset_days", None)
+    return _settle_net_position(
+        position,
+        profile,
+        allocated_quantity=allocated_quantity,
+        signed_cash=position.quantity,
+        allocated_cash=allocated_quantity,
+        settlement_date=settlement_date,
+        as_of_date=settlement_date,
+        calendar=calendar,
+        **kwargs,
+    )
 
 #: Example count comes from the active Hypothesis profile - see
 #: ``tests/conftest.py``. Run ``pytest --hypothesis-profile=deep`` to hunt

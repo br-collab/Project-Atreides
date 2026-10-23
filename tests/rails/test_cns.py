@@ -8,11 +8,12 @@ the fail-handling it makes necessary.
 
 from __future__ import annotations
 
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
+from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.rails import cns
 from atreides.rails.cns import (
     CNS_FINALITY,
@@ -30,10 +31,11 @@ from atreides.rails.cns import (
     close_out_deadline,
     net_positions,
     processing_date_offset,
+)
+from atreides.rails.cns import (
     settle_net_position as _settle_net_position,
 )
 from atreides.rails.finality import FinalityClass
-from atreides.deadlines.calendar import Market, MarketCalendar
 
 D = Decimal
 

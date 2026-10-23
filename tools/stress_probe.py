@@ -98,6 +98,7 @@ from atreides.contracts.quorum import (  # noqa: E402
     QuorumAuthority,
     SigningAuthority,
 )
+from atreides.deadlines.calendar import Market, MarketCalendar  # noqa: E402
 from atreides.messaging.canonical import (  # noqa: E402
     CashLegInstruction,
     FinancialInstitution,
@@ -106,7 +107,6 @@ from atreides.messaging.canonical import (  # noqa: E402
 from atreides.messaging.emit import emit_instruction_artifact  # noqa: E402
 from atreides.messaging.profile import DepositoryProfile  # noqa: E402
 from atreides.messaging.readback import ingest_readback  # noqa: E402
-from atreides.deadlines.calendar import Market, MarketCalendar  # noqa: E402
 from atreides.rails.cato_cash import (  # noqa: E402
     CashRail,
     FundingState,
