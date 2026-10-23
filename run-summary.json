@@ -2,24 +2,21 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 {
   "all_invariants_pass": true,
   "calibration_classes_used": [
-    "A",
     "SYNTHETIC"
   ],
-  "calibration_manifest_digest": "sha256:5faf8116e33c2a6c556fa6029e55beefb23272070111678a51d2b48786dd41ca",
+  "calibration_manifest_digest": "sha256:d1feae65e29ecd203d6b4878479ffbc569050280994adfc877cfe602eb468b1c",
   "calibration_pack_id": "synthetic",
   "calibration_pack_version": "1",
   "closes": [
     {
       "breaks": [],
       "business_date": "2026-12-28",
-      "economics_digest": "sha256:eae1208e35bf8c1a17b6942abf7abadab1389dd64579d36bfaef293b6d5e2c47",
-      "fails_by_age": {
-        "age_0": 1,
-        "age_1_plus": 1
-      },
+      "economics_digest": "sha256:6cfb741f74eb1f3fc82d6dea50190ba64ca9288d9531469799e9c1550cc971ac",
+      "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL",
-        "STALE_MARKET_DATA"
+        "STALE_MARKET_DATA",
+        "RESERVE_INPUTS"
       ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
@@ -35,43 +32,39 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
         "HALT": 1,
         "RULE_204_B": 1
       },
-      "money_residual": "0",
+      "money_residual": "0.00",
       "replay_digest_check": true,
       "scenarios": [
-        "QUEUE_PRIORITY",
-        "LATE_REPORT",
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_BUY_IN",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "DEFAULT_CNS",
+        "DTC_CAP_HOLD",
+        "EX_DATE_REFUSAL",
+        "FINRA_11810_BUY_IN",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "HALT",
         "MULTI_PRINT",
         "ODD_LOT",
         "OPEN_AUCTION",
-        "CLOSE_AUCTION",
-        "HALT",
-        "TREASURY_64TH",
-        "EX_DATE_REFUSAL",
-        "CNS_NIGHT",
-        "CNS_DAY",
+        "QUEUE_PRIORITY",
         "RULE_204_SHORT",
-        "RULE_204_LONG",
-        "CNS_BUY_IN",
-        "FINRA_11810_BUY_IN",
-        "GSD_SECURITIES_NET",
-        "GSD_FUNDS_ONLY",
-        "DTC_CAP_HOLD",
-        "CASH_RAIL",
-        "DEFAULT_CNS",
-        "DEFAULT_GSD",
-        "DEFAULT_DTC",
-        "STALE_DATA_HOLD"
+        "STALE_DATA_HOLD",
+        "TREASURY_64TH"
       ]
     },
     {
       "breaks": [],
       "business_date": "2026-12-29",
-      "economics_digest": "sha256:d8c2a6c1ff3da61980cda9a6ce00a192d1ce0acf6994b9a99bada04f9592af0b",
-      "fails_by_age": {
-        "age_0": 1,
-        "age_1_plus": 1
-      },
-      "holds": [],
+      "economics_digest": "sha256:67c73de83ddb8310051867f882897b4ab33841ffd7b34efcc4854d3c4ab3e321",
+      "fails_by_age": {},
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "RESERVE_INPUTS"
+      ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -86,23 +79,35 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
         "HALT": 1,
         "RULE_204_B": 1
       },
-      "money_residual": "0",
+      "money_residual": "0.00",
       "replay_digest_check": true,
       "scenarios": [
-        "MULTI_PRINT",
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
         "CNS_NIGHT",
-        "CNS_DAY"
+        "DTC_CAP_HOLD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "HALT",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "RULE_204_SHORT",
+        "TREASURY_64TH"
       ]
     },
     {
       "breaks": [],
       "business_date": "2026-12-30",
-      "economics_digest": "sha256:ea69baf085da74b747ef76c1604870983948a1f96d8437b0f9ca3e9ce9303d3d",
-      "fails_by_age": {
-        "age_0": 1,
-        "age_1_plus": 1
-      },
-      "holds": [],
+      "economics_digest": "sha256:c09a28a8b6c29d655a08b239836e0fcdd157037020a90260527d40fba1808e00",
+      "fails_by_age": {},
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "RESERVE_INPUTS"
+      ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -117,23 +122,37 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
         "HALT": 1,
         "RULE_204_B": 1
       },
-      "money_residual": "0",
+      "money_residual": "0.00",
       "replay_digest_check": true,
       "scenarios": [
-        "MULTI_PRINT",
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
         "CNS_NIGHT",
-        "CNS_DAY"
+        "DTC_CAP_HOLD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "HALT",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "RULE_204_SHORT",
+        "TREASURY_64TH"
       ]
     },
     {
       "breaks": [],
       "business_date": "2026-12-31",
-      "economics_digest": "sha256:f3c909d4442159cc3f26d699e0abb31d17beea6d37c9a7ad27b08d0a2339db1f",
+      "economics_digest": "sha256:283c7c7a9e7cbdfd052264c7f00b41baf4f9b6a8df3c4811c51545089abb7ecb",
       "fails_by_age": {
-        "age_0": 1,
-        "age_1_plus": 1
+        "age_1": 1
       },
-      "holds": [],
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "RESERVE_INPUTS"
+      ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -148,23 +167,36 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
         "HALT": 1,
         "RULE_204_B": 1
       },
-      "money_residual": "0",
+      "money_residual": "0.00",
       "replay_digest_check": true,
       "scenarios": [
-        "MULTI_PRINT",
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
         "CNS_NIGHT",
-        "CNS_DAY"
+        "DTC_CAP_HOLD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "HALT",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "RULE_204_LONG",
+        "RULE_204_SHORT",
+        "TREASURY_64TH"
       ]
     },
     {
       "breaks": [],
       "business_date": "2027-01-04",
-      "economics_digest": "sha256:cfedcb2c3008226763b5805f7081171a4e15cfe9602cb52855ffa7d65707d0ea",
-      "fails_by_age": {
-        "age_0": 1,
-        "age_1_plus": 1
-      },
-      "holds": [],
+      "economics_digest": "sha256:f0689fae6f5cb0989820ffeb4a9cd0eb96322ae8b47382996e503b33a76c7789",
+      "fails_by_age": {},
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "RESERVE_INPUTS"
+      ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -179,18 +211,31 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
         "HALT": 1,
         "RULE_204_B": 1
       },
-      "money_residual": "0",
+      "money_residual": "0.00",
       "replay_digest_check": true,
       "scenarios": [
-        "MULTI_PRINT",
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
         "CNS_NIGHT",
-        "CNS_DAY"
+        "DTC_CAP_HOLD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "HALT",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "RULE_204_SHORT",
+        "TREASURY_64TH"
       ]
     }
   ],
   "days": 5,
   "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
-  "economics_digest": "sha256:32b814f357258b6d076fdc77e36d12bf6ffab774c6731b02dfdd7dd2a0899e68",
+  "economics_digest": "sha256:a3d1adb4b697e75112fad0488c7accdf2210f69cee317d5d10476c335e3d474d",
+  "interim_notice": "SIM-1 v1 invariants are not yet independent checks; green results are not evidence (see SIM-1B).",
   "not_tested": [
     "second venue",
     "best execution",
@@ -201,10 +246,35 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
   "ny_fed_notices": [],
   "repository_shas": {
     "Cato-FICC-MCP": "ae356bd822952bffb0fa9be2d5960d5064ed5a62",
-    "L.C.": "ceb556f1682a5dbdb7b6b8a460f246c32796360c",
-    "atreides": "69675ddd98ee063cd6dfe28f5211af7391d7f33c",
+    "L.C.": "418303c515c73c511dfb5a997a449fbe3042a169",
+    "atreides": "d1daff1c2413120ef6edc7e67645f7db145e40cf",
     "aureon": "254713b5c411e9c83ced17a61cb800f9bfae3998",
     "cannae-kernel": "549604c1af78ac7aace64d7fefb68d22d99bc394"
+  },
+  "scenario_counts": {
+    "CASH_RAIL": 5,
+    "CLOSE_AUCTION": 5,
+    "CNS_BUY_IN": 1,
+    "CNS_DAY": 5,
+    "CNS_NIGHT": 5,
+    "DEFAULT_CNS": 1,
+    "DEFAULT_DTC": 0,
+    "DEFAULT_GSD": 0,
+    "DTC_CAP_HOLD": 5,
+    "EX_DATE_REFUSAL": 1,
+    "FINRA_11810_BUY_IN": 1,
+    "GSD_FUNDS_ONLY": 5,
+    "GSD_SECURITIES_NET": 5,
+    "HALT": 5,
+    "LATE_REPORT": 4,
+    "MULTI_PRINT": 5,
+    "ODD_LOT": 5,
+    "OPEN_AUCTION": 5,
+    "QUEUE_PRIORITY": 5,
+    "RULE_204_LONG": 1,
+    "RULE_204_SHORT": 5,
+    "STALE_DATA_HOLD": 1,
+    "TREASURY_64TH": 5
   },
   "scenarios_declared": [
     "QUEUE_PRIORITY",
@@ -238,8 +308,6 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
     "CNS_DAY",
     "CNS_NIGHT",
     "DEFAULT_CNS",
-    "DEFAULT_DTC",
-    "DEFAULT_GSD",
     "DTC_CAP_HOLD",
     "EX_DATE_REFUSAL",
     "FINRA_11810_BUY_IN",
@@ -256,7 +324,10 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
     "STALE_DATA_HOLD",
     "TREASURY_64TH"
   ],
-  "scenarios_not_exercised": [],
+  "scenarios_not_exercised": [
+    "DEFAULT_DTC",
+    "DEFAULT_GSD"
+  ],
   "schema_version": "sim.run/1",
   "seed": 20261023
 }
