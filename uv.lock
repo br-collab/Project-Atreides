@@ -103,7 +103,7 @@ dev = [
 requires-dist = [
     { name = "cannae-kernel", git = "https://github.com/br-collab/cannae-kernel.git?rev=v1.1.2" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },
-    { name = "legiones-cannenses", marker = "extra == 'dev'", git = "https://github.com/br-collab/L.C..git?rev=8d419f9a922ed73d255f5f923e97362931e45fe1" },
+    { name = "legiones-cannenses", marker = "extra == 'dev'", git = "https://github.com/br-collab/L.C..git?rev=54dd01aee3f1bae53b9901477c7c2aebac1e921a" },
     { name = "lxml", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9" },
     { name = "pydantic", specifier = ">=2.6,<3.0" },
@@ -345,7 +345,7 @@ wheels = [
 [[package]]
 name = "legiones-cannenses"
 version = "0.1.0"
-source = { git = "https://github.com/br-collab/L.C..git?rev=8d419f9a922ed73d255f5f923e97362931e45fe1#8d419f9a922ed73d255f5f923e97362931e45fe1" }
+source = { git = "https://github.com/br-collab/L.C..git?rev=54dd01aee3f1bae53b9901477c7c2aebac1e921a#54dd01aee3f1bae53b9901477c7c2aebac1e921a" }
 dependencies = [
     { name = "cannae-kernel" },
     { name = "pydantic" },
