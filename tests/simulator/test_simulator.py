@@ -503,6 +503,17 @@ def test_publication_resolves_the_real_lc_repository_slug() -> None:
     assert "Legiones-Cannenses" not in action
 
 
+def test_publication_installs_the_real_lc_simulator_dependency() -> None:
+    action = (
+        Path(__file__).parents[2]
+        / ".github"
+        / "actions"
+        / "publish-simulation-snapshot"
+        / "action.yml"
+    ).read_text()
+    assert "uv sync --locked --extra dev" in action
+
+
 def test_configuration_is_synthetic_and_forbidden_sources_absent_from_imports() -> None:
     root = Path(__file__).parents[2] / "simulator"
     pack = load_calibration_pack()

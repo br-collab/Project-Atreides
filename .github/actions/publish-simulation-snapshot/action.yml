@@ -20,7 +20,9 @@ runs:
         enable-cache: true
     - name: Install from lock
       shell: bash
-      run: uv sync --locked
+      # SIM-1B drives the real L.C. package, which is deliberately confined to
+      # the source-only dev extra so Atreides production installs cannot acquire it.
+      run: uv sync --locked --extra dev
     - name: Build synthetic simulation documents
       shell: bash
       run: |
