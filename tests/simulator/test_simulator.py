@@ -314,6 +314,13 @@ def test_seed_replay_and_scenario_coverage(tmp_path: Path) -> None:
     publish_run(first, tmp_path)
     for name in ("daily-close.json", "run-summary.json", "trend.json", "SUMMARY.md"):
         assert (tmp_path / name).read_text().splitlines()[0] == DISCLAIMER
+    notice = (
+        "SIM-1 v1 invariants are not yet independent checks; green results are not evidence "
+        "(see SIM-1B)."
+    )
+    assert first["interim_notice"] == notice
+    assert notice in (tmp_path / "SUMMARY.md").read_text()
+    assert notice in (tmp_path / "run-summary.json").read_text()
 
 
 def test_reference_defect_classes_are_rediscovered_by_named_invariants() -> None:

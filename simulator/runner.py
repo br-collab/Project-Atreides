@@ -35,6 +35,10 @@ DISCLAIMER = (
     "SYNTHETIC SIMULATION: invariants held on generated data; "
     "this is not evidence of production correctness"
 )
+INTERIM_NOTICE = (
+    "SIM-1 v1 invariants are not yet independent checks; green results are not evidence "
+    "(see SIM-1B)."
+)
 NOT_TESTED = ("second venue", "best execution", "options", "repo", "clearing fund waterfall")
 ALL_SCENARIOS = (
     "QUEUE_PRIORITY",
@@ -285,6 +289,7 @@ def run_simulation(
     return {
         "schema_version": "sim.run/1",
         "disclaimer": DISCLAIMER,
+        "interim_notice": INTERIM_NOTICE,
         "seed": seed,
         "days": days,
         "repository_shas": repository_shas or {},
@@ -348,7 +353,7 @@ def publish_run(run: dict[str, object], output: Path) -> None:
     classes = run["calibration_classes_used"]
     assert isinstance(classes, list)
     (output / "SUMMARY.md").write_text(
-        f"{DISCLAIMER}\n\n"
+        f"{DISCLAIMER}\n\n{INTERIM_NOTICE}\n\n"
         "# SIM-1 run summary\n\n"
         f"- Seed: `{run['seed']}`\n"
         f"- Pack: `{run['calibration_pack_id']}` version `{run['calibration_pack_version']}`\n"
