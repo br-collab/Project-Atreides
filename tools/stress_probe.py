@@ -73,7 +73,7 @@ import sys
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -106,6 +106,7 @@ from atreides.messaging.canonical import (  # noqa: E402
 from atreides.messaging.emit import emit_instruction_artifact  # noqa: E402
 from atreides.messaging.profile import DepositoryProfile  # noqa: E402
 from atreides.messaging.readback import ingest_readback  # noqa: E402
+from atreides.deadlines.calendar import Market, MarketCalendar  # noqa: E402
 from atreides.rails.cato_cash import (  # noqa: E402
     CashRail,
     FundingState,
@@ -1417,7 +1418,11 @@ def e5_4() -> tuple[str, str]:
     pos = net_positions(
         (("SEC-A", D("1000")),), market_id="XCLR", settlement_date_offset_days=1
     )[0]
-    r = settle_net_position(pos, prof, allocated_quantity=D("1000"))
+    r = settle_net_position(
+        pos, prof, allocated_quantity=D("1000"), signed_cash=D("1000"),
+        allocated_cash=D("1000"), settlement_date=date(2026, 10, 1),
+        as_of_date=date(2026, 10, 1), calendar=MarketCalendar.load(Market.US_EQUITIES),
+    )
     codes = {b.code.value for b in r.breaks}
     ok = "processing_date_not_established" in codes
     return (HELD if ok else BROKE), f"{r.disposition.value} breaks={sorted(codes)}"
@@ -1430,7 +1435,11 @@ def e5_5() -> tuple[str, str]:
     pos = net_positions(
         (("SEC-A", D("100")),), market_id="XCLR", settlement_date_offset_days=1
     )[0]
-    r = settle_net_position(pos, _market(), allocated_quantity=D("500"))
+    r = settle_net_position(
+        pos, _market(), allocated_quantity=D("500"), signed_cash=D("100"),
+        allocated_cash=D("500"), settlement_date=date(2026, 10, 1),
+        as_of_date=date(2026, 10, 1), calendar=MarketCalendar.load(Market.US_EQUITIES),
+    )
     residual = r.residual.quantity if r.residual else D(0)
     conserved = r.allocated_quantity + residual == pos.quantity
     # REFUTED by an existing property test. tests/test_properties.py:515 draws
@@ -1456,7 +1465,11 @@ def e5_6() -> tuple[str, str]:
         market_id="XCLR",
         settlement_date_offset_days=1,
     )[0]
-    r = settle_net_position(pos, _market(), allocated_quantity=D("50"))
+    r = settle_net_position(
+        pos, _market(), allocated_quantity=D("50"), signed_cash=D(0),
+        allocated_cash=D("50"), settlement_date=date(2026, 10, 1),
+        as_of_date=date(2026, 10, 1), calendar=MarketCalendar.load(Market.US_EQUITIES),
+    )
     ok = bool(r.breaks) or r.disposition.value != "flat"
     return (HELD if ok else BROKE), (
         f"net=0 allocated=50 -> {r.disposition.value} "

@@ -9,6 +9,7 @@ the fail-handling it makes necessary.
 from __future__ import annotations
 
 from decimal import Decimal
+from datetime import date
 
 import pytest
 
@@ -29,13 +30,35 @@ from atreides.rails.cns import (
     close_out_deadline,
     net_positions,
     processing_date_offset,
-    settle_net_position,
+    settle_net_position as _settle_net_position,
 )
 from atreides.rails.finality import FinalityClass
+from atreides.deadlines.calendar import Market, MarketCalendar
 
 D = Decimal
 
 CITATION = "Market rulebook, settlement and close-out provisions, read Aug 2026"
+
+
+def settle_net_position(position, profile, *, allocated_quantity=None, **kwargs):
+    """Supply explicit synthetic cash and dates to legacy share-focused cases."""
+    if "signed_cash" in kwargs:
+        return _settle_net_position(
+            position, profile, allocated_quantity=allocated_quantity, **kwargs
+        )
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    settlement_date = date(2026, 10, 1)
+    current_offset = kwargs.pop("current_offset_days", 0) or 0
+    kwargs.pop("aged_days", None)
+    return _settle_net_position(
+        position, profile, allocated_quantity=allocated_quantity,
+        signed_cash=position.quantity,
+        allocated_cash=allocated_quantity,
+        settlement_date=settlement_date,
+        as_of_date=calendar.add_business_days(settlement_date, current_offset),
+        calendar=calendar,
+        **kwargs,
+    )
 
 
 def _profile(**kw: object) -> MarketProfile:
@@ -59,6 +82,18 @@ def _position(quantity: Decimal | None = None, **kw: object):
         settlement_date_offset_days=int(kw.get("settlement_date_offset_days", 1)),
     )
     return positions[0]
+
+
+def test_cash_residual_prevents_full_settlement_and_calendar_ages_fail() -> None:
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    result = settle_net_position(
+        _position(D("100")), _profile(close_out_deadline_days=1),
+        allocated_quantity=D("100"), signed_cash=D("10000"), allocated_cash=D("9999.99"),
+        settlement_date=date(2026, 12, 31), as_of_date=date(2027, 1, 4), calendar=calendar,
+    )
+    assert result.disposition is not CNSDisposition.SETTLED_IN_FULL
+    assert result.residual is not None and result.residual.cash == D("0.01")
+    assert result.residual.aged_business_days == 1
 
 
 # ---------------------------------------------------------------------------
@@ -508,6 +543,7 @@ def test_every_disposition_answers_both_derived_questions(
         disposition=disposition,
         position=_position(),
         allocated_quantity=D("0"),
+        allocated_cash=D("0"),
         residual=None,
     )
     assert isinstance(r.is_fail, bool)
@@ -521,6 +557,7 @@ def test_not_novated_is_representable_and_is_not_a_fail() -> None:
         disposition=CNSDisposition.NOT_NOVATED,
         position=_position(),
         allocated_quantity=D("0"),
+        allocated_cash=D("0"),
         residual=None,
     )
     assert r.is_fail is False

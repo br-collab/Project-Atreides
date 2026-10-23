@@ -150,6 +150,21 @@ def test_repo_term_calendar_excludes_declared_holidays_and_nonbusiness_closes():
     )
     with pytest.raises(ValidationError, match="government securities business day"):
         trade(term=RepoTerm.OVERNIGHT, close_date=date(2026, 10, 24))
+    with pytest.raises(ValidationError, match="start date"):
+        trade(start_date=date(2027, 1, 1), close_date=date(2027, 1, 4))
+
+
+def test_half_cent_close_money_rounds_up_and_document_keeps_unrounded_amount():
+    repo = trade(
+        term=RepoTerm.OVERNIGHT, start_money=Decimal("1.80"),
+        repo_rate_percent=Decimal("100"), start_date=date(2026, 10, 22),
+        close_date=date(2026, 10, 23),
+    )
+    assert repo.unrounded_close_money() == Decimal("1.805")
+    assert repo.close_money() == Decimal("1.81")
+    doc = document(produce_repo_result(trade=repo, access=access()))
+    assert doc.legs[-1].unrounded_signed_money == Decimal("1.805")
+    assert doc.cash_rounding_convention == "ROUND_HALF_UP_TO_CENT"
 
 
 @pytest.mark.parametrize(

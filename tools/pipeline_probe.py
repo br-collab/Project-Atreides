@@ -35,7 +35,7 @@ import argparse
 import json
 import pathlib
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -55,6 +55,7 @@ from atreides.contracts.margin_profile import (  # noqa: E402
     ProfileStatus,
     VenueMarginProfile,
 )
+from atreides.deadlines.calendar import Market, MarketCalendar  # noqa: E402
 from atreides.messaging.canonical import (  # noqa: E402
     CashLegInstruction,
     FinancialInstitution,
@@ -496,6 +497,11 @@ def _equity(
         position,
         profile,
         allocated_quantity=allocated,
+        signed_cash=position.quantity,
+        allocated_cash=allocated,
+        settlement_date=date(2026, 10, 1),
+        as_of_date=date(2026, 10, 1),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
         spans_record_date=spans_record_date,
     )
     return {
@@ -583,7 +589,12 @@ def scenario_extended_hours_night_position() -> dict[str, object]:
         market_id="XCLR-EXT",
         settlement_date_offset_days=1,
     )[0]
-    result = settle_net_position(position, market, allocated_quantity=D("3500"))
+    result = settle_net_position(
+        position, market, allocated_quantity=D("3500"),
+        signed_cash=D("3500"), allocated_cash=D("3500"),
+        settlement_date=date(2026, 10, 1), as_of_date=date(2026, 10, 1),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+    )
 
     impact = margin_impact_outside_monitoring_window(
         profile=venue,

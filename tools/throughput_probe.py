@@ -53,6 +53,7 @@ import pathlib
 import statistics
 import sys
 import time
+from datetime import date
 from decimal import Decimal
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -68,6 +69,7 @@ from atreides.contracts.margin_impact import (  # noqa: E402
     sort_by_margin_consequence,
 )
 from atreides.contracts.margin_profile import CollectionModel  # noqa: E402
+from atreides.deadlines.calendar import Market, MarketCalendar  # noqa: E402
 from atreides.messaging.emit import emit_instruction_artifact  # noqa: E402
 from atreides.messaging.readback import ingest_readback  # noqa: E402
 from atreides.rails.cato_cash import (  # noqa: E402
@@ -202,7 +204,10 @@ def _stages() -> dict[str, tuple[object, str]]:
         ),
         "cns_settle": (
             lambda: settle_net_position(
-                position, market, allocated_quantity=D("2000"), current_offset_days=2
+                position, market, allocated_quantity=D("2000"),
+                signed_cash=D("2000"), allocated_cash=D("2000"),
+                settlement_date=date(2026, 10, 1), as_of_date=date(2026, 10, 5),
+                calendar=MarketCalendar.load(Market.US_EQUITIES),
             ),
             "one netted-position settlement classification",
         ),

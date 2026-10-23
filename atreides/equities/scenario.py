@@ -390,7 +390,12 @@ def build_equities_publications(taken_at: datetime) -> dict[str, bytes]:
     net = net_positions(
         (("ACME", Decimal(-10)),), market_id=profile.market_id, settlement_date_offset_days=1
     )
-    cns = settle_net_position(net[0], profile, allocated_quantity=Decimal(-5), aged_days=1)
+    cns = settle_net_position(
+        net[0], profile, allocated_quantity=Decimal(-5),
+        signed_cash=Decimal(500), allocated_cash=Decimal(250),
+        settlement_date=taken_at.date(), as_of_date=calendar.add_business_days(taken_at.date(), 1),
+        calendar=calendar,
+    )
     rule_204 = assess_rule_204(
         Rule204Fail(
             security="ACME",

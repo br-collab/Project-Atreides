@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import ROUND_HALF_EVEN, Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
 from typing import Self, cast
 
@@ -71,6 +71,8 @@ class RepoTrade(_Model):
 
     @model_validator(mode="after")
     def _service_and_term_are_complete(self) -> Self:
+        if not _REPO_CALENDAR.is_business_day(self.start_date):
+            raise ValueError("repo start date must be a loaded government securities business day")
         if self.term is RepoTerm.OPEN and self.close_date is not None:
             raise ValueError("OPEN repo has no fixed close date")
         if self.term is not RepoTerm.OPEN and (
@@ -108,7 +110,17 @@ class RepoTrade(_Model):
             / Decimal(100)
             * days
             / Decimal(self.day_count_basis)
-        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    def unrounded_close_money(self) -> Decimal | None:
+        if self.close_date is None:
+            return None
+        days = Decimal((self.close_date - self.start_date).days)
+        return (
+            self.start_money
+            + self.start_money * self.repo_rate_percent / Decimal(100)
+            * days / Decimal(self.day_count_basis)
+        )
 
 
 class RepoLegObligation(_Model):
@@ -118,6 +130,7 @@ class RepoLegObligation(_Model):
     settlement_date: date | None
     signed_par: Decimal
     signed_money: Decimal | None
+    unrounded_signed_money: Decimal | None
     currency: str
     cusip: str | None
     collateral_class: str | None
@@ -147,6 +160,7 @@ class RepoDocument(_Model):
     haircut_percent: Decimal
     member_margin_approximation: Decimal
     member_margin_method: str = "SYNTHETIC_APPROXIMATION_NOT_FICC_VAR"
+    cash_rounding_convention: str = "ROUND_HALF_UP_TO_CENT"
     legs: tuple[RepoLegObligation, ...]
     gcf_allocation: GcfAllocation | None = None
 
@@ -210,6 +224,7 @@ def produce_repo_result(
             settlement_date=trade.start_date,
             signed_par=trade.collateral_par,
             signed_money=-trade.start_money,
+            unrounded_signed_money=-trade.start_money,
             currency=trade.currency,
             cusip=trade.cusip,
             collateral_class=trade.collateral_class,
@@ -226,6 +241,7 @@ def produce_repo_result(
                 settlement_date=trade.close_date,
                 signed_par=-trade.collateral_par,
                 signed_money=close_money,
+                unrounded_signed_money=trade.unrounded_close_money(),
                 currency=trade.currency,
                 cusip=trade.cusip,
                 collateral_class=trade.collateral_class,

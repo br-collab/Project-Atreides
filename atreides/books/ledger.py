@@ -175,6 +175,7 @@ class PostingResult(_Frozen):
     posted: bool
     entry: JournalEntry
     duplicate: DuplicatePosting | None = None
+    break_reason: str | None = None
 
 
 class EquitiesBooks:
@@ -196,6 +197,7 @@ class EquitiesBooks:
 
     def post(self, entry: JournalEntry) -> PostingResult:
         if original := self._by_source.get(entry.source_event_id):
+            identical = canonical_bytes_of(original) == canonical_bytes_of(entry)
             return PostingResult(
                 posted=False,
                 entry=original,
@@ -203,6 +205,9 @@ class EquitiesBooks:
                     source_event_id=entry.source_event_id,
                     original_entry_id=original.entry_id,
                     duplicate_entry_id=entry.entry_id,
+                ),
+                break_reason=None if identical else (
+                    "source_event_id was reused with different posting economics"
                 ),
             )
         if entry.reverses_entry_id is not None and not any(
@@ -227,14 +232,19 @@ class EquitiesBooks:
         for issue, sides in self.quantities().items():
             ownership = sides.get(RecordSide.OWNERSHIP, Decimal(0))
             location = (
-                observed_locations[issue]
-                if observed_locations is not None and issue in observed_locations
+                observed_locations.get(issue, Decimal(0))
+                if observed_locations is not None
                 else -sides.get(RecordSide.LOCATION, Decimal(0))
             )
             difference = ownership - location
-            if difference and not any(
-                item.issue == issue and item.state == "OPEN" for item in self._breaks
-            ):
+            existing = next(
+                (item for item in self._breaks if item.issue == issue and item.state == "OPEN"),
+                None,
+            )
+            if difference and existing is not None and existing.difference != difference:
+                self._breaks.remove(existing)
+                existing = None
+            if difference and existing is None:
                 self._breaks.append(
                     StockRecordBreak(
                         break_id=f"STOCK-RECORD-{issue}-{len(self._breaks) + 1}",

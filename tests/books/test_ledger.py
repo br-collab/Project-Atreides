@@ -96,7 +96,19 @@ def test_balanced_append_duplicate_reversal_replay_and_break() -> None:
     assert books.verify_stock_record() == ()
     breaks = books.verify_stock_record(observed_locations={"ACME": Decimal(9)})
     assert breaks[0].owner == "stock-record-control" and breaks[0].difference == 1
-    assert books.verify_stock_record(observed_locations={"ACME": Decimal(8)}) == breaks
+    changed = books.verify_stock_record(observed_locations={"ACME": Decimal(8)})
+    assert changed[0].difference == 2
+
+
+def test_supplied_street_map_treats_omission_as_zero_and_conflicting_replay_breaks() -> None:
+    books = EquitiesBooks(break_owner="stock-record-control")
+    original = entry()
+    books.post(original)
+    omitted = books.verify_stock_record(observed_locations={})
+    assert omitted[0].location_quantity == 0 and omitted[0].difference == 10
+    conflict = books.post(original.model_copy(update={"entry_id": "different-economics"}))
+    assert conflict.posted is False
+    assert conflict.break_reason == "source_event_id was reused with different posting economics"
     reversal = entry(
         "2",
         "reversal-1",
@@ -104,7 +116,7 @@ def test_balanced_append_duplicate_reversal_replay_and_break() -> None:
         reverses_entry_id="entry-1",
         lines=tuple(
             line.model_copy(update={"quantity": -line.quantity, "money": -line.money})
-            for line in first.lines
+            for line in original.lines
         ),
     )
     assert books.post(reversal).posted
