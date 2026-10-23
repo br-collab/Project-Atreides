@@ -192,7 +192,9 @@ def ingest(
                 total = 0
                 while chunk := response.read(CHUNK_SIZE):
                     total += len(chunk)
-                    _ensure_free_space(paths, total)
+                    # disk_usage().free already reflects chunks written to the temporary
+                    # file, so only the next chunk belongs in the remainder check.
+                    _ensure_free_space(paths, len(chunk))
                     target.write(chunk)
         digest = _sha256(temporary)
         suffix = Path(source.url.split("?", 1)[0]).suffix or ".bin"

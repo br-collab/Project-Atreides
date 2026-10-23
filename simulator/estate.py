@@ -44,6 +44,7 @@ from atreides.books.projections import project_customer_protection, project_marg
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import (
+    EXHIBIT_A_CREDITS,
     ComputationMode,
     LineBalance,
     ReserveInputs,
@@ -81,6 +82,8 @@ class EstateResult:
     books_digest: str
     settled_quantity: Decimal
     settlement_residual_two_sided: bool
+    customer_total_credits: Decimal
+    pab_total_credits: Decimal
 
 
 def _complete_reserve_inputs(
@@ -89,15 +92,19 @@ def _complete_reserve_inputs(
     average_total_credits: Decimal | None,
     daily_requirement_effective_date: date | None,
     computation_mode: ComputationMode,
+    previously_daily_required: bool,
+    daily_exit_notice_date: date | None,
 ) -> ReserveInputs:
-    """Turn complete activity and generated filing history into reserve facts.
+    """Turn complete activity and simulated filing-history evidence into reserve facts.
 
     17 CFR 240.15c3-3(e)(3)(i)(B)(1), pinned in the rule table:
     "For purposes of this paragraph (e)(3), average total credits means the arithmetic
     mean of the sum of Total Credits in the Customer Reserve Bank Account computation
     and the PAB Reserve Bank Account computation reported in the 12 most recently filed
-    month-end Forms X-17A-5." The same paragraph requires daily computations no later
-    than six months after average total credits first equal or exceed $500 million.
+    month-end Forms X-17A-5." This simulator's month-end book projections are explicitly
+    a synthetic stand-in for those filed figures; they are not represented as filings.
+    The same paragraph requires daily computations no later than six months after average
+    total credits first equal or exceed $500 million.
     """
     reserve_lines = tuple(
         LineBalance(rule_id=line.rule_id, amount=line.amount or Decimal())
@@ -108,7 +115,8 @@ def _complete_reserve_inputs(
             "lines": reserve_lines,
             "average_total_credits": average_total_credits,
             "daily_requirement_effective_date": daily_requirement_effective_date,
-            "previously_daily_required": False,
+            "previously_daily_required": previously_daily_required,
+            "daily_exit_notice_date": daily_exit_notice_date,
             "mode": computation_mode,
             "qualified_securities_deposit": Decimal(),
         }
@@ -127,6 +135,73 @@ def _actor() -> ActorRef:
         entitlement_refs=("SIM-1B",),
         authenticated=True,
     )
+
+
+def simulated_filed_credit_total(as_of: date, customer_credit: Decimal) -> tuple[Decimal, Decimal]:
+    """Project a pre-run synthetic month-end through the real books seam.
+
+    SIM-1E scope: this is a simulated stand-in for a month-end FOCUS figure,
+    not a filed report. The returned values are the customer and PAB Exhibit A
+    total credits produced by ``project_customer_protection``.
+    """
+    actor = _actor()
+    base = datetime.combine(as_of, datetime.min.time(), tzinfo=UTC)
+    books = EquitiesBooks(break_owner="SIM_SETTLEMENT_OPS")
+    source_event_id = _identifier("evt_", 90_000 + as_of.toordinal())
+    books.post(
+        JournalEntry(
+            entry_id=f"SIM-1E-PREHISTORY-{as_of.isoformat()}",
+            source_event_id=source_event_id,
+            source=PostingSource.CASH_MOVEMENT,
+            effective_date=as_of,
+            effective_date_basis="VALUE_DATE",
+            authority="SIM-1E_SYNTHETIC_FOCUS_STAND_IN",
+            lines=(
+                LedgerLine(
+                    account_id="CUSTOMER-PREHISTORY-CREDIT",
+                    account_type=AccountType.CUSTOMER_CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=customer_credit,
+                ),
+                LedgerLine(
+                    account_id="PREHISTORY-FUNDING",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=-customer_credit,
+                ),
+            ),
+            posting=BooksPosting(
+                posted_record_id=f"SIM-1E-PREHISTORY-{as_of.isoformat()}",
+                posting_authority=actor,
+                effective_time=base,
+                source_event_id=EventId(source_event_id),
+                provenance=Provenance.FACT_SYNTHETIC,
+            ),
+            synthetic=True,
+        )
+    )
+    projected = project_customer_protection(
+        books,
+        as_of=as_of,
+        prices={},
+        net_worth=Decimal("1000000"),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=(),
+    )
+
+    def total(inputs: ReserveInputs) -> Decimal:
+        return sum(
+            (
+                line.amount or Decimal()
+                for line in inputs.lines
+                if line.rule_id in EXHIBIT_A_CREDITS
+            ),
+            Decimal(),
+        )
+
+    return total(projected.reserve), total(projected.pab_reserve)
 
 
 def _event(number: int, at: datetime) -> EventInput:
@@ -181,6 +256,8 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     average_total_credits: Decimal | None,
     daily_requirement_effective_date: date | None,
     computation_mode: ComputationMode,
+    previously_daily_required: bool,
+    daily_exit_notice_date: date | None,
     financing_charge: Decimal | None,
     post_financing: bool = True,
 ) -> EstateResult:
@@ -525,6 +602,8 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         average_total_credits=average_total_credits,
         daily_requirement_effective_date=daily_requirement_effective_date,
         computation_mode=computation_mode,
+        previously_daily_required=previously_daily_required,
+        daily_exit_notice_date=daily_exit_notice_date,
     )
     net_capital_inputs = projected.net_capital.model_copy(
         update={
@@ -585,6 +664,22 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         ),
         Decimal(),
     )
+    customer_total_credits = sum(
+        (
+            line.amount or Decimal()
+            for line in projected.reserve.lines
+            if line.rule_id in EXHIBIT_A_CREDITS
+        ),
+        Decimal(),
+    )
+    pab_total_credits = sum(
+        (
+            line.amount or Decimal()
+            for line in projected.pab_reserve.lines
+            if line.rule_id in EXHIBIT_A_CREDITS
+        ),
+        Decimal(),
+    )
     return EstateResult(
         captured_quantity=captured.quantity,
         captured_money=captured.quantity * captured.price,
@@ -613,4 +708,6 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 and settlement.residual.cash is not None
             )
         ),
+        customer_total_credits=customer_total_credits,
+        pab_total_credits=pab_total_credits,
     )

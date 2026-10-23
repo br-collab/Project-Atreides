@@ -1,7 +1,7 @@
 {
   "current": {
     "baseline-2019-q2": "4",
-    "repo-spike-2019": "4"
+    "repo-spike-2019": "5"
   },
   "packs": {
     "baseline-2019-q2/1": "sha256:dec6be4c0c9fe354a607cbfb8a92fd7f0e9f9a3e3087edb86c6a688d8e09f4d0",
@@ -11,15 +11,17 @@
     "repo-spike-2019/1": "sha256:14ccf5a074c6ece7fcfb4a1ba91bc785e7bda5eb589db632700112c47f9d7902",
     "repo-spike-2019/2": "sha256:52c066b2f18eabfd95732002fe487f9b6bc2092956539ac638ade58ccb74820f",
     "repo-spike-2019/3": "sha256:fd5f1ca78d8936afbacc7f99a553325c04fe1559886311b7747ba0bad1650bd9",
-    "repo-spike-2019/4": "sha256:9c82868a976f6ccf441c47cb21a714c21406d10ae6aaa85980ce87dcd64b973a"
+    "repo-spike-2019/4": "sha256:9c82868a976f6ccf441c47cb21a714c21406d10ae6aaa85980ce87dcd64b973a",
+    "repo-spike-2019/5": "sha256:7ba4c5261cce790a9acee3d3d72f65ee9d59976704c1343b77ea9550ed3d748b"
   },
   "schema_version": "cfma.pack-locks/1",
   "superseded": {
     "baseline-2019-q2/1": "pre-attack pack: source order was descending and only SOFR was present",
     "baseline-2019-q2/2": "pre-attack pack: chronological, but BGCR, TGCR, EFFR and OBFR were absent",
+    "baseline-2019-q2/3": "pre-SIM-1D pack: shared paraphrased New York Fed notice and pre-2019 calendar evidence",
     "repo-spike-2019/1": "pre-attack pack: source order was descending and only SOFR was present",
     "repo-spike-2019/2": "pre-attack pack: chronological, but BGCR, TGCR, EFFR and OBFR were absent",
-    "baseline-2019-q2/3": "pre-SIM-1D pack: shared paraphrased New York Fed notice and pre-2019 calendar evidence",
-    "repo-spike-2019/3": "pre-SIM-1D pack: shared paraphrased New York Fed notice and pre-2019 calendar evidence"
+    "repo-spike-2019/3": "pre-SIM-1D pack: shared paraphrased New York Fed notice and pre-2019 calendar evidence",
+    "repo-spike-2019/4": "pre-SIM-1E pack: customer-credit calibration could not drive the daily phase-in and exit lifecycle"
   }
 }
