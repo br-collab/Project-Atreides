@@ -147,9 +147,12 @@ def test_ingest_size_cap_is_store_wide_and_catalog_refusal_is_logged(
     refused = _catalog(refused_dir, _source_row(url="https://fred.stlouisfed.org/x"))
     with pytest.raises(ValueError, match="host refused"):
         ingest("test", root=root, catalog_path=refused)
-    events = (root / "40_runs" / "events.jsonl").read_text()
-    assert '"event": "ingest_refused"' in events
-    assert "fred.stlouisfed.org" in events
+    events = [
+        json.loads(line)
+        for line in (root / "40_runs" / "events.jsonl").read_text().splitlines()
+    ]
+    assert events[-1]["event"] == "ingest_refused"
+    assert events[-1]["reason"] == "source host refused: fred.stlouisfed.org"
 
 
 def _write_raw(root: Path, source_id: str, payload: bytes, suffix: str) -> Path:
@@ -193,7 +196,8 @@ def test_ny_fed_notice_travels_into_pack_and_sim_summary(tmp_path: Path) -> None
     pack = build_pack("repo-spike", "1", [normalized], root=root)
     run = run_simulation(seed=29, days=1, calibration_uri=pack.as_uri())
     assert run["calibration_classes_used"] == ["B", "SYNTHETIC"]
-    assert "newyorkfed.org" in run["ny_fed_notices"][0]
+    expected_notice = load_catalog(CATALOG_PATH)["nyfed_sofr_2019"].ny_fed_notice
+    assert run["ny_fed_notices"] == [expected_notice]
 
 
 def test_validation_flags_schema_range_calendar_duplicates_and_reconciliation() -> None:
