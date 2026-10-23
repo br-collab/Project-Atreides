@@ -117,3 +117,26 @@ def test_cli_boundary_requires_both_dates_for_a_dated_pack(tmp_path: Path) -> No
             calibration_uri=pack.as_uri(),
             require_explicit_dated_window=True,
         )
+
+
+def test_committed_spike_publication_is_output_only_and_complete() -> None:
+    publication = Path(__file__).parents[2] / "simulator/publication/spike-2019"
+    assert {path.name for path in publication.iterdir()} == {
+        "SUMMARY.md",
+        "daily-close.json",
+        "run-summary.json",
+        "trend.json",
+    }
+    run = json.loads((publication / "run-summary.json").read_text())
+    assert run["calibration_pack_id"] == "repo-spike-2019"
+    assert run["calibration_pack_version"] == "5"
+    assert run["calibration_classes_used"] == ["A", "B", "SYNTHETIC"]
+    assert run["days"] == 21
+    assert (run["window_start"], run["window_end"]) == ("2019-08-19", "2019-09-17")
+    final = run["closes"][-1]["market_data"]
+    assert final["sofr_percent"] == "5.25"
+    assert final["financing_charge"] == "14.83"
+    assert "repo" in run["not_tested"]
+    summary = (publication / "SUMMARY.md").read_text()
+    assert summary.count("New York Fed is not responsible for publication") == 5
+    assert "run outputs only, not the pack or its data" in summary

@@ -1,0 +1,1675 @@
+{
+  "closes": [
+    {
+      "breaks": [],
+      "business_date": "2019-08-19",
+      "economics_digest": "sha256:b8ce75b3137af3dd9ee7a67f281a6df2ab85129a78f625c6064551c4d6b469e9",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "LIMIT": 1
+      },
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "5.98",
+        "financing_need": "102036.42",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.11",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.90625",
+        "treasury_par_yield_percent": "1.53",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999584.5000",
+          "reserve_requirement": "900000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_BUY_IN",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "EX_DATE_REFUSAL",
+        "FINRA_11810_BUY_IN",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-08-20",
+      "economics_digest": "sha256:9c693b65b642bb1386122cd9595c00d347a39c19ed5f24c28f0109014b381702",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "6.04",
+        "financing_need": "102098.95",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.13",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.96875",
+        "treasury_par_yield_percent": "1.50",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999773.5000",
+          "reserve_requirement": "900000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-08-21",
+      "economics_digest": "sha256:f8b3c5c8e6c143e75c5cbbba4a24b4ab61e3d0c5cdbca1757083b126fd9db3ad",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "5.95",
+        "financing_need": "101976.37",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.10",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.84375",
+        "treasury_par_yield_percent": "1.56",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999679.0000",
+          "reserve_requirement": "900000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-08-22",
+      "economics_digest": "sha256:18083acd5d0a70c04d58eb66ca22f61786c26eed8ecf5465fef4b4e8ed8434d0",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "5.91",
+        "financing_need": "101879.13",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.09",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.75",
+        "treasury_par_yield_percent": "1.61",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "reserve_requirement": null
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-2361]"
+          ],
+          "reserve": [
+            "15c3-3a.item.01",
+            "average_total_credits"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "DEFAULT_CNS",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-08-23",
+      "economics_digest": "sha256:68341976e9103f75469436189283c42615a6d5ade54b886c4c16a716a5877246",
+      "fails_by_age": {},
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "HALT": 1
+      },
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "6.01",
+        "financing_need": "103068.88",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.10",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.9375",
+        "treasury_par_yield_percent": "1.51",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999790.0000",
+          "reserve_requirement": "900000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "DTC_CAP_HOLD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "HALT",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-08-26",
+      "economics_digest": "sha256:44578ccbaa020f7ed2bfc825f40e082105bfbe8b5d02f8c864a6b33b319616cc",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "5.95",
+        "financing_need": "102022.39",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.10",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.890625",
+        "treasury_par_yield_percent": "1.54",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999670.0000",
+          "reserve_requirement": "900000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-08-27",
+      "economics_digest": "sha256:45a3a6a023513d7edaaebb8782122a1aac465ab86e1aa2002afebbd3c9b2fcdf",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "LIMIT": 1
+      },
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "6.09",
+        "financing_need": "102036.70",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.15",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.90625",
+        "treasury_par_yield_percent": "1.53",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999797.5000",
+          "reserve_requirement": "900000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-08-28",
+      "economics_digest": "sha256:6c6e4de491c0b798b4a0e1b002ff7151a7b293d7860725842af79e2bafe6ce16",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "6.01",
+        "financing_need": "102100.83",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.12",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.96875",
+        "treasury_par_yield_percent": "1.50",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999562.0000",
+          "reserve_requirement": "900000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-08-29",
+      "economics_digest": "sha256:02fb062a29055ba860eab620e3822665f65997f989489865acebf2028a5ed8a5",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "HALT": 1
+      },
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "6.01",
+        "financing_need": "102036.95",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.12",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.90625",
+        "treasury_par_yield_percent": "1.53",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999692.5000",
+          "reserve_requirement": "900000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "HALT",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-08-30",
+      "economics_digest": "sha256:2fbf2aaef5f5a84cfeb101f207ff34a279cdd14a3dd0264d2f0279824fe9ae97",
+      "fails_by_age": {},
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "6.19",
+        "financing_need": "103100.15",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.16",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.96875",
+        "treasury_par_yield_percent": "1.50",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "reserve_requirement": null
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-5990]"
+          ],
+          "reserve": [
+            "15c3-3a.item.01",
+            "average_total_credits"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "DEFAULT_CNS",
+        "DTC_CAP_HOLD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-03",
+      "economics_digest": "sha256:5bd94535a04a88c8b383780e090055acef71da3be822cac1cb6fbb2b200583ad",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.16",
+        "financing_need": "102143.77",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.17",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "102.015625",
+        "treasury_par_yield_percent": "1.47",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999848.5000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-04",
+      "economics_digest": "sha256:636ea2015b4826dfab8a3dc65f885716af765f8c6f12fbf995683a2bebee426a",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.28",
+        "financing_need": "102237.47",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.21",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "102.109375",
+        "treasury_par_yield_percent": "1.43",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999583.0000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-05",
+      "economics_digest": "sha256:4c361e6b5be24f12e691683e539f0687083cdfa1862995647c4e29afe98b4f4f",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.26",
+        "financing_need": "101986.05",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.21",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.859375",
+        "treasury_par_yield_percent": "1.55",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999604.0000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-06",
+      "economics_digest": "sha256:9f62c8fd32203304995025e1e5072ab9669010ba4a1603f0b418b2c62d7d5a17",
+      "fails_by_age": {},
+      "holds": [
+        "STALE_MARKET_DATA",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.09",
+        "financing_need": "102034.92",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.15",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.90625",
+        "treasury_par_yield_percent": "1.53",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "reserve_requirement": null
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-5714]"
+          ],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "15c3-3a.item.01"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "STALE_DATA_HOLD",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-09",
+      "economics_digest": "sha256:e4bc8b7a8910e41a45e9f6a209bbc29de8c395ffc1555c2f3e648fdd9c1e4895",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.00",
+        "financing_need": "101929.45",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.12",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.796875",
+        "treasury_par_yield_percent": "1.58",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999799.0000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-10",
+      "economics_digest": "sha256:eba850f40a1da5567e7c4323b97b14f22ca0e0ed7e598a6f472cda6902179df0",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "RULE_204_B": 1
+      },
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.05",
+        "financing_need": "101755.50",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.14",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.625",
+        "treasury_par_yield_percent": "1.67",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999794.5000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "RULE_204_SHORT",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-11",
+      "economics_digest": "sha256:eaab7a9f5fd23dda146699a7f9f16ec74b6578e8de37a813c5c0b145cda333dd",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.08",
+        "financing_need": "101742.35",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.15",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.609375",
+        "treasury_par_yield_percent": "1.68",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999640.0000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-12",
+      "economics_digest": "sha256:ffe321e6ae2cbd42fea09d7b58dba39045bd569e1adfb84a30842286ba28aaf4",
+      "fails_by_age": {},
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "LOCATE": 1,
+        "RULE_204_B": 1
+      },
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.27",
+        "financing_need": "102663.65",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.20",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.53125",
+        "treasury_par_yield_percent": "1.72",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999647.5000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "DTC_CAP_HOLD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "RULE_204_SHORT",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-13",
+      "economics_digest": "sha256:6d5ccfc6577307f50d7e7a089d3c8973a14939eca8ef14dc42cc5fdb284a8e7a",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "RULE_204_B": 1
+      },
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.20",
+        "financing_need": "101522.39",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.20",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.390625",
+        "treasury_par_yield_percent": "1.79",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999853.0000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "RULE_204_SHORT",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-16",
+      "economics_digest": "sha256:401275800e1cc47660c6d9c2fc123e031e7c05786787a06b20de5fbef7ba6010",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "6.86",
+        "financing_need": "101618.33",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "2.43",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.484375",
+        "treasury_par_yield_percent": "1.74",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999556.0000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "EX_DATE_REFUSAL",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2019-09-17",
+      "economics_digest": "sha256:e8fbd78fffd8c93f24f468882c6d11258ee21cf7200610f5df0ac2cded8d5c6d",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516666666.6666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2020-03-03",
+        "filed_credit_history_count": 12,
+        "financing_charge": "14.83",
+        "financing_need": "101662.13",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "5.25",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2019-01-01&endDate=2019-12-31&type=rate",
+        "treasury_clean_price_64ths": "101.53125",
+        "treasury_par_yield_percent": "1.72",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2019/all?type=daily_treasury_yield_curve&field_tdr_date_value=2019&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "dispositions": {
+          "net_capital": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999865.0000",
+          "reserve_requirement": "50000000.00"
+        },
+        "reasons": {
+          "net_capital": [],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    }
+  ],
+  "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
+  "not_tested": [
+    "second venue",
+    "best execution",
+    "options",
+    "repo",
+    "clearing fund waterfall"
+  ],
+  "schema_version": "sim.daily-close/1"
+}
