@@ -194,7 +194,10 @@ def validate_rows(rows: list[dict[str, object]]) -> list[str]:
         }
         if len({frozenset(values) for values in date_sets.values()}) > 1:
             errors.append("calendar completeness differs between metrics")
-        calendar = MarketCalendar.load(Market.US_EQUITIES)
+        # DATA-1 stores Treasury and overnight-funding observations. Their
+        # publication completeness follows the government-securities/federal-
+        # banking calendar, not an equity exchange calendar.
+        calendar = MarketCalendar.load(Market.US_GOVERNMENT_SECURITIES)
         start, end = min(dates), max(dates)
         for metric in metrics:
             metric_dates = date_sets[metric]
@@ -202,9 +205,8 @@ def validate_rows(rows: list[dict[str, object]]) -> list[str]:
             while cursor <= end:
                 try:
                     business_day = calendar.is_business_day(cursor)
-                except CalendarIndeterminateError:
-                    # DATA-1 does not ingest or extend holiday calendars. Completeness
-                    # remains cross-metric for years outside the pinned calendar range.
+                except CalendarIndeterminateError as error:
+                    errors.append(str(error))
                     break
                 if business_day and cursor not in metric_dates:
                     errors.append(f"calendar gap: {metric} {cursor.isoformat()}")

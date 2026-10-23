@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import shutil
 from datetime import date
 from pathlib import Path
@@ -10,11 +9,12 @@ from typing import Any, cast
 
 import pyarrow.parquet as pq
 
+from marketdata.catalog import classify_url
 from marketdata.model import StorePaths
+from marketdata.normalize import validate_rows
 from marketdata.store import digest_file, initialize
+from simulator.calibration.identifiers import refuse_identifiers
 from simulator.calibration.loader import DEFAULT_PACK, load_calibration_pack
-
-IDENTIFIER = re.compile(r"(?:^|_)(?:cusip|figi|ticker|issuer(?:_name)?)(?:$|_)", re.I)
 
 
 def _metadata(path: Path) -> dict[str, Any]:
@@ -50,14 +50,20 @@ def build_pack(
     ]
     for path in inputs:
         metadata = _metadata(path)
-        if metadata.get("validation_status") != "clean":
-            raise ValueError(f"build-pack refuses unclean input: {path.name}")
+        source = classify_url(str(metadata.get("source_url", "")))
+        mismatches = {
+            "source_id": (metadata.get("source_id"), source.source_id),
+            "license_class": (metadata.get("license_class"), source.license_class),
+            "ny_fed_notice": (metadata.get("ny_fed_notice"), source.ny_fed_notice),
+        }
+        wrong = [name for name, (sidecar, catalog) in mismatches.items() if sidecar != catalog]
+        if wrong:
+            raise ValueError(
+                f"build-pack sidecar/catalog mismatch for {path.name}: {', '.join(wrong)}"
+            )
         table = pq.read_table(path)
-        if any(IDENTIFIER.search(name) for name in table.column_names):
-            raise ValueError(f"build-pack refuses identifier column: {path.name}")
         rows = table.to_pylist()
-        if any(any(IDENTIFIER.search(str(key)) for key in row) for row in rows):
-            raise ValueError(f"build-pack refuses identifier column: {path.name}")
+        refuse_identifiers(rows, path.name)
         selected = sorted(
             (
                 row
@@ -69,18 +75,19 @@ def build_pack(
         )
         if not selected:
             raise ValueError(f"build-pack date window has no rows: {path.name}")
-        source_id = str(metadata["source_id"])
+        validation_errors = validate_rows(selected)
+        if validation_errors:
+            raise ValueError(
+                f"build-pack revalidation failed for {path.name}: " + "; ".join(validation_errors)
+            )
+        source_id = source.source_id
         calibration_inputs.append(
             {
                 "input_id": source_id,
-                "source_url": metadata["source_url"],
+                "source_url": source.url,
                 "citation": f"{source_id}; raw sha256:{metadata['raw_sha256']}",
-                "license_class": metadata["license_class"],
-                **(
-                    {"ny_fed_notice": metadata["ny_fed_notice"]}
-                    if metadata.get("ny_fed_notice")
-                    else {}
-                ),
+                "license_class": source.license_class,
+                **({"ny_fed_notice": source.ny_fed_notice} if source.ny_fed_notice else {}),
                 "values": {
                     "observations": [
                         {

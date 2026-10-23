@@ -27,6 +27,14 @@ class CalendarIndeterminateError(ValueError):
     """The calendar cannot decide because the requested year is not loaded."""
 
 
+class _CalendarSource(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(min_length=1)
+    url: str = Field(min_length=1)
+    license_class: str = Field(min_length=1)
+
+
 class _CalendarFile(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -36,12 +44,15 @@ class _CalendarFile(BaseModel):
     source_url: str = Field(min_length=1)
     confidence: str = Field(min_length=1)
     holidays: dict[int, tuple[date, ...]]
+    year_sources: dict[int, tuple[_CalendarSource, ...]] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _dates_match_years(self) -> Self:
         for year, dates in self.holidays.items():
             if any(day.year != year for day in dates):
                 raise ValueError(f"holiday is outside declared year {year}")
+        if any(year not in self.holidays for year in self.year_sources):
+            raise ValueError("calendar year source names a year without holiday data")
         return self
 
 
@@ -53,6 +64,7 @@ class MarketCalendar:
         self.source = document.source
         self.source_url = document.source_url
         self.confidence = document.confidence
+        self.year_sources = document.year_sources
         self._holidays = {year: frozenset(days) for year, days in document.holidays.items()}
 
     @classmethod

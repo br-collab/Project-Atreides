@@ -44,7 +44,7 @@ from atreides.books.projections import project_customer_protection, project_marg
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import (
-    EXHIBIT_A_CREDITS,
+    ComputationMode,
     LineBalance,
     ReserveInputs,
     compute_reserve,
@@ -84,28 +84,32 @@ class EstateResult:
 
 
 def _complete_reserve_inputs(
-    projected: ReserveInputs, *, previously_daily_required: bool
+    projected: ReserveInputs,
+    *,
+    average_total_credits: Decimal | None,
+    daily_requirement_effective_date: date | None,
+    computation_mode: ComputationMode,
 ) -> ReserveInputs:
-    """Turn the simulator's complete generated activity into evidenced reserve facts."""
+    """Turn complete activity and generated filing history into reserve facts.
+
+    17 CFR 240.15c3-3(e)(3)(i)(B)(1), pinned in the rule table:
+    "For purposes of this paragraph (e)(3), average total credits means the arithmetic
+    mean of the sum of Total Credits in the Customer Reserve Bank Account computation
+    and the PAB Reserve Bank Account computation reported in the 12 most recently filed
+    month-end Forms X-17A-5." The same paragraph requires daily computations no later
+    than six months after average total credits first equal or exceed $500 million.
+    """
     reserve_lines = tuple(
         LineBalance(rule_id=line.rule_id, amount=line.amount or Decimal())
         for line in projected.lines
     )
-    generated_credit_history = sum(
-        (
-            line.amount or Decimal()
-            for line in reserve_lines
-            if line.rule_id in EXHIBIT_A_CREDITS
-        ),
-        Decimal(),
-    )
     return projected.model_copy(
         update={
             "lines": reserve_lines,
-            # The generated estate's complete activity is the evidence for its
-            # synthetic trailing-period credit fact; this is not a regulatory default.
-            "average_total_credits": generated_credit_history,
-            "previously_daily_required": previously_daily_required,
+            "average_total_credits": average_total_credits,
+            "daily_requirement_effective_date": daily_requirement_effective_date,
+            "previously_daily_required": False,
+            "mode": computation_mode,
             "qualified_securities_deposit": Decimal(),
         }
     )
@@ -173,7 +177,12 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     street_quantity: Decimal,
     prior_close: Decimal,
     protection_inputs_missing: bool,
-    previously_daily_required: bool,
+    customer_credit_balance: Decimal,
+    average_total_credits: Decimal | None,
+    daily_requirement_effective_date: date | None,
+    computation_mode: ComputationMode,
+    financing_charge: Decimal | None,
+    post_financing: bool = True,
 ) -> EstateResult:
     """Drive L.C. then Atreides; checks elsewhere only compare their outputs.
 
@@ -417,6 +426,77 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             ),
         )
     )
+    credit_event_id = _identifier("evt_", 70_000 + run_number)
+    books.post(
+        JournalEntry(
+            entry_id=f"SIM-1D-CREDIT-{run_number}",
+            source_event_id=credit_event_id,
+            source=PostingSource.CASH_MOVEMENT,
+            effective_date=business_date,
+            effective_date_basis="VALUE_DATE",
+            authority="SIM-1D_SYNTHETIC_CUSTOMER_ACTIVITY",
+            lines=(
+                LedgerLine(
+                    account_id="CUSTOMER-GENERATED-CREDIT",
+                    account_type=AccountType.CUSTOMER_CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=customer_credit_balance,
+                ),
+                LedgerLine(
+                    account_id="SYNTHETIC_CUSTOMER_CREDIT_FUNDING",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=-customer_credit_balance,
+                ),
+            ),
+            posting=BooksPosting(
+                posted_record_id=f"SIM-1D-CREDIT-{run_number}",
+                posting_authority=actor,
+                effective_time=base,
+                source_event_id=EventId(credit_event_id),
+                provenance=Provenance.FACT_SYNTHETIC,
+            ),
+            synthetic=True,
+        )
+    )
+    if financing_charge not in {None, Decimal()} and post_financing:
+        financing_event_id = _identifier("evt_", 80_000 + run_number)
+        books.post(
+            JournalEntry(
+                entry_id=f"SIM-1D-FINANCING-{run_number}",
+                source_event_id=financing_event_id,
+                source=PostingSource.MARGIN_INTEREST,
+                effective_date=business_date,
+                effective_date_basis="VALUE_DATE",
+                authority="SIM-1D_SYNTHETIC_FINANCING",
+                lines=(
+                    LedgerLine(
+                        account_id="SYNTHETIC_FINANCING_EXPENSE",
+                        account_type=AccountType.FIRM_PROPRIETARY,
+                        record_side=RecordSide.MONEY,
+                        currency="USD",
+                        money=financing_charge,
+                    ),
+                    LedgerLine(
+                        account_id="SYNTHETIC_FINANCING_CASH",
+                        account_type=AccountType.CASH,
+                        record_side=RecordSide.MONEY,
+                        currency="USD",
+                        money=-financing_charge,
+                    ),
+                ),
+                posting=BooksPosting(
+                    posted_record_id=f"SIM-1D-FINANCING-{run_number}",
+                    posting_authority=actor,
+                    effective_time=base,
+                    source_event_id=EventId(financing_event_id),
+                    provenance=Provenance.FACT_SYNTHETIC,
+                ),
+                synthetic=True,
+            )
+        )
     stock_breaks = books.verify_stock_record(
         observed_locations={issue: settlement.allocated_quantity}
     )
@@ -442,7 +522,9 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     # absent from that set are observed zeroes, not invented regulatory defaults.
     reserve_inputs = _complete_reserve_inputs(
         projected.reserve,
-        previously_daily_required=previously_daily_required,
+        average_total_credits=average_total_credits,
+        daily_requirement_effective_date=daily_requirement_effective_date,
+        computation_mode=computation_mode,
     )
     net_capital_inputs = projected.net_capital.model_copy(
         update={
@@ -484,12 +566,22 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     )
     quantities = books.quantities()[issue]
     books_quantity = quantities[RecordSide.OWNERSHIP]
-    books_money = -sum(
+    trade_books_money = -sum(
         (
             line.money
             for item in books.entries
             for line in item.lines
             if line.account_type is AccountType.CUSTOMER_MARGIN and line.currency == "USD"
+        ),
+        Decimal(),
+    )
+    financing_booked = sum(
+        (
+            line.money
+            for item in books.entries
+            if item.source is PostingSource.MARGIN_INTEREST
+            for line in item.lines
+            if line.account_type is AccountType.FIRM_PROPRIETARY and line.currency == "USD"
         ),
         Decimal(),
     )
@@ -499,7 +591,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         allocated_quantity=sum((item.quantity for item in allocation.entries), Decimal()),
         allocated_money=sum((item.consideration for item in allocation.entries), Decimal()),
         books_quantity=books_quantity,
-        books_money=books_money,
+        books_money=trade_books_money + financing_booked,
         stock_breaks=stock_breaks,
         reserve_disposition=reserve.disposition.value,
         net_capital_disposition=capital.disposition.value,

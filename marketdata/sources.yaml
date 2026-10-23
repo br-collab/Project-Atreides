@@ -10,7 +10,11 @@
     }
   ],
   "notices": {
-    "nyfed_reference_rates": "Reference-rate data is subject to the Terms of Use at newyorkfed.org. The Federal Reserve Bank of New York does not endorse, sanction, or accept responsibility for this use or any derived work. Distributed content remains subject to the same permissions, conditions, and restrictions."
+    "nyfed_sofr": "The SOFR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the SOFR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
+    "nyfed_bgcr": "The BGCR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the BGCR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
+    "nyfed_tgcr": "The TGCR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the TGCR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
+    "nyfed_effr": "The EFFR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the EFFR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
+    "nyfed_obfr": "The OBFR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the OBFR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions."
   },
   "sources": [
     {
@@ -26,7 +30,7 @@
       "license_class": "B",
       "kind": "nyfed_rate_json",
       "citation": "Federal Reserve Bank of New York published SOFR values, 2019",
-      "notice_id": "nyfed_reference_rates"
+      "notice_id": "nyfed_sofr"
     },
     {
       "id": "nyfed_bgcr_2019",
@@ -34,7 +38,7 @@
       "license_class": "B",
       "kind": "nyfed_rate_json",
       "citation": "Federal Reserve Bank of New York published BGCR values, 2019",
-      "notice_id": "nyfed_reference_rates"
+      "notice_id": "nyfed_bgcr"
     },
     {
       "id": "nyfed_tgcr_2019",
@@ -42,7 +46,7 @@
       "license_class": "B",
       "kind": "nyfed_rate_json",
       "citation": "Federal Reserve Bank of New York published TGCR values, 2019",
-      "notice_id": "nyfed_reference_rates"
+      "notice_id": "nyfed_tgcr"
     },
     {
       "id": "nyfed_effr_2019",
@@ -50,7 +54,7 @@
       "license_class": "B",
       "kind": "nyfed_rate_json",
       "citation": "Federal Reserve Bank of New York published EFFR values, 2019",
-      "notice_id": "nyfed_reference_rates"
+      "notice_id": "nyfed_effr"
     },
     {
       "id": "nyfed_obfr_2019",
@@ -58,7 +62,7 @@
       "license_class": "B",
       "kind": "nyfed_rate_json",
       "citation": "Federal Reserve Bank of New York published OBFR values, 2019",
-      "notice_id": "nyfed_reference_rates"
+      "notice_id": "nyfed_obfr"
     },
     {
       "id": "treasury_fiscal_auctions",

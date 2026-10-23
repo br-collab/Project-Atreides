@@ -10,6 +10,7 @@ import threading
 from http.client import HTTPMessage
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 from typing import ClassVar
 from urllib.request import Request
 
@@ -106,6 +107,10 @@ def test_ingest_is_write_once_with_provenance_and_size_refusal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = _catalog(tmp_path, _source_row())
+    monkeypatch.setattr(
+        "marketdata.store.shutil.disk_usage",
+        lambda _path: SimpleNamespace(total=1000, used=100, free=500),
+    )
     payload = b"Date,1 Mo\n09/17/2019,2.04\n"
     monkeypatch.setattr("marketdata.store._open", lambda *_args, **_kwargs: _Response(payload))
     first = ingest("test", root=tmp_path / "store", catalog_path=path)
@@ -123,24 +128,30 @@ def test_ingest_is_write_once_with_provenance_and_size_refusal(
     }
 
     monkeypatch.setattr(
-        "marketdata.store._open", lambda *_args, **_kwargs: _Response(b"x", declared=11)
+        "marketdata.store.shutil.disk_usage",
+        lambda _path: SimpleNamespace(total=1000, used=901, free=99),
     )
-    with pytest.raises(ValueError, match="total size exceeds"):
-        ingest("test", root=tmp_path / "small", size_cap=10, catalog_path=path)
+    with pytest.raises(ValueError, match="below 10 percent free"):
+        ingest("test", root=tmp_path / "small", catalog_path=path)
 
 
-def test_ingest_size_cap_is_store_wide_and_catalog_refusal_is_logged(
+def test_interrupted_raw_is_quarantined_and_catalog_refusal_is_logged(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = _catalog(tmp_path, _source_row())
     root = tmp_path / "store"
+    monkeypatch.setattr(
+        "marketdata.store.shutil.disk_usage",
+        lambda _path: SimpleNamespace(total=1000, used=100, free=500),
+    )
     existing = initialize(root).raw / "existing.bin"
     existing.write_bytes(b"12345678")
     monkeypatch.setattr(
         "marketdata.store._open", lambda *_args, **_kwargs: _Response(b"abc", declared=3)
     )
-    with pytest.raises(ValueError, match="total size exceeds"):
-        ingest("test", root=root, size_cap=10, catalog_path=path)
+    ingest("test", root=root, catalog_path=path)
+    assert not existing.exists()
+    assert any((root / "quarantine").glob("raw-startup-*-existing.bin"))
 
     refused_dir = tmp_path / "refused"
     refused_dir.mkdir()
@@ -248,13 +259,13 @@ def _clean_parquet(tmp_path: Path, *, identifier: bool = False, clean: bool = Tr
         "value": "5.25",
         "unit": "percent",
         "source_id": "nyfed_sofr_2019",
-        "source_url": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json",
+        "source_url": load_catalog(CATALOG_PATH)["nyfed_sofr_2019"].url,
         "citation": "NY Fed published SOFR",
         "license_class": "B",
-        "ny_fed_notice": "subject to Terms of Use at newyorkfed.org; no endorsement",
+        "ny_fed_notice": load_catalog(CATALOG_PATH)["nyfed_sofr_2019"].ny_fed_notice,
     }
     if identifier:
-        row["cusip"] = "FORBIDDEN"
+        row["metric"] = "037833100"
     pq.write_table(pa.Table.from_pylist([row]), path)
     path.with_suffix(".metadata.json").write_text(
         json.dumps(
@@ -272,15 +283,28 @@ def _clean_parquet(tmp_path: Path, *, identifier: bool = False, clean: bool = Tr
 
 
 def test_build_pack_refuses_unclean_and_identifier_inputs(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="unclean"):
-        build_pack("bad", "1", [_clean_parquet(tmp_path, clean=False)], root=tmp_path / "a")
-    with pytest.raises(ValueError, match="identifier"):
+    # A status word in a sidecar is not trusted; the rows are revalidated.
+    assert build_pack(
+        "revalidated", "1", [_clean_parquet(tmp_path, clean=False)], root=tmp_path / "a"
+    ).exists()
+    with pytest.raises(ValueError, match="CUSIP-shaped value"):
         build_pack(
             "bad",
             "1",
             [_clean_parquet(tmp_path / "identified", identifier=True)],
             root=tmp_path / "b",
         )
+
+
+def test_build_pack_refuses_sidecar_catalog_class_or_notice_edits(tmp_path: Path) -> None:
+    path = _clean_parquet(tmp_path / "source")
+    metadata_path = path.with_suffix(".metadata.json")
+    metadata = json.loads(metadata_path.read_text())
+    metadata["license_class"] = "A"
+    metadata["ny_fed_notice"] = "edited"
+    metadata_path.write_text(json.dumps(metadata))
+    with pytest.raises(ValueError, match=r"sidecar/catalog mismatch.*license_class.*ny_fed_notice"):
+        build_pack("bad-sidecar", "1", [path], root=tmp_path / "store")
 
 
 def test_verify_quarantines_corruption_and_annex_loader_refuses(tmp_path: Path) -> None:
@@ -308,13 +332,13 @@ def test_pack_observations_are_chronological(tmp_path: Path) -> None:
     path = _clean_parquet(tmp_path / "source")
     table = pq.read_table(path)
     rows = table.to_pylist()
-    rows.append({**rows[0], "date": "2019-08-19", "value": "2.11"})
+    rows.append({**rows[0], "date": "2019-09-16", "value": "2.11"})
     pq.write_table(pa.Table.from_pylist(rows), path)
     pack = build_pack("ordered", "1", [path], root=tmp_path / "store")
     document = json.loads((pack / "calibration.json").read_text())
     source = next(row for row in document["inputs"] if row["input_id"] == "nyfed_sofr_2019")
     assert [row["date"] for row in source["values"]["observations"]] == [
-        "2019-08-19",
+        "2019-09-16",
         "2019-09-17",
     ]
 

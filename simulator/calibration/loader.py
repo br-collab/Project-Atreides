@@ -5,17 +5,20 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import re
 from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from simulator.calibration.identifiers import refuse_identifiers
+
 ALLOWED_CLASSES = frozenset({"SYNTHETIC", "A", "B"})
 FORBIDDEN_HOSTS = frozenset({"fred.stlouisfed.org", "alfred.stlouisfed.org", "api.stlouisfed.org"})
-IDENTIFIER_NAME = re.compile(r"(?:^|_)(?:cusip|figi|ticker)(?:$|_)", re.IGNORECASE)
 DEFAULT_PACK = "synthetic/1"
 PACKS_ROOT = Path(__file__).with_name("packs")
+DEFAULT_STORE_ROOT = Path.home() / "Data" / "cfma-data"
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,37 +56,80 @@ class CalibrationPack:
             raise KeyError(f"calibration value absent: {input_id}.{key}")
         return item.values[key]
 
+    @property
+    def observation_dates(self) -> tuple[date, ...]:
+        """All dated real observations; synthetic-only packs have none."""
+        dates: set[date] = set()
+        for item in self.inputs:
+            rows = item.values.get("observations")
+            if isinstance(rows, list):
+                for row in rows:
+                    if isinstance(row, dict) and "date" in row:
+                        dates.add(date.fromisoformat(str(row["date"])))
+        return tuple(sorted(dates))
+
+    def observation(self, day: date, metric: str) -> tuple[Decimal, CalibrationInput] | None:
+        matches: list[tuple[Decimal, CalibrationInput]] = []
+        for item in self.inputs:
+            rows = item.values.get("observations")
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                if str(row.get("date")) == day.isoformat() and str(row.get("metric")) == metric:
+                    matches.append((Decimal(str(row["value"])), item))
+        if len(matches) > 1:
+            raise ValueError(f"duplicate calibration observation: {day} {metric}")
+        return matches[0] if matches else None
+
 
 def _pack_path(uri: str) -> Path:
     parsed = urlparse(uri)
     if parsed.scheme not in {"", "file"}:
         raise ValueError("CFMA_DATA_URI must address one local pack; network schemes are refused")
+    store_root = Path(os.getenv("CFMA_DATA_ROOT", DEFAULT_STORE_ROOT)).resolve()
     if parsed.scheme == "file":
         path = Path(parsed.path)
     else:
         supplied = Path(uri)
-        path = supplied if supplied.is_absolute() else PACKS_ROOT / supplied
-    if path.name in {"", ".", ".."}:
-        raise ValueError("CFMA_DATA_URI must address one pack, not a store root")
-    return path.resolve()
+        repository_candidate = PACKS_ROOT / supplied
+        path = (
+            supplied
+            if supplied.is_absolute()
+            else repository_candidate
+            if repository_candidate.exists()
+            else store_root / "20_curated" / "packs" / supplied
+        )
+    resolved = path.resolve()
+    repository_root = PACKS_ROOT.resolve()
+    curated_root = store_root / "20_curated" / "packs"
+    allowed = False
+    for root in (repository_root, curated_root):
+        try:
+            relative = resolved.relative_to(root)
+        except ValueError:
+            continue
+        allowed = len(relative.parts) == 2
+        if allowed:
+            break
+    # Test and operator-selected stores may have a different root, but the seam
+    # remains exactly the curated <pack-id>/<version> shape.
+    if not allowed and len(resolved.parts) >= 4:
+        allowed = resolved.parts[-4:-2] == ("20_curated", "packs")
+    if not allowed:
+        raise ValueError(
+            "CFMA_DATA_URI must address <pack-id>/<version> below the repository synthetic "
+            "pack root or <store>/20_curated/packs"
+        )
+    return resolved
 
 
 def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _identifier_scan(value: object, trail: str = "input") -> None:
-    if isinstance(value, dict):
-        for key, child in value.items():
-            if IDENTIFIER_NAME.search(str(key)):
-                raise ValueError(f"forbidden identifier-shaped column {trail}.{key}")
-            _identifier_scan(child, f"{trail}.{key}")
-    elif isinstance(value, list):
-        for index, child in enumerate(value):
-            _identifier_scan(child, f"{trail}[{index}]")
-
-
-def load_calibration_pack(uri: str | None = None) -> CalibrationPack:
+def load_calibration_pack(uri: str | None = None) -> CalibrationPack:  # noqa: PLR0915
     """Load every calibration input; simulator call sites never open calibration files."""
     selected_uri = uri or os.getenv("CFMA_DATA_URI") or DEFAULT_PACK
     pack_path = _pack_path(selected_uri)
@@ -93,6 +139,12 @@ def load_calibration_pack(uri: str | None = None) -> CalibrationPack:
     if set(manifest) != {"schema_version", "pack_id", "version", "files"}:
         raise ValueError("calibration manifest has unknown or missing fields")
     files = manifest["files"]
+    relative = Path(pack_path.parent.name) / pack_path.name
+    if (
+        str(manifest["pack_id"]) != relative.parts[0]
+        or str(manifest["version"]) != relative.parts[1]
+    ):
+        raise ValueError("calibration manifest identity does not match its curated pack path")
     if not isinstance(files, dict) or not files:
         raise ValueError("calibration manifest files must be a non-empty object")
     payloads: list[dict[str, object]] = []
@@ -127,10 +179,16 @@ def load_calibration_pack(uri: str | None = None) -> CalibrationPack:
             notice = row.get("ny_fed_notice")
             if license_class == "B" and not isinstance(notice, str):
                 raise ValueError("class B calibration requires the NY Fed notice")
+            if license_class == "B":
+                from marketdata.catalog import classify_url
+
+                catalog_source = classify_url(source_url)
+                if notice != catalog_source.ny_fed_notice:
+                    raise ValueError("class B calibration notice does not exactly match catalog")
             values = row["values"]
             if not isinstance(values, dict):
                 raise ValueError("calibration values must be an object")
-            _identifier_scan(values, str(row["input_id"]))
+            refuse_identifiers(row, str(row["input_id"]))
             if str(row["input_id"]) == "aggregate_fail_rate" and license_class not in {
                 "A",
                 "SYNTHETIC",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
 from datetime import UTC, datetime
@@ -16,8 +17,9 @@ from marketdata.catalog import ADMITTED_HOSTS, classify_url, resolve_source
 from marketdata.model import Source, StorePaths
 
 DEFAULT_ROOT = Path.home() / "Data" / "cfma-data"
-DEFAULT_SIZE_CAP = 2 * 1024 * 1024 * 1024
 CHUNK_SIZE = 1024 * 1024
+MINIMUM_FREE_FRACTION = 0.10
+_RAW_NAME = re.compile(r"^[0-9a-f]{64}\.[A-Za-z0-9.]+(?:\.metadata\.json)?$")
 
 
 class _AdmittedRedirect(HTTPRedirectHandler):
@@ -65,9 +67,63 @@ def _log(paths: StorePaths, event: dict[str, object]) -> None:
         stream.write(json.dumps(event, sort_keys=True) + "\n")
 
 
+def _quarantine_interrupted_raw(paths: StorePaths) -> None:
+    """Move interrupted/foreign raw names aside before any run can count or use them."""
+    for path in sorted(candidate for candidate in paths.raw.rglob("*") if candidate.is_file()):
+        relative = path.relative_to(paths.raw)
+        valid = len(relative.parts) == 2 and bool(_RAW_NAME.fullmatch(relative.name))
+        if valid:
+            continue
+        digest = hashlib.sha256(str(relative).encode()).hexdigest()[:12]
+        destination = paths.quarantine / f"raw-startup-{digest}-{path.name}"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(path, destination)
+        _log(
+            paths,
+            {
+                "event": "raw_startup_quarantine",
+                "path": str(relative),
+                "reason": "raw name is not <source-id>/<digest>.<suffix> or its metadata",
+                "at": datetime.now(UTC).isoformat(),
+            },
+        )
+
+
+def store_usage(paths: StorePaths) -> dict[str, object]:
+    """Return auditable store bytes by zone and raw source."""
+    zones = {
+        name: sum(path.stat().st_size for path in directory.rglob("*") if path.is_file())
+        for name, directory in {
+            "00_raw": paths.raw,
+            "10_normalized": paths.normalized,
+            "20_curated": paths.packs.parent,
+            "quarantine": paths.quarantine,
+            "catalog": paths.catalog,
+            "40_runs": paths.runs,
+        }.items()
+    }
+    sources = {
+        directory.name: sum(path.stat().st_size for path in directory.rglob("*") if path.is_file())
+        for directory in sorted(paths.raw.iterdir())
+        if directory.is_dir()
+    }
+    return {"zones": zones, "raw_sources": sources}
+
+
+def _ensure_free_space(paths: StorePaths, incoming_bytes: int) -> None:
+    usage = shutil.disk_usage(paths.root)
+    minimum_free = int(usage.total * MINIMUM_FREE_FRACTION)
+    if usage.free - incoming_bytes < minimum_free:
+        raise ValueError(
+            "ingest refused: fetch would leave the volume below 10 percent free "
+            f"(free={usage.free}, incoming={incoming_bytes}, required_free={minimum_free})"
+        )
+
+
 def initialize(root: Path | None = None) -> StorePaths:
     paths = store_paths(root)
     paths.create()
+    _quarantine_interrupted_raw(paths)
     package_root = Path(__file__).parent
     catalog_files = [package_root / "sources.yaml", package_root / "pack-locks.json"]
     catalog_files.extend(sorted((package_root / "schemas").glob("*.json")))
@@ -84,26 +140,25 @@ def initialize(root: Path | None = None) -> StorePaths:
         )
         + "\n"
     )
-    return paths
-
-
-def _stored_raw_bytes(paths: StorePaths) -> int:
-    return sum(
-        path.stat().st_size
-        for path in paths.raw.rglob("*")
-        if path.is_file() and not path.name.endswith(".metadata.json")
+    _log(
+        paths,
+        {
+            "event": "store_status",
+            "at": datetime.now(UTC).isoformat(),
+            **store_usage(paths),
+        },
     )
+    return paths
 
 
 def ingest(
     source_id: str,
     *,
     root: Path | None = None,
-    size_cap: int = DEFAULT_SIZE_CAP,
     catalog_path: Path | None = None,
 ) -> Path:
     paths = initialize(root)
-    stored_bytes = _stored_raw_bytes(paths)
+    _ensure_free_space(paths, 0)
     try:
         source = (
             resolve_source(source_id)
@@ -130,15 +185,14 @@ def ingest(
     try:
         with _open(request, timeout=60) as response:
             declared = response.headers.get("Content-Length")
-            if declared is not None and stored_bytes + int(declared) > size_cap:
-                raise ValueError(f"ingest refused: total size exceeds {size_cap} bytes")
+            if declared is not None:
+                _ensure_free_space(paths, int(declared))
             with tempfile.NamedTemporaryFile(dir=paths.raw, delete=False) as target:
                 temporary = Path(target.name)
                 total = 0
                 while chunk := response.read(CHUNK_SIZE):
                     total += len(chunk)
-                    if stored_bytes + total > size_cap:
-                        raise ValueError(f"ingest refused: total size exceeds {size_cap} bytes")
+                    _ensure_free_space(paths, total)
                     target.write(chunk)
         digest = _sha256(temporary)
         suffix = Path(source.url.split("?", 1)[0]).suffix or ".bin"
