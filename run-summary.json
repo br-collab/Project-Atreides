@@ -1,0 +1,262 @@
+SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness
+{
+  "all_invariants_pass": true,
+  "calibration_classes_used": [
+    "A",
+    "SYNTHETIC"
+  ],
+  "calibration_manifest_digest": "sha256:5faf8116e33c2a6c556fa6029e55beefb23272070111678a51d2b48786dd41ca",
+  "calibration_pack_id": "synthetic",
+  "calibration_pack_version": "1",
+  "closes": [
+    {
+      "breaks": [],
+      "business_date": "2026-12-28",
+      "economics_digest": "sha256:eae1208e35bf8c1a17b6942abf7abadab1389dd64579d36bfaef293b6d5e2c47",
+      "fails_by_age": {
+        "age_0": 1,
+        "age_1_plus": 1
+      },
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "STALE_MARKET_DATA"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "HALT": 1,
+        "RULE_204_B": 1
+      },
+      "money_residual": "0",
+      "replay_digest_check": true,
+      "scenarios": [
+        "QUEUE_PRIORITY",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "CLOSE_AUCTION",
+        "HALT",
+        "TREASURY_64TH",
+        "EX_DATE_REFUSAL",
+        "CNS_NIGHT",
+        "CNS_DAY",
+        "RULE_204_SHORT",
+        "RULE_204_LONG",
+        "CNS_BUY_IN",
+        "FINRA_11810_BUY_IN",
+        "GSD_SECURITIES_NET",
+        "GSD_FUNDS_ONLY",
+        "DTC_CAP_HOLD",
+        "CASH_RAIL",
+        "DEFAULT_CNS",
+        "DEFAULT_GSD",
+        "DEFAULT_DTC",
+        "STALE_DATA_HOLD"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2026-12-29",
+      "economics_digest": "sha256:d8c2a6c1ff3da61980cda9a6ce00a192d1ce0acf6994b9a99bada04f9592af0b",
+      "fails_by_age": {
+        "age_0": 1,
+        "age_1_plus": 1
+      },
+      "holds": [],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "HALT": 1,
+        "RULE_204_B": 1
+      },
+      "money_residual": "0",
+      "replay_digest_check": true,
+      "scenarios": [
+        "MULTI_PRINT",
+        "CNS_NIGHT",
+        "CNS_DAY"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2026-12-30",
+      "economics_digest": "sha256:ea69baf085da74b747ef76c1604870983948a1f96d8437b0f9ca3e9ce9303d3d",
+      "fails_by_age": {
+        "age_0": 1,
+        "age_1_plus": 1
+      },
+      "holds": [],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "HALT": 1,
+        "RULE_204_B": 1
+      },
+      "money_residual": "0",
+      "replay_digest_check": true,
+      "scenarios": [
+        "MULTI_PRINT",
+        "CNS_NIGHT",
+        "CNS_DAY"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2026-12-31",
+      "economics_digest": "sha256:f3c909d4442159cc3f26d699e0abb31d17beea6d37c9a7ad27b08d0a2339db1f",
+      "fails_by_age": {
+        "age_0": 1,
+        "age_1_plus": 1
+      },
+      "holds": [],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "HALT": 1,
+        "RULE_204_B": 1
+      },
+      "money_residual": "0",
+      "replay_digest_check": true,
+      "scenarios": [
+        "MULTI_PRINT",
+        "CNS_NIGHT",
+        "CNS_DAY"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2027-01-04",
+      "economics_digest": "sha256:cfedcb2c3008226763b5805f7081171a4e15cfe9602cb52855ffa7d65707d0ea",
+      "fails_by_age": {
+        "age_0": 1,
+        "age_1_plus": 1
+      },
+      "holds": [],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "HALT": 1,
+        "RULE_204_B": 1
+      },
+      "money_residual": "0",
+      "replay_digest_check": true,
+      "scenarios": [
+        "MULTI_PRINT",
+        "CNS_NIGHT",
+        "CNS_DAY"
+      ]
+    }
+  ],
+  "days": 5,
+  "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
+  "economics_digest": "sha256:32b814f357258b6d076fdc77e36d12bf6ffab774c6731b02dfdd7dd2a0899e68",
+  "not_tested": [
+    "second venue",
+    "best execution",
+    "options",
+    "repo",
+    "clearing fund waterfall"
+  ],
+  "ny_fed_notices": [],
+  "repository_shas": {
+    "Cato-FICC-MCP": "ae356bd822952bffb0fa9be2d5960d5064ed5a62",
+    "L.C.": "ceb556f1682a5dbdb7b6b8a460f246c32796360c",
+    "atreides": "69675ddd98ee063cd6dfe28f5211af7391d7f33c",
+    "aureon": "254713b5c411e9c83ced17a61cb800f9bfae3998",
+    "cannae-kernel": "549604c1af78ac7aace64d7fefb68d22d99bc394"
+  },
+  "scenarios_declared": [
+    "QUEUE_PRIORITY",
+    "LATE_REPORT",
+    "MULTI_PRINT",
+    "ODD_LOT",
+    "OPEN_AUCTION",
+    "CLOSE_AUCTION",
+    "HALT",
+    "TREASURY_64TH",
+    "EX_DATE_REFUSAL",
+    "CNS_NIGHT",
+    "CNS_DAY",
+    "RULE_204_SHORT",
+    "RULE_204_LONG",
+    "CNS_BUY_IN",
+    "FINRA_11810_BUY_IN",
+    "GSD_SECURITIES_NET",
+    "GSD_FUNDS_ONLY",
+    "DTC_CAP_HOLD",
+    "CASH_RAIL",
+    "DEFAULT_CNS",
+    "DEFAULT_GSD",
+    "DEFAULT_DTC",
+    "STALE_DATA_HOLD"
+  ],
+  "scenarios_exercised": [
+    "CASH_RAIL",
+    "CLOSE_AUCTION",
+    "CNS_BUY_IN",
+    "CNS_DAY",
+    "CNS_NIGHT",
+    "DEFAULT_CNS",
+    "DEFAULT_DTC",
+    "DEFAULT_GSD",
+    "DTC_CAP_HOLD",
+    "EX_DATE_REFUSAL",
+    "FINRA_11810_BUY_IN",
+    "GSD_FUNDS_ONLY",
+    "GSD_SECURITIES_NET",
+    "HALT",
+    "LATE_REPORT",
+    "MULTI_PRINT",
+    "ODD_LOT",
+    "OPEN_AUCTION",
+    "QUEUE_PRIORITY",
+    "RULE_204_LONG",
+    "RULE_204_SHORT",
+    "STALE_DATA_HOLD",
+    "TREASURY_64TH"
+  ],
+  "scenarios_not_exercised": [],
+  "schema_version": "sim.run/1",
+  "seed": 20261023
+}
