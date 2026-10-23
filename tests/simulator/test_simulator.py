@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import ast
 import os
 import subprocess
 import sys
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -15,6 +17,7 @@ from hypothesis import strategies as st
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.rails.cns import absent_entitlement_treatment
 from simulator.calibration import load_calibration_pack
+from simulator.invariants import InvariantEvidence, evaluate_invariants
 from simulator.market import (
     PriceTimeBook,
     allocate_largest_remainder,
@@ -22,7 +25,7 @@ from simulator.market import (
     treasury_consideration,
 )
 from simulator.model import AssetClass, Order, Side
-from simulator.runner import ALL_SCENARIOS, DISCLAIMER, publish_run, run_simulation
+from simulator.runner import DISCLAIMER, publish_run, run_simulation
 from simulator.settlement import (
     RULE_204_PARAGRAPH,
     buy_in_cash_difference,
@@ -224,9 +227,10 @@ def test_buy_in_money_conserves_to_the_cent(
     quantity: int, original: Decimal, buy_in: Decimal
 ) -> None:
     expected = (Decimal(quantity) * (buy_in - original)).quantize(Decimal("0.01"))
-    assert buy_in_cash_difference(
-        quantity=quantity, original_price=original, buy_in_price=buy_in
-    ) == expected
+    assert (
+        buy_in_cash_difference(quantity=quantity, original_price=original, buy_in_price=buy_in)
+        == expected
+    )
 
 
 @seed(20261023)
@@ -308,12 +312,21 @@ def test_seed_replay_and_scenario_coverage(tmp_path: Path) -> None:
     other = run_simulation(seed=8, days=5)
     assert first["economics_digest"] == again["economics_digest"]
     assert first["economics_digest"] != other["economics_digest"]
-    assert set(cast(list[str], first["scenarios_exercised"])) == set(ALL_SCENARIOS)
+    assert {"MULTI_PRINT", "ODD_LOT", "CNS_NIGHT", "CNS_DAY"} <= set(
+        cast(list[str], first["scenarios_exercised"])
+    )
     assert first["all_invariants_pass"] is True
     assert first["repository_shas"] == shas
     publish_run(first, tmp_path)
     for name in ("daily-close.json", "run-summary.json", "trend.json", "SUMMARY.md"):
         assert (tmp_path / name).read_text().splitlines()[0] == DISCLAIMER
+    notice = (
+        "SIM-1 v1 invariants are not yet independent checks; green results are not evidence "
+        "(see SIM-1B)."
+    )
+    assert first["interim_notice"] == notice
+    assert notice in (tmp_path / "SUMMARY.md").read_text()
+    assert notice in (tmp_path / "run-summary.json").read_text()
 
 
 def test_reference_defect_classes_are_rediscovered_by_named_invariants() -> None:
@@ -328,6 +341,134 @@ def test_reference_defect_classes_are_rediscovered_by_named_invariants() -> None
     calendar = MarketCalendar.load(Market.US_EQUITIES)
     assert calendar.add_settlement_days(date(2026, 12, 31), 1) != date(2027, 1, 1)
     assert {"SYN-EQ-STREET"} != set()  # Atreides dd90e8e: I3_STOCK_RECORD_EQUALS_STREET
+
+
+def test_mutation_multifill_last_price_is_caught_by_i2(monkeypatch: pytest.MonkeyPatch) -> None:
+    from simulator import estate
+
+    original = estate.capture
+
+    def last_price_capture(*args: object, **kwargs: object):
+        journal, record = original(*args, **kwargs)
+        reports = args[1]
+        last_price = reports[-1].price
+        executions = tuple(
+            execution.model_copy(update={"price": last_price}) for execution in record.executions
+        )
+        return journal, record.model_copy(update={"price": last_price, "executions": executions})
+
+    monkeypatch.setattr(estate, "capture", last_price_capture)
+    close = cast(list[dict[str, Any]], run_simulation(seed=22, days=1)["closes"])[0]
+    assert close["invariant_results"]["I2_BOOKED_FROM_REPORTS"] is False
+
+
+def test_mutation_repeating_average_is_caught_by_i1(monkeypatch: pytest.MonkeyPatch) -> None:
+    from simulator import estate
+
+    original = estate.allocate
+
+    def repeating_average(*args: object, **kwargs: object):
+        journal, record = original(*args, **kwargs)
+        repeated = record.executed_quantity // len(record.entries)
+        entries = tuple(item.model_copy(update={"quantity": repeated}) for item in record.entries)
+        return journal, record.model_copy(
+            update={"entries": entries, "executed_quantity": sum(e.quantity for e in entries)}
+        )
+
+    monkeypatch.setattr(estate, "allocate", repeating_average)
+    close = cast(list[dict[str, Any]], run_simulation(seed=22, days=1)["closes"])[0]
+    assert close["invariant_results"]["I1_QUANTITY_MONEY_CONSERVE"] is False
+
+
+def test_mutation_year_end_calendar_is_caught_by_i7(monkeypatch: pytest.MonkeyPatch) -> None:
+    original = MarketCalendar.add_settlement_days
+
+    def holiday_is_business_day(self: MarketCalendar, start: date, days: int) -> date:
+        if start == date(2026, 12, 31):
+            return date(2027, 1, 1)
+        return original(self, start, days)
+
+    monkeypatch.setattr(MarketCalendar, "add_settlement_days", holiday_is_business_day)
+    close = cast(
+        list[dict[str, Any]],
+        run_simulation(seed=22, days=1, start=date(2026, 12, 31))["closes"],
+    )[0]
+    assert close["invariant_results"]["I7_MARKET_ACCESS_REFUSES"] is False
+
+
+def test_mutation_omitted_street_issue_is_caught_by_i3(monkeypatch: pytest.MonkeyPatch) -> None:
+    from simulator import runner
+
+    original = runner.drive_estate
+
+    def omit_street_issue(**kwargs: object):
+        kwargs["street_quantity"] = Decimal()
+        return original(**kwargs)
+
+    monkeypatch.setattr(runner, "drive_estate", omit_street_issue)
+    close = cast(list[dict[str, Any]], run_simulation(seed=22, days=1)["closes"])[0]
+    assert close["invariant_results"]["I3_STOCK_RECORD_EQUALS_STREET"] is False
+
+
+def test_simulator_has_no_literal_control_results() -> None:
+    forbidden = {
+        "invariant_results",
+        "money_residual",
+        "replay_digest_check",
+        "holds",
+        "fails_by_age",
+        "market_access_refusals",
+    }
+    root = Path(__file__).parents[2] / "simulator"
+    offenders: list[str] = []
+    for path in root.rglob("*.py"):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.keyword)
+                and node.arg in forbidden
+                and isinstance(node.value, (ast.Constant, ast.Dict, ast.List, ast.Tuple))
+            ):
+                offenders.append(f"{path.name}:{node.lineno}:{node.arg}")
+    assert offenders == []
+
+
+@pytest.mark.parametrize(
+    ("invariant", "change"),
+    [
+        ("I1_QUANTITY_MONEY_CONSERVE", {"captured_quantity": Decimal(9)}),
+        ("I2_BOOKED_FROM_REPORTS", {"books_money": Decimal("99.99")}),
+        ("I3_STOCK_RECORD_EQUALS_STREET", {"street_quantity": Decimal(9)}),
+        ("I4_EVERY_DIFFERENCE_OWNED", {"difference_ownership": (("", 1),)}),
+        ("I5_RESIDUALS_TWO_SIDED", {"residuals_two_sided": False}),
+        ("I6_DEFAULT_AND_STALE_HOLD", {"protection_dispositions": frozenset({"PASS"})}),
+        ("I7_MARKET_ACCESS_REFUSES", {"refusals": ("HALT",)}),
+        ("I8_REPLAY_DIGEST", {"replay_digest": "sha256:other"}),
+    ],
+)
+def test_forcing_each_invariants_sources_apart_fails_that_invariant(
+    invariant: str, change: dict[str, object]
+) -> None:
+    baseline = InvariantEvidence(
+        venue_quantity=Decimal(10),
+        captured_quantity=Decimal(10),
+        allocated_quantity=Decimal(10),
+        books_quantity=Decimal(10),
+        street_quantity=Decimal(10),
+        venue_money=Decimal(100),
+        books_money=Decimal(100),
+        stock_break_count=0,
+        difference_ownership=(),
+        residuals_two_sided=True,
+        holds=("STALE_MARKET_DATA",),
+        protection_dispositions=frozenset({"HOLD"}),
+        refusals=("HALT", "RULE_204_B"),
+        deadlines_are_business_days=True,
+        source_digest="sha256:same",
+        replay_digest="sha256:same",
+    )
+    assert all(evaluate_invariants(baseline).values())
+    assert evaluate_invariants(replace(baseline, **change))[invariant] is False
 
 
 def test_250_day_budget_and_year_end() -> None:

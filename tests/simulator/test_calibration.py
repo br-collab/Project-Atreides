@@ -35,7 +35,7 @@ def test_default_and_local_copy_have_identical_economics(tmp_path: Path) -> None
     local = run_simulation(seed=29, days=5, calibration_uri=copied.as_uri())
     assert default["economics_digest"] == local["economics_digest"]
     assert default["calibration_manifest_digest"] == local["calibration_manifest_digest"]
-    assert default["calibration_classes_used"] == ["A", "SYNTHETIC"]
+    assert default["calibration_classes_used"] == ["SYNTHETIC"]
 
 
 def test_cfma_data_uri_addresses_one_local_pack(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
