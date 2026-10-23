@@ -441,8 +441,8 @@ def test_simulator_has_no_literal_control_results() -> None:
         ("I3_STOCK_RECORD_EQUALS_STREET", {"street_quantity": Decimal(9)}),
         ("I4_EVERY_DIFFERENCE_OWNED", {"difference_ownership": (("", 1),)}),
         ("I5_RESIDUALS_TWO_SIDED", {"residuals_two_sided": False}),
-        ("I6_DEFAULT_AND_STALE_HOLD", {"protection_dispositions": frozenset({"PASS"})}),
-        ("I7_MARKET_ACCESS_REFUSES", {"refusals": ("HALT",)}),
+        ("I6_DEFAULT_AND_STALE_HOLD", {"protection_dispositions": ("HOLD", "PASS", "PASS")}),
+        ("I7_MARKET_ACCESS_REFUSES", {"access_events": (("HALT", None),)}),
         ("I8_REPLAY_DIGEST", {"replay_digest": "sha256:other"}),
     ],
 )
@@ -460,9 +460,12 @@ def test_forcing_each_invariants_sources_apart_fails_that_invariant(
         stock_break_count=0,
         difference_ownership=(),
         residuals_two_sided=True,
-        holds=("STALE_MARKET_DATA",),
-        protection_dispositions=frozenset({"HOLD"}),
-        refusals=("HALT", "RULE_204_B"),
+        holds=(),
+        protection_dispositions=("PASS", "PASS", "PASS"),
+        protection_figures=(Decimal(0), Decimal(100), Decimal(0)),
+        protection_hold_required=False,
+        refusals=(),
+        access_events=((None, None),),
         deadlines_are_business_days=True,
         source_digest="sha256:same",
         replay_digest="sha256:same",
@@ -476,6 +479,64 @@ def test_250_day_budget_and_year_end() -> None:
     assert run["days"] == 250
     closes = cast(list[dict[str, Any]], run["closes"])
     assert any(close["business_date"].startswith("2027") for close in closes)
+    assert run["all_invariants_pass"] is True
+    assert cast(int, run["normal_day_count"]) > 0
+    counts = cast(dict[str, int], run["scenario_counts"])
+    assert counts["HALT"] < 250
+    assert counts["RULE_204_SHORT"] < 250
+    assert counts["DTC_CAP_HOLD"] < 250
+
+
+def test_i7_is_green_with_no_halts_and_with_several_halts() -> None:
+    no_halts = run_simulation(seed=1, days=5)
+    several_halts = run_simulation(seed=2, days=40)
+    assert no_halts["scenario_counts"]["HALT"] == 0
+    assert several_halts["scenario_counts"]["HALT"] >= 5
+    for run in (no_halts, several_halts):
+        closes = cast(list[dict[str, Any]], run["closes"])
+        assert all(close["invariant_results"]["I7_MARKET_ACCESS_REFUSES"] for close in closes)
+
+
+def test_i6_requires_hold_only_when_protection_inputs_are_missing() -> None:
+    normal = InvariantEvidence(
+        venue_quantity=Decimal(10), captured_quantity=Decimal(10),
+        allocated_quantity=Decimal(10), books_quantity=Decimal(10),
+        street_quantity=Decimal(10), venue_money=Decimal(100), books_money=Decimal(100),
+        stock_break_count=0, difference_ownership=(), residuals_two_sided=True, holds=(),
+        protection_dispositions=("PASS", "PASS", "PASS"),
+        protection_figures=(Decimal(0), Decimal(100), Decimal(0)),
+        protection_hold_required=False, refusals=(), access_events=((None, None),),
+        deadlines_are_business_days=True, source_digest="same", replay_digest="same",
+    )
+    assert evaluate_invariants(normal)["I6_DEFAULT_AND_STALE_HOLD"] is True
+    assert evaluate_invariants(
+        replace(normal, protection_dispositions=("HOLD", "PASS", "PASS"))
+    )["I6_DEFAULT_AND_STALE_HOLD"] is False
+
+    missing = replace(
+        normal,
+        protection_hold_required=True,
+        protection_dispositions=("HOLD", "HOLD", "HOLD"),
+        protection_figures=(None, None, None),
+    )
+    assert evaluate_invariants(missing)["I6_DEFAULT_AND_STALE_HOLD"] is True
+    assert evaluate_invariants(
+        replace(missing, protection_dispositions=("PASS", "HOLD", "HOLD"))
+    )["I6_DEFAULT_AND_STALE_HOLD"] is False
+
+
+def test_i7_catches_a_halt_that_passes_market_access() -> None:
+    evidence = InvariantEvidence(
+        venue_quantity=Decimal(10), captured_quantity=Decimal(10),
+        allocated_quantity=Decimal(10), books_quantity=Decimal(10),
+        street_quantity=Decimal(10), venue_money=Decimal(100), books_money=Decimal(100),
+        stock_break_count=0, difference_ownership=(), residuals_two_sided=True, holds=(),
+        protection_dispositions=("PASS", "PASS", "PASS"),
+        protection_figures=(Decimal(0), Decimal(100), Decimal(0)),
+        protection_hold_required=False, refusals=(), access_events=(("HALT", None),),
+        deadlines_are_business_days=True, source_digest="same", replay_digest="same",
+    )
+    assert evaluate_invariants(evidence)["I7_MARKET_ACCESS_REFUSES"] is False
 
 
 def test_production_profile_refuses_import() -> None:

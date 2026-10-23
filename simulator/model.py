@@ -63,6 +63,13 @@ class Break(Record):
     reason: str
 
 
+class ProtectionResults(Record):
+    required_hold: bool
+    dispositions: dict[str, str]
+    figures: dict[str, Decimal | None]
+    reasons: dict[str, tuple[str, ...]]
+
+
 class CloseResult(Record):
     business_date: date
     invariant_results: dict[str, bool]
@@ -74,3 +81,5 @@ class CloseResult(Record):
     replay_digest_check: bool
     economics_digest: str
     scenarios: tuple[str, ...]
+    normal_day: bool
+    protection: ProtectionResults
