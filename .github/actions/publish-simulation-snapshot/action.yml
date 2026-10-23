@@ -52,6 +52,7 @@ runs:
         cp "$RUNNER_TEMP/simulation/"*.json "$RUNNER_TEMP/simulation/SUMMARY.md" "$publish_dir/"
         spike_source="simulator/publication/spike-2019"
         test "$(find "$spike_source" -maxdepth 1 -type f | wc -l | tr -d ' ')" = 4
+        rm -rf "$publish_dir/spike-2019"
         mkdir -p "$publish_dir/spike-2019"
         cp "$spike_source/"*.json "$spike_source/SUMMARY.md" "$publish_dir/spike-2019/"
         git -C "$publish_dir" config user.name "github-actions[bot]"
