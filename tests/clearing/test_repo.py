@@ -187,6 +187,7 @@ def test_trade_shape_refusals_name_the_reason(changes, reason):
 def test_open_repo_has_one_leg_and_no_close_money():
     open_trade = trade(term=RepoTerm.OPEN, close_date=None)
     assert open_trade.close_money() is None
+    assert open_trade.unrounded_close_money() is None
     doc = document(produce_repo_result(trade=open_trade, access=access()))
     assert len(doc.legs) == 1
     assert doc.gcf_allocation is None
