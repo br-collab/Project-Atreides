@@ -91,6 +91,7 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "hypothesis" },
+    { name = "legiones-cannenses" },
     { name = "lxml" },
     { name = "mypy" },
     { name = "pytest" },
@@ -102,6 +103,7 @@ dev = [
 requires-dist = [
     { name = "cannae-kernel", git = "https://github.com/br-collab/cannae-kernel.git?rev=v1.1.2" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },
+    { name = "legiones-cannenses", marker = "extra == 'dev'", git = "https://github.com/br-collab/L.C..git?rev=8d419f9a922ed73d255f5f923e97362931e45fe1" },
     { name = "lxml", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9" },
     { name = "pydantic", specifier = ">=2.6,<3.0" },
@@ -338,6 +340,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730", size = 20503, upload-time = "2025-10-18T21:55:43.219Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
+]
+
+[[package]]
+name = "legiones-cannenses"
+version = "0.1.0"
+source = { git = "https://github.com/br-collab/L.C..git?rev=8d419f9a922ed73d255f5f923e97362931e45fe1#8d419f9a922ed73d255f5f923e97362931e45fe1" }
+dependencies = [
+    { name = "cannae-kernel" },
+    { name = "pydantic" },
 ]
 
 [[package]]

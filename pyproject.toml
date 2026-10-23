@@ -30,6 +30,9 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.9",
     "hypothesis>=6.100",
+    # SIM-1B is source-only test infrastructure. It drives the committed L.C.
+    # lifecycle/capture/allocation package; production imports still refuse simulator/.
+    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@8d419f9a922ed73d255f5f923e97362931e45fe1",
 ]
 
 [build-system]

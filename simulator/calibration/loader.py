@@ -12,9 +12,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 ALLOWED_CLASSES = frozenset({"SYNTHETIC", "A", "B"})
-FORBIDDEN_HOSTS = frozenset(
-    {"fred.stlouisfed.org", "alfred.stlouisfed.org", "api.stlouisfed.org"}
-)
+FORBIDDEN_HOSTS = frozenset({"fred.stlouisfed.org", "alfred.stlouisfed.org", "api.stlouisfed.org"})
 IDENTIFIER_NAME = re.compile(r"(?:^|_)(?:cusip|figi|ticker)(?:$|_)", re.IGNORECASE)
 DEFAULT_PACK = "synthetic/1"
 PACKS_ROOT = Path(__file__).with_name("packs")
@@ -133,8 +131,11 @@ def load_calibration_pack(uri: str | None = None) -> CalibrationPack:
             if not isinstance(values, dict):
                 raise ValueError("calibration values must be an object")
             _identifier_scan(values, str(row["input_id"]))
-            if str(row["input_id"]) == "aggregate_fail_rate" and license_class != "A":
-                raise ValueError("aggregate fail rate must be admitted class A")
+            if str(row["input_id"]) == "aggregate_fail_rate" and license_class not in {
+                "A",
+                "SYNTHETIC",
+            }:
+                raise ValueError("aggregate fail rate must be admitted class A or SYNTHETIC")
             inputs.append(
                 CalibrationInput(
                     input_id=str(row["input_id"]),

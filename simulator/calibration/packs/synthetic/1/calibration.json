@@ -20,13 +20,33 @@
       }
     },
     {
+      "input_id": "generator",
+      "source_url": "synthetic://sim-1b/generated-day-v1",
+      "citation": "ORDER-SIM-1B generated-day parameters; deliberately synthetic",
+      "license_class": "SYNTHETIC",
+      "values": {
+        "quantity_min": 73,
+        "quantity_max": 311,
+        "account_count_min": 2,
+        "account_count_max": 5,
+        "account_weight_max": 9,
+        "price_spread": "0.001",
+        "size_ahead_max": 20,
+        "report_delay_max": 30,
+        "stale_interval": 11,
+        "default_interval": 17,
+        "ex_date_interval": 19,
+        "buy_in_interval": 23
+      }
+    },
+    {
       "input_id": "aggregate_fail_rate",
-      "source_url": "https://www.sec.gov/data-research/sec-markets-data/fails-deliver-data",
-      "citation": "SEC aggregate fails-to-deliver calibration, aggregate rate only",
-      "license_class": "A",
+      "source_url": "synthetic://sim-1b/aggregate-fail-rate-v1",
+      "citation": "ORDER-SIM-1B synthetic aggregate fail-rate calibration; not SEC-derived",
+      "license_class": "SYNTHETIC",
       "values": {
         "rate": "0.0200",
-        "period": "synthetic calibration baseline"
+        "period": "SIM-1B synthetic generated-day baseline"
       }
     }
   ]

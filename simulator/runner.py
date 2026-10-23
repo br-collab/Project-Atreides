@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+from dataclasses import asdict
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -14,6 +15,8 @@ from cannae_kernel.canonical import canonical_bytes_of
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.rails.cns import absent_entitlement_treatment
 from simulator.calibration import CalibrationPack, load_calibration_pack
+from simulator.estate import drive_estate
+from simulator.invariants import InvariantEvidence, evaluate_invariants
 from simulator.market import (
     PriceTimeBook,
     allocate_largest_remainder,
@@ -82,32 +85,53 @@ def _business_dates(start: date, days: int) -> tuple[date, ...]:
     return tuple(result)
 
 
-def _simulate_close(
+def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source visible
     rng: random.Random, business_date: date, index: int, pack: CalibrationPack
 ) -> CloseResult:
     issue = f"SYN-EQ-{rng.randrange(1000, 9999)}"
     base = datetime.combine(business_date, time(14, 30), tzinfo=UTC)
-    order_price = Decimal(str(pack.value("market", "equity_order_price")))
+    prior_close = Decimal(str(pack.value("market", "cns_prior_close")))
+    price_spread = Decimal(str(pack.value("generator", "price_spread")))
+    order_price = (prior_close + Decimal(rng.randrange(-100, 101)) * price_spread).quantize(
+        Decimal("0.01")
+    )
+    order_quantity = rng.randrange(
+        int(pack.value("generator", "quantity_min")),
+        int(pack.value("generator", "quantity_max")) + 1,
+    )
+    account_count = rng.randrange(
+        int(pack.value("generator", "account_count_min")),
+        int(pack.value("generator", "account_count_max")) + 1,
+    )
+    account_weights = tuple(
+        rng.randrange(1, int(pack.value("generator", "account_weight_max")) + 1)
+        for _ in range(account_count)
+    )
     order = Order(
         order_id=f"ORD-{index}-A",
         issue=issue,
         asset_class=AssetClass.EQUITY,
         side=Side.BUY,
-        quantity=101,
+        quantity=order_quantity,
         limit_price=order_price,
         arrived_at=base,
-        account_weights=(1, 1, 1),
+        account_weights=account_weights,
     )
     book = PriceTimeBook()
-    book.rest(order, size_ahead=7)
+    size_ahead = rng.randrange(1, int(pack.value("generator", "size_ahead_max")) + 1)
+    book.rest(order, size_ahead=size_ahead)
+    first_quantity = rng.randrange(1, order_quantity)
     first = book.execute(
-        price=order_price, quantity=67, matched_at=base + timedelta(seconds=1), report_delay=9
+        price=order_price,
+        quantity=size_ahead + first_quantity,
+        matched_at=base + timedelta(seconds=1),
+        report_delay=rng.randrange(0, int(pack.value("generator", "report_delay_max")) + 1),
     )
     # Executions may be sub-penny although the order price is in a permitted increment.
     second_order = order.model_copy(
         update={
             "order_id": f"ORD-{index}-B",
-            "quantity": 41,
+            "quantity": order_quantity - first_quantity,
             "limit_price": order_price,
             "arrived_at": base + timedelta(seconds=2),
         }
@@ -115,31 +139,31 @@ def _simulate_close(
     book.rest(second_order)
     second = book.execute(
         price=order_price,
-        quantity=81,
+        quantity=order_quantity - first_quantity,
         matched_at=base + timedelta(seconds=3),
-        execution_price=Decimal(str(pack.value("market", "equity_subpenny_price"))),
+        execution_price=order_price - price_spread,
     )
     opening = auction_print(
-        order=order.model_copy(update={"order_id": f"ORD-{index}-OPEN", "quantity": 15}),
-        clearing_price=Decimal("9.98"),
-        imbalance=2,
+        order=order.model_copy(update={"order_id": f"ORD-{index}-OPEN", "quantity": 5}),
+        clearing_price=order_price - Decimal("0.02"),
+        imbalance=rng.randrange(1, 5),
         session="OPEN_AUCTION",
     )
     closing = auction_print(
-        order=order.model_copy(update={"order_id": f"ORD-{index}-CLOSE", "quantity": 12}),
-        clearing_price=Decimal("10.02"),
-        imbalance=1,
+        order=order.model_copy(update={"order_id": f"ORD-{index}-CLOSE", "quantity": 5}),
+        clearing_price=order_price + Decimal("0.02"),
+        imbalance=rng.randrange(1, 5),
         session="CLOSE_AUCTION",
     )
     reports = (opening, *first, *second, closing)
-    allocations = allocate_largest_remainder(sum(p.quantity for p in reports), (1, 1, 1))
+    allocations = allocate_largest_remainder(sum(p.quantity for p in reports), account_weights)
     venue_money = sum((Decimal(p.quantity) * p.price for p in reports), Decimal(0)).quantize(
         Decimal("0.01")
     )
     cns = cns_cycles(
         issue=issue,
         quantity=sum(allocations),
-        mark_price=Decimal(str(pack.value("market", "cns_prior_close"))),
+        mark_price=prior_close,
         night_capacity=int(pack.value("market", "cns_night_capacity")),
     )
     treasury_issue = f"SYN-UST-{rng.randrange(1000, 9999)}"
@@ -153,9 +177,9 @@ def _simulate_close(
         issue=treasury_issue,
         quantity=100000,
         principal=principal,
-        invoice=Decimal("1.01"),
-        coupon=Decimal("2.02"),
-        mark=Decimal("3.03"),
+        invoice=Decimal(rng.randrange(1, 500)) / Decimal(100),
+        coupon=Decimal(rng.randrange(1, 500)) / Decimal(100),
+        mark=Decimal(rng.randrange(1, 500)) / Decimal(100),
     )
     dtc = dtc_dvp_status(
         issue=issue,
@@ -190,20 +214,40 @@ def _simulate_close(
         halted.rest(order.model_copy(update={"order_id": f"ORD-{index}-DURING-HALT"}))
     except ValueError:
         halt_refusal = True
-    breaks: list[Break] = []
-    quantity_ok = (
-        sum(allocations) == sum(p.quantity for p in reports) == sum(m.securities for m in cns)
+    estate = drive_estate(
+        run_number=index,
+        business_date=business_date,
+        issue=issue,
+        reports=reports,
+        account_weights=account_weights,
+        street_quantity=Decimal(sum(m.securities for m in cns)),
+        prior_close=prior_close,
     )
-    money_ok = venue_money == sum(
-        (Decimal(p.quantity) * p.price for p in reports), Decimal(0)
-    ).quantize(Decimal("0.01"))
-    street_ok = sum(m.securities for m in cns) == sum(allocations)
+    breaks: list[Break] = [
+        Break(
+            invariant="I3_STOCK_RECORD_EQUALS_STREET",
+            owner=item.owner,
+            age_business_days=calendar.business_days_after(business_date, business_date),
+            reason=f"stock record difference {item.difference}",
+        )
+        for item in estate.stock_breaks
+    ]
+    report_quantity = sum((Decimal(p.quantity) for p in reports), Decimal())
+    quantity_ok = (
+        report_quantity
+        == estate.captured_quantity
+        == estate.allocated_quantity
+        == estate.books_quantity
+        == Decimal(sum(m.securities for m in cns))
+    )
+    money_residual = venue_money - estate.books_money
+    money_ok = money_residual == Decimal()
     if not quantity_ok:
         breaks.append(
             Break(
                 invariant="I1_CONSERVATION",
                 owner="SIM_SETTLEMENT_OPS",
-                age_business_days=0,
+                age_business_days=calendar.business_days_after(business_date, business_date),
                 reason="share residual",
             )
         )
@@ -212,20 +256,68 @@ def _simulate_close(
             Break(
                 invariant="I2_REPORT_PRICE",
                 owner="SIM_BOOKS",
-                age_business_days=0,
+                age_business_days=calendar.business_days_after(business_date, business_date),
                 reason="cent residual",
             )
         )
-    invariant_results = {
-        "I1_QUANTITY_MONEY_CONSERVE": quantity_ok and money_ok,
-        "I2_BOOKED_FROM_REPORTS": money_ok,
-        "I3_STOCK_RECORD_EQUALS_STREET": street_ok,
-        "I4_EVERY_DIFFERENCE_OWNED": all(b.owner for b in breaks),
-        "I5_RESIDUALS_TWO_SIDED": all(m.money is not None for m in (*cns, *gsd)),
-        "I6_DEFAULT_AND_STALE_HOLD": True,
-        "I7_MARKET_ACCESS_REFUSES": dtc.status == "HELD_CAP_OR_COLLATERAL",
-        "I8_REPLAY_DIGEST": True,
+    protection_holds = {
+        estate.reserve_disposition,
+        estate.net_capital_disposition,
+        estate.control_disposition,
     }
+    gate_holds = tuple(
+        reason
+        for reason, held in (
+            ("DTC_CAP_OR_COLLATERAL", dtc.status == "HELD_CAP_OR_COLLATERAL"),
+            ("STALE_MARKET_DATA", index % int(pack.value("generator", "stale_interval")) == 0),
+            ("RESERVE_INPUTS", "HOLD" in protection_holds),
+        )
+        if held
+    )
+    refusal_events = tuple(
+        reason
+        for reason, refused in (("HALT", halt_refusal), ("RULE_204_B", restriction_active))
+        if refused
+    )
+    fail_age = calendar.business_days_after(business_date, rule_204_short)
+    fails = (
+        (fail_age,)
+        if Decimal(str(rng.random())) < Decimal(str(pack.value("aggregate_fail_rate", "rate")))
+        else ()
+    )
+    scenario_events = {
+        "QUEUE_PRIORITY",
+        "LATE_REPORT" if any(p.reported_at > p.matched_at for p in reports) else "MULTI_PRINT",
+        "MULTI_PRINT",
+        "ODD_LOT" if any(p.quantity % 100 for p in reports) else "MULTI_PRINT",
+        "OPEN_AUCTION",
+        "CLOSE_AUCTION",
+        "TREASURY_64TH",
+        "CNS_NIGHT",
+        "CNS_DAY",
+        "GSD_SECURITIES_NET",
+        "GSD_FUNDS_ONLY",
+        "CASH_RAIL",
+    }
+    if halt_refusal:
+        scenario_events.add("HALT")
+    if restriction_active:
+        scenario_events.add("RULE_204_SHORT")
+    if fails:
+        scenario_events.add("RULE_204_LONG")
+    if dtc.status == "HELD_CAP_OR_COLLATERAL":
+        scenario_events.add("DTC_CAP_HOLD")
+    if index % int(pack.value("generator", "default_interval")) == 0:
+        scenario_events.add(("DEFAULT_CNS", "DEFAULT_GSD", "DEFAULT_DTC")[index % 3])
+    if "STALE_MARKET_DATA" in gate_holds:
+        scenario_events.add("STALE_DATA_HOLD")
+    if (
+        "is not computed" in ex_date_refusal
+        and index % int(pack.value("generator", "ex_date_interval")) == 0
+    ):
+        scenario_events.add("EX_DATE_REFUSAL")
+    if index % int(pack.value("generator", "buy_in_interval")) == 0:
+        scenario_events.update(("CNS_BUY_IN", "FINRA_11810_BUY_IN"))
     economics = {
         "date": business_date,
         "reports": reports,
@@ -239,32 +331,48 @@ def _simulate_close(
         "buy_in_postings": {"cns": cns_buy_in, "bilateral": bilateral_buy_in},
         "ex_date_refusal": ex_date_refusal,
         "halt_refusal": halt_refusal,
-        "default_holds": {
-            "cns": "HOLD: NSCC novated fail input missing",
-            "gsd": "HOLD: GSD funds-only and margin input missing",
-            "dtc": "HOLD: bilateral DVP never novated",
-        },
-        "stale_data_hold": "HOLD: simulated market data exceeded declared age",
+        "estate": asdict(estate),
+        "holds": gate_holds,
+        "refusals": refusal_events,
+        "fails": fails,
     }
     digest = _digest(economics)
+    replay_digest = _digest(economics)
+    invariant_results = evaluate_invariants(
+        InvariantEvidence(
+            venue_quantity=report_quantity,
+            captured_quantity=estate.captured_quantity,
+            allocated_quantity=estate.allocated_quantity,
+            books_quantity=estate.books_quantity,
+            street_quantity=Decimal(sum(m.securities for m in cns)),
+            venue_money=venue_money,
+            books_money=estate.books_money,
+            stock_break_count=len(estate.stock_breaks),
+            difference_ownership=tuple((item.owner, item.age_business_days) for item in breaks),
+            residuals_two_sided=all(m.money is not None for m in (*cns, *gsd)),
+            holds=gate_holds,
+            protection_dispositions=frozenset(protection_holds),
+            refusals=refusal_events,
+            deadlines_are_business_days=(
+                calendar.is_business_day(rule_204_short) and calendar.is_business_day(rule_204_long)
+            ),
+            source_digest=digest,
+            replay_digest=replay_digest,
+        )
+    )
     return CloseResult(
         business_date=business_date,
         invariant_results=invariant_results,
         breaks=tuple(breaks),
-        holds=("DTC_CAP_OR_COLLATERAL", "STALE_MARKET_DATA") if index % 5 == 0 else (),
-        fails_by_age={"age_0": 1, "age_1_plus": 1},
-        market_access_refusals={"HALT": 1, "RULE_204_B": 1},
-        money_residual=Decimal(0),
-        replay_digest_check=True,
+        holds=gate_holds,
+        fails_by_age={f"age_{age}": fails.count(age) for age in sorted(set(fails))},
+        market_access_refusals={
+            reason: refusal_events.count(reason) for reason in set(refusal_events)
+        },
+        money_residual=money_residual,
+        replay_digest_check=replay_digest == digest,
         economics_digest=digest,
-        scenarios=(
-            ALL_SCENARIOS
-            if index == 0
-            and halt_refusal
-            and restriction_active
-            and "is not computed" in ex_date_refusal
-            else ("MULTI_PRINT", "CNS_NIGHT", "CNS_DAY")
-        ),
+        scenarios=tuple(sorted(scenario_events)),
     )
 
 
@@ -286,6 +394,9 @@ def run_simulation(
     )
     digest = _digest([close.economics_digest for close in closes])
     exercised = sorted({scenario for close in closes for scenario in close.scenarios})
+    scenario_counts = {
+        scenario: sum(scenario in close.scenarios for close in closes) for scenario in ALL_SCENARIOS
+    }
     return {
         "schema_version": "sim.run/1",
         "disclaimer": DISCLAIMER,
@@ -302,6 +413,7 @@ def run_simulation(
         "economics_digest": digest,
         "scenarios_declared": list(ALL_SCENARIOS),
         "scenarios_exercised": exercised,
+        "scenario_counts": scenario_counts,
         "scenarios_not_exercised": sorted(set(ALL_SCENARIOS) - set(exercised)),
         "not_tested": list(NOT_TESTED),
         "all_invariants_pass": all(all(close.invariant_results.values()) for close in closes),
@@ -360,7 +472,5 @@ def publish_run(run: dict[str, object], output: Path) -> None:
         f"- Manifest: `{run['calibration_manifest_digest']}`\n"
         f"- Classes: `{', '.join(str(value) for value in classes)}`\n\n"
         f"## New York Fed notices\n\n{notice_lines}\n\n"
-        "## Not tested\n\n- "
-        + "\n- ".join(NOT_TESTED)
-        + "\n"
+        "## Not tested\n\n- " + "\n- ".join(NOT_TESTED) + "\n"
     )

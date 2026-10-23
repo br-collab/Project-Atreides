@@ -1,0 +1,380 @@
+"""SIM-1B adapter: supply generated facts to the real L.C. and Atreides APIs."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
+
+from cannae_kernel.actor import ActorKind, ActorRef
+from cannae_kernel.canonical import canonical_bytes_of, digest, digest_bytes
+from cannae_kernel.clocks import EventTimes
+from cannae_kernel.effects import OperationEffects
+from cannae_kernel.envelopes import ApprovedIntentEnvelope, ExecutionEvent
+from cannae_kernel.ids import ActorId, AllocationId, EventId, IntentId, LifecycleId, OrderId
+from cannae_kernel.provenance import Provenance
+from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
+from lc.events import LifecycleState
+from lc.lifecycle import (
+    ApprovedIntentPayload,
+    AuthorityManifest,
+    ChildOrder,
+    EventInput,
+    OrderSide,
+    PolicyManifest,
+    accept_intent,
+    activate_parent,
+    authorize_strategy,
+    split_parent,
+    transition,
+)
+from lc.policy import ExecutionReport, apply_execution
+from lc.trade import AllocationPlan, AllocationRule, AllocationTarget, allocate, capture
+
+from atreides.books.ledger import (
+    AccountType,
+    EquitiesBooks,
+    JournalEntry,
+    LedgerLine,
+    PostingSource,
+    RecordSide,
+)
+from atreides.books.projections import project_customer_protection, project_margin_accounts
+from atreides.customer_protection.control import check_possession_or_control
+from atreides.customer_protection.net_capital import compute_net_capital
+from atreides.customer_protection.reserve import compute_reserve
+from atreides.customer_protection.rules import load_rule_table
+from atreides.deadlines.calendar import Market, MarketCalendar
+from atreides.dsor.books import BooksPosting
+from atreides.margin.engine import compute_margin
+from simulator.model import Print
+
+
+@dataclass(frozen=True, slots=True)
+class EstateResult:
+    captured_quantity: Decimal
+    captured_money: Decimal
+    allocated_quantity: Decimal
+    allocated_money: Decimal
+    books_quantity: Decimal
+    books_money: Decimal
+    stock_breaks: tuple[object, ...]
+    reserve_disposition: str
+    net_capital_disposition: str
+    control_disposition: str
+    books_digest: str
+
+
+def _identifier(prefix: str, value: int) -> str:
+    return prefix + f"{value:026d}"
+
+
+def _actor() -> ActorRef:
+    return ActorRef(
+        actor_id=ActorId(_identifier("act_", 71)),
+        actor_kind=ActorKind.DETERMINISTIC_SERVICE,
+        role="sim-1b-estate-adapter",
+        entitlement_refs=("SIM-1B",),
+        authenticated=True,
+    )
+
+
+def _event(number: int, at: datetime) -> EventInput:
+    when = at + timedelta(microseconds=number)
+    return EventInput(
+        event_id=EventId(_identifier("evt_", number)),
+        times=EventTimes(
+            event_time=when,
+            observation_time=when,
+            processing_time=when,
+            decision_time=when,
+        ),
+        idempotency_key=f"sim-1b-{number}",
+    )
+
+
+def _wire(payload: ApprovedIntentPayload) -> bytes:
+    return canonical_bytes_of(
+        {
+            "schema_version": "aureon.approved_intent/0.1-draft",
+            "intent": {
+                "instrument_id": payload.instrument_id,
+                "side": payload.side,
+                "quantity": {"basis": "QUANTITY", "quantity": str(payload.quantity)},
+            },
+            "policy_manifest": {
+                "disposition": "PASS",
+                "policy_record_id": payload.policy_manifest.policy_id,
+                "rule_set_version": payload.policy_manifest.version,
+                "rules_digest": payload.policy_manifest.bounds_digest,
+            },
+            "authority_manifest": {
+                "quorum_met": payload.authority_manifest.authorized,
+                "authority_id": payload.authority_manifest.authority_id,
+            },
+            "allocation_accounts": payload.allocation_accounts,
+        }
+    )
+
+
+def drive_estate(
+    *,
+    run_number: int,
+    business_date: date,
+    issue: str,
+    reports: tuple[Print, ...],
+    account_weights: tuple[int, ...],
+    street_quantity: Decimal,
+    prior_close: Decimal,
+) -> EstateResult:
+    """Drive L.C. then Atreides; checks elsewhere only compare their outputs.
+
+    SIM-1 v0.2: "Simulated venue reports pass through the real L.C. capture and
+    allocation and the real Atreides ... stock record, reserve and gate code."
+    """
+    actor = _actor()
+    base = datetime.combine(business_date, datetime.min.time(), tzinfo=UTC)
+    total_quantity = sum((Decimal(item.quantity) for item in reports), Decimal())
+    policy = PolicyManifest(
+        policy_id="sim-1b-generated-day",
+        version="1",
+        bounds_digest="sha256:" + "1" * 64,
+        enabled=True,
+    )
+    payload = ApprovedIntentPayload(
+        intent_id=IntentId(_identifier("int_", 10_000 + run_number)),
+        instrument_id=issue,
+        side=OrderSide.BUY,
+        quantity=total_quantity,
+        policy_manifest=policy,
+        authority_manifest=AuthorityManifest(
+            authority_id=actor.actor_id,
+            policy_manifest_digest=digest(policy),
+            authorized=True,
+        ),
+        allocation_accounts=tuple(f"ACCOUNT-{i + 1}" for i in range(len(account_weights))),
+    )
+    wire = _wire(payload)
+    lifecycle_id = LifecycleId(_identifier("lif_", 20_000 + run_number))
+    envelope = ApprovedIntentEnvelope(
+        envelope_id=payload.intent_id,
+        lifecycle_id=lifecycle_id,
+        revision=1,
+        prior_digest=None,
+        session=SessionContext(
+            session=MarketSession.REGULAR,
+            business_date=BusinessDate(
+                value=business_date,
+                calendar="SIFMA-US",
+                established_by="SIM-1B generated day",
+            ),
+        ),
+        approved_by=actor,
+        provenance=Provenance.HUMAN_JUDGMENT,
+        effects=OperationEffects(
+            operation="simulate approved intent",
+            effects=(),
+            note="synthetic input only; no submission capability",
+        ),
+        payload_digest=digest_bytes(wire),
+    )
+    parent_id = OrderId(_identifier("ord_", 30_000 + run_number * 2))
+    child_id = OrderId(_identifier("ord_", 30_001 + run_number * 2))
+    outcome = accept_intent(
+        envelope,
+        wire,
+        parent_order_id=parent_id,
+        actor=actor,
+        event=_event(40_000 + run_number * 20, base),
+    )
+    outcome = authorize_strategy(outcome, actor=actor, event=_event(40_001 + run_number * 20, base))
+    outcome = activate_parent(outcome, actor=actor, event=_event(40_002 + run_number * 20, base))
+    register = split_parent(
+        outcome,
+        actor=actor,
+        children=(
+            ChildOrder(
+                order_id=child_id,
+                quantity=total_quantity,
+                event=_event(40_003 + run_number * 20, base),
+            ),
+        ),
+    ).journal
+    register = transition(
+        register,
+        order_id=child_id,
+        target=LifecycleState.MARKET_ACCESS_PASSED,
+        reason="SIM-1B generated release passed its exercised controls",
+        actor=actor,
+        event=_event(40_004 + run_number * 20, base),
+    )
+    lc_reports = tuple(
+        ExecutionReport(
+            execution_id=f"{run_number}-{index}-{item.print_id}",
+            order_id=child_id,
+            intent_id=payload.intent_id,
+            venue="VENUE-SYNTHETIC",
+            quantity=Decimal(item.quantity),
+            price=item.price,
+            outcome="FILL" if index == len(reports) - 1 else "PARTIAL_FILL",
+        )
+        for index, item in enumerate(reports)
+    )
+    for index, report in enumerate(lc_reports):
+        event_time = reports[index].matched_at
+        execution = ExecutionEvent(
+            event_id=EventId(_identifier("evt_", 70_000 + run_number * 20 + index)),
+            lifecycle_id=lifecycle_id,
+            intent_id=payload.intent_id,
+            intent_digest=digest(payload),
+            times=EventTimes(
+                event_time=event_time,
+                observation_time=reports[index].reported_at,
+                processing_time=reports[index].reported_at,
+                decision_time=None,
+            ),
+            session=envelope.session,
+            provenance=Provenance.FACT_SYNTHETIC,
+            payload_digest=digest(report),
+        )
+        applied = apply_execution(
+            register,
+            execution,
+            report,
+            actor=actor,
+            event=_event(40_005 + run_number * 20 + index, base),
+        )
+        register = applied.journal
+    register, captured = capture(
+        register,
+        lc_reports,
+        payload,
+        actor=actor,
+        event=_event(40_012 + run_number * 20, base),
+    )
+    targets = tuple(
+        AllocationTarget(
+            account=f"ACCOUNT-{index + 1}",
+            target_quantity=Decimal(weight) * total_quantity,
+        )
+        for index, weight in enumerate(account_weights)
+    )
+    _, allocation = allocate(
+        register,
+        captured,
+        payload,
+        allocation_id=AllocationId(_identifier("alc_", 50_000 + run_number)),
+        actor=actor,
+        event=_event(40_013 + run_number * 20, base),
+        plan=AllocationPlan(
+            targets=targets,
+            rule=AllocationRule.PRO_RATA,
+            rounding_method="LARGEST_REMAINDER",
+        ),
+    )
+    books = EquitiesBooks(break_owner="SIM_SETTLEMENT_OPS")
+    lines: list[LedgerLine] = []
+    for entry in allocation.entries:
+        lines.extend(
+            (
+                LedgerLine(
+                    account_id=entry.account,
+                    account_type=AccountType.CUSTOMER_MARGIN,
+                    record_side=RecordSide.OWNERSHIP,
+                    issue=issue,
+                    quantity=entry.quantity,
+                ),
+                LedgerLine(
+                    account_id=entry.account,
+                    account_type=AccountType.CUSTOMER_MARGIN,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=-entry.consideration,
+                ),
+            )
+        )
+    lines.extend(
+        (
+            LedgerLine(
+                account_id="DTC",
+                account_type=AccountType.DTC,
+                record_side=RecordSide.LOCATION,
+                issue=issue,
+                quantity=-allocation.executed_quantity,
+            ),
+            LedgerLine(
+                account_id="CLEARING",
+                account_type=AccountType.CASH,
+                record_side=RecordSide.MONEY,
+                currency="USD",
+                money=allocation.executed_consideration,
+            ),
+        )
+    )
+    source_event_id = _identifier("evt_", 60_000 + run_number)
+    books.post(
+        JournalEntry(
+            entry_id=f"SIM-1B-{run_number}",
+            source_event_id=source_event_id,
+            source=PostingSource.CNS_SETTLEMENT,
+            effective_date=business_date,
+            effective_date_basis="SETTLEMENT_DATE",
+            authority="NSCC_SYNTHETIC",
+            lines=tuple(lines),
+            posting=BooksPosting(
+                posted_record_id=f"SIM-1B-{run_number}",
+                posting_authority=actor,
+                effective_time=base,
+                source_event_id=EventId(source_event_id),
+                provenance=Provenance.FACT_SYNTHETIC,
+            ),
+        )
+    )
+    stock_breaks = books.verify_stock_record(observed_locations={issue: street_quantity})
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    margin_results = tuple(
+        compute_margin(
+            account,
+            trade_date=business_date,
+            calendar=calendar,
+            house_maintenance_rate=Decimal("0.30"),
+            maintenance_call_due_business_days=2,
+        )
+        for account in project_margin_accounts(books, prices={issue: prior_close})
+    )
+    projected = project_customer_protection(
+        books,
+        as_of=business_date,
+        prices={issue: prior_close},
+        net_worth=Decimal("1000000"),
+        calendar=calendar,
+        margin_results=margin_results,
+    )
+    rules = load_rule_table()
+    reserve = compute_reserve(projected.reserve, rules)
+    capital = compute_net_capital(projected.net_capital, rules)
+    control = check_possession_or_control(projected.control, rules)
+    quantities = books.quantities()[issue]
+    books_quantity = quantities[RecordSide.OWNERSHIP]
+    books_money = -sum(
+        (
+            line.money
+            for item in books.entries
+            for line in item.lines
+            if line.account_type is AccountType.CUSTOMER_MARGIN and line.currency == "USD"
+        ),
+        Decimal(),
+    )
+    return EstateResult(
+        captured_quantity=captured.quantity,
+        captured_money=captured.quantity * captured.price,
+        allocated_quantity=sum((item.quantity for item in allocation.entries), Decimal()),
+        allocated_money=sum((item.consideration for item in allocation.entries), Decimal()),
+        books_quantity=books_quantity,
+        books_money=books_money,
+        stock_breaks=stock_breaks,
+        reserve_disposition=reserve.disposition.value,
+        net_capital_disposition=capital.disposition.value,
+        control_disposition=control.disposition.value,
+        books_digest=books.digest(),
+    )
