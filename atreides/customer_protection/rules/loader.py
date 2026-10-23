@@ -75,7 +75,7 @@ _NUMBER = r"(?P<whole>\d[\d,]*)?(?:\s*(?P<num>\d+)/(?P<den>\d+))?"
 _PERCENT = re.compile(rf"^{_NUMBER}\s*(?:percent|%)$")
 _FRACTION_OF_ONE = re.compile(r"^(?P<num>\d+)/(?P<den>\d+) of 1\s*(?:percent|%)$")
 _USD = re.compile(r"^\$(?P<amount>\d[\d,]*)(?:\s+(?P<scale>million|billion))?$")
-_DURATION = re.compile(rf"^{_NUMBER}\s+(?P<unit>months?|years?)$")
+_DURATION = re.compile(rf"^(?:(?P<word>[a-z]+)|{_NUMBER})\s+(?P<unit>months?|years?)$")
 _DAYS = re.compile(r"^(?P<count>\d+|[a-z]+)\s+(?P<unit>calendar|business) days$")
 _COUNT = re.compile(r"^(?P<count>\d+|[a-z]+)(?:\s+.*)?$")
 
@@ -121,7 +121,8 @@ def parse_figure(kind: RuleKind, figure: str) -> Decimal:
             return amount * _SCALE[match["scale"]] if match["scale"] else amount
     elif kind is RuleKind.MONTHS:
         if match := _DURATION.match(text):
-            count = _number(match)
+            word = match["word"]
+            count = Decimal(_WORDS[word]) if word in _WORDS else _number(match)
             return count * _MONTHS_PER_YEAR if match["unit"].startswith("year") else count
     elif kind in (RuleKind.CALENDAR_DAYS, RuleKind.BUSINESS_DAYS):
         if (match := _DAYS.match(text)) and match["unit"] == kind.value.split("_")[0].lower():

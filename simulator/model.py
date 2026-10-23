@@ -83,3 +83,4 @@ class CloseResult(Record):
     scenarios: tuple[str, ...]
     normal_day: bool
     protection: ProtectionResults
+    market_data: dict[str, Decimal | str | None]

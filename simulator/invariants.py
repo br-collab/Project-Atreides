@@ -27,6 +27,7 @@ class InvariantEvidence:
     deadlines_are_business_days: bool
     source_digest: str
     replay_digest: str
+    protection_holds_required: tuple[bool, ...] | None = None
 
 
 def evaluate_invariants(evidence: InvariantEvidence) -> dict[str, bool]:
@@ -57,12 +58,15 @@ def evaluate_invariants(evidence: InvariantEvidence) -> dict[str, bool]:
             bool(owner) and age >= 0 for owner, age in evidence.difference_ownership
         ),
         "I5_RESIDUALS_TWO_SIDED": evidence.residuals_two_sided,
-        "I6_DEFAULT_AND_STALE_HOLD": (
-            all(value == "HOLD" for value in evidence.protection_dispositions)
-            and all(figure is None for figure in evidence.protection_figures)
-            if evidence.protection_hold_required
-            else "HOLD" not in evidence.protection_dispositions
-            and all(figure is not None for figure in evidence.protection_figures)
+        "I6_DEFAULT_AND_STALE_HOLD": all(
+            (disposition == "HOLD") if required else (disposition != "HOLD" and figure is not None)
+            for disposition, figure, required in zip(
+                evidence.protection_dispositions,
+                evidence.protection_figures,
+                evidence.protection_holds_required
+                or (evidence.protection_hold_required,) * len(evidence.protection_dispositions),
+                strict=True,
+            )
         ),
         "I7_MARKET_ACCESS_REFUSES": (
             all(expected == actual for expected, actual in evidence.access_events)

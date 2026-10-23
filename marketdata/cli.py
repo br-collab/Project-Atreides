@@ -21,7 +21,6 @@ def parser() -> argparse.ArgumentParser:
     commands = result.add_subparsers(dest="command", required=True)
     ingest_command = commands.add_parser("ingest")
     ingest_command.add_argument("source_id")
-    ingest_command.add_argument("--size-cap", type=int, default=2 * 1024 * 1024 * 1024)
     normalize_command = commands.add_parser("normalize")
     normalize_command.add_argument("source_id")
     build = commands.add_parser("build-pack")
@@ -49,7 +48,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser().parse_args(argv)
     paths = initialize(args.root)
     if args.command == "ingest":
-        print(ingest(args.source_id, root=args.root, size_cap=args.size_cap))
+        print(ingest(args.source_id, root=args.root))
     elif args.command == "normalize":
         print(normalize(args.source_id, root=args.root))
     elif args.command == "build-pack":

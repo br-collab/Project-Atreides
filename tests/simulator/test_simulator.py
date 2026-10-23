@@ -485,6 +485,13 @@ def test_250_day_budget_and_year_end() -> None:
     assert counts["HALT"] < 250
     assert counts["RULE_204_SHORT"] < 250
     assert counts["DTC_CAP_HOLD"] < 250
+    reserve_figures = [
+        close["protection"]["figures"]["reserve_requirement"] for close in closes
+    ]
+    assert any(value is not None and Decimal(value) > 0 for value in reserve_figures)
+    averages = [close["market_data"]["average_total_credits"] for close in closes]
+    assert averages.count(None) > 0
+    assert any(value is not None for value in averages)
 
 
 def test_i7_is_green_with_no_halts_and_with_several_halts() -> None:

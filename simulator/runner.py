@@ -5,13 +5,16 @@ from __future__ import annotations
 import hashlib
 import json
 import random
+from calendar import monthrange
 from dataclasses import asdict
 from datetime import UTC, date, datetime, time, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from cannae_kernel.canonical import canonical_bytes_of
 
+from atreides.customer_protection.reserve import ComputationMode
+from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.rails.cns import absent_entitlement_treatment
 from simulator.calibration import CalibrationPack, load_calibration_pack
@@ -85,8 +88,37 @@ def _draw(rng: random.Random, pack: CalibrationPack, key: str) -> bool:
     return Decimal(str(rng.random())) < Decimal(str(pack.value("generator", key)))
 
 
+def _add_months(day: date, months: int) -> date:
+    month = day.month - 1 + months
+    year = day.year + month // 12
+    month = month % 12 + 1
+    return date(year, month, min(day.day, monthrange(year, month)[1]))
+
+
+def treasury_clean_price(
+    par_yield_percent: Decimal, coupon_percent: Decimal, years: int
+) -> Decimal:
+    """Price a declared synthetic fixed coupon Treasury from an observed par yield."""
+    periods = years * 2
+    rate = par_yield_percent / Decimal(200)
+    coupon = coupon_percent / Decimal(2)
+    price = sum((coupon / ((Decimal(1) + rate) ** n) for n in range(1, periods + 1)), Decimal())
+    price += Decimal(100) / ((Decimal(1) + rate) ** periods)
+    return (price * Decimal(64)).quantize(Decimal(1), rounding=ROUND_HALF_UP) / Decimal(64)
+
+
+def daily_financing_charge(need: Decimal, sofr_percent: Decimal) -> Decimal:
+    return (need * sofr_percent / Decimal(100) / Decimal(360)).quantize(Decimal("0.01"))
+
+
 def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source visible
-    rng: random.Random, business_date: date, index: int, pack: CalibrationPack
+    rng: random.Random,
+    business_date: date,
+    index: int,
+    pack: CalibrationPack,
+    reserve_history: dict[str, object],
+    *,
+    post_financing: bool = True,
 ) -> CloseResult:
     issue = f"SYN-EQ-{rng.randrange(1000, 9999)}"
     base = datetime.combine(business_date, time(14, 30), tzinfo=UTC)
@@ -167,10 +199,21 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         night_capacity=int(pack.value("market", "cns_night_capacity")),
     )
     treasury_issue = f"SYN-UST-{rng.randrange(1000, 9999)}"
+    tenor = str(pack.value("market", "treasury_tenor"))
+    coupon = Decimal(str(pack.value("market", "treasury_coupon_percent")))
+    yield_observation = pack.observation(business_date, tenor)
+    sofr_observation = pack.observation(business_date, "SOFR")
+    real_rates_required = bool(pack.observation_dates)
+    rates_missing = real_rates_required and (yield_observation is None or sofr_observation is None)
+    treasury_price = (
+        treasury_clean_price(yield_observation[0], coupon, int(tenor.split(maxsplit=1)[0]))
+        if yield_observation is not None
+        else Decimal(str(pack.value("market", "treasury_price_64ths")))
+    )
     principal = treasury_consideration(
         asset_class=AssetClass.TREASURY_NOTE,
         par=100000,
-        price=Decimal(str(pack.value("market", "treasury_price_64ths"))),
+        price=treasury_price,
         accrued_interest=Decimal(str(pack.value("market", "treasury_accrued_interest"))),
     )
     gsd = gsd_messages(
@@ -197,9 +240,7 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             str(
                 pack.value(
                     "market",
-                    "dtc_net_debit_cap"
-                    if dtc_shortfall_event
-                    else "dtc_normal_net_debit_cap",
+                    "dtc_net_debit_cap" if dtc_shortfall_event else "dtc_normal_net_debit_cap",
                 )
             )
         ),
@@ -211,6 +252,14 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
                 )
             )
         ),
+    )
+    financing_need = max(Decimal(), Decimal("1000.00") - dtc.money) + sum(
+        (max(Decimal(), message.money) for message in gsd), Decimal()
+    )
+    financing_charge = (
+        daily_financing_charge(financing_need, sofr_observation[0])
+        if sofr_observation is not None
+        else None
     )
     cash = cash_rail_movement(issue=treasury_issue, money=gsd[0].money + gsd[1].money)
     calendar = MarketCalendar.load(Market.US_EQUITIES)
@@ -252,7 +301,54 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         ("LIMIT" if limit_refusal_event else None, "LIMIT" if limit_refusal else None),
         ("LOCATE" if locate_refusal_event else None, "LOCATE" if locate_refusal else None),
     )
-    protection_hold_required = default_event or stale_event
+    credit_min = int(pack.value("generator", "customer_credit_min"))
+    credit_max = int(pack.value("generator", "customer_credit_max"))
+    # A separate deterministic stream preserves the pre-SIM-1D event draws.
+    customer_credit = Decimal(
+        credit_min + ((index * 104729 + 7919) % (credit_max - credit_min + 1))
+    )
+    current_month = (business_date.year, business_date.month)
+    prior_month = reserve_history.get("month")
+    if prior_month is not None and prior_month != current_month:
+        snapshots = reserve_history.setdefault("snapshots", [])
+        assert isinstance(snapshots, list)
+        snapshots.append(reserve_history["last_credit"])
+    reserve_history["month"] = current_month
+    reserve_history["last_credit"] = customer_credit
+    snapshots = reserve_history.setdefault("snapshots", [])
+    assert isinstance(snapshots, list)
+    trailing = snapshots[-12:]
+    average_credits = (
+        sum((Decimal(str(value)) for value in trailing), Decimal()) / Decimal(12)
+        if len(trailing) == 12
+        else None
+    )
+    rules = load_rule_table()
+    threshold_item = rules.get("15c3-3.e3iB1.daily_threshold")
+    phase_item = rules.get("15c3-3.e3iB1.daily_phase_in")
+    assert threshold_item is not None and threshold_item.value is not None
+    assert phase_item is not None and phase_item.value is not None
+    threshold = threshold_item.value
+    if (
+        average_credits is not None
+        and average_credits >= threshold
+        and "crossed" not in reserve_history
+    ):
+        reserve_history["crossed"] = business_date
+    crossed = reserve_history.get("crossed")
+    phase_months = int(phase_item.value)
+    effective = _add_months(crossed, phase_months) if isinstance(crossed, date) else None
+    mode = (
+        ComputationMode.DAILY
+        if effective is not None and business_date >= effective
+        else ComputationMode.WEEKLY
+    )
+    protection_inputs_missing = default_event or stale_event
+    reserve_hold_required = (
+        protection_inputs_missing
+        or average_credits is None
+        or (effective is not None and business_date < effective)
+    )
     estate = drive_estate(
         run_number=index,
         business_date=business_date,
@@ -261,10 +357,13 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         account_weights=account_weights,
         street_quantity=Decimal(sum(m.securities for m in cns)),
         prior_close=prior_close,
-        protection_inputs_missing=protection_hold_required,
-        previously_daily_required=bool(
-            pack.value("market", "previously_daily_required")
-        ),
+        protection_inputs_missing=protection_inputs_missing,
+        customer_credit_balance=customer_credit,
+        average_total_credits=average_credits,
+        daily_requirement_effective_date=effective,
+        computation_mode=mode,
+        financing_charge=financing_charge,
+        post_financing=post_financing,
     )
     breaks: list[Break] = [
         Break(
@@ -283,7 +382,8 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         == estate.books_quantity
         == estate.settled_quantity
     )
-    money_residual = venue_money - estate.books_money
+    expected_money = venue_money + (financing_charge or Decimal())
+    money_residual = expected_money - estate.books_money
     money_ok = money_residual == Decimal()
     if not quantity_ok:
         breaks.append(
@@ -318,13 +418,12 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         for reason, held in (
             ("DTC_CAP_OR_COLLATERAL", dtc.status == "HELD_CAP_OR_COLLATERAL"),
             ("STALE_MARKET_DATA", stale_event),
+            ("MARKET_RATE_INPUTS", rates_missing),
             ("PROTECTION_INPUTS", "HOLD" in protection_dispositions),
         )
         if held
     )
-    refusal_events = tuple(
-        actual for _, actual in access_events if actual is not None
-    )
+    refusal_events = tuple(actual for _, actual in access_events if actual is not None)
     fail_age = calendar.business_days_after(business_date, rule_204_short)
     fails = (
         (fail_age,)
@@ -381,7 +480,11 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         "holds": gate_holds,
         "refusals": refusal_events,
         "access_events": access_events,
-        "protection_hold_required": protection_hold_required,
+        "protection_holds_required": (
+            reserve_hold_required,
+            protection_inputs_missing,
+            protection_inputs_missing,
+        ),
         "fails": fails,
     }
     digest = _digest(economics)
@@ -393,18 +496,22 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             allocated_quantity=estate.allocated_quantity,
             books_quantity=estate.books_quantity,
             street_quantity=estate.settled_quantity,
-            venue_money=venue_money,
+            venue_money=expected_money,
             books_money=estate.books_money,
             stock_break_count=len(estate.stock_breaks),
             difference_ownership=tuple((item.owner, item.age_business_days) for item in breaks),
             residuals_two_sided=(
-                estate.settlement_residual_two_sided
-                and all(m.money is not None for m in gsd)
+                estate.settlement_residual_two_sided and all(m.money is not None for m in gsd)
             ),
             holds=gate_holds,
             protection_dispositions=protection_dispositions,
             protection_figures=protection_figures,
-            protection_hold_required=protection_hold_required,
+            protection_holds_required=(
+                reserve_hold_required,
+                protection_inputs_missing,
+                protection_inputs_missing,
+            ),
+            protection_hold_required=protection_inputs_missing,
             refusals=refusal_events,
             access_events=access_events,
             deadlines_are_business_days=(
@@ -439,7 +546,7 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             )
         ),
         protection=ProtectionResults(
-            required_hold=protection_hold_required,
+            required_hold=reserve_hold_required,
             dispositions={
                 "reserve": estate.reserve_disposition,
                 "net_capital": estate.net_capital_disposition,
@@ -452,6 +559,20 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             },
             reasons=estate.protection_reasons,
         ),
+        market_data={
+            "sofr_percent": sofr_observation[0] if sofr_observation else None,
+            "sofr_source": sofr_observation[1].source_url if sofr_observation else None,
+            "treasury_tenor": tenor,
+            "treasury_par_yield_percent": yield_observation[0] if yield_observation else None,
+            "treasury_yield_source": yield_observation[1].source_url if yield_observation else None,
+            "treasury_clean_price_64ths": treasury_price if yield_observation else None,
+            "financing_need": financing_need if sofr_observation else None,
+            "financing_charge": financing_charge,
+            "customer_credit_balance": customer_credit,
+            "average_total_credits": average_credits,
+            "reserve_mode": mode.value,
+            "daily_requirement_effective_date": effective.isoformat() if effective else None,
+        },
     )
 
 
@@ -467,9 +588,13 @@ def run_simulation(
         raise ValueError("SIM-1 run length must be 1..250 business days")
     rng = random.Random(seed)
     pack = load_calibration_pack(calibration_uri)
+    dates = pack.observation_dates or _business_dates(start, days)
+    if len(dates) < days:
+        raise ValueError("calibration pack does not contain enough dated observations")
+    reserve_history: dict[str, object] = {}
     closes = tuple(
-        _simulate_close(rng, day, index, pack)
-        for index, day in enumerate(_business_dates(start, days))
+        _simulate_close(rng, day, index, pack, reserve_history)
+        for index, day in enumerate(dates[:days])
     )
     digest = _digest([close.economics_digest for close in closes])
     exercised = sorted({scenario for close in closes for scenario in close.scenarios})
@@ -503,9 +628,7 @@ def publish_run(run: dict[str, object], output: Path) -> None:
     output.mkdir(parents=True, exist_ok=True)
     closes = run["closes"]
     assert isinstance(closes, list)
-    (output / "run-summary.json").write_text(
-        json.dumps(run, indent=2, sort_keys=True) + "\n"
-    )
+    (output / "run-summary.json").write_text(json.dumps(run, indent=2, sort_keys=True) + "\n")
     (output / "daily-close.json").write_text(
         json.dumps(
             {
