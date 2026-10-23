@@ -109,7 +109,7 @@ jobs:
       # Strict type checking covers the complete production package. A new
       # subpackage is therefore gated automatically rather than relying on a
       # manually maintained allowlist.
-      - run: mypy --strict atreides
+      - run: mypy --strict atreides simulator tools/run_simulator.py
 
   probes:
     name: Probes
@@ -147,6 +147,21 @@ jobs:
       # suite and has to be accounted for in review.
       - name: Stress probe
         run: python tools/stress_probe.py
+
+  simulation-five-day:
+    name: SIM-1 five-day close
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.11"
+          enable-cache: true
+      - run: uv sync --locked --extra dev
+      - name: Normal day and year-end close
+        run: uv run python -m tools.run_simulator --seed 20261023 --days 5 --output "$RUNNER_TEMP/simulation"
+      - name: Production import refusal
+        run: '! ATREIDES_PROFILE=production uv run python -c "import simulator"'
 
   publish-agents-snapshot:
     name: Publish agent activation snapshot
@@ -228,3 +243,21 @@ jobs:
       - uses: ./.github/actions/publish-equities-snapshot
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-simulation-snapshot:
+    name: Publish SIM-1 snapshot
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, lint, typecheck, probes, simulation-five-day]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: simulation-snapshot-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/publish-simulation-snapshot
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          days: "5"
+          seed: "20261023"

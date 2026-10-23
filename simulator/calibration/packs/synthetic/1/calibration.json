@@ -1,0 +1,33 @@
+{
+  "inputs": [
+    {
+      "input_id": "market",
+      "source_url": "synthetic://sim-1/market-v1",
+      "citation": "ORDER-SIM-1-v0.2 declared synthetic calibration",
+      "license_class": "SYNTHETIC",
+      "values": {
+        "equity_round_lot": 100,
+        "halt_band_percent": "10.00",
+        "stale_after_seconds": 60,
+        "equity_order_price": "10.00",
+        "equity_subpenny_price": "9.999",
+        "cns_night_capacity": 70,
+        "cns_prior_close": "10.00",
+        "treasury_price_64ths": "99.515625",
+        "treasury_accrued_interest": "123.456",
+        "dtc_net_debit_cap": "900.00",
+        "dtc_collateral": "950.00"
+      }
+    },
+    {
+      "input_id": "aggregate_fail_rate",
+      "source_url": "https://www.sec.gov/data-research/sec-markets-data/fails-deliver-data",
+      "citation": "SEC aggregate fails-to-deliver calibration, aggregate rate only",
+      "license_class": "A",
+      "values": {
+        "rate": "0.0200",
+        "period": "synthetic calibration baseline"
+      }
+    }
+  ]
+}

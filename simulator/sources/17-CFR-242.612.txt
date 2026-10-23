@@ -1,0 +1,14 @@
+17 CFR 242.612(b)(2) — Minimum pricing increment
+Pinned from the official eCFR XML, Title 17 Part 242, version 2025-01-01.
+Source: https://www.ecfr.gov/current/title-17/chapter-II/part-242/section-242.612
+
+“No national securities exchange, national securities association, alternative trading
+system, vendor, or broker or dealer shall display, rank, or accept from any person a bid
+or offer, an order, or an indication of interest in any NMS stock in an increment smaller
+than required pursuant to either paragraph (b)(2)(i) or (ii) of this section if that bid
+or offer, order, or indication of interest is priced equal to or greater than $1.00 per
+share.”
+
+SIM-1 scope note: the operative nouns are bid, offer, order and indication of interest.
+The paragraph does not name execution prices. The simulator therefore validates order
+increments separately and permits a synthetic execution at additional precision.
