@@ -69,8 +69,8 @@ and `InstructionArtifact` both pin `is_submission` to `Literal[False]`,
 which makes a submission object *unconstructible* rather than merely
 discouraged.
 
-**2,378 collected tests (2,333 passing, 44 skipped, 1 expected failure) · 98.83% measured
-whole-package coverage, with a 95% gate plus branch-coverage floors on Cato Cash and funding
+**The CI test run is the source of truth for current counts and measured
+whole-package coverage; branch-coverage floors protect Cato Cash and funding
 dispositions · MIT**
 
 This is research software with the public functional facade described below. It prepares,
@@ -429,7 +429,7 @@ one rather than assumed away.
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q          # 1504 passed, 1 expected failure
+pytest -q
 ```
 
 Requires Python ≥ 3.11. Runtime dependency: `pydantic>=2.6`. `lxml` is
