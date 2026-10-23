@@ -34,8 +34,8 @@ dev = [
     # dependencies stay in the development environment and out of production.
     "boto3>=1.35,<2.0",
     "boto3-stubs[s3]>=1.35,<2.0",
-    "pyarrow>=20,<21",
-    "pyarrow-stubs>=20,<21",
+    "pyarrow>=23.0.1,<24",
+    "pyarrow-stubs>=20",
     # SIM-1B is source-only test infrastructure. It drives the committed L.C.
     # lifecycle/capture/allocation package; production imports still refuse simulator/.
     "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@a6d748523507a76990ecbc034ce3bffbd287fdf6",
