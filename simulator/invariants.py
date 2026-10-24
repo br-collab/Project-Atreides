@@ -28,6 +28,10 @@ class InvariantEvidence:
     source_digest: str
     replay_digest: str
     protection_holds_required: tuple[bool, ...] | None = None
+    #: SIM-1G: each computation's reasons as the engine stated them.
+    protection_reasons: tuple[tuple[str, ...], ...] | None = None
+    #: SIM-1G: reason text a required HOLD must carry, derived outside the engine.
+    protection_required_reasons: tuple[str | None, ...] | None = None
 
 
 def evaluate_invariants(evidence: InvariantEvidence) -> dict[str, bool]:
@@ -59,12 +63,20 @@ def evaluate_invariants(evidence: InvariantEvidence) -> dict[str, bool]:
         ),
         "I5_RESIDUALS_TWO_SIDED": evidence.residuals_two_sided,
         "I6_DEFAULT_AND_STALE_HOLD": all(
-            (disposition == "HOLD") if required else (disposition != "HOLD" and figure is not None)
-            for disposition, figure, required in zip(
+            (
+                disposition == "HOLD"
+                and (reason is None or any(reason in stated for stated in reasons))
+            )
+            if required
+            else (disposition != "HOLD" and figure is not None)
+            for disposition, figure, required, reasons, reason in zip(
                 evidence.protection_dispositions,
                 evidence.protection_figures,
                 evidence.protection_holds_required
                 or (evidence.protection_hold_required,) * len(evidence.protection_dispositions),
+                evidence.protection_reasons or ((),) * len(evidence.protection_dispositions),
+                evidence.protection_required_reasons
+                or (None,) * len(evidence.protection_dispositions),
                 strict=True,
             )
         ),

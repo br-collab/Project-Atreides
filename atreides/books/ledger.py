@@ -35,6 +35,10 @@ class AccountType(StrEnum):
     STOCK_LOANED = "STOCK_LOANED"
     IN_TRANSFER = "IN_TRANSFER"
     CASH = "CASH"
+    #: Customer Reserve Bank Account, 17 CFR 240.15c3-3(e)(1). Money lines only.
+    RESERVE_BANK_CUSTOMER = "RESERVE_BANK_CUSTOMER"
+    #: PAB Reserve Bank Account, 17 CFR 240.15c3-3(e)(1). Money lines only.
+    RESERVE_BANK_PAB = "RESERVE_BANK_PAB"
 
 
 class RecordSide(StrEnum):

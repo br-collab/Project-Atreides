@@ -359,6 +359,28 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     )
 
 
+def reserve_bank_balances(books: EquitiesBooks, *, through: date) -> dict[AccountType, Decimal]:
+    """Cash in each reserve bank account, from entries effective on or before ``through``.
+
+    SIM-1G. 17 CFR 240.15c3-3(e)(3)(i)(A): "the deposit so computed must be made no
+    later than one hour after the opening of banking business on the second following
+    business day." The caller passes that deadline as ``through``, so a deposit
+    effective after it does not count toward the computation it was made for. Only
+    USD money lines on the two reserve bank account types are read.
+    """
+    balances = {
+        AccountType.RESERVE_BANK_CUSTOMER: Decimal(0),
+        AccountType.RESERVE_BANK_PAB: Decimal(0),
+    }
+    for entry in books.entries:
+        if entry.effective_date > through:
+            continue
+        for line in entry.lines:
+            if line.account_type in balances and line.currency == "USD":
+                balances[line.account_type] += line.money
+    return balances
+
+
 def project_margin_accounts(
     books: EquitiesBooks,
     *,

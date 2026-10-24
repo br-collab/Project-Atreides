@@ -68,6 +68,12 @@ class ProtectionResults(Record):
     dispositions: dict[str, str]
     figures: dict[str, Decimal | None]
     reasons: dict[str, tuple[str, ...]]
+    #: SIM-1G: each reserve computation's deposit, as posted and read back from the books.
+    deposits: dict[str, dict[str, str | None]] = {}
+    #: SIM-1G: the hold each computation requires, derived outside the engine.
+    holds_required: dict[str, bool] = {}
+    #: SIM-1G: reason text a required HOLD must carry, or None when none is required.
+    reasons_required: dict[str, str | None] = {}
 
 
 class CloseResult(Record):
