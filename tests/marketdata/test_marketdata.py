@@ -21,7 +21,7 @@ import pytest
 from marketdata.catalog import CATALOG_PATH, classify_url, load_catalog
 from marketdata.cli import main as cli_main
 from marketdata.guard import check_repository
-from marketdata.normalize import normalize, reconcile, validate_rows
+from marketdata.normalize import _ofr_repo_rows, normalize, reconcile, validate_rows
 from marketdata.packs import build_pack, verify_pack, write_pack_lock
 from marketdata.store import _AdmittedRedirect, _ensure_free_space, ingest, initialize
 from marketdata.sync import sync_to_bucket, sync_to_ssd
@@ -222,6 +222,53 @@ def test_ny_fed_notice_travels_into_pack_and_sim_summary(tmp_path: Path) -> None
     assert run["calibration_classes_used"] == ["B", "SYNTHETIC"]
     expected_notice = load_catalog(CATALOG_PATH)["nyfed_sofr_2019"].ny_fed_notice
     assert run["ny_fed_notices"] == [expected_notice]
+
+
+def _ofr_repo_payload() -> dict[str, object]:
+    series = {}
+    for mnemonic in (
+        "REPO-DVP_AR_TOT-F",
+        "REPO-DVP_TV_TOT-F",
+        "REPO-GCF_AR_TOT-F",
+        "REPO-GCF_TV_TOT-F",
+        "REPO-TRI_AR_TOT-F",
+        "REPO-TRI_TV_TOT-F",
+    ):
+        unit = "Percent" if "_AR_" in mnemonic else "USD"
+        series[mnemonic] = {
+            "timeseries": {"aggregation": [["2020-03-09", 1.25], ["2020-03-10", None]]},
+            "metadata": {
+                "mnemonic": mnemonic,
+                "description": {"vintage": "Final"},
+                "release": {"long_name": "OFR U.S. Repo Markets Data Release"},
+                "unit": {"name": unit},
+            },
+        }
+    return series
+
+
+def test_ofr_repo_parser_accepts_only_six_final_ofr_series_and_preserves_null_absence() -> None:
+    """CLOSE-1 WP3.1: accept DVP/GCF/tri-party and refuse non-OFR slices."""
+    source = load_catalog(CATALOG_PATH)["ofr_repo_2020"]
+    rows = _ofr_repo_rows(json.dumps(_ofr_repo_payload()).encode(), source)
+    assert {row["metric"] for row in rows} == set(_ofr_repo_payload())
+    assert {row["date"] for row in rows} == {"2020-03-09"}
+    assert {row["unit"] for row in rows} == {"percent", "usd"}
+
+    unexpected = _ofr_repo_payload()
+    unexpected["FNYR-SOFR"] = unexpected["REPO-DVP_AR_TOT-F"]
+    with pytest.raises(ValueError, match="exact admitted six-series bundle"):
+        _ofr_repo_rows(json.dumps(unexpected).encode(), source)
+
+    wrong_release = _ofr_repo_payload()
+    wrong_release["REPO-DVP_AR_TOT-F"]["metadata"]["release"]["long_name"] = "Elsewhere"
+    with pytest.raises(ValueError, match="not an OFR final publication"):
+        _ofr_repo_rows(json.dumps(wrong_release).encode(), source)
+
+    wrong_unit = _ofr_repo_payload()
+    wrong_unit["REPO-DVP_TV_TOT-F"]["metadata"]["unit"]["name"] = "Percent"
+    with pytest.raises(ValueError, match="not an OFR final publication"):
+        _ofr_repo_rows(json.dumps(wrong_unit).encode(), source)
 
 
 def test_validation_flags_schema_range_calendar_duplicates_and_reconciliation() -> None:
@@ -459,3 +506,5 @@ def test_catalog_contains_only_order_admitted_hosts_and_ny_fed_notice() -> None:
     catalog = load_catalog(CATALOG_PATH)
     assert {source.license_class for source in catalog.values()} == {"A", "B"}
     assert catalog["nyfed_sofr_2019"].ny_fed_notice
+    assert catalog["ofr_repo_2020"].license_class == "A"
+    assert catalog["ofr_repo_2023"].license_class == "A"

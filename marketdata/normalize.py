@@ -113,6 +113,67 @@ def _ofr_rows(raw: bytes, source: Source) -> list[dict[str, object]]:
     return rows
 
 
+_OFR_REPO_SERIES = {
+    "REPO-DVP_AR_TOT-F": ("Percent", "percent"),
+    "REPO-DVP_TV_TOT-F": ("USD", "usd"),
+    "REPO-GCF_AR_TOT-F": ("Percent", "percent"),
+    "REPO-GCF_TV_TOT-F": ("USD", "usd"),
+    "REPO-TRI_AR_TOT-F": ("Percent", "percent"),
+    "REPO-TRI_TV_TOT-F": ("USD", "usd"),
+}
+
+
+def _ofr_repo_rows(raw: bytes, source: Source) -> list[dict[str, object]]:
+    """Parse the exact OFR-owned repo slice admitted by CLOSE-1 WP3.1.
+
+    Governing text: "Ingest OFR repo segment rates and volumes (DVP, GCF,
+    tri-party) as OFR publishes them. Refuse the bundle and any slice that
+    originates elsewhere."
+    """
+    document = json.loads(raw)
+    if not isinstance(document, dict) or set(document) != set(_OFR_REPO_SERIES):
+        raise ValueError("OFR repo response is not the exact admitted six-series bundle")
+    rows: list[dict[str, object]] = []
+    for mnemonic, (published_unit, normalized_unit) in _OFR_REPO_SERIES.items():
+        series = document[mnemonic]
+        metadata = series.get("metadata", {}) if isinstance(series, dict) else {}
+        release = metadata.get("release", {}) if isinstance(metadata, dict) else {}
+        description = metadata.get("description", {}) if isinstance(metadata, dict) else {}
+        unit = metadata.get("unit", {}) if isinstance(metadata, dict) else {}
+        unit = unit if isinstance(unit, dict) else {}
+        values = (
+            series.get("timeseries", {}).get("aggregation")
+            if isinstance(series, dict)
+            else None
+        )
+        if (
+            metadata.get("mnemonic") != mnemonic
+            or release.get("long_name") != "OFR U.S. Repo Markets Data Release"
+            or description.get("vintage") != "Final"
+            or unit.get("name") != published_unit
+            or not isinstance(values, list)
+        ):
+            raise ValueError(f"OFR repo series is not an OFR final publication: {mnemonic}")
+        for observation in values:
+            if not isinstance(observation, list) or len(observation) != 2:
+                raise ValueError(f"OFR repo observation has an undocumented shape: {mnemonic}")
+            observation_date, value = observation
+            # OFR documents null as no trading or a confidentiality disclosure edit.
+            # Absence remains absence; it is never converted to a literal value.
+            if value is None:
+                continue
+            rows.append(
+                _row(
+                    _iso_date(observation_date),
+                    mnemonic,
+                    _decimal(value, mnemonic),
+                    normalized_unit,
+                    source,
+                )
+            )
+    return rows
+
+
 def _sec_rows(raw: bytes, source: Source) -> list[dict[str, object]]:
     with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         names = [name for name in archive.namelist() if not name.endswith("/")]
@@ -156,6 +217,7 @@ PARSERS = {
     "nyfed_rate_json": _nyfed_rows,
     "fiscal_json": _fiscal_rows,
     "ofr_csv": _ofr_rows,
+    "ofr_repo_json": _ofr_repo_rows,
     "sec_ftd": _sec_rows,
 }
 

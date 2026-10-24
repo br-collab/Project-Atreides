@@ -12,6 +12,7 @@ ADMITTED_HOSTS = frozenset(
         "home.treasury.gov",
         "api.fiscaldata.treasury.gov",
         "markets.newyorkfed.org",
+        "data.financialresearch.gov",
         "www.financialresearch.gov",
         "www.sec.gov",
     }
