@@ -26,7 +26,7 @@
     {
       "input_id": "generator",
       "source_url": "synthetic://sim-1b/generated-day-v1",
-      "citation": "ORDER-SIM-1B generated-day parameters; deliberately synthetic",
+      "citation": "ORDER-SIM-1B generated-day parameters; deliberately synthetic; CLOSE-1 WP5 PAB correspondent fail-to-receive parameters, deliberately synthetic",
       "license_class": "SYNTHETIC",
       "values": {
         "quantity_min": 73,
@@ -48,7 +48,11 @@
         "ex_date_interval": 19,
         "buy_in_interval": 23,
         "customer_credit_min": 50000000,
-        "customer_credit_max": 900000000
+        "customer_credit_max": 900000000,
+        "pab_fail_rate": "0.3000",
+        "pab_fail_quantity_min": 5000,
+        "pab_fail_quantity_max": 250000,
+        "pab_fail_price": "10.00"
       }
     },
     {
