@@ -597,7 +597,7 @@ def test_publication_installs_the_real_lc_simulator_dependency() -> None:
     assert "uv sync --locked --extra dev" in action
 
 
-def test_publication_copies_the_committed_spike_outputs_without_the_pack() -> None:
+def test_publication_copies_every_committed_spike_output_and_labels_stale_sources() -> None:
     action = (
         Path(__file__).parents[2]
         / ".github"
@@ -605,8 +605,10 @@ def test_publication_copies_the_committed_spike_outputs_without_the_pack() -> No
         / "publish-simulation-snapshot"
         / "action.yml"
     ).read_text()
-    assert "simulator/publication/spike-2019" in action
-    assert '"$publish_dir/spike-2019"' in action
+    assert "for artifact in spike-2019 stress-2020-03 stress-2023-03" in action
+    assert 'source="simulator/publication/$artifact"' in action
+    assert '"$publish_dir/$artifact"' in action
+    assert "tools.regenerate_spike_artifacts label-stale" in action
     assert "repo-spike-2019/5/calibration.json" not in action
 
 
