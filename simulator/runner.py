@@ -10,6 +10,7 @@ from dataclasses import asdict
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
+from typing import Any
 
 from cannae_kernel.canonical import canonical_bytes_of
 
@@ -886,6 +887,53 @@ def run_simulation(
     }
 
 
+RESERVE_SECTION_HEADING = "## Reserve protection"
+_RESERVE_COMPUTATIONS = (("customer", "reserve", "Customer"), ("pab", "pab_reserve", "PAB"))
+
+
+def reserve_section(closes: list[dict[str, Any]]) -> str:
+    """Disclose each reserve computation's deposit policy and why its HOLD days held.
+
+    SIM-1G. Derived only from the published closes, so it can be checked against
+    ``daily-close.json``. A pack that declares no deposit policy makes every positive
+    requirement a deposit shortfall; this section says so, so an undeclared policy is
+    never read as a real funding failure.
+    """
+    lines = [RESERVE_SECTION_HEADING, ""]
+    for name, key, label in _RESERVE_COMPUTATIONS:
+        deposits = [close["protection"].get("deposits", {}).get(name, {}) for close in closes]
+        drawn = {deposit.get("drawn_outcome") for deposit in deposits}
+        if not deposits or drawn == {None}:
+            policy = "not recorded (publication predates SIM-1G)"
+        elif drawn == {"NOT_DECLARED_IN_PACK"}:
+            policy = (
+                "`NOT_DECLARED_IN_PACK`: the pack declares no deposit policy, so no "
+                "deposit is posted and every positive requirement holds as a shortfall"
+            )
+        else:
+            policy = "declared SYNTHETIC in the pack"
+        dispositions = [close["protection"]["dispositions"][key] for close in closes]
+        reasons_required = [
+            close["protection"].get("reasons_required", {}).get(key) for close in closes
+        ]
+        outcomes = [deposit.get("outcome") for deposit in deposits]
+        holds = [i for i, value in enumerate(dispositions) if value == "HOLD"]
+        undeclared = sum(1 for i in holds if outcomes[i] == "NOT_DECLARED_IN_PACK")
+        breach = sum(
+            1
+            for i in holds
+            if outcomes[i] in {"SHORT", "LATE"} and reasons_required[i] is not None
+        )
+        other = len(holds) - undeclared - breach
+        lines += [
+            f"- {label} deposit policy: {policy}",
+            f"- {label} reserve: `{dispositions.count('PASS')}` PASS, `{len(holds)}` HOLD "
+            f"(`{undeclared}` no declared deposit, `{breach}` simulated short or late "
+            f"deposit, `{other}` missing inputs or other engine reasons)",
+        ]
+    return "\n".join(lines) + "\n"
+
+
 def publish_run(run: dict[str, object], output: Path) -> None:
     output.mkdir(parents=True, exist_ok=True)
     closes = run["closes"]
@@ -949,6 +997,7 @@ def publish_run(run: dict[str, object], output: Path) -> None:
         f"- Source commit: `{source_commit}`\n"
         "- Provenance: locally generated from the locked Mac pack; this folder contains "
         "run outputs only, not the pack or its data.\n\n"
+        f"{reserve_section(closes)}\n"
         f"## New York Fed notices\n\n{notice_lines}\n\n"
         "## Not tested\n\n- " + "\n- ".join(NOT_TESTED) + "\n"
     )

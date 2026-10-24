@@ -14,6 +14,13 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 - Source commit: `21348fea502dcc8a87e33e70365203c6404efe0d`
 - Provenance: locally generated from the locked Mac pack; this folder contains run outputs only, not the pack or its data.
 
+## Reserve protection
+
+- Customer deposit policy: `NOT_DECLARED_IN_PACK`: the pack declares no deposit policy, so no deposit is posted and every positive requirement holds as a shortfall
+- Customer reserve: `0` PASS, `36` HOLD (`29` no declared deposit, `0` simulated short or late deposit, `7` missing inputs or other engine reasons)
+- PAB deposit policy: `NOT_DECLARED_IN_PACK`: the pack declares no deposit policy, so no deposit is posted and every positive requirement holds as a shortfall
+- PAB reserve: `14` PASS, `22` HOLD (`7` no declared deposit, `0` simulated short or late deposit, `15` missing inputs or other engine reasons)
+
 ## New York Fed notices
 
 - The SOFR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the SOFR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.
