@@ -7,6 +7,8 @@
 > *experimental*, *validated* and *production-qualified*; all five repositories are at
 > the first, and this label changes only when evidence changes it.
 
+**Last updated:** 242250Z OCT 26. Reflects `main` at `e4ba312`, package version 0.6.1 (tag `v0.6.1`). Latest merged change: #144, CONV-1, a synthetic self-clearing conversion scenario; independent verification found defects in its I9 invariant and gates, tracked by ORDER CONV-1B.
+
 
 Atreides is a **governance layer for multi-asset settlement**. It sits above the
 systems that actually move securities and money, governs the decision behind each
