@@ -3,10 +3,28 @@
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.equities.scenario import build_equities_publications
+
+
+def scenario_time(clock: datetime) -> datetime:
+    """The latest US equities business day on or before ``clock``, at the same time of day.
+
+    The EQ-1 scenario books trades and settlements on its ``taken_at`` date, and the
+    books projection refuses a reserve source settlement date that is not a loaded
+    business day. The main-only publication job runs on every merge, including on
+    weekends and holidays, so the writer dates the snapshot to the last business day
+    instead of failing (Publish equities self-clearing snapshot failed on 24 Oct 2026,
+    a Saturday).
+    """
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    day = clock.date()
+    while not calendar.is_business_day(day):
+        day -= timedelta(days=1)
+    return datetime.combine(day, clock.timetz())
 
 
 def write_publications(directory: Path, *, taken_at: datetime) -> tuple[Path, ...]:
@@ -24,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
     args = parser.parse_args(argv)
-    write_publications(args.directory, taken_at=datetime.now(UTC))
+    write_publications(args.directory, taken_at=scenario_time(datetime.now(UTC)))
     return 0
 
 
