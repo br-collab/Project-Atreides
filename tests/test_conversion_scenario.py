@@ -11,10 +11,8 @@ from hypothesis import strategies as st
 from atreides.customer_protection.rules import normalize_text
 from simulator.conversion import (
     SEED,
-    STATEMENT,
     VARIANTS,
     StatementLine,
-    conversion_gated,
     migration_books,
     migration_conserved,
     publish_conversion,
@@ -60,10 +58,12 @@ def test_prior_clearer_location_is_unknown_until_transfer() -> None:
     assert run["closes"][3]["control"]["disposition"] == "PASS"
 
 
-def test_all_six_variants_drive_expected_holds_and_recovery() -> None:
+def test_all_seven_variants_have_honest_i9_and_expected_holds() -> None:
     runs = {variant: run_conversion_variant(variant) for variant in VARIANTS}
+    assert all(run["all_invariants_pass"] for run in runs.values())
     assert runs["clean"]["closes"][3]["conversion_disposition"] == "PASS"
-    assert "customer reserve" in runs["short-first-deposit"]["closes"][2]["conversion_reasons"]
+    assert "reserve shortfall" in runs["short-first-deposit"]["closes"][2]["conversion_reasons"]
+    assert "reserve shortfall" in runs["late-first-deposit"]["closes"][2]["conversion_reasons"]
     assert runs["late-transfer"]["closes"][4]["conversion_disposition"] == "HOLD"
     assert any(
         "G1:" in reason for reason in runs["missing-f-letter"]["closes"][3]["conversion_reasons"]
@@ -76,30 +76,18 @@ def test_all_six_variants_drive_expected_holds_and_recovery() -> None:
     )
 
 
-def test_four_mutations_are_caught_by_i9_or_i10() -> None:
-    books = migration_books(STATEMENT, date(2027, 1, 6), transferred=True)
-    assert not migration_conserved(books, STATEMENT[:-1])  # dropped account
-    changed_cash = (
-        STATEMENT[0].__class__(
-            STATEMENT[0].account,
-            STATEMENT[0].issue,
-            STATEMENT[0].quantity,
-            STATEMENT[0].cash_credit + Decimal("0.01"),
-        ),
-        STATEMENT[1],
+def test_six_end_to_end_mutations_each_fail_i9_or_i10() -> None:
+    cases = (
+        ("clean", "forced-hold-funded"),
+        ("short-first-deposit", "forced-pass-short"),
+        ("clean", "cleared-gate-let-through"),
+        ("affiliated-bank", "affiliated-counted-eligible"),
+        ("clean", "prior-clearer-as-control"),
+        ("clean", "drop-one-share"),
     )
-    assert not migration_conserved(books, changed_cash)  # one-cent corruption
-    changed_qty = (
-        STATEMENT[0].__class__(
-            STATEMENT[0].account,
-            STATEMENT[0].issue,
-            STATEMENT[0].quantity + Decimal("1"),
-            STATEMENT[0].cash_credit,
-        ),
-        STATEMENT[1],
-    )
-    assert not migration_conserved(books, changed_qty)  # quantity corruption
-    assert not conversion_gated("PASS", True, ["G1:missing notification"])  # bypassed gate
+    for variant, mutation in cases:
+        run = run_conversion_variant(variant, mutation=mutation)
+        assert not run["all_invariants_pass"], (variant, mutation)
 
 
 def test_publication_has_four_files_and_explicit_non_claims(tmp_path: Path) -> None:
@@ -122,8 +110,8 @@ def test_control_matrix_node_ids_exist() -> None:
         "test_conversion_rule_quotes_are_verbatim_in_pinned_source",
         "test_i10_generated_migrations_conserve_quantity_and_cash",
         "test_prior_clearer_location_is_unknown_until_transfer",
-        "test_all_six_variants_drive_expected_holds_and_recovery",
-        "test_four_mutations_are_caught_by_i9_or_i10",
+        "test_all_seven_variants_have_honest_i9_and_expected_holds",
+        "test_six_end_to_end_mutations_each_fail_i9_or_i10",
         "test_publication_has_four_files_and_explicit_non_claims",
     }
     assert all(f"tests/test_conversion_scenario.py::{name}" in text for name in required)
