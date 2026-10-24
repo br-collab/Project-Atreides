@@ -3,22 +3,22 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 # SIM-1 run summary
 
 - Seed: `20261023`
-- Pack: `repo-spike-2019` version `5`
-- Manifest: `sha256:7ba4c5261cce790a9acee3d3d72f65ee9d59976704c1343b77ea9550ed3d748b`
+- Pack: `repo-spike-2019` version `6`
+- Manifest: `sha256:edecfe94d3cbc7b7775610b69a379586b51be18643a1adfbee6f10aa0891360a`
 - Classes: `A, B, SYNTHETIC`
 - Closes: `21`
 - Window: `2019-08-19` through `2019-09-17` (`explicit dated-pack window`)
 - Final SOFR: `5.25` percent
 - Final financing need: `$101662.13`
 - Final financing charge: `$14.83`
-- Source commit: `21348fea502dcc8a87e33e70365203c6404efe0d`
+- Source commit: `68e348c4fe6ea48d3a58fb7f591d555f8124adc8`
 - Provenance: locally generated from the locked Mac pack; this folder contains run outputs only, not the pack or its data.
 
 ## Reserve protection
 
-- Customer deposit policy: `NOT_DECLARED_IN_PACK`: the pack declares no deposit policy, so no deposit is posted and every positive requirement holds as a shortfall
-- Customer reserve: `0` PASS, `21` HOLD (`18` no declared deposit, `0` simulated short or late deposit, `3` missing inputs or other engine reasons)
-- PAB deposit policy: `NOT_DECLARED_IN_PACK`: the pack declares no deposit policy, so no deposit is posted and every positive requirement holds as a shortfall
+- Customer deposit policy: declared SYNTHETIC in the pack
+- Customer reserve: `10` PASS, `11` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `11` missing inputs or other engine reasons)
+- PAB deposit policy: declared SYNTHETIC in the pack
 - PAB reserve: `10` PASS, `11` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `11` missing inputs or other engine reasons)
 
 ## New York Fed notices
@@ -37,4 +37,4 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 - repo
 - clearing fund waterfall
 
-- Artifact freshness: `STALE`; source commit `21348fea502dcc8a87e33e70365203c6404efe0d` is behind current main `2610f46696ed26ad24b43c1b350eeef232a4423c`.
+- Artifact freshness: `STALE`; source commit `68e348c4fe6ea48d3a58fb7f591d555f8124adc8` is behind current main `03ecb953f617e09bc03e6e33e34be5198491622b`.
