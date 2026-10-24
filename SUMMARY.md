@@ -11,8 +11,15 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 - Final SOFR: `None` percent
 - Final financing need: `$None`
 - Final financing charge: `$None`
-- Source commit: `c7c33ecc68ebe245d16580124bac0e2123565d6e`
+- Source commit: `2610f46696ed26ad24b43c1b350eeef232a4423c`
 - Provenance: locally generated from the locked Mac pack; this folder contains run outputs only, not the pack or its data.
+
+## Reserve protection
+
+- Customer deposit policy: declared SYNTHETIC in the pack
+- Customer reserve: `1` PASS, `4` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `4` missing inputs or other engine reasons)
+- PAB deposit policy: declared SYNTHETIC in the pack
+- PAB reserve: `1` PASS, `4` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `4` missing inputs or other engine reasons)
 
 ## New York Fed notices
 
