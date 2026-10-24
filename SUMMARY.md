@@ -2,12 +2,12 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 
 # SIM-1 run summary
 
-- Seed: `20261023`
+- Seed: `40078948255`
 - Pack: `synthetic` version `1`
 - Manifest: `sha256:00a4d9ddb67f75cdb6c7d21b5117777b703430385ae89414cc05a06e57faa918`
 - Classes: `SYNTHETIC`
-- Closes: `5`
-- Window: `2026-12-28` through `2027-01-04` (`declared synthetic start`)
+- Closes: `250`
+- Window: `2026-12-28` through `2027-12-23` (`declared synthetic start`)
 - Final SOFR: `None` percent
 - Final financing need: `$None`
 - Final financing charge: `$None`
