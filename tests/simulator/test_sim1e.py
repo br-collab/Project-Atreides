@@ -123,9 +123,9 @@ def test_cli_boundary_requires_both_dates_for_a_dated_pack(tmp_path: Path) -> No
 @pytest.mark.parametrize(
     ("artifact", "pack_id", "version", "window"),
     [
-        ("spike-2019", "repo-spike-2019", "5", ("2019-08-19", "2019-09-17")),
-        ("stress-2020-03", "stress-2020-03", "1", ("2020-02-10", "2020-03-31")),
-        ("stress-2023-03", "stress-2023-03", "1", ("2023-02-09", "2023-03-24")),
+        ("spike-2019", "repo-spike-2019", "6", ("2019-08-19", "2019-09-17")),
+        ("stress-2020-03", "stress-2020-03", "2", ("2020-02-10", "2020-03-31")),
+        ("stress-2023-03", "stress-2023-03", "2", ("2023-02-09", "2023-03-24")),
     ],
 )
 def test_committed_spike_publications_are_output_only_and_complete(

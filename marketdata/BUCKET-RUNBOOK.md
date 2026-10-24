@@ -41,10 +41,10 @@ secret files.
 From the Atreides checkout, with the store at its default root:
 
 ```bash
-python -m marketdata verify ~/Data/cfma-data/20_curated/packs/repo-spike-2019/5
+python -m marketdata verify ~/Data/cfma-data/20_curated/packs/repo-spike-2019/6
 python -m marketdata sync --to bucket \
-  ~/Data/cfma-data/20_curated/packs/repo-spike-2019/5 \
-  s3://<bucket-name>/packs/repo-spike-2019/5
+  ~/Data/cfma-data/20_curated/packs/repo-spike-2019/6 \
+  s3://<bucket-name>/packs/repo-spike-2019/6
 ```
 
 Run the same `sync` again. The second run must upload zero objects; that is the
