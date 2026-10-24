@@ -263,6 +263,22 @@
       "quote": "the requirement may be satisfied to the extent of any excess debit in the computation performed under paragraph (e)(3) of this section with respect to customer accounts of the same date"
     },
     {
+      "id": "15c3-3.k2ii.introducing_exemption",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-3(k)(2)(ii)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "Who, as an introducing broker or dealer, clears all transactions with and for customers on a fully disclosed basis with a clearing broker or dealer, and who promptly transmits all customer funds and securities to the clearing broker or dealer"
+    },
+    {
+      "id": "15c3-3.f.bank_written_notification",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-3(f)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "must obtain and preserve in accordance with § 240.17a-4 a written notification from each bank with which it maintains a Customer Reserve Bank Account, a PAB Reserve Bank Account, or a Special Account"
+    },
+    {
       "id": "15c3-3.e5.affiliated_bank_excluded",
       "kind": "PROVISION",
       "citation": "17 CFR 240.15c3-3(e)(5)",

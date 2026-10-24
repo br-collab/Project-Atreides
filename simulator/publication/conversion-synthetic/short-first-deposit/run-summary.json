@@ -1,0 +1,241 @@
+{
+  "all_invariants_pass": true,
+  "closes": [
+    {
+      "business_date": "2027-01-04",
+      "control": {
+        "disposition": "HOLD",
+        "reasons": [
+          "no issues were supplied; nothing was checked"
+        ]
+      },
+      "conversion_disposition": "PASS",
+      "conversion_reasons": [
+        "G4:15c3-3.control.c1",
+        "possession or control"
+      ],
+      "first_deposit": "0",
+      "invariants": {
+        "I10_MIGRATION_CONSERVED": true,
+        "I9_CONVERSION_GATED": true
+      },
+      "net_capital": {
+        "disposition": "PASS",
+        "minimum": "250000",
+        "net_capital": "1000000"
+      },
+      "pab_reserve": {
+        "disposition": "PASS",
+        "requirement": "0"
+      },
+      "phase": "introducing",
+      "readiness_evidence": {
+        "G1": "SYN-F-NOTICE-001",
+        "G2": "SYN-NONAFFILIATION-001",
+        "G3": "SYN-CAPITAL-COMPUTATION-001",
+        "G4": null
+      },
+      "reserve": {
+        "disposition": "PASS",
+        "requirement": "0",
+        "shortfall": "0.00"
+      }
+    },
+    {
+      "business_date": "2027-01-05",
+      "control": {
+        "disposition": "HOLD",
+        "reasons": [
+          "no issues were supplied; nothing was checked"
+        ]
+      },
+      "conversion_disposition": "PASS",
+      "conversion_reasons": [
+        "G4:15c3-3.control.c1",
+        "possession or control"
+      ],
+      "first_deposit": "0",
+      "invariants": {
+        "I10_MIGRATION_CONSERVED": true,
+        "I9_CONVERSION_GATED": true
+      },
+      "net_capital": {
+        "disposition": "PASS",
+        "minimum": "250000",
+        "net_capital": "1000000"
+      },
+      "pab_reserve": {
+        "disposition": "PASS",
+        "requirement": "0"
+      },
+      "phase": "introducing",
+      "readiness_evidence": {
+        "G1": "SYN-F-NOTICE-001",
+        "G2": "SYN-NONAFFILIATION-001",
+        "G3": "SYN-CAPITAL-COMPUTATION-001",
+        "G4": null
+      },
+      "reserve": {
+        "disposition": "PASS",
+        "requirement": "0",
+        "shortfall": "0.00"
+      }
+    },
+    {
+      "business_date": "2027-01-06",
+      "control": {
+        "disposition": "INDETERMINATE",
+        "reasons": []
+      },
+      "conversion_disposition": "HOLD",
+      "conversion_reasons": [
+        "G4:15c3-3.control.c1",
+        "customer reserve",
+        "possession or control"
+      ],
+      "first_deposit": "154111.11",
+      "invariants": {
+        "I10_MIGRATION_CONSERVED": true,
+        "I9_CONVERSION_GATED": true
+      },
+      "net_capital": {
+        "disposition": "PASS",
+        "minimum": "250000",
+        "net_capital": "996403.0270"
+      },
+      "pab_reserve": {
+        "disposition": "PASS",
+        "requirement": "0"
+      },
+      "phase": "carrying",
+      "readiness_evidence": {
+        "G1": "SYN-F-NOTICE-001",
+        "G2": "SYN-NONAFFILIATION-001",
+        "G3": "SYN-CAPITAL-COMPUTATION-001",
+        "G4": null
+      },
+      "reserve": {
+        "disposition": "HOLD",
+        "requirement": "211111.11",
+        "shortfall": "57000.00"
+      }
+    },
+    {
+      "business_date": "2027-01-07",
+      "control": {
+        "disposition": "PASS",
+        "reasons": []
+      },
+      "conversion_disposition": "PASS",
+      "conversion_reasons": [],
+      "first_deposit": "211111.11",
+      "invariants": {
+        "I10_MIGRATION_CONSERVED": true,
+        "I9_CONVERSION_GATED": true
+      },
+      "net_capital": {
+        "disposition": "PASS",
+        "minimum": "250000",
+        "net_capital": "996403.0270"
+      },
+      "pab_reserve": {
+        "disposition": "PASS",
+        "requirement": "0"
+      },
+      "phase": "carrying",
+      "readiness_evidence": {
+        "G1": "SYN-F-NOTICE-001",
+        "G2": "SYN-NONAFFILIATION-001",
+        "G3": "SYN-CAPITAL-COMPUTATION-001",
+        "G4": "SYN-CONTROL-ARRANGEMENT-001"
+      },
+      "reserve": {
+        "disposition": "PASS",
+        "requirement": "211111.11",
+        "shortfall": "0.00"
+      }
+    },
+    {
+      "business_date": "2027-01-08",
+      "control": {
+        "disposition": "PASS",
+        "reasons": []
+      },
+      "conversion_disposition": "PASS",
+      "conversion_reasons": [],
+      "first_deposit": "211111.11",
+      "invariants": {
+        "I10_MIGRATION_CONSERVED": true,
+        "I9_CONVERSION_GATED": true
+      },
+      "net_capital": {
+        "disposition": "PASS",
+        "minimum": "250000",
+        "net_capital": "996403.0270"
+      },
+      "pab_reserve": {
+        "disposition": "PASS",
+        "requirement": "0"
+      },
+      "phase": "carrying",
+      "readiness_evidence": {
+        "G1": "SYN-F-NOTICE-001",
+        "G2": "SYN-NONAFFILIATION-001",
+        "G3": "SYN-CAPITAL-COMPUTATION-001",
+        "G4": "SYN-CONTROL-ARRANGEMENT-001"
+      },
+      "reserve": {
+        "disposition": "PASS",
+        "requirement": "211111.11",
+        "shortfall": "0.00"
+      }
+    },
+    {
+      "business_date": "2027-01-11",
+      "control": {
+        "disposition": "PASS",
+        "reasons": []
+      },
+      "conversion_disposition": "PASS",
+      "conversion_reasons": [],
+      "first_deposit": "211111.11",
+      "invariants": {
+        "I10_MIGRATION_CONSERVED": true,
+        "I9_CONVERSION_GATED": true
+      },
+      "net_capital": {
+        "disposition": "PASS",
+        "minimum": "250000",
+        "net_capital": "996403.0270"
+      },
+      "pab_reserve": {
+        "disposition": "PASS",
+        "requirement": "0"
+      },
+      "phase": "carrying",
+      "readiness_evidence": {
+        "G1": "SYN-F-NOTICE-001",
+        "G2": "SYN-NONAFFILIATION-001",
+        "G3": "SYN-CAPITAL-COMPUTATION-001",
+        "G4": "SYN-CONTROL-ARRANGEMENT-001"
+      },
+      "reserve": {
+        "disposition": "PASS",
+        "requirement": "211111.11",
+        "shortfall": "0.00"
+      }
+    }
+  ],
+  "conversion_day": "2027-01-06",
+  "not_claimed": [
+    "ACATS or bulk transfer",
+    "DTC, NSCC, or FICC membership or clearing-fund sufficiency",
+    "FOCUS filing",
+    "FINRA continuing membership application approval",
+    "legal conclusion"
+  ],
+  "schema_version": "sim.conversion/1",
+  "seed": 20261024,
+  "synthetic": true,
+  "variant": "short-first-deposit"
+}
