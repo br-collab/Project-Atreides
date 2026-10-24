@@ -18,7 +18,14 @@ from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.rails.cns import absent_entitlement_treatment
 from simulator.calibration import CalibrationPack, load_calibration_pack
-from simulator.estate import drive_estate, simulated_filed_credit_total
+from simulator.estate import (
+    DEPOSIT_BREACH_OUTCOMES,
+    DepositDraw,
+    DepositPolicy,
+    ReserveDeposit,
+    drive_estate,
+    simulated_filed_credit_total,
+)
 from simulator.invariants import InvariantEvidence, evaluate_invariants
 from simulator.market import (
     PriceTimeBook,
@@ -87,6 +94,57 @@ def _business_dates(start: date, days: int) -> tuple[date, ...]:
 
 def _draw(rng: random.Random, pack: CalibrationPack, key: str) -> bool:
     return Decimal(str(rng.random())) < Decimal(str(pack.value("generator", key)))
+
+
+#: Text the reserve engine writes for a deposit shortfall (atreides/customer_protection/reserve.py).
+SHORTFALL_REASON = "reserve deposit is short of the requirement"
+
+DEPOSIT_POLICY_KEYS = (
+    "reserve_deposit_late_rate",
+    "reserve_deposit_short_rate",
+    "reserve_deposit_short_fraction_min",
+    "reserve_deposit_short_fraction_max",
+    "reserve_bank_equity_capital",
+)
+
+
+def deposit_breach(deposit: ReserveDeposit) -> bool:
+    """True when a deposit was needed and the simulated deposit did not meet it in time."""
+    return (
+        deposit.needed is not None
+        and deposit.needed > 0
+        and deposit.outcome in DEPOSIT_BREACH_OUTCOMES
+    )
+
+
+def _deposit_draw(
+    rng: random.Random, late: Decimal, short: Decimal, low: Decimal, high: Decimal
+) -> DepositDraw:
+    # Two draws per computation, always consumed, so the stream does not depend on outcomes.
+    uniform = Decimal(str(rng.random()))
+    fraction = (low + (high - low) * Decimal(str(rng.random()))).quantize(Decimal("0.0001"))
+    if uniform < late:
+        return DepositDraw(outcome="LATE", short_fraction=fraction)
+    if uniform < late + short:
+        return DepositDraw(outcome="SHORT", short_fraction=fraction)
+    return DepositDraw(outcome="ON_TIME", short_fraction=fraction)
+
+
+def _deposit_policy(pack: CalibrationPack, rng: random.Random) -> DepositPolicy | None:
+    """The pack's declared SYNTHETIC deposit policy, or None when the pack declares none."""
+    try:
+        late, short, low, high, equity = (
+            Decimal(str(pack.value("generator", key))) for key in DEPOSIT_POLICY_KEYS
+        )
+    except KeyError:
+        return None
+    if not (Decimal(0) < low <= high < Decimal(1)):
+        raise ValueError("reserve deposit short fraction must lie in (0, 1)")
+    return DepositPolicy(
+        customer=_deposit_draw(rng, late, short, low, high),
+        pab=_deposit_draw(rng, late, short, low, high),
+        bank_equity_capital=equity,
+    )
 
 
 def _add_months(day: date, months: int) -> date:
@@ -420,6 +478,15 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
             ),
             Decimal(str(pack.value("generator", "pab_fail_price"))),
         )
+    # SIM-1G: Reserve Bank Account deposit behaviour, drawn from its own seeded
+    # stream so every pre-existing draw is unchanged. Rates are declared SYNTHETIC in
+    # the calibration pack; a pack without them posts no deposit and records
+    # NOT_DECLARED_IN_PACK.
+    deposit_rng = random.Random(f"sim-1g-deposit:{reserve_history['seed']}:{index}")
+    deposit_policy = _deposit_policy(pack, deposit_rng)
+    carried = reserve_history.get("reserve_bank", (Decimal(0), Decimal(0)))
+    assert isinstance(carried, tuple)
+    opening_balances = (Decimal(carried[0]), Decimal(carried[1]))
     estate = drive_estate(
         run_number=index,
         business_date=business_date,
@@ -438,13 +505,26 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         financing_charge=financing_charge,
         post_financing=post_financing,
         pab_fail_to_receive=pab_fail_to_receive,
+        reserve_bank_opening=opening_balances,
+        deposit_policy=deposit_policy,
     )
-    reserve_hold_required = estate.reserve_disposition == "HOLD"
-    # CLOSE-1 WP5 mirrors the merged SIM-1E convention for the customer reserve.
-    # Finding recorded in _reports/CLOSE-1-report.md: for both reserve computations
-    # this makes I6 accept the engine's own HOLD, and the simulator posts no reserve
-    # bank deposit, so every positive requirement holds as a deposit shortfall.
-    pab_hold_required = estate.pab_reserve_disposition == "HOLD"
+    reserve_history["reserve_bank"] = tuple(
+        deposit.closing_balance for deposit in estate.reserve_deposits
+    )
+    # SIM-1G: the hold requirement for each reserve computation is derived from the
+    # day's inputs and the simulated deposit, never from the engine's disposition.
+    # Missing inputs (default or stale day, or no 12-month average total credits for
+    # Rule 15c3-3(e)(3)(i)(B)(1)) require HOLD. A deposit that is short, late or not
+    # declared while a deposit was needed requires HOLD with the shortfall reason.
+    # Otherwise the day is funded and requires a computed figure and no HOLD.
+    inputs_missing = protection_inputs_missing or average_credits is None
+    reserve_hold_required, pab_hold_required = (
+        inputs_missing or deposit_breach(deposit) for deposit in estate.reserve_deposits
+    )
+    reserve_reason_required, pab_reason_required = (
+        SHORTFALL_REASON if deposit_breach(deposit) and not inputs_missing else None
+        for deposit in estate.reserve_deposits
+    )
     reserve_history["last_filed"] = {
         "month_end": business_date,
         "customer_total_credits": estate.customer_total_credits,
@@ -603,6 +683,18 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
                 protection_inputs_missing,
             ),
             protection_hold_required=protection_inputs_missing,
+            protection_reasons=(
+                estate.protection_reasons["reserve"],
+                estate.protection_reasons["pab_reserve"],
+                estate.protection_reasons["net_capital"],
+                estate.protection_reasons["possession_or_control"],
+            ),
+            protection_required_reasons=(
+                reserve_reason_required,
+                pab_reason_required,
+                None,
+                None,
+            ),
             refusals=refusal_events,
             access_events=access_events,
             deadlines_are_business_days=(
@@ -651,6 +743,22 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
                 "control_shortfall": estate.control_figure,
             },
             reasons=estate.protection_reasons,
+            deposits={
+                deposit.computation: {
+                    key: None if value is None else str(value)
+                    for key, value in asdict(deposit).items()
+                    if key != "computation"
+                }
+                for deposit in estate.reserve_deposits
+            },
+            holds_required={
+                "reserve": reserve_hold_required,
+                "pab_reserve": pab_hold_required,
+            },
+            reasons_required={
+                "reserve": reserve_reason_required,
+                "pab_reserve": pab_reason_required,
+            },
         ),
         market_data={
             "sofr_percent": sofr_observation[0] if sofr_observation else None,

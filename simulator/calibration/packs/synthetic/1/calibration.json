@@ -26,7 +26,7 @@
     {
       "input_id": "generator",
       "source_url": "synthetic://sim-1b/generated-day-v1",
-      "citation": "ORDER-SIM-1B generated-day parameters; deliberately synthetic; CLOSE-1 WP5 PAB correspondent fail-to-receive parameters, deliberately synthetic",
+      "citation": "ORDER-SIM-1B generated-day parameters; deliberately synthetic; CLOSE-1 WP5 PAB correspondent fail-to-receive parameters, deliberately synthetic; SIM-1G reserve bank deposit policy (late and short deposit rates, short fraction range, synthetic reserve bank equity capital), deliberately synthetic",
       "license_class": "SYNTHETIC",
       "values": {
         "quantity_min": 73,
@@ -52,7 +52,12 @@
         "pab_fail_rate": "0.3000",
         "pab_fail_quantity_min": 5000,
         "pab_fail_quantity_max": 250000,
-        "pab_fail_price": "10.00"
+        "pab_fail_price": "10.00",
+        "reserve_deposit_late_rate": "0.0400",
+        "reserve_deposit_short_rate": "0.0600",
+        "reserve_deposit_short_fraction_min": "0.0500",
+        "reserve_deposit_short_fraction_max": "0.4000",
+        "reserve_bank_equity_capital": "50000000000"
       }
     },
     {

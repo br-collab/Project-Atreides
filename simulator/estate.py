@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes_of, digest, digest_bytes
@@ -42,18 +42,25 @@ from atreides.books.ledger import (
     ReserveSourceFact,
     StockRecordBreak,
 )
-from atreides.books.projections import project_customer_protection, project_margin_accounts
+from atreides.books.projections import (
+    project_customer_protection,
+    project_margin_accounts,
+    reserve_bank_balances,
+)
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import (
     EXHIBIT_A_CREDITS,
+    BankCashDeposit,
     ComputationMode,
     LineBalance,
     ReserveInputs,
+    ReserveResult,
     compute_reserve,
     with_customer_excess_debits,
 )
 from atreides.customer_protection.rules import load_rule_table
+from atreides.customer_protection.rules.model import RuleTable
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.dsor.books import BooksPosting
 from atreides.margin.engine import compute_margin
@@ -64,6 +71,48 @@ from atreides.rails.cns import (
     settle_net_position,
 )
 from simulator.model import Print
+
+#: SIM-1G deposit outcomes that leave the computation short at its deadline.
+DEPOSIT_BREACH_OUTCOMES = frozenset({"SHORT", "LATE", "NOT_DECLARED_IN_PACK"})
+
+
+@dataclass(frozen=True, slots=True)
+class DepositDraw:
+    """One computation's drawn deposit behaviour under the pack's SYNTHETIC policy.
+
+    ``outcome`` is ON_TIME, SHORT or LATE. ``short_fraction`` is the share of the
+    needed deposit left unpaid on a SHORT draw.
+    """
+
+    outcome: str
+    short_fraction: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class DepositPolicy:
+    """SIM-1G synthetic deposit policy for both reserve computations of one day."""
+
+    customer: DepositDraw
+    pab: DepositDraw
+    #: Equity capital of the one synthetic non-affiliated reserve bank (Rule 15c3-3(e)(5) cap).
+    bank_equity_capital: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class ReserveDeposit:
+    """What the simulator did for one reserve computation, read back from the books."""
+
+    computation: str
+    opening_balance: Decimal
+    requirement: Decimal | None
+    needed: Decimal | None
+    drawn_outcome: str
+    outcome: str
+    amount: Decimal
+    deposit_date: date | None
+    deadline: date
+    balance_at_deadline: Decimal
+    closing_balance: Decimal
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +133,7 @@ class EstateResult:
     net_capital_figure: Decimal | None
     control_figure: Decimal | None
     protection_reasons: dict[str, tuple[str, ...]]
+    reserve_deposits: tuple[ReserveDeposit, ...]
     books_digest: str
     settled_quantity: Decimal
     settlement_residual_two_sided: bool
@@ -266,6 +316,8 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     financing_charge: Decimal | None,
     post_financing: bool = True,
     pab_fail_to_receive: tuple[Decimal, Decimal] | None = None,
+    reserve_bank_opening: tuple[Decimal, Decimal] = (Decimal(0), Decimal(0)),
+    deposit_policy: DepositPolicy | None = None,
 ) -> EstateResult:
     """Drive L.C. then Atreides; checks elsewhere only compare their outputs.
 
@@ -710,6 +762,19 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     # Rule 15c3-3(e)(4): the PAB computation is run with the same-date customer
     # computation's excess debits attached (with_customer_excess_debits).
     pab_reserve = compute_reserve(with_customer_excess_debits(pab_reserve_inputs, reserve), rules)
+    reserve, pab_reserve, reserve_deposits = _post_reserve_deposits(
+        books=books,
+        run_number=run_number,
+        business_date=business_date,
+        calendar=calendar,
+        actor=actor,
+        rules=rules,
+        reserve_inputs=reserve_inputs,
+        pab_reserve_inputs=pab_reserve_inputs,
+        sized_from=(reserve, pab_reserve),
+        opening=reserve_bank_opening,
+        policy=deposit_policy,
+    )
     capital = compute_net_capital(net_capital_inputs, rules)
     control = check_possession_or_control(control_inputs, rules)
     control_figure = (
@@ -779,6 +844,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             "net_capital": capital.reasons + capital.missing_inputs + capital.breaches,
             "possession_or_control": control.reasons + control.missing_inputs + control.breaches,
         },
+        reserve_deposits=reserve_deposits,
         books_digest=books.digest(),
         settled_quantity=settlement.allocated_quantity,
         settlement_residual_two_sided=(
@@ -791,3 +857,206 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         customer_total_credits=customer_total_credits,
         pab_total_credits=pab_total_credits,
     )
+
+
+_RESERVE_BANK = "SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+#: Deposits and withdrawals move whole cents; the requirement itself is not rounded.
+CENT = Decimal("0.01")
+
+
+def _deposit_entry(
+    *,
+    entry_id: str,
+    event_number: int,
+    account_type: AccountType,
+    amount: Decimal,
+    effective: date,
+    authority: str,
+    actor: ActorRef,
+) -> JournalEntry:
+    """A balanced cash movement between firm cash and one reserve bank account."""
+    event_id = _identifier("evt_", event_number)
+    return JournalEntry(
+        entry_id=entry_id,
+        source_event_id=event_id,
+        source=PostingSource.CASH_MOVEMENT,
+        effective_date=effective,
+        effective_date_basis="VALUE_DATE",
+        authority=authority,
+        lines=(
+            LedgerLine(
+                account_id=f"{account_type.value}@{_RESERVE_BANK}",
+                account_type=account_type,
+                record_side=RecordSide.MONEY,
+                currency="USD",
+                money=amount,
+            ),
+            LedgerLine(
+                account_id="FIRM-OPERATING-CASH",
+                account_type=AccountType.CASH,
+                record_side=RecordSide.MONEY,
+                currency="USD",
+                money=-amount,
+            ),
+        ),
+        posting=BooksPosting(
+            posted_record_id=entry_id,
+            posting_authority=actor,
+            effective_time=datetime.combine(effective, datetime.min.time(), tzinfo=UTC),
+            source_event_id=EventId(event_id),
+            provenance=Provenance.FACT_SYNTHETIC,
+        ),
+        synthetic=True,
+    )
+
+
+def _post_reserve_deposits(
+    *,
+    books: EquitiesBooks,
+    run_number: int,
+    business_date: date,
+    calendar: MarketCalendar,
+    actor: ActorRef,
+    rules: RuleTable,
+    reserve_inputs: ReserveInputs,
+    pab_reserve_inputs: ReserveInputs,
+    sized_from: tuple[ReserveResult, ReserveResult],
+    opening: tuple[Decimal, Decimal],
+    policy: DepositPolicy | None,
+) -> tuple[ReserveResult, ReserveResult, tuple[ReserveDeposit, ...]]:
+    """SIM-1G: post each computation's Reserve Bank Account deposit, then recompute.
+
+    17 CFR 240.15c3-3(e)(3)(i)(A), pinned source sha256 c7d7067f...: computations
+    "must be made weekly, as of the close of the last business day of the week, and
+    the deposit so computed must be made no later than one hour after the opening of
+    banking business on the second following business day." Paragraph (e)(3)(i)(B)(1)
+    (daily computations) and paragraph (e)(3)(iv) (additional computations on any
+    business day) set the same deadline. The simulator computes every business day,
+    so each computation's deadline is the second following business day.
+
+    17 CFR 240.15c3-3(g): withdrawals are permitted "if and to the extent that at the
+    time of the withdrawal the amount remaining ... is not less than the amount then
+    required". An over-funded account is therefore drawn down to the requirement.
+
+    Declared simplifications (SYNTHETIC policy, not firm practice): business days come
+    from the loaded US equities calendar, not a bank holiday calendar; the intraday
+    "one hour after the opening" is not modelled, so an ON_TIME deposit is effective on
+    the deadline date and a LATE one on the next business day; the account is held at
+    one non-affiliated bank with declared equity capital; no qualified securities.
+    Cash moves in whole cents: a full deposit rounds up, a SHORT deposit rounds down,
+    and a withdrawal rounds toward zero, so rounding never creates or hides a breach.
+    """
+    deadline = calendar.add_business_days(business_date, 2)
+    accounts = (
+        ("customer", AccountType.RESERVE_BANK_CUSTOMER),
+        ("pab", AccountType.RESERVE_BANK_PAB),
+    )
+    draws = (None, None) if policy is None else (policy.customer, policy.pab)
+    plans: list[
+        tuple[str, Decimal, Decimal | None, Decimal | None, str, str, Decimal, date | None]
+    ] = []
+    for index, ((name, account_type), result, balance, draw) in enumerate(
+        zip(accounts, sized_from, opening, draws, strict=True)
+    ):
+        base_event = 400_000_000 + run_number * 10 + index * 3
+        if balance != 0:
+            books.post(
+                _deposit_entry(
+                    entry_id=f"SIM-1G-{name.upper()}-BROUGHT-FORWARD-{run_number}",
+                    event_number=base_event,
+                    account_type=account_type,
+                    amount=balance,
+                    effective=business_date,
+                    authority="SIM-1G_SYNTHETIC_BALANCE_BROUGHT_FORWARD",
+                    actor=actor,
+                )
+            )
+        requirement = result.requirement_after_customer_excess_debits
+        needed = None if requirement is None else requirement - balance
+        drawn = "NOT_DECLARED_IN_PACK" if draw is None else draw.outcome
+        amount = Decimal(0)
+        deposit_date: date | None = None
+        if needed is None:
+            outcome = "NOT_COMPUTED"
+        elif draw is None:
+            outcome = "NOT_DECLARED_IN_PACK" if needed > 0 else "NO_DEPOSIT_NEEDED"
+        elif needed < 0:
+            # Toward zero, so the account never falls below the requirement (Rule 15c3-3(g)).
+            amount = needed.quantize(CENT, rounding=ROUND_CEILING)
+            outcome, deposit_date = "WITHDRAWAL_TO_REQUIREMENT", deadline
+            if amount == 0:
+                outcome, deposit_date = "NO_DEPOSIT_NEEDED", None
+        elif needed == 0:
+            outcome = "NO_DEPOSIT_NEEDED"
+        elif draw.outcome == "SHORT":
+            amount = (needed * (1 - draw.short_fraction)).quantize(CENT, rounding=ROUND_FLOOR)
+            outcome, deposit_date = "SHORT", deadline
+        elif draw.outcome == "LATE":
+            outcome, amount = "LATE", needed.quantize(CENT, rounding=ROUND_CEILING)
+            deposit_date = calendar.add_business_days(deadline, 1)
+        else:
+            amount = needed.quantize(CENT, rounding=ROUND_CEILING)
+            outcome, deposit_date = "ON_TIME", deadline
+        if amount != 0 and deposit_date is not None:
+            books.post(
+                _deposit_entry(
+                    entry_id=f"SIM-1G-{name.upper()}-{outcome}-{run_number}",
+                    event_number=base_event + 1,
+                    account_type=account_type,
+                    amount=amount,
+                    effective=deposit_date,
+                    authority="SIM-1G_SYNTHETIC_RESERVE_DEPOSIT_POLICY",
+                    actor=actor,
+                )
+            )
+        plans.append(
+            (name, balance, requirement, needed, drawn, outcome, amount, deposit_date)
+        )
+    at_deadline = reserve_bank_balances(books, through=deadline)
+    closing = reserve_bank_balances(books, through=date.max)
+    equity = None if policy is None else policy.bank_equity_capital
+
+    def counted(inputs: ReserveInputs, account_type: AccountType) -> ReserveInputs:
+        cash = at_deadline[account_type]
+        if cash == 0:
+            return inputs
+        return inputs.model_copy(
+            update={
+                "cash_deposits": (
+                    BankCashDeposit(
+                        bank=_RESERVE_BANK,
+                        amount=cash,
+                        affiliated=False,
+                        bank_equity_capital=equity,
+                    ),
+                )
+            }
+        )
+
+    reserve = compute_reserve(counted(reserve_inputs, AccountType.RESERVE_BANK_CUSTOMER), rules)
+    pab_reserve = compute_reserve(
+        with_customer_excess_debits(
+            counted(pab_reserve_inputs, AccountType.RESERVE_BANK_PAB), reserve
+        ),
+        rules,
+    )
+    deposits = tuple(
+        ReserveDeposit(
+            computation=name,
+            opening_balance=balance,
+            requirement=requirement,
+            needed=needed,
+            drawn_outcome=drawn,
+            outcome=outcome,
+            amount=amount,
+            deposit_date=deposit_date,
+            deadline=deadline,
+            balance_at_deadline=at_deadline[account_type],
+            closing_balance=closing[account_type],
+        )
+        for (name, balance, requirement, needed, drawn, outcome, amount, deposit_date), (
+            _,
+            account_type,
+        ) in zip(plans, accounts, strict=True)
+    )
+    return reserve, pab_reserve, deposits
