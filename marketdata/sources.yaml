@@ -1,14 +1,6 @@
 {
   "schema_version": "cfma.sources/1",
-  "deferred_sources": [
-    {
-      "id": "ofr_repo_market_volume",
-      "catalog_url": "https://www.financialresearch.gov/short-term-funding-monitor/datasets/repo/",
-      "data_host": "data.financialresearch.gov",
-      "status": "NOT_ADMITTED_HOST",
-      "reason": "DATA-1 v0.2 names the OFR site but not its separate data host; no fetch is permitted until that host is expressly admitted"
-    }
-  ],
+  "deferred_sources": [],
   "notices": {
     "nyfed_sofr": "The SOFR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the SOFR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
     "nyfed_bgcr": "The BGCR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the BGCR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
@@ -63,6 +55,118 @@
       "kind": "nyfed_rate_json",
       "citation": "Federal Reserve Bank of New York published OBFR values, 2019",
       "notice_id": "nyfed_obfr"
+    },
+    {
+      "id": "treasury_yield_2020",
+      "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2020/all?type=daily_treasury_yield_curve&field_tdr_date_value=2020&page&_format=csv",
+      "license_class": "A",
+      "kind": "treasury_yield_csv",
+      "citation": "U.S. Department of the Treasury daily par yield curve rates, 2020"
+    },
+    {
+      "id": "treasury_yield_2023",
+      "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv",
+      "license_class": "A",
+      "kind": "treasury_yield_csv",
+      "citation": "U.S. Department of the Treasury daily par yield curve rates, 2023"
+    },
+    {
+      "id": "nyfed_sofr_2020",
+      "url": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2020-01-01&endDate=2020-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published SOFR values, 2020",
+      "notice_id": "nyfed_sofr"
+    },
+    {
+      "id": "nyfed_bgcr_2020",
+      "url": "https://markets.newyorkfed.org/api/rates/secured/bgcr/search.json?startDate=2020-01-01&endDate=2020-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published BGCR values, 2020",
+      "notice_id": "nyfed_bgcr"
+    },
+    {
+      "id": "nyfed_tgcr_2020",
+      "url": "https://markets.newyorkfed.org/api/rates/secured/tgcr/search.json?startDate=2020-01-01&endDate=2020-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published TGCR values, 2020",
+      "notice_id": "nyfed_tgcr"
+    },
+    {
+      "id": "nyfed_effr_2020",
+      "url": "https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=2020-01-01&endDate=2020-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published EFFR values, 2020",
+      "notice_id": "nyfed_effr"
+    },
+    {
+      "id": "nyfed_obfr_2020",
+      "url": "https://markets.newyorkfed.org/api/rates/unsecured/obfr/search.json?startDate=2020-01-01&endDate=2020-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published OBFR values, 2020",
+      "notice_id": "nyfed_obfr"
+    },
+    {
+      "id": "nyfed_sofr_2023",
+      "url": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published SOFR values, 2023",
+      "notice_id": "nyfed_sofr"
+    },
+    {
+      "id": "nyfed_bgcr_2023",
+      "url": "https://markets.newyorkfed.org/api/rates/secured/bgcr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published BGCR values, 2023",
+      "notice_id": "nyfed_bgcr"
+    },
+    {
+      "id": "nyfed_tgcr_2023",
+      "url": "https://markets.newyorkfed.org/api/rates/secured/tgcr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published TGCR values, 2023",
+      "notice_id": "nyfed_tgcr"
+    },
+    {
+      "id": "nyfed_effr_2023",
+      "url": "https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published EFFR values, 2023",
+      "notice_id": "nyfed_effr"
+    },
+    {
+      "id": "nyfed_obfr_2023",
+      "url": "https://markets.newyorkfed.org/api/rates/unsecured/obfr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+      "license_class": "B",
+      "kind": "nyfed_rate_json",
+      "citation": "Federal Reserve Bank of New York published OBFR values, 2023",
+      "notice_id": "nyfed_obfr"
+    },
+    {
+      "id": "ofr_repo_2020",
+      "url": "https://data.financialresearch.gov/v1/series/multifull?mnemonics=REPO-DVP_AR_TOT-F%2CREPO-DVP_TV_TOT-F%2CREPO-GCF_AR_TOT-F%2CREPO-GCF_TV_TOT-F%2CREPO-TRI_AR_TOT-F%2CREPO-TRI_TV_TOT-F&start_date=2020-02-10&end_date=2020-03-31",
+      "license_class": "A",
+      "kind": "ofr_repo_json",
+      "citation": "Office of Financial Research U.S. Repo Markets Data Release, final total rates and transaction volumes for DVP, GCF and tri-party repo, 2020 stress window",
+      "catalog_url": "https://www.financialresearch.gov/short-term-funding-monitor/datasets/repo/",
+      "terms_reference": "https://www.financialresearch.gov/short-term-funding-monitor/documentation/"
+    },
+    {
+      "id": "ofr_repo_2023",
+      "url": "https://data.financialresearch.gov/v1/series/multifull?mnemonics=REPO-DVP_AR_TOT-F%2CREPO-DVP_TV_TOT-F%2CREPO-GCF_AR_TOT-F%2CREPO-GCF_TV_TOT-F%2CREPO-TRI_AR_TOT-F%2CREPO-TRI_TV_TOT-F&start_date=2023-02-09&end_date=2023-03-24",
+      "license_class": "A",
+      "kind": "ofr_repo_json",
+      "citation": "Office of Financial Research U.S. Repo Markets Data Release, final total rates and transaction volumes for DVP, GCF and tri-party repo, 2023 stress window",
+      "catalog_url": "https://www.financialresearch.gov/short-term-funding-monitor/datasets/repo/",
+      "terms_reference": "https://www.financialresearch.gov/short-term-funding-monitor/documentation/"
     },
     {
       "id": "treasury_fiscal_auctions",

@@ -1,7 +1,9 @@
 {
   "current": {
     "baseline-2019-q2": "4",
-    "repo-spike-2019": "5"
+    "repo-spike-2019": "5",
+    "stress-2020-03": "1",
+    "stress-2023-03": "1"
   },
   "packs": {
     "baseline-2019-q2/1": "sha256:dec6be4c0c9fe354a607cbfb8a92fd7f0e9f9a3e3087edb86c6a688d8e09f4d0",
@@ -12,7 +14,9 @@
     "repo-spike-2019/2": "sha256:52c066b2f18eabfd95732002fe487f9b6bc2092956539ac638ade58ccb74820f",
     "repo-spike-2019/3": "sha256:fd5f1ca78d8936afbacc7f99a553325c04fe1559886311b7747ba0bad1650bd9",
     "repo-spike-2019/4": "sha256:9c82868a976f6ccf441c47cb21a714c21406d10ae6aaa85980ce87dcd64b973a",
-    "repo-spike-2019/5": "sha256:7ba4c5261cce790a9acee3d3d72f65ee9d59976704c1343b77ea9550ed3d748b"
+    "repo-spike-2019/5": "sha256:7ba4c5261cce790a9acee3d3d72f65ee9d59976704c1343b77ea9550ed3d748b",
+    "stress-2020-03/1": "sha256:470887d7261dec1c06edde0acd3f5bcd36c73a86ebae5e95e9ae3695773e0125",
+    "stress-2023-03/1": "sha256:db4ba240f71156f3fd98be0956e2cc77be74c4901253a33695f94b4a90a8fb32"
   },
   "schema_version": "cfma.pack-locks/1",
   "superseded": {
