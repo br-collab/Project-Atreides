@@ -3,7 +3,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-09",
-      "economics_digest": "sha256:c84d19d75b47b67d1abbe3c4fe88e8b204f3a24471da61f88cacaf295d025b9c",
+      "economics_digest": "sha256:67bd3264075f81639ab6fff14cd854fa3521f244822682f65937f89a0a920db8",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -47,15 +47,15 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "900000000.00",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-13",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "deposit_date": "2023-02-13",
+            "drawn_outcome": "ON_TIME",
             "needed": "900000000.00",
             "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "outcome": "ON_TIME",
             "requirement": "900000000.00"
           },
           "pab": {
@@ -64,7 +64,7 @@
             "closing_balance": "0",
             "deadline": "2023-02-13",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -94,8 +94,7 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -126,7 +125,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-10",
-      "economics_digest": "sha256:aa034a16f0aeb7970ed7923f0a638abe83e956442861925f3e515bfa467935a8",
+      "economics_digest": "sha256:9eb87eeb3212ef4cc49ccd61e7d345eb31ff40602939b218b9af78893d70f73b",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -171,14 +170,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-14",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "900000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "900000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "900000000.00"
           },
           "pab": {
@@ -187,7 +186,7 @@
             "closing_balance": "0",
             "deadline": "2023-02-14",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -217,8 +216,7 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -246,7 +244,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-13",
-      "economics_digest": "sha256:edf053eed84ffc8e79cc722c865e6bda8f10ab54732d25f3c011a33c855abf93",
+      "economics_digest": "sha256:28170742b0cc233b55405e7941728d7325dcdea891784de730df87bfb6e7c57b",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -289,14 +287,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-15",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "900000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "900000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "900000000.00"
           },
           "pab": {
@@ -305,7 +303,7 @@
             "closing_balance": "0",
             "deadline": "2023-02-15",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -335,8 +333,7 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -364,7 +361,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-14",
-      "economics_digest": "sha256:3dddb36760cb024cb6284a24f04fc636f8280b3e0783db282d15580f5c7df55f",
+      "economics_digest": "sha256:832609f14bf0e1b447b062271ef7fd2f979dac8a6f2193f8b7bb90ebc787a67c",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -407,14 +404,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-16",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "900000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "900000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "900000000.00"
           },
           "pab": {
@@ -423,7 +420,7 @@
             "closing_balance": "0",
             "deadline": "2023-02-16",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -453,8 +450,7 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -482,7 +478,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-15",
-      "economics_digest": "sha256:76c2f939b43680e650bfc2fe1e1a5e135ccd499522e0d9589b331c6ea5fd25eb",
+      "economics_digest": "sha256:6ca73d719e58830cb733de10bdb6f6b216a5ef4e3d85fb519a7189498f89493b",
       "fails_by_age": {
         "age_1": 1
       },
@@ -527,13 +523,13 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-17",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "0",
+            "opening_balance": "900000000.00",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
@@ -543,7 +539,7 @@
             "closing_balance": "0",
             "deadline": "2023-02-17",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
             "opening_balance": "0",
             "outcome": "NOT_COMPUTED",
@@ -609,7 +605,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-16",
-      "economics_digest": "sha256:c1f739b6bb6248b7ae42eb9ca853184f33a57aac958e5c6a33f6c32406b251dd",
+      "economics_digest": "sha256:975a9ee7d5f6f5e4bff0a3533d9f32b279b7891ea1a1e58295b6a68d30f7f714",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -652,26 +648,26 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-21",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "900000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "900000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "900000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "1712030.00",
+            "balance_at_deadline": "1712030.00",
+            "closing_balance": "1712030.00",
             "deadline": "2023-02-21",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "deposit_date": "2023-02-21",
+            "drawn_outcome": "ON_TIME",
             "needed": "1712030.00",
             "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "outcome": "ON_TIME",
             "requirement": "1712030.00"
           }
         },
@@ -694,13 +690,11 @@
         "reasons": {
           "net_capital": [],
           "pab_reserve": [
-            "average_total_credits",
-            "pab reserve deposit is short of the requirement by 1712030.00"
+            "average_total_credits"
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -728,7 +722,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-17",
-      "economics_digest": "sha256:8150b7638ea1ff16cfc40729cb3bc92996cf72754e90d7604b68a28fedcf1ee9",
+      "economics_digest": "sha256:a31ef9bb5c6e26d6358c2314ae8494cb900134cd6d166887811fa6cc17e40c85",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -771,26 +765,26 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-22",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "900000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "900000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "900000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "-1712030.00",
+            "balance_at_deadline": "0.00",
+            "closing_balance": "0.00",
             "deadline": "2023-02-22",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "0",
-            "opening_balance": "0",
-            "outcome": "NO_DEPOSIT_NEEDED",
+            "deposit_date": "2023-02-22",
+            "drawn_outcome": "ON_TIME",
+            "needed": "-1712030.00",
+            "opening_balance": "1712030.00",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
             "requirement": "0"
           }
         },
@@ -817,8 +811,7 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -846,7 +839,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-21",
-      "economics_digest": "sha256:c8317f797198735e41b61ffaf7c9f66cc7d6ede66980431c3f0bc0d5b261f196",
+      "economics_digest": "sha256:dfcaa427e7f439e5d3bb162db2768134c373dea85df2a9f610c4b8618e8e0645",
       "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL",
@@ -891,13 +884,13 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-23",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "0",
+            "opening_balance": "900000000.00",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
@@ -907,9 +900,9 @@
             "closing_balance": "0",
             "deadline": "2023-02-23",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "0",
+            "opening_balance": "0.00",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           }
@@ -973,7 +966,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-22",
-      "economics_digest": "sha256:aa56624161e9b846e4d30eedee2ad3c9589f83d490706fe2c1de0fe28b23dba4",
+      "economics_digest": "sha256:e5a0cca53c359392a6858c02c527695cede4f41d3151a2d1d7a4142d25358143",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -1016,26 +1009,26 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-24",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "900000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "900000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "900000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "2362210.00",
+            "balance_at_deadline": "2362210.00",
+            "closing_balance": "2362210.00",
             "deadline": "2023-02-24",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "deposit_date": "2023-02-24",
+            "drawn_outcome": "ON_TIME",
             "needed": "2362210.00",
             "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "outcome": "ON_TIME",
             "requirement": "2362210.00"
           }
         },
@@ -1058,13 +1051,11 @@
         "reasons": {
           "net_capital": [],
           "pab_reserve": [
-            "average_total_credits",
-            "pab reserve deposit is short of the requirement by 2362210.00"
+            "average_total_credits"
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -1092,7 +1083,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-23",
-      "economics_digest": "sha256:1d722aef7dbe17aeb06c17fdafb866ac0ba1ecfce4fcd7d295b7577f210e326f",
+      "economics_digest": "sha256:ce69461303460f025ff8e33e9d0c1715afdf56b9020fa8b9965279315821ee07",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -1135,26 +1126,26 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-27",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "900000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "900000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "900000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "-2362210.00",
+            "balance_at_deadline": "0.00",
+            "closing_balance": "0.00",
             "deadline": "2023-02-27",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "0",
-            "opening_balance": "0",
-            "outcome": "NO_DEPOSIT_NEEDED",
+            "deposit_date": "2023-02-27",
+            "drawn_outcome": "ON_TIME",
+            "needed": "-2362210.00",
+            "opening_balance": "2362210.00",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
             "requirement": "0"
           }
         },
@@ -1181,8 +1172,7 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -1210,7 +1200,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-24",
-      "economics_digest": "sha256:60737a3ad159079e7ae8dce5fb482c4ce5774240e76dc595f4d010c2b2e74b4f",
+      "economics_digest": "sha256:2daa29d855a7d0664838b76a033c40ac3fe52441f0b6c38bb1f9394afb4f74a0",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -1253,14 +1243,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-02-28",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "900000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "900000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "900000000.00"
           },
           "pab": {
@@ -1269,9 +1259,9 @@
             "closing_balance": "0",
             "deadline": "2023-02-28",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "0",
-            "opening_balance": "0",
+            "drawn_outcome": "SHORT",
+            "needed": "0.00",
+            "opening_balance": "0.00",
             "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "0"
           }
@@ -1299,8 +1289,7 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -1328,7 +1317,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-27",
-      "economics_digest": "sha256:c661c324785a587080df7fb0e079a4c22fb2f1b2a6bb7fa7c12a35a4bb34e061",
+      "economics_digest": "sha256:5cc89d0efd65f1d3c984cfff102110fad27a330e4076e0fc20367ff5b3e01bed",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -1371,14 +1360,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-03-01",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "900000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "900000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "900000000.00"
           },
           "pab": {
@@ -1387,7 +1376,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-01",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -1417,8 +1406,7 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "average_total_credits",
-            "customer reserve deposit is short of the requirement by 900000000.00"
+            "average_total_credits"
           ]
         },
         "reasons_required": {
@@ -1446,7 +1434,7 @@
     {
       "breaks": [],
       "business_date": "2023-02-28",
-      "economics_digest": "sha256:0e2839b70fd9cc7a495079b474e8d94307f15e60055a47bc95a318be1aa8c6d3",
+      "economics_digest": "sha256:f9812062c3660a664c9ae1cf1caae64c2d1b4ce4ceb504259382722ab8ac6af1",
       "fails_by_age": {},
       "holds": [
         "STALE_MARKET_DATA",
@@ -1490,13 +1478,13 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-03-02",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "0",
+            "opening_balance": "900000000.00",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
@@ -1506,7 +1494,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-02",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
             "opening_balance": "0",
             "outcome": "NOT_COMPUTED",
@@ -1571,7 +1559,7 @@
     {
       "breaks": [],
       "business_date": "2023-03-01",
-      "economics_digest": "sha256:e44e56944fe03ea9e6685a35b9c6afd807c637837da6b42097a03ccf2050cb32",
+      "economics_digest": "sha256:ab9bc2bb0ddf04ec796532682a8f8a730da3fbf44ff8feb9b745582c0f0b410a",
       "fails_by_age": {},
       "holds": [
         "STALE_MARKET_DATA",
@@ -1615,13 +1603,13 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "900000000.00",
+            "closing_balance": "900000000.00",
             "deadline": "2023-03-03",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "0",
+            "opening_balance": "900000000.00",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
@@ -1631,7 +1619,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-03",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
             "opening_balance": "0",
             "outcome": "NOT_COMPUTED",
@@ -1696,11 +1684,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-02",
-      "economics_digest": "sha256:3121583fb13ec816f6a02f39790ca46a20b2947a696c9d491f99561249fd820f",
+      "economics_digest": "sha256:5d8b7ffbe1c08b6502f7d25abcad7a7381624e06931539833cc21c437a662c9e",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -1738,15 +1724,15 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "-850000000.00",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-06",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "deposit_date": "2023-03-06",
+            "drawn_outcome": "ON_TIME",
+            "needed": "-850000000.00",
+            "opening_balance": "900000000.00",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
             "requirement": "50000000.00"
           },
           "pab": {
@@ -1755,7 +1741,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-06",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "SHORT",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -1766,7 +1752,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -1776,7 +1762,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -1785,15 +1771,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -1814,7 +1799,7 @@
     {
       "breaks": [],
       "business_date": "2023-03-03",
-      "economics_digest": "sha256:322293ed3cc187501bdd5babd9416ed86d32aa653332ae8d239af1f52afd1691",
+      "economics_digest": "sha256:4bc76c015201d53907b609ee56bec6628e1fc794b61ec363ee53104a8541b0d2",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -1857,13 +1842,13 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-07",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "0",
+            "opening_balance": "50000000.00",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
@@ -1873,7 +1858,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-07",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
             "opening_balance": "0",
             "outcome": "NOT_COMPUTED",
@@ -1938,11 +1923,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-06",
-      "economics_digest": "sha256:8e2290d207cb13dbade12acb108dd3fcd60ed29e48b2f25838b91c431f46e710",
+      "economics_digest": "sha256:3bbeb20c1567c026ebda6fbe8a4471dde4732be1af38e720ba933320893ba35f",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -1981,34 +1964,34 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-08",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "1926760.00",
+            "balance_at_deadline": "1926760.00",
+            "closing_balance": "1926760.00",
             "deadline": "2023-03-08",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "deposit_date": "2023-03-08",
+            "drawn_outcome": "ON_TIME",
             "needed": "1926760.00",
             "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "outcome": "ON_TIME",
             "requirement": "1926760.00"
           }
         },
         "dispositions": {
           "net_capital": "PASS",
-          "pab_reserve": "HOLD",
+          "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -2017,26 +2000,24 @@
           "reserve_requirement": "50000000.00"
         },
         "holds_required": {
-          "pab_reserve": true,
-          "reserve": true
+          "pab_reserve": false,
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
           "pab_reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "pab reserve deposit is short of the requirement by 1926760.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
-          "pab_reserve": "reserve deposit is short of the requirement",
-          "reserve": "reserve deposit is short of the requirement"
+          "pab_reserve": null,
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -2057,7 +2038,7 @@
     {
       "breaks": [],
       "business_date": "2023-03-07",
-      "economics_digest": "sha256:2023cbb284da755fc11817f54269e36e181288ca381cd4afaf5df67b0f6cfb75",
+      "economics_digest": "sha256:4cf8e2cd9ba203d14d310537c2f6bdff2c4992535d814c3f007a51d27dc8cae3",
       "fails_by_age": {},
       "holds": [
         "STALE_MARKET_DATA",
@@ -2101,25 +2082,25 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-09",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "0",
+            "opening_balance": "50000000.00",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
           "pab": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "1926760.00",
+            "closing_balance": "1926760.00",
             "deadline": "2023-03-09",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "LATE",
             "needed": null,
-            "opening_balance": "0",
+            "opening_balance": "1926760.00",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           }
@@ -2182,11 +2163,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-08",
-      "economics_digest": "sha256:fd3a8cb2519c391115a7acbaa03c8d669872d9410f58731f8829c6e289ac1105",
+      "economics_digest": "sha256:549f5672aeaf3817a18dc62f4188aacf41d34e527a56771849223693cc5918f5",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -2225,34 +2204,34 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-10",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "SHORT",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "-840230.00",
+            "balance_at_deadline": "1086530.00",
+            "closing_balance": "1086530.00",
             "deadline": "2023-03-10",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "1086530.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "deposit_date": "2023-03-10",
+            "drawn_outcome": "ON_TIME",
+            "needed": "-840230.00",
+            "opening_balance": "1926760.00",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
             "requirement": "1086530.00"
           }
         },
         "dispositions": {
           "net_capital": "PASS",
-          "pab_reserve": "HOLD",
+          "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -2261,26 +2240,24 @@
           "reserve_requirement": "50000000.00"
         },
         "holds_required": {
-          "pab_reserve": true,
-          "reserve": true
+          "pab_reserve": false,
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
           "pab_reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "pab reserve deposit is short of the requirement by 1086530.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
-          "pab_reserve": "reserve deposit is short of the requirement",
-          "reserve": "reserve deposit is short of the requirement"
+          "pab_reserve": null,
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -2301,11 +2278,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-09",
-      "economics_digest": "sha256:23debd39479f6099a1ca39f3fed9ce6bd861bd38d8cea4e1fc7bc0cbff12089b",
+      "economics_digest": "sha256:2da969837c8db98222ed476c3a76b950fd85e22ae62476936559342630ac5d52",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -2344,26 +2319,26 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-13",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "-1086530.00",
+            "balance_at_deadline": "0.00",
+            "closing_balance": "0.00",
             "deadline": "2023-03-13",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "0",
-            "opening_balance": "0",
-            "outcome": "NO_DEPOSIT_NEEDED",
+            "deposit_date": "2023-03-13",
+            "drawn_outcome": "ON_TIME",
+            "needed": "-1086530.00",
+            "opening_balance": "1086530.00",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
             "requirement": "0"
           }
         },
@@ -2371,7 +2346,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -2381,7 +2356,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -2390,15 +2365,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -2420,11 +2394,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-10",
-      "economics_digest": "sha256:89e56f40473a7545403b231fc56aff903fa7c5c1cc9d8aba6e6f37b1cca63ef1",
+      "economics_digest": "sha256:c6459614a801b726c18787b7d2ffc1550f31c6dff79823da0235be1a53512149",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -2463,14 +2435,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-14",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
@@ -2479,9 +2451,9 @@
             "closing_balance": "0",
             "deadline": "2023-03-14",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "0",
-            "opening_balance": "0",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "0.00",
             "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "0"
           }
@@ -2490,7 +2462,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -2500,7 +2472,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -2509,15 +2481,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -2538,11 +2509,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-13",
-      "economics_digest": "sha256:112ef1396e93f739b790da7195c02a2d0849fac7cb7c017bd8b53aee8f411ddb",
+      "economics_digest": "sha256:9bf98f4b6430fee4ab05cdc57f97e9b499893b1267a32a15ff1d8636300a3fde",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -2581,14 +2550,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-15",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
@@ -2597,7 +2566,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-15",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -2608,7 +2577,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -2618,7 +2587,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -2627,15 +2596,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -2656,11 +2624,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-14",
-      "economics_digest": "sha256:4720995f7e9a0977bcb8c23e4ee234d03ad547e33235b5001bfc7e5a9655a7f7",
+      "economics_digest": "sha256:9e14adcc9e6e7d70fec3381537c252ebae7486c0b99ba2375ec6c8b324454d4c",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -2701,14 +2667,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-16",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
@@ -2717,7 +2683,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-16",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -2728,7 +2694,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -2738,7 +2704,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -2747,15 +2713,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -2777,7 +2742,7 @@
     {
       "breaks": [],
       "business_date": "2023-03-15",
-      "economics_digest": "sha256:20553dda0f7c476922f8d3ccf273d715429cccdc2e75566226f71251e041afad",
+      "economics_digest": "sha256:664bc643336d5006baa5a26c0a6b0d4bc8c0cb0ffeae68e2bd88fd4215a2ff62",
       "fails_by_age": {},
       "holds": [
         "STALE_MARKET_DATA",
@@ -2821,13 +2786,13 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-17",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "0",
+            "opening_balance": "50000000.00",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
@@ -2837,7 +2802,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-17",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "LATE",
             "needed": null,
             "opening_balance": "0",
             "outcome": "NOT_COMPUTED",
@@ -2904,11 +2869,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-16",
-      "economics_digest": "sha256:916348b13f3cd60d0393222253a311593ae4afd9ec7e461c462265291c66b83d",
+      "economics_digest": "sha256:72c5adebe71153eb759dfaa4dea4542f04619055b0d739f1818b34330309e7b9",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -2947,14 +2910,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-20",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
@@ -2963,7 +2926,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-20",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -2974,7 +2937,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -2984,7 +2947,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -2993,15 +2956,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -3022,11 +2984,10 @@
     {
       "breaks": [],
       "business_date": "2023-03-17",
-      "economics_digest": "sha256:7a9ba7fa176f34f8a17637a835b1faf19a251d5618521bdf17295872a430d21c",
+      "economics_digest": "sha256:b62e1e5f6e3ef30a38649a3f5242c64e3fdc24e931cdd5bcae22d2bc02f5e776",
       "fails_by_age": {},
       "holds": [
-        "DTC_CAP_OR_COLLATERAL",
-        "PROTECTION_INPUTS"
+        "DTC_CAP_OR_COLLATERAL"
       ],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
@@ -3066,14 +3027,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-21",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "SHORT",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
@@ -3082,7 +3043,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-21",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "SHORT",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -3093,7 +3054,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -3103,7 +3064,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -3112,15 +3073,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -3142,11 +3102,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-20",
-      "economics_digest": "sha256:7c4fa4a5dc06aa28e3bbcc0e7cad70a302db37b49fb57931ef71c7dcf6f8f998",
+      "economics_digest": "sha256:253ae27ddadb34118404bdf78c37b69639754f1bbdc6d9d0815e745a91fa2da0",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -3185,14 +3143,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-22",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
@@ -3201,7 +3159,7 @@
             "closing_balance": "0",
             "deadline": "2023-03-22",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
             "needed": "0",
             "opening_balance": "0",
             "outcome": "NO_DEPOSIT_NEEDED",
@@ -3212,7 +3170,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -3222,7 +3180,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -3231,15 +3189,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -3260,11 +3217,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-21",
-      "economics_digest": "sha256:740e3063f6e03e35cb589cd931b51347c5d4dc66913fce10263f620ffb61163d",
+      "economics_digest": "sha256:b38cf537c83ad5f5fa0afb27157dfdc31dab599b2387580349b13c1bb3d7e4e6",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -3303,34 +3258,34 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-23",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "1546310.00",
+            "balance_at_deadline": "1546310.00",
+            "closing_balance": "1546310.00",
             "deadline": "2023-03-23",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "deposit_date": "2023-03-23",
+            "drawn_outcome": "ON_TIME",
             "needed": "1546310.00",
             "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "outcome": "ON_TIME",
             "requirement": "1546310.00"
           }
         },
         "dispositions": {
           "net_capital": "PASS",
-          "pab_reserve": "HOLD",
+          "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -3339,26 +3294,24 @@
           "reserve_requirement": "50000000.00"
         },
         "holds_required": {
-          "pab_reserve": true,
-          "reserve": true
+          "pab_reserve": false,
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
           "pab_reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "pab reserve deposit is short of the requirement by 1546310.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
-          "pab_reserve": "reserve deposit is short of the requirement",
-          "reserve": "reserve deposit is short of the requirement"
+          "pab_reserve": null,
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -3379,11 +3332,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-22",
-      "economics_digest": "sha256:d88abfd98023ff027fc8374f5b093bca8fbc97d8b7c6d5b0149ecbe13cd7191b",
+      "economics_digest": "sha256:b74801e697bd1fa2581dfccb07526f6a781026f7d290f4e2e002af1924b8aadf",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -3422,34 +3373,34 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-24",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "709810.00",
+            "balance_at_deadline": "2256120.00",
+            "closing_balance": "2256120.00",
             "deadline": "2023-03-24",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "2256120.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "deposit_date": "2023-03-24",
+            "drawn_outcome": "ON_TIME",
+            "needed": "709810.00",
+            "opening_balance": "1546310.00",
+            "outcome": "ON_TIME",
             "requirement": "2256120.00"
           }
         },
         "dispositions": {
           "net_capital": "PASS",
-          "pab_reserve": "HOLD",
+          "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -3458,26 +3409,24 @@
           "reserve_requirement": "50000000.00"
         },
         "holds_required": {
-          "pab_reserve": true,
-          "reserve": true
+          "pab_reserve": false,
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
           "pab_reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "pab reserve deposit is short of the requirement by 2256120.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
-          "pab_reserve": "reserve deposit is short of the requirement",
-          "reserve": "reserve deposit is short of the requirement"
+          "pab_reserve": null,
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -3498,11 +3447,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-23",
-      "economics_digest": "sha256:8a11a33805479374886c3a3deabced91f2ec2580982f1e5a7bc7f053ba20403a",
+      "economics_digest": "sha256:f01fd625d209d0a3252d9e624a5691f6ff03ee87c3d2c9f84f838afe1cb6b940",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -3541,26 +3488,26 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-27",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
-            "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "amount": "-2256120.00",
+            "balance_at_deadline": "0.00",
+            "closing_balance": "0.00",
             "deadline": "2023-03-27",
-            "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "0",
-            "opening_balance": "0",
-            "outcome": "NO_DEPOSIT_NEEDED",
+            "deposit_date": "2023-03-27",
+            "drawn_outcome": "ON_TIME",
+            "needed": "-2256120.00",
+            "opening_balance": "2256120.00",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
             "requirement": "0"
           }
         },
@@ -3568,7 +3515,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -3578,7 +3525,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -3587,15 +3534,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [
@@ -3616,11 +3562,9 @@
     {
       "breaks": [],
       "business_date": "2023-03-24",
-      "economics_digest": "sha256:23e46a94fd4c48e84ff9cb61d10ea5bd96cc124a36a09df113488696d49c1aac",
+      "economics_digest": "sha256:66a8097fbf09556ba2bb3dfce58eb7fbb0034c57de9b5e3bfc050f79da6188a7",
       "fails_by_age": {},
-      "holds": [
-        "PROTECTION_INPUTS"
-      ],
+      "holds": [],
       "invariant_results": {
         "I1_QUANTITY_MONEY_CONSERVE": true,
         "I2_BOOKED_FROM_REPORTS": true,
@@ -3661,14 +3605,14 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "0",
-            "closing_balance": "0",
+            "balance_at_deadline": "50000000.00",
+            "closing_balance": "50000000.00",
             "deadline": "2023-03-28",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "50000000.00",
-            "opening_balance": "0",
-            "outcome": "NOT_DECLARED_IN_PACK",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "50000000.00",
+            "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "50000000.00"
           },
           "pab": {
@@ -3677,9 +3621,9 @@
             "closing_balance": "0",
             "deadline": "2023-03-28",
             "deposit_date": null,
-            "drawn_outcome": "NOT_DECLARED_IN_PACK",
-            "needed": "0",
-            "opening_balance": "0",
+            "drawn_outcome": "ON_TIME",
+            "needed": "0.00",
+            "opening_balance": "0.00",
             "outcome": "NO_DEPOSIT_NEEDED",
             "requirement": "0"
           }
@@ -3688,7 +3632,7 @@
           "net_capital": "PASS",
           "pab_reserve": "PASS",
           "possession_or_control": "PASS",
-          "reserve": "HOLD"
+          "reserve": "PASS"
         },
         "figures": {
           "control_shortfall": "0",
@@ -3698,7 +3642,7 @@
         },
         "holds_required": {
           "pab_reserve": false,
-          "reserve": true
+          "reserve": false
         },
         "reasons": {
           "net_capital": [],
@@ -3707,15 +3651,14 @@
           ],
           "possession_or_control": [],
           "reserve": [
-            "the six-month daily-computation phase-in has not reached its evidenced effective date",
-            "customer reserve deposit is short of the requirement by 50000000.00"
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
           ]
         },
         "reasons_required": {
           "pab_reserve": null,
-          "reserve": "reserve deposit is short of the requirement"
+          "reserve": null
         },
-        "required_hold": true
+        "required_hold": false
       },
       "replay_digest_check": true,
       "scenarios": [

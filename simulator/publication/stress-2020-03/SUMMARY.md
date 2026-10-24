@@ -3,23 +3,23 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 # SIM-1 run summary
 
 - Seed: `20261024`
-- Pack: `stress-2020-03` version `1`
-- Manifest: `sha256:470887d7261dec1c06edde0acd3f5bcd36c73a86ebae5e95e9ae3695773e0125`
+- Pack: `stress-2020-03` version `2`
+- Manifest: `sha256:774fc2e5973e7208f166feef4288f8e84c335fe69e78210d238a6b1ac85bfc16`
 - Classes: `A, B, SYNTHETIC`
 - Closes: `36`
 - Window: `2020-02-10` through `2020-03-31` (`explicit dated-pack window`)
 - Final SOFR: `0.01` percent
 - Final financing need: `$104665.25`
 - Final financing charge: `$0.03`
-- Source commit: `21348fea502dcc8a87e33e70365203c6404efe0d`
+- Source commit: `68e348c4fe6ea48d3a58fb7f591d555f8124adc8`
 - Provenance: locally generated from the locked Mac pack; this folder contains run outputs only, not the pack or its data.
 
 ## Reserve protection
 
-- Customer deposit policy: `NOT_DECLARED_IN_PACK`: the pack declares no deposit policy, so no deposit is posted and every positive requirement holds as a shortfall
-- Customer reserve: `0` PASS, `36` HOLD (`29` no declared deposit, `0` simulated short or late deposit, `7` missing inputs or other engine reasons)
-- PAB deposit policy: `NOT_DECLARED_IN_PACK`: the pack declares no deposit policy, so no deposit is posted and every positive requirement holds as a shortfall
-- PAB reserve: `14` PASS, `22` HOLD (`7` no declared deposit, `0` simulated short or late deposit, `15` missing inputs or other engine reasons)
+- Customer deposit policy: declared SYNTHETIC in the pack
+- Customer reserve: `19` PASS, `17` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `17` missing inputs or other engine reasons)
+- PAB deposit policy: declared SYNTHETIC in the pack
+- PAB reserve: `18` PASS, `18` HOLD (`0` no declared deposit, `1` simulated short or late deposit, `17` missing inputs or other engine reasons)
 
 ## New York Fed notices
 
