@@ -930,6 +930,9 @@ def publish_run(run: dict[str, object], output: Path) -> None:
     assert isinstance(final_close, dict)
     final_market = final_close["market_data"]
     assert isinstance(final_market, dict)
+    repository_shas = run["repository_shas"]
+    assert isinstance(repository_shas, dict)
+    source_commit = repository_shas.get("atreides")
     (output / "SUMMARY.md").write_text(
         f"{DISCLAIMER}\n\n"
         "# SIM-1 run summary\n\n"
@@ -942,7 +945,10 @@ def publish_run(run: dict[str, object], output: Path) -> None:
         f"(`{run['window_basis']}`)\n"
         f"- Final SOFR: `{final_market.get('sofr_percent')}` percent\n"
         f"- Final financing need: `${final_market.get('financing_need')}`\n"
-        f"- Final financing charge: `${final_market.get('financing_charge')}`\n\n"
+        f"- Final financing charge: `${final_market.get('financing_charge')}`\n"
+        f"- Source commit: `{source_commit}`\n"
+        "- Provenance: locally generated from the locked Mac pack; this folder contains "
+        "run outputs only, not the pack or its data.\n\n"
         f"## New York Fed notices\n\n{notice_lines}\n\n"
         "## Not tested\n\n- " + "\n- ".join(NOT_TESTED) + "\n"
     )

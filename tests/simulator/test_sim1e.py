@@ -11,6 +11,7 @@ import pytest
 from atreides.deadlines.calendar import Market, MarketCalendar
 from simulator.calibration.loader import PACKS_ROOT
 from simulator.runner import daily_financing_charge, publish_run, run_simulation
+from tools.regenerate_spike_artifacts import label_summary_freshness
 
 
 def _spike_pack(tmp_path: Path) -> Path:
@@ -119,8 +120,18 @@ def test_cli_boundary_requires_both_dates_for_a_dated_pack(tmp_path: Path) -> No
         )
 
 
-def test_committed_spike_publication_is_output_only_and_complete() -> None:
-    publication = Path(__file__).parents[2] / "simulator/publication/spike-2019"
+@pytest.mark.parametrize(
+    ("artifact", "pack_id", "version", "window"),
+    [
+        ("spike-2019", "repo-spike-2019", "5", ("2019-08-19", "2019-09-17")),
+        ("stress-2020-03", "stress-2020-03", "1", ("2020-02-10", "2020-03-31")),
+        ("stress-2023-03", "stress-2023-03", "1", ("2023-02-09", "2023-03-24")),
+    ],
+)
+def test_committed_spike_publications_are_output_only_and_complete(
+    artifact: str, pack_id: str, version: str, window: tuple[str, str]
+) -> None:
+    publication = Path(__file__).parents[2] / "simulator/publication" / artifact
     assert {path.name for path in publication.iterdir()} == {
         "SUMMARY.md",
         "daily-close.json",
@@ -128,15 +139,43 @@ def test_committed_spike_publication_is_output_only_and_complete() -> None:
         "trend.json",
     }
     run = json.loads((publication / "run-summary.json").read_text())
-    assert run["calibration_pack_id"] == "repo-spike-2019"
-    assert run["calibration_pack_version"] == "5"
+    assert run["calibration_pack_id"] == pack_id
+    assert run["calibration_pack_version"] == version
     assert run["calibration_classes_used"] == ["A", "B", "SYNTHETIC"]
-    assert run["days"] == 21
-    assert (run["window_start"], run["window_end"]) == ("2019-08-19", "2019-09-17")
-    final = run["closes"][-1]["market_data"]
-    assert final["sofr_percent"] == "5.25"
-    assert final["financing_charge"] == "14.83"
+    assert (run["window_start"], run["window_end"]) == window
+    assert run["repository_shas"]["atreides"]
     assert "repo" in run["not_tested"]
     summary = (publication / "SUMMARY.md").read_text()
     assert summary.count("New York Fed is not responsible for publication") == 5
     assert "run outputs only, not the pack or its data" in summary
+    assert f"Source commit: `{run['repository_shas']['atreides']}`" in summary
+
+
+def test_all_dated_publications_keep_the_same_not_tested_boundary() -> None:
+    root = Path(__file__).parents[2] / "simulator/publication"
+    boundaries = {
+        tuple(json.loads((root / artifact / "run-summary.json").read_text())["not_tested"])
+        for artifact in ("spike-2019", "stress-2020-03", "stress-2023-03")
+    }
+    assert len(boundaries) == 1
+
+
+def test_publication_labels_a_behind_source_and_removes_the_label_when_current(
+    tmp_path: Path,
+) -> None:
+    summary = tmp_path / "SUMMARY.md"
+    summary.write_text("# Run\n")
+    label_summary_freshness(
+        summary,
+        source_commit="source",
+        current_commit="main",
+        is_ancestor=lambda older, newer: (older, newer) == ("source", "main"),
+    )
+    assert "Artifact freshness: `STALE`" in summary.read_text()
+    label_summary_freshness(
+        summary,
+        source_commit="main",
+        current_commit="main",
+        is_ancestor=lambda _older, _newer: False,
+    )
+    assert "Artifact freshness:" not in summary.read_text()
