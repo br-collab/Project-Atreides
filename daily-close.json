@@ -3,7 +3,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-28",
-      "economics_digest": "sha256:1a7af2ffacd5c4f0333a1e87091918edbd6de80d4e87948663e85dfba811aa0e",
+      "economics_digest": "sha256:87663fd0140c9bfa3271fbce1961c463660c473c2a46d6664f06a5360df2437a",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -31,6 +31,8 @@
         "filed_credit_history_count": 11,
         "financing_charge": null,
         "financing_need": null,
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
         "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
@@ -45,16 +47,21 @@
       "protection": {
         "dispositions": {
           "net_capital": "PASS",
+          "pab_reserve": "HOLD",
           "possession_or_control": "PASS",
           "reserve": "HOLD"
         },
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999584.5000",
+          "pab_reserve_requirement": "0",
           "reserve_requirement": "900000000.00"
         },
         "reasons": {
           "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
           "possession_or_control": [],
           "reserve": [
             "average_total_credits",
@@ -84,7 +91,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-29",
-      "economics_digest": "sha256:d1a368f5bb88db7b20de6b094c88a1d7fa04245ce5a7d9f006d01a6cc365192c",
+      "economics_digest": "sha256:f2ef9ee91aa22d5c5994ede1ca5ec27f38a59fa5188845e60642b29e09800032",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -110,6 +117,8 @@
         "filed_credit_history_count": 11,
         "financing_charge": null,
         "financing_need": null,
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
         "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
@@ -124,16 +133,21 @@
       "protection": {
         "dispositions": {
           "net_capital": "PASS",
+          "pab_reserve": "HOLD",
           "possession_or_control": "PASS",
           "reserve": "HOLD"
         },
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999773.5000",
+          "pab_reserve_requirement": "0",
           "reserve_requirement": "900000000.00"
         },
         "reasons": {
           "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
           "possession_or_control": [],
           "reserve": [
             "average_total_credits",
@@ -161,7 +175,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-30",
-      "economics_digest": "sha256:8c66d96a250c2dbac657227a45328f1990ae5793b7601b537e82e5d06975a637",
+      "economics_digest": "sha256:b34362fcff05b479b0bc9644dc9d796067362871cb15f1bb7566580ac5ffd873",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -187,6 +201,8 @@
         "filed_credit_history_count": 11,
         "financing_charge": null,
         "financing_need": null,
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
         "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
@@ -201,16 +217,21 @@
       "protection": {
         "dispositions": {
           "net_capital": "PASS",
+          "pab_reserve": "HOLD",
           "possession_or_control": "PASS",
           "reserve": "HOLD"
         },
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999679.0000",
+          "pab_reserve_requirement": "0",
           "reserve_requirement": "900000000.00"
         },
         "reasons": {
           "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
           "possession_or_control": [],
           "reserve": [
             "average_total_credits",
@@ -238,7 +259,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-31",
-      "economics_digest": "sha256:4f04f723e2a3a08e2c4b50ab355080be529bf33d90857ce7c78b0424076109d6",
+      "economics_digest": "sha256:b0aec8fcf524c3b63a285a5e460f924dc0ee654a7b150eeacc9a05f077dcbbb7",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -257,13 +278,15 @@
       "market_data": {
         "average_total_credits": null,
         "book_customer_total_credits": "900000000.00",
-        "book_pab_total_credits": "0",
+        "book_pab_total_credits": "2355260.00",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
         "daily_requirement_effective_date": null,
         "filed_credit_history_count": 11,
         "financing_charge": null,
         "financing_need": null,
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "235526",
         "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
@@ -278,17 +301,23 @@
       "protection": {
         "dispositions": {
           "net_capital": "HOLD",
+          "pab_reserve": "HOLD",
           "possession_or_control": "HOLD",
           "reserve": "HOLD"
         },
         "figures": {
           "control_shortfall": null,
           "net_capital": null,
+          "pab_reserve_requirement": null,
           "reserve_requirement": null
         },
         "reasons": {
           "net_capital": [
             "net_worth"
+          ],
+          "pab_reserve": [
+            "15c3-3a.item.01",
+            "average_total_credits"
           ],
           "possession_or_control": [
             "fully_paid[SYN-EQ-2361]"
@@ -320,7 +349,7 @@
     {
       "breaks": [],
       "business_date": "2027-01-04",
-      "economics_digest": "sha256:80af192468f085834144524f2a8e29bb74160a127bcdcc6f1b3f8e36189ebd5f",
+      "economics_digest": "sha256:8bb354ac9cc6a69c49bd23e3df84f47f9a0b611395e1a47f88380a938ce3a82b",
       "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL",
@@ -340,7 +369,7 @@
         "HALT": 1
       },
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
+        "average_total_credits": "516862938.3333333333333333333",
         "book_customer_total_credits": "50000000.00",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
@@ -349,6 +378,8 @@
         "filed_credit_history_count": 12,
         "financing_charge": null,
         "financing_need": null,
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
         "previously_daily_required": false,
         "reserve_mode": "weekly",
         "sofr_percent": null,
@@ -363,16 +394,21 @@
       "protection": {
         "dispositions": {
           "net_capital": "PASS",
+          "pab_reserve": "PASS",
           "possession_or_control": "PASS",
           "reserve": "HOLD"
         },
         "figures": {
           "control_shortfall": "0",
           "net_capital": "999790.0000",
+          "pab_reserve_requirement": "0",
           "reserve_requirement": "50000000.00"
         },
         "reasons": {
           "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
           "possession_or_control": [],
           "reserve": [
             "the six-month daily-computation phase-in has not reached its evidenced effective date",

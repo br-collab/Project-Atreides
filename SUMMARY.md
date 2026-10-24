@@ -4,7 +4,7 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 
 - Seed: `20261023`
 - Pack: `synthetic` version `1`
-- Manifest: `sha256:56cb41f12e3461af66c44c5f6f46e711fbc9ff99928d0b1144d90e2afcc15fc1`
+- Manifest: `sha256:00a4d9ddb67f75cdb6c7d21b5117777b703430385ae89414cc05a06e57faa918`
 - Classes: `SYNTHETIC`
 - Closes: `5`
 - Window: `2026-12-28` through `2027-01-04` (`declared synthetic start`)
