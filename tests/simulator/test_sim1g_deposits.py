@@ -50,7 +50,14 @@ from simulator.estate import (
     _deposit_entry,
     _post_reserve_deposits,
 )
-from simulator.runner import SHORTFALL_REASON, deposit_breach, run_simulation
+from simulator.runner import (
+    RESERVE_SECTION_HEADING,
+    SHORTFALL_REASON,
+    deposit_breach,
+    publish_run,
+    reserve_section,
+    run_simulation,
+)
 
 I6 = "I6_DEFAULT_AND_STALE_HOLD"
 CALENDAR = MarketCalendar.load(Market.US_EQUITIES)
@@ -383,3 +390,24 @@ def test_mutation_projection_counting_late_deposits_fails_i6(
     ]
     assert late
     assert all(close["invariant_results"][I6] is False for close in late)
+
+
+@pytest.mark.parametrize("artifact", ["spike-2019", "stress-2020-03", "stress-2023-03"])
+def test_committed_summaries_disclose_the_reserve_section_from_their_own_closes(
+    artifact: str,
+) -> None:
+    publication = Path(__file__).parents[2] / "simulator/publication" / artifact
+    closes = json.loads((publication / "daily-close.json").read_text())["closes"]
+    summary = (publication / "SUMMARY.md").read_text()
+    assert reserve_section(closes) in summary
+    assert summary.count(RESERVE_SECTION_HEADING) == 1
+
+
+def test_published_summary_states_a_declared_policy_and_counts(tmp_path: Path) -> None:
+    run = run_simulation(seed=20261023, days=30)
+    publish_run(run, tmp_path)
+    summary = (tmp_path / "SUMMARY.md").read_text()
+    assert "Customer deposit policy: declared SYNTHETIC in the pack" in summary
+    passes = sum(c["protection"]["dispositions"]["reserve"] == "PASS" for c in run["closes"])
+    assert f"Customer reserve: `{passes}` PASS" in summary
+    assert summary.index(RESERVE_SECTION_HEADING) < summary.index("## New York Fed notices")
