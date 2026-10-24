@@ -609,7 +609,7 @@ def test_publication_copies_every_committed_spike_output_and_labels_stale_source
     assert 'source="simulator/publication/$artifact"' in action
     assert '"$publish_dir/$artifact"' in action
     assert "tools.regenerate_spike_artifacts label-stale" in action
-    assert "repo-spike-2019/5/calibration.json" not in action
+    assert "repo-spike-2019/6/calibration.json" not in action
 
 
 def test_configuration_is_synthetic_and_forbidden_sources_absent_from_imports() -> None:

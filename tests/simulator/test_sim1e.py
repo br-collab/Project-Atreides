@@ -121,15 +121,41 @@ def test_cli_boundary_requires_both_dates_for_a_dated_pack(tmp_path: Path) -> No
 
 
 @pytest.mark.parametrize(
-    ("artifact", "pack_id", "version", "window"),
+    ("artifact", "pack_id", "version", "window", "customer_counts", "pab_counts"),
     [
-        ("spike-2019", "repo-spike-2019", "5", ("2019-08-19", "2019-09-17")),
-        ("stress-2020-03", "stress-2020-03", "1", ("2020-02-10", "2020-03-31")),
-        ("stress-2023-03", "stress-2023-03", "1", ("2023-02-09", "2023-03-24")),
+        (
+            "spike-2019",
+            "repo-spike-2019",
+            "6",
+            ("2019-08-19", "2019-09-17"),
+            (10, 11, 0, 11),
+            (10, 11, 0, 11),
+        ),
+        (
+            "stress-2020-03",
+            "stress-2020-03",
+            "2",
+            ("2020-02-10", "2020-03-31"),
+            (19, 17, 0, 17),
+            (18, 18, 1, 17),
+        ),
+        (
+            "stress-2023-03",
+            "stress-2023-03",
+            "2",
+            ("2023-02-09", "2023-03-24"),
+            (14, 17, 0, 17),
+            (14, 17, 0, 17),
+        ),
     ],
 )
 def test_committed_spike_publications_are_output_only_and_complete(
-    artifact: str, pack_id: str, version: str, window: tuple[str, str]
+    artifact: str,
+    pack_id: str,
+    version: str,
+    window: tuple[str, str],
+    customer_counts: tuple[int, int, int, int],
+    pab_counts: tuple[int, int, int, int],
 ) -> None:
     publication = Path(__file__).parents[2] / "simulator/publication" / artifact
     assert {path.name for path in publication.iterdir()} == {
@@ -149,6 +175,17 @@ def test_committed_spike_publications_are_output_only_and_complete(
     assert summary.count("New York Fed is not responsible for publication") == 5
     assert "run outputs only, not the pack or its data" in summary
     assert f"Source commit: `{run['repository_shas']['atreides']}`" in summary
+    assert "Customer deposit policy: declared SYNTHETIC in the pack" in summary
+    assert "PAB deposit policy: declared SYNTHETIC in the pack" in summary
+    for label, (passed, held, breach, missing) in (
+        ("Customer", customer_counts),
+        ("PAB", pab_counts),
+    ):
+        assert (
+            f"{label} reserve: `{passed}` PASS, `{held}` HOLD "
+            f"(`0` no declared deposit, `{breach}` simulated short or late deposit, "
+            f"`{missing}` missing inputs or other engine reasons)"
+        ) in summary
 
 
 def test_all_dated_publications_keep_the_same_not_tested_boundary() -> None:

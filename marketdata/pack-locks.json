@@ -1,9 +1,9 @@
 {
   "current": {
     "baseline-2019-q2": "4",
-    "repo-spike-2019": "5",
-    "stress-2020-03": "1",
-    "stress-2023-03": "1"
+    "repo-spike-2019": "6",
+    "stress-2020-03": "2",
+    "stress-2023-03": "2"
   },
   "packs": {
     "baseline-2019-q2/1": "sha256:dec6be4c0c9fe354a607cbfb8a92fd7f0e9f9a3e3087edb86c6a688d8e09f4d0",
@@ -15,8 +15,11 @@
     "repo-spike-2019/3": "sha256:fd5f1ca78d8936afbacc7f99a553325c04fe1559886311b7747ba0bad1650bd9",
     "repo-spike-2019/4": "sha256:9c82868a976f6ccf441c47cb21a714c21406d10ae6aaa85980ce87dcd64b973a",
     "repo-spike-2019/5": "sha256:7ba4c5261cce790a9acee3d3d72f65ee9d59976704c1343b77ea9550ed3d748b",
+    "repo-spike-2019/6": "sha256:edecfe94d3cbc7b7775610b69a379586b51be18643a1adfbee6f10aa0891360a",
     "stress-2020-03/1": "sha256:470887d7261dec1c06edde0acd3f5bcd36c73a86ebae5e95e9ae3695773e0125",
-    "stress-2023-03/1": "sha256:db4ba240f71156f3fd98be0956e2cc77be74c4901253a33695f94b4a90a8fb32"
+    "stress-2020-03/2": "sha256:774fc2e5973e7208f166feef4288f8e84c335fe69e78210d238a6b1ac85bfc16",
+    "stress-2023-03/1": "sha256:db4ba240f71156f3fd98be0956e2cc77be74c4901253a33695f94b4a90a8fb32",
+    "stress-2023-03/2": "sha256:20f2fc912b2a9f21822c829baa1248fd8f95719feece22e28b5c555ac20da2af"
   },
   "schema_version": "cfma.pack-locks/1",
   "superseded": {
@@ -26,6 +29,9 @@
     "repo-spike-2019/1": "pre-attack pack: source order was descending and only SOFR was present",
     "repo-spike-2019/2": "pre-attack pack: chronological, but BGCR, TGCR, EFFR and OBFR were absent",
     "repo-spike-2019/3": "pre-SIM-1D pack: shared paraphrased New York Fed notice and pre-2019 calendar evidence",
-    "repo-spike-2019/4": "pre-SIM-1E pack: customer-credit calibration could not drive the daily phase-in and exit lifecycle"
+    "repo-spike-2019/4": "pre-SIM-1E pack: customer-credit calibration could not drive the daily phase-in and exit lifecycle",
+    "repo-spike-2019/5": "pre-SIM-1H pack: PAB activity and reserve-deposit policy were not declared",
+    "stress-2020-03/1": "pre-SIM-1H pack: reserve-deposit policy was not declared",
+    "stress-2023-03/1": "pre-SIM-1H pack: reserve-deposit policy was not declared"
   }
 }
