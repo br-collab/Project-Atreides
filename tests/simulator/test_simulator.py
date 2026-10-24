@@ -607,7 +607,7 @@ def test_publication_copies_every_committed_spike_output_and_labels_stale_source
     ).read_text()
     assert "for artifact in spike-2019 stress-2020-03 stress-2023-03" in action
     assert 'source="simulator/publication/$artifact"' in action
-    assert '"$publish_dir/spike-2019"' in action
+    assert '"$publish_dir/$artifact"' in action
     assert "tools.regenerate_spike_artifacts label-stale" in action
     assert "repo-spike-2019/5/calibration.json" not in action
 

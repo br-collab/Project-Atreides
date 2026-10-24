@@ -11,7 +11,8 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 - Final SOFR: `5.25` percent
 - Final financing need: `$101662.13`
 - Final financing charge: `$14.83`
-- Provenance: locally generated from locked Mac pack `repo-spike-2019/5` using recorded Atreides commit `4068a9a20752280ae3a3c61b23ba591d13579684`; this folder contains run outputs only, not the pack or its data.
+- Source commit: `21348fea502dcc8a87e33e70365203c6404efe0d`
+- Provenance: locally generated from the locked Mac pack; this folder contains run outputs only, not the pack or its data.
 
 ## New York Fed notices
 

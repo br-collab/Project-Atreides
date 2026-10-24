@@ -179,3 +179,15 @@ def test_publication_labels_a_behind_source_and_removes_the_label_when_current(
         is_ancestor=lambda _older, _newer: False,
     )
     assert "Artifact freshness:" not in summary.read_text()
+
+
+def test_publication_refuses_a_source_that_is_not_behind_current_main(tmp_path: Path) -> None:
+    summary = tmp_path / "SUMMARY.md"
+    summary.write_text("# Run\n")
+    with pytest.raises(ValueError, match="is not an ancestor"):
+        label_summary_freshness(
+            summary,
+            source_commit="unrelated",
+            current_commit="main",
+            is_ancestor=lambda _older, _newer: False,
+        )
