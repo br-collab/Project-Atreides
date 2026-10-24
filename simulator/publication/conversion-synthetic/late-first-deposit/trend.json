@@ -1,0 +1,8 @@
+{
+  "all_invariants_pass": true,
+  "invariants": [
+    "I9",
+    "I10"
+  ],
+  "schema_version": "sim.conversion-trend/2"
+}

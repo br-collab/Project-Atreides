@@ -9,11 +9,13 @@
         ]
       },
       "conversion_disposition": "PASS",
-      "conversion_reasons": [
-        "G4:15c3-3.control.c1",
-        "possession or control"
-      ],
-      "first_deposit": "0",
+      "conversion_reasons": [],
+      "first_deposit": {
+        "amount": "0",
+        "balance_at_deadline": "0",
+        "deadline": "2027-01-08",
+        "outcome": "NOT_APPLICABLE"
+      },
       "invariants": {
         "I10_MIGRATION_CONSERVED": true,
         "I9_CONVERSION_GATED": true
@@ -24,16 +26,17 @@
         "net_capital": "1000000"
       },
       "pab_reserve": {
-        "disposition": "PASS",
-        "requirement": "0"
+        "disposition": "PASS"
       },
       "phase": "introducing",
       "readiness_evidence": {
         "G1": "SYN-F-NOTICE-001",
         "G2": "SYN-NONAFFILIATION-001",
-        "G3": "SYN-CAPITAL-COMPUTATION-001",
-        "G4": null
+        "G3": "SYN-CAPITAL-PLAN-001",
+        "G4": "SYN-CONTROL-ARRANGEMENT-001"
       },
+      "required_conversion_disposition": "PASS",
+      "required_conversion_reasons": [],
       "reserve": {
         "disposition": "PASS",
         "requirement": "0",
@@ -49,11 +52,13 @@
         ]
       },
       "conversion_disposition": "PASS",
-      "conversion_reasons": [
-        "G4:15c3-3.control.c1",
-        "possession or control"
-      ],
-      "first_deposit": "0",
+      "conversion_reasons": [],
+      "first_deposit": {
+        "amount": "0",
+        "balance_at_deadline": "0",
+        "deadline": "2027-01-08",
+        "outcome": "NOT_APPLICABLE"
+      },
       "invariants": {
         "I10_MIGRATION_CONSERVED": true,
         "I9_CONVERSION_GATED": true
@@ -64,16 +69,17 @@
         "net_capital": "1000000"
       },
       "pab_reserve": {
-        "disposition": "PASS",
-        "requirement": "0"
+        "disposition": "PASS"
       },
       "phase": "introducing",
       "readiness_evidence": {
         "G1": "SYN-F-NOTICE-001",
         "G2": "SYN-NONAFFILIATION-001",
-        "G3": "SYN-CAPITAL-COMPUTATION-001",
-        "G4": null
+        "G3": "SYN-CAPITAL-PLAN-001",
+        "G4": "SYN-CONTROL-ARRANGEMENT-001"
       },
+      "required_conversion_disposition": "PASS",
+      "required_conversion_reasons": [],
       "reserve": {
         "disposition": "PASS",
         "requirement": "0",
@@ -88,11 +94,15 @@
       },
       "conversion_disposition": "HOLD",
       "conversion_reasons": [
-        "G4:15c3-3.control.c1",
-        "customer reserve",
-        "possession or control"
+        "possession or control",
+        "reserve shortfall"
       ],
-      "first_deposit": "154111.11",
+      "first_deposit": {
+        "amount": "154111.11",
+        "balance_at_deadline": "154111.11",
+        "deadline": "2027-01-08",
+        "outcome": "SHORT"
+      },
       "invariants": {
         "I10_MIGRATION_CONSERVED": true,
         "I9_CONVERSION_GATED": true
@@ -103,16 +113,20 @@
         "net_capital": "996403.0270"
       },
       "pab_reserve": {
-        "disposition": "PASS",
-        "requirement": "0"
+        "disposition": "PASS"
       },
       "phase": "carrying",
       "readiness_evidence": {
         "G1": "SYN-F-NOTICE-001",
         "G2": "SYN-NONAFFILIATION-001",
-        "G3": "SYN-CAPITAL-COMPUTATION-001",
-        "G4": null
+        "G3": "SYN-CAPITAL-PLAN-001",
+        "G4": "SYN-CONTROL-ARRANGEMENT-001"
       },
+      "required_conversion_disposition": "HOLD",
+      "required_conversion_reasons": [
+        "possession or control",
+        "reserve shortfall"
+      ],
       "reserve": {
         "disposition": "HOLD",
         "requirement": "211111.11",
@@ -125,9 +139,16 @@
         "disposition": "PASS",
         "reasons": []
       },
-      "conversion_disposition": "PASS",
-      "conversion_reasons": [],
-      "first_deposit": "211111.11",
+      "conversion_disposition": "HOLD",
+      "conversion_reasons": [
+        "reserve shortfall"
+      ],
+      "first_deposit": {
+        "amount": "154111.11",
+        "balance_at_deadline": "154111.11",
+        "deadline": "2027-01-08",
+        "outcome": "SHORT"
+      },
       "invariants": {
         "I10_MIGRATION_CONSERVED": true,
         "I9_CONVERSION_GATED": true
@@ -138,20 +159,23 @@
         "net_capital": "996403.0270"
       },
       "pab_reserve": {
-        "disposition": "PASS",
-        "requirement": "0"
+        "disposition": "PASS"
       },
       "phase": "carrying",
       "readiness_evidence": {
         "G1": "SYN-F-NOTICE-001",
         "G2": "SYN-NONAFFILIATION-001",
-        "G3": "SYN-CAPITAL-COMPUTATION-001",
+        "G3": "SYN-CAPITAL-PLAN-001",
         "G4": "SYN-CONTROL-ARRANGEMENT-001"
       },
+      "required_conversion_disposition": "HOLD",
+      "required_conversion_reasons": [
+        "reserve shortfall"
+      ],
       "reserve": {
-        "disposition": "PASS",
+        "disposition": "HOLD",
         "requirement": "211111.11",
-        "shortfall": "0.00"
+        "shortfall": "57000.00"
       }
     },
     {
@@ -160,9 +184,16 @@
         "disposition": "PASS",
         "reasons": []
       },
-      "conversion_disposition": "PASS",
-      "conversion_reasons": [],
-      "first_deposit": "211111.11",
+      "conversion_disposition": "HOLD",
+      "conversion_reasons": [
+        "reserve shortfall"
+      ],
+      "first_deposit": {
+        "amount": "154111.11",
+        "balance_at_deadline": "154111.11",
+        "deadline": "2027-01-08",
+        "outcome": "SHORT"
+      },
       "invariants": {
         "I10_MIGRATION_CONSERVED": true,
         "I9_CONVERSION_GATED": true
@@ -173,20 +204,23 @@
         "net_capital": "996403.0270"
       },
       "pab_reserve": {
-        "disposition": "PASS",
-        "requirement": "0"
+        "disposition": "PASS"
       },
       "phase": "carrying",
       "readiness_evidence": {
         "G1": "SYN-F-NOTICE-001",
         "G2": "SYN-NONAFFILIATION-001",
-        "G3": "SYN-CAPITAL-COMPUTATION-001",
+        "G3": "SYN-CAPITAL-PLAN-001",
         "G4": "SYN-CONTROL-ARRANGEMENT-001"
       },
+      "required_conversion_disposition": "HOLD",
+      "required_conversion_reasons": [
+        "reserve shortfall"
+      ],
       "reserve": {
-        "disposition": "PASS",
+        "disposition": "HOLD",
         "requirement": "211111.11",
-        "shortfall": "0.00"
+        "shortfall": "57000.00"
       }
     },
     {
@@ -195,9 +229,16 @@
         "disposition": "PASS",
         "reasons": []
       },
-      "conversion_disposition": "PASS",
-      "conversion_reasons": [],
-      "first_deposit": "211111.11",
+      "conversion_disposition": "HOLD",
+      "conversion_reasons": [
+        "reserve shortfall"
+      ],
+      "first_deposit": {
+        "amount": "154111.11",
+        "balance_at_deadline": "154111.11",
+        "deadline": "2027-01-08",
+        "outcome": "SHORT"
+      },
       "invariants": {
         "I10_MIGRATION_CONSERVED": true,
         "I9_CONVERSION_GATED": true
@@ -208,22 +249,25 @@
         "net_capital": "996403.0270"
       },
       "pab_reserve": {
-        "disposition": "PASS",
-        "requirement": "0"
+        "disposition": "PASS"
       },
       "phase": "carrying",
       "readiness_evidence": {
         "G1": "SYN-F-NOTICE-001",
         "G2": "SYN-NONAFFILIATION-001",
-        "G3": "SYN-CAPITAL-COMPUTATION-001",
+        "G3": "SYN-CAPITAL-PLAN-001",
         "G4": "SYN-CONTROL-ARRANGEMENT-001"
       },
+      "required_conversion_disposition": "HOLD",
+      "required_conversion_reasons": [
+        "reserve shortfall"
+      ],
       "reserve": {
-        "disposition": "PASS",
+        "disposition": "HOLD",
         "requirement": "211111.11",
-        "shortfall": "0.00"
+        "shortfall": "57000.00"
       }
     }
   ],
-  "schema_version": "sim.conversion-daily-close/1"
+  "schema_version": "sim.conversion-daily-close/2"
 }

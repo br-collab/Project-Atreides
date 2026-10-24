@@ -1,8 +1,7 @@
-"""CONV-1 synthetic introducing-to-carrying conversion scenario.
+"""Synthetic introducing-to-carrying conversion control rehearsal.
 
-This is a control rehearsal, not a legal conclusion or a submission workflow.
-It posts the synthetic statement into the real Atreides books and evaluates the
-real reserve, possession/control, and net-capital engines.
+The real Atreides books and protection engines produce the scenario result.
+I9 separately derives what that result must be from declared evidence and facts.
 """
 
 from __future__ import annotations
@@ -12,7 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from cannae_kernel.ids import EventId
 from cannae_kernel.provenance import Provenance
@@ -25,7 +24,7 @@ from atreides.books.ledger import (
     PostingSource,
     RecordSide,
 )
-from atreides.books.projections import project_customer_protection
+from atreides.books.projections import project_customer_protection, reserve_bank_balances
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import BrokerDealerCategory, compute_net_capital
 from atreides.customer_protection.reserve import (
@@ -38,12 +37,21 @@ from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.dsor.books import BooksPosting
 from atreides.margin.engine import MarginAccount, MarginPosition, compute_margin
-from simulator.estate import _actor, _complete_reserve_inputs
+from simulator.estate import (
+    DepositDraw,
+    DepositPolicy,
+    ReserveDeposit,
+    _actor,
+    _complete_reserve_inputs,
+    _post_reserve_deposits,
+)
+from simulator.runner import deposit_breach
 
 SEED = 20261024
 VARIANTS = (
     "clean",
     "short-first-deposit",
+    "late-first-deposit",
     "late-transfer",
     "missing-f-letter",
     "affiliated-bank",
@@ -56,18 +64,20 @@ NOT_CLAIMED = (
     "FINRA continuing membership application approval",
     "legal conclusion",
 )
-
-# 17 CFR 240.15c3-3(k)(2)(ii), pinned source c7d7067f...: an introducing
-# broker-dealer "promptly transmits all customer funds and securities to the
-# clearing broker or dealer". Conversion is held until the evidence below says
-# the carrying controls are ready; absence remains None rather than invented.
-# Paragraph (f) requires written bank notification for each reserve account.
 GATE_RULES = {
     "G1": "15c3-3.f.bank_written_notification",
     "G2": "15c3-3.e5.affiliated_bank_excluded",
     "G3": "15c3-1.a2i.minimum.carrying",
     "G4": "15c3-3.control.c1",
 }
+Mutation = Literal[
+    "forced-hold-funded",
+    "forced-pass-short",
+    "cleared-gate-let-through",
+    "affiliated-counted-eligible",
+    "prior-clearer-as-control",
+    "drop-one-share",
+]
 
 
 @dataclass(frozen=True)
@@ -78,11 +88,37 @@ class StatementLine:
     cash_credit: Decimal
 
 
+@dataclass(frozen=True)
+class ReadinessRecord:
+    bank_notification: str | None
+    non_affiliation: str | None
+    pre_conversion_capital_plan: str | None
+    control_location_arrangement: str | None
+
+    def gates(self) -> dict[str, str | None]:
+        return {
+            "G1": self.bank_notification,
+            "G2": self.non_affiliation,
+            "G3": self.pre_conversion_capital_plan,
+            "G4": self.control_location_arrangement,
+        }
+
+
 STATEMENT = (
     StatementLine("SYN-CUST-101", "SYN-EQ-ALPHA", Decimal("137"), Decimal("123456.79")),
     StatementLine("SYN-CUST-202", "SYN-EQ-BETA", Decimal("211"), Decimal("87654.32")),
 )
 PRICES = {"SYN-EQ-ALPHA": Decimal("101.37"), "SYN-EQ-BETA": Decimal("47.83")}
+
+
+def readiness_record(variant: str) -> ReadinessRecord:
+    """Return declared synthetic evidence, never an engine result relabelled as evidence."""
+    return ReadinessRecord(
+        None if variant == "missing-f-letter" else "SYN-F-NOTICE-001",
+        None if variant == "affiliated-bank" else "SYN-NONAFFILIATION-001",
+        None if variant == "capital-short" else "SYN-CAPITAL-PLAN-001",
+        "SYN-CONTROL-ARRANGEMENT-001",
+    )
 
 
 def _posting(number: int, day: date) -> BooksPosting:
@@ -99,7 +135,6 @@ def _posting(number: int, day: date) -> BooksPosting:
 def migration_books(
     lines: tuple[StatementLine, ...], day: date, *, transferred: bool
 ) -> EquitiesBooks:
-    """Replay the prior-clearer statement through the append-only real book."""
     books = EquitiesBooks(break_owner="CONV_1_SETTLEMENT_OPS")
     for index, line in enumerate(lines, 1):
         location = AccountType.DTC if transferred else AccountType.FIRM_PROPRIETARY
@@ -150,10 +185,10 @@ def migration_books(
 
 
 def migration_conserved(books: EquitiesBooks, lines: tuple[StatementLine, ...]) -> bool:
-    expected_qty = {(x.account, x.issue): x.quantity for x in lines}
-    expected_cash = {x.account: x.cash_credit for x in lines}
-    actual_qty: dict[tuple[str, str], Decimal] = {}
-    actual_cash: dict[str, Decimal] = {}
+    expected_q = {(x.account, x.issue): x.quantity for x in lines}
+    expected_c = {x.account: x.cash_credit for x in lines}
+    actual_q: dict[tuple[str, str], Decimal] = {}
+    actual_c: dict[str, Decimal] = {}
     for entry in books.entries:
         for line in entry.lines:
             if (
@@ -161,47 +196,118 @@ def migration_conserved(books: EquitiesBooks, lines: tuple[StatementLine, ...]) 
                 and line.record_side is RecordSide.OWNERSHIP
                 and line.issue
             ):
-                actual_qty[(line.account_id, line.issue)] = (
-                    actual_qty.get((line.account_id, line.issue), Decimal()) + line.quantity
-                )
+                key = (line.account_id, line.issue)
+                actual_q[key] = actual_q.get(key, Decimal()) + line.quantity
             if line.account_type is AccountType.CUSTOMER_CASH and line.currency == "USD":
-                actual_cash[line.account_id] = (
-                    actual_cash.get(line.account_id, Decimal()) + line.money
-                )
-    return actual_qty == expected_qty and actual_cash == expected_cash
-
-
-def conversion_gated(disposition: str, after_conversion: bool, reasons: list[str]) -> bool:
-    """I9: a carrying conversion with a missing gate or engine hold cannot pass."""
-    return (disposition == "HOLD") == bool(after_conversion and reasons)
+                actual_c[line.account_id] = actual_c.get(line.account_id, Decimal()) + line.money
+    return actual_q == expected_q and actual_c == expected_c
 
 
 def _business_days(start: date, count: int) -> list[date]:
-    cal = MarketCalendar.load(Market.US_EQUITIES)
-    days: list[date] = []
-    cursor = start
-    while len(days) < count:
-        if cal.is_business_day(cursor):
-            days.append(cursor)
-        cursor += timedelta(days=1)
-    return days
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    result: list[date] = []
+    while len(result) < count:
+        if calendar.is_business_day(start):
+            result.append(start)
+        start += timedelta(days=1)
+    return result
 
 
-def run_conversion_variant(variant: str) -> dict[str, object]:
+def _policy(variant: str) -> DepositPolicy:
+    outcome = {"short-first-deposit": "SHORT", "late-first-deposit": "LATE"}.get(variant, "ON_TIME")
+    return DepositPolicy(
+        customer=DepositDraw(outcome=outcome, short_fraction=Decimal("0.27")),
+        pab=DepositDraw(outcome="ON_TIME", short_fraction=Decimal("0.27")),
+        bank_equity_capital=Decimal("10000000"),
+    )
+
+
+def _gate_reasons(record: ReadinessRecord) -> list[str]:
+    return [f"{gate}:{GATE_RULES[gate]}" for gate, value in record.gates().items() if value is None]
+
+
+def _required_reasons(
+    *,
+    day: date,
+    conversion_day: date,
+    transfer_day: date,
+    record: ReadinessRecord,
+    deposit: ReserveDeposit,
+    affiliated: bool,
+    requirement: Decimal,
+    net_worth: Decimal,
+    carrying_minimum: Decimal,
+) -> list[str]:
+    """Derive the required outcome without reading any engine disposition.
+
+    17 CFR 240.15c3-3(e)(3)(i)(A), pinned source c7d7067f..., says the deposit
+    "must be made no later than one hour after the opening of banking business
+    on the second following business day." A SHORT or LATE first deposit holds.
+    The pinned 15c3-1(a)(2)(i) carrying minimum is an upper-bound test because
+    net capital cannot exceed the separately declared net worth.
+    """
+    if day < conversion_day:
+        return []
+    reasons = _gate_reasons(record)
+    if deposit_breach(deposit) or (affiliated and requirement > 0):
+        reasons.append("reserve shortfall")
+    if day < transfer_day:
+        reasons.append("possession or control")
+    if net_worth < carrying_minimum:
+        reasons.append("net capital")
+    return sorted(set(reasons))
+
+
+def _produced_reasons(
+    record: ReadinessRecord, *, after: bool, reserve: str, pab: str, control: str, capital: str
+) -> list[str]:
+    if not after:
+        return []
+    reasons = _gate_reasons(record)
+    if reserve != "PASS" or pab != "PASS":
+        reasons.append("reserve shortfall")
+    if control != "PASS":
+        reasons.append("possession or control")
+    if capital != "PASS":
+        reasons.append("net capital")
+    return sorted(set(reasons))
+
+
+def run_conversion_variant(  # noqa: PLR0915 - one close keeps independent sources visible
+    variant: str, *, mutation: Mutation | None = None
+) -> dict[str, object]:
     if variant not in VARIANTS:
         raise ValueError(f"unknown conversion variant: {variant}")
     rules = load_rule_table()
-    cal = MarketCalendar.load(Market.US_EQUITIES)
+    minimum = rules.get("15c3-1.a2i.minimum.carrying")
+    if minimum is None or minimum.value is None:
+        raise ValueError("pinned carrying minimum is unavailable")
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
     days = _business_days(date(2027, 1, 4), 6)
     conversion_day = days[2]
+    transfer_day = days[5] if variant == "late-transfer" else days[3]
+    declared = readiness_record(variant)
+    net_worth = Decimal("100000") if variant == "capital-short" else Decimal("1000000")
     closes: list[dict[str, object]] = []
-    for day in days:
-        after_conversion = day >= conversion_day
-        transfer_day = days[5] if variant == "late-transfer" else days[3]
-        transferred = after_conversion and day >= transfer_day
+    for index, day in enumerate(days):
+        after = day >= conversion_day
+        transferred = after and day >= transfer_day
+        lines = STATEMENT
+        if mutation == "drop-one-share" and after:
+            lines = (
+                StatementLine(
+                    STATEMENT[0].account,
+                    STATEMENT[0].issue,
+                    STATEMENT[0].quantity - 1,
+                    STATEMENT[0].cash_credit,
+                ),
+                STATEMENT[1],
+            )
+        if mutation == "prior-clearer-as-control" and day == conversion_day:
+            transferred = True
         books = (
-            migration_books(STATEMENT, day, transferred=transferred)
-            if after_conversion
+            migration_books(lines, day, transferred=transferred)
+            if after
             else EquitiesBooks(break_owner="CONV_1_SETTLEMENT_OPS")
         )
         margins = (
@@ -217,21 +323,21 @@ def run_conversion_variant(variant: str) -> dict[str, object]:
                         ),
                     ),
                     trade_date=day,
-                    calendar=cal,
+                    calendar=calendar,
                     house_maintenance_rate=Decimal("0.30"),
                     maintenance_call_due_business_days=3,
                 )
-                for x in STATEMENT
+                for x in lines
             )
-            if after_conversion
+            if after
             else ()
         )
         projected = project_customer_protection(
             books,
             as_of=day,
             prices=PRICES,
-            net_worth=Decimal("100000") if variant == "capital-short" else Decimal("1000000"),
-            calendar=cal,
+            net_worth=net_worth,
+            calendar=calendar,
             margin_results=margins,
         )
         reserve_input = _complete_reserve_inputs(
@@ -251,99 +357,147 @@ def run_conversion_variant(variant: str) -> dict[str, object]:
             daily_exit_notice_date=None,
         )
         sized = compute_reserve(reserve_input, rules)
-        required = sized.requirement_after_customer_excess_debits or Decimal()
-        deposit = required
-        if variant == "short-first-deposit" and day == conversion_day:
-            deposit = (required * Decimal("0.73")).quantize(Decimal("0.01"))
-        affiliate = variant == "affiliated-bank"
-        banked = (
-            reserve_input.model_copy(
-                update={
-                    "cash_deposits": (
-                        BankCashDeposit(
-                            bank="SYNTHETIC RESERVE BANK",
-                            amount=deposit,
-                            affiliated=affiliate,
-                            bank_equity_capital=Decimal("10000000"),
-                        ),
-                    )
-                }
+        sized_pab = compute_reserve(with_customer_excess_debits(pab_input, sized), rules)
+        deadline = calendar.add_business_days(conversion_day, 2)
+        deposit = ReserveDeposit(
+            computation="customer",
+            opening_balance=Decimal(),
+            requirement=None,
+            needed=None,
+            drawn_outcome="NOT_APPLICABLE",
+            outcome="NOT_APPLICABLE",
+            amount=Decimal(),
+            deposit_date=None,
+            deadline=deadline,
+            balance_at_deadline=Decimal(),
+            closing_balance=Decimal(),
+        )
+        reserve, pab = sized, sized_pab
+        if after:
+            reserve, pab, deposits = _post_reserve_deposits(
+                books=books,
+                run_number=80_000 + VARIANTS.index(variant) * 100 + index,
+                business_date=conversion_day,
+                calendar=calendar,
+                actor=_actor(),
+                rules=rules,
+                reserve_inputs=reserve_input,
+                pab_reserve_inputs=pab_input,
+                sized_from=(sized, sized_pab),
+                opening=(Decimal(), Decimal()),
+                policy=_policy(variant),
             )
-            if deposit
-            else reserve_input
-        )
-        reserve = compute_reserve(banked, rules)
-        pab = compute_reserve(with_customer_excess_debits(pab_input, reserve), rules)
+            deposit = deposits[0]
+            if variant == "affiliated-bank" and mutation != "affiliated-counted-eligible":
+                balance = reserve_bank_balances(books, through=deadline)[
+                    AccountType.RESERVE_BANK_CUSTOMER
+                ]
+                affiliated_input = reserve_input.model_copy(
+                    update={
+                        "cash_deposits": (
+                            BankCashDeposit(
+                                bank="SYNTHETIC AFFILIATED RESERVE BANK",
+                                amount=balance,
+                                affiliated=True,
+                                bank_equity_capital=Decimal("10000000"),
+                            ),
+                        )
+                    }
+                )
+                reserve = compute_reserve(affiliated_input, rules)
+                pab = compute_reserve(with_customer_excess_debits(pab_input, reserve), rules)
         control = check_possession_or_control(projected.control, rules)
-        capital_input = projected.net_capital.model_copy(
-            update={
-                "category": BrokerDealerCategory.CARRYING
-                if after_conversion
-                else BrokerDealerCategory.INTRODUCING,
-                "reports_lending_activity_monthly": False,
-                "securities_loaned_and_repo_payable": Decimal(),
-                "securities_borrowed_and_reverse_repo_value": Decimal(),
-            }
+        capital = compute_net_capital(
+            projected.net_capital.model_copy(
+                update={
+                    "category": (
+                        BrokerDealerCategory.CARRYING if after else BrokerDealerCategory.INTRODUCING
+                    ),
+                    "reports_lending_activity_monthly": False,
+                    "securities_loaned_and_repo_payable": Decimal(),
+                    "securities_borrowed_and_reverse_repo_value": Decimal(),
+                }
+            ),
+            rules,
         )
-        capital = compute_net_capital(capital_input, rules)
-        evidence = {
-            "G1": None if variant == "missing-f-letter" else "SYN-F-NOTICE-001",
-            "G2": None if affiliate else "SYN-NONAFFILIATION-001",
-            "G3": None if capital.disposition.value != "PASS" else "SYN-CAPITAL-COMPUTATION-001",
-            "G4": None if control.disposition.value != "PASS" else "SYN-CONTROL-ARRANGEMENT-001",
-        }
-        missing = [
-            f"{gate}:{GATE_RULES[gate]}" for gate, value in evidence.items() if value is None
-        ]
-        engine_holds = []
-        if reserve.disposition.value != "PASS":
-            engine_holds.append("customer reserve")
-        if pab.disposition.value != "PASS":
-            engine_holds.append("PAB reserve")
-        if control.disposition.value != "PASS":
-            engine_holds.append("possession or control")
-        if capital.disposition.value != "PASS":
-            engine_holds.append("net capital")
-        disposition = "HOLD" if after_conversion and (missing or engine_holds) else "PASS"
-        i9 = conversion_gated(disposition, after_conversion, missing + engine_holds)
-        i10 = not after_conversion or migration_conserved(books, STATEMENT)
+        required_record = declared
+        if mutation == "cleared-gate-let-through" and day == days[3]:
+            required_record = ReadinessRecord(
+                None,
+                declared.non_affiliation,
+                declared.pre_conversion_capital_plan,
+                declared.control_location_arrangement,
+            )
+        produced_reasons = _produced_reasons(
+            declared,
+            after=after,
+            reserve=reserve.disposition.value,
+            pab=pab.disposition.value,
+            control=control.disposition.value,
+            capital=capital.disposition.value,
+        )
+        produced = "HOLD" if produced_reasons else "PASS"
+        if mutation == "forced-hold-funded" and day == days[3]:
+            produced, produced_reasons = "HOLD", ["reserve shortfall"]
+        if mutation == "forced-pass-short" and day == conversion_day:
+            produced, produced_reasons = "PASS", []
+        required_reasons = _required_reasons(
+            day=day,
+            conversion_day=conversion_day,
+            transfer_day=transfer_day,
+            record=required_record,
+            deposit=deposit,
+            affiliated=variant == "affiliated-bank",
+            requirement=sized.requirement_after_customer_excess_debits or Decimal(),
+            net_worth=net_worth,
+            carrying_minimum=minimum.value,
+        )
+        required = "HOLD" if required_reasons else "PASS"
+        i9 = produced == required and produced_reasons == required_reasons
+        i10 = not after or migration_conserved(books, STATEMENT)
         closes.append(
             {
                 "business_date": day.isoformat(),
-                "phase": "carrying" if after_conversion else "introducing",
-                "conversion_disposition": disposition,
-                "conversion_reasons": missing + engine_holds,
-                "readiness_evidence": evidence,
+                "phase": "carrying" if after else "introducing",
+                "conversion_disposition": produced,
+                "conversion_reasons": produced_reasons,
+                "required_conversion_disposition": required,
+                "required_conversion_reasons": required_reasons,
+                "readiness_evidence": required_record.gates(),
                 "invariants": {"I9_CONVERSION_GATED": i9, "I10_MIGRATION_CONSERVED": i10},
-                "first_deposit": str(deposit),
+                "first_deposit": {
+                    "outcome": deposit.outcome,
+                    "amount": str(deposit.amount),
+                    "deadline": deposit.deadline.isoformat(),
+                    "balance_at_deadline": str(deposit.balance_at_deadline),
+                },
                 "reserve": {
                     "disposition": reserve.disposition.value,
-                    "requirement": str(required),
-                    "shortfall": str(reserve.shortfall) if reserve.shortfall is not None else None,
+                    "requirement": str(sized.requirement_after_customer_excess_debits or Decimal()),
+                    "shortfall": (
+                        str(reserve.shortfall) if reserve.shortfall is not None else None
+                    ),
                 },
-                "pab_reserve": {
-                    "disposition": pab.disposition.value,
-                    "requirement": str(pab.requirement_after_customer_excess_debits)
-                    if pab.requirement_after_customer_excess_debits is not None
-                    else None,
-                },
+                "pab_reserve": {"disposition": pab.disposition.value},
                 "control": {
                     "disposition": control.disposition.value,
                     "reasons": list(control.reasons),
                 },
                 "net_capital": {
                     "disposition": capital.disposition.value,
-                    "net_capital": str(capital.net_capital)
-                    if capital.net_capital is not None
-                    else None,
-                    "minimum": str(capital.minimum_requirement)
-                    if capital.minimum_requirement is not None
-                    else None,
+                    "net_capital": (
+                        str(capital.net_capital) if capital.net_capital is not None else None
+                    ),
+                    "minimum": (
+                        str(capital.minimum_requirement)
+                        if capital.minimum_requirement is not None
+                        else None
+                    ),
                 },
             }
         )
     return {
-        "schema_version": "sim.conversion/1",
+        "schema_version": "sim.conversion/2",
         "synthetic": True,
         "seed": SEED,
         "variant": variant,
@@ -358,12 +512,11 @@ def run_conversion_variant(variant: str) -> dict[str, object]:
 
 def publish_conversion(run: dict[str, object], output: Path) -> None:
     output.mkdir(parents=True, exist_ok=True)
-    closes = run["closes"]
-    assert isinstance(closes, list)
+    closes = cast(list[dict[str, object]], run["closes"])
     (output / "run-summary.json").write_text(json.dumps(run, indent=2, sort_keys=True) + "\n")
     (output / "daily-close.json").write_text(
         json.dumps(
-            {"schema_version": "sim.conversion-daily-close/1", "closes": closes},
+            {"schema_version": "sim.conversion-daily-close/2", "closes": closes},
             indent=2,
             sort_keys=True,
         )
@@ -372,7 +525,7 @@ def publish_conversion(run: dict[str, object], output: Path) -> None:
     (output / "trend.json").write_text(
         json.dumps(
             {
-                "schema_version": "sim.conversion-trend/1",
+                "schema_version": "sim.conversion-trend/2",
                 "all_invariants_pass": run["all_invariants_pass"],
                 "invariants": ["I9", "I10"],
             },
@@ -381,17 +534,31 @@ def publish_conversion(run: dict[str, object], output: Path) -> None:
         )
         + "\n"
     )
-    d_close = next(c for c in closes if c["business_date"] == run["conversion_day"])
-    invariants = d_close["invariants"]
+    start = next(i for i, c in enumerate(closes) if c["business_date"] == run["conversion_day"])
+    rows = []
+    for close in closes[start : start + 4]:
+        deposit = cast(dict[str, str], close["first_deposit"])
+        required = ", ".join(cast(list[str], close["required_conversion_reasons"])) or "none"
+        produced = ", ".join(cast(list[str], close["conversion_reasons"])) or "none"
+        rows.append(
+            f"| {close['business_date']} | {close['required_conversion_disposition']}: "
+            f"{required} | {close['conversion_disposition']}: {produced} | "
+            f"{deposit['outcome']} | {deposit['deadline']} | "
+            f"{deposit['balance_at_deadline']} |"
+        )
+    d_close = closes[start]
+    invariants = cast(dict[str, bool], d_close["invariants"])
     (output / "SUMMARY.md").write_text(
         "SYNTHETIC CONTROL REHEARSAL — not evidence of production correctness\n\n"
-        f"# CONV-1 {run['variant']}\n\n"
-        f"- Conversion day: `{run['conversion_day']}`\n"
+        f"# CONV-1 {run['variant']}\n\n- Conversion day: `{run['conversion_day']}`\n"
         f"- D disposition: `{d_close['conversion_disposition']}`\n"
         f"- I9 conversion gated: `{invariants['I9_CONVERSION_GATED']}`\n"
-        f"- I10 migration conserved: `{invariants['I10_MIGRATION_CONSERVED']}`\n"
-        f"- First deposit: `${d_close['first_deposit']}`\n\n"
-        "## Not claimed\n\n- "
+        f"- I10 migration conserved: `{invariants['I10_MIGRATION_CONSERVED']}`\n\n"
+        "## D through D+3 evidence\n\n"
+        "| Date | Required | Produced | First deposit | Deadline | Balance at deadline |\n"
+        "|---|---|---|---|---|---:|\n"
+        + "\n".join(rows)
+        + "\n\n## Not claimed\n\n- "
         + "\n- ".join(cast(list[str], run["not_claimed"]))
         + "\n"
     )
