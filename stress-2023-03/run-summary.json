@@ -1,0 +1,3940 @@
+{
+  "all_invariants_pass": true,
+  "calibration_classes_used": [
+    "A",
+    "B",
+    "SYNTHETIC"
+  ],
+  "calibration_manifest_digest": "sha256:db4ba240f71156f3fd98be0956e2cc77be74c4901253a33695f94b4a90a8fb32",
+  "calibration_pack_id": "stress-2023-03",
+  "calibration_pack_version": "1",
+  "closes": [
+    {
+      "breaks": [],
+      "business_date": "2023-02-09",
+      "economics_digest": "sha256:c84d19d75b47b67d1abbe3c4fe88e8b204f3a24471da61f88cacaf295d025b9c",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "LOCATE": 1
+      },
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.18",
+        "financing_need": "96379.06",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96.25",
+        "treasury_par_yield_percent": "4.48",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-13",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-13",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999857.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_BUY_IN",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "EX_DATE_REFUSAL",
+        "FINRA_11810_BUY_IN",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-10",
+      "economics_digest": "sha256:aa034a16f0aeb7970ed7923f0a638abe83e956442861925f3e515bfa467935a8",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "LIMIT": 1
+      },
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.18",
+        "financing_need": "96349.33",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96.21875",
+        "treasury_par_yield_percent": "4.50",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-14",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-14",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999551.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-13",
+      "economics_digest": "sha256:edf053eed84ffc8e79cc722c865e6bda8f10ab54732d25f3c011a33c855abf93",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.17",
+        "financing_need": "96302.61",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96.171875",
+        "treasury_par_yield_percent": "4.52",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-15",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-15",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999859.0000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-14",
+      "economics_digest": "sha256:3dddb36760cb024cb6284a24f04fc636f8280b3e0783db282d15580f5c7df55f",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.15",
+        "financing_need": "96160.97",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96.03125",
+        "treasury_par_yield_percent": "4.60",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-16",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-16",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999590.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-15",
+      "economics_digest": "sha256:76c2f939b43680e650bfc2fe1e1a5e135ccd499522e0d9589b331c6ea5fd25eb",
+      "fails_by_age": {
+        "age_1": 1
+      },
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.15",
+        "financing_need": "96129.61",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96",
+        "treasury_par_yield_percent": "4.62",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-17",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-17",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          }
+        },
+        "dispositions": {
+          "net_capital": "HOLD",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "pab_reserve_requirement": null,
+          "reserve_requirement": null
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "pab_reserve": [
+            "15c3-3a.item.01",
+            "average_total_credits"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-5586]"
+          ],
+          "reserve": [
+            "15c3-3a.item.01",
+            "average_total_credits"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "DEFAULT_GSD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "RULE_204_LONG",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-16",
+      "economics_digest": "sha256:c1f739b6bb6248b7ae42eb9ca853184f33a57aac958e5c6a33f6c32406b251dd",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "1712030.00",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.15",
+        "financing_need": "96132.22",
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "171203",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96",
+        "treasury_par_yield_percent": "4.62",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-21",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-21",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "1712030.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "1712030.00"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999802.0000",
+          "pab_reserve_requirement": "1712030.00",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits",
+            "pab reserve deposit is short of the requirement by 1712030.00"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-17",
+      "economics_digest": "sha256:8150b7638ea1ff16cfc40729cb3bc92996cf72754e90d7604b68a28fedcf1ee9",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.15",
+        "financing_need": "96156.21",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96.03125",
+        "treasury_par_yield_percent": "4.60",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-22",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-22",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999704.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-21",
+      "economics_digest": "sha256:c8317f797198735e41b61ffaf7c9f66cc7d6ede66980431c3f0bc0d5b261f196",
+      "fails_by_age": {},
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "STALE_MARKET_DATA",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.26",
+        "financing_need": "97036.60",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.90625",
+        "treasury_par_yield_percent": "4.67",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-23",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-23",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          }
+        },
+        "dispositions": {
+          "net_capital": "HOLD",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "pab_reserve_requirement": null,
+          "reserve_requirement": null
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "pab_reserve": [
+            "15c3-3a.item.01",
+            "average_total_credits"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-4852]"
+          ],
+          "reserve": [
+            "15c3-3a.item.01",
+            "average_total_credits"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "DTC_CAP_HOLD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "STALE_DATA_HOLD",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-22",
+      "economics_digest": "sha256:aa56624161e9b846e4d30eedee2ad3c9589f83d490706fe2c1de0fe28b23dba4",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "2362210.00",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.14",
+        "financing_need": "96055.84",
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "236221",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.921875",
+        "treasury_par_yield_percent": "4.66",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-24",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-24",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "2362210.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "2362210.00"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999680.5000",
+          "pab_reserve_requirement": "2362210.00",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits",
+            "pab reserve deposit is short of the requirement by 2362210.00"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-23",
+      "economics_digest": "sha256:1d722aef7dbe17aeb06c17fdafb866ac0ba1ecfce4fcd7d295b7577f210e326f",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.14",
+        "financing_need": "96055.02",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.921875",
+        "treasury_par_yield_percent": "4.66",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-27",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-27",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999650.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-24",
+      "economics_digest": "sha256:60737a3ad159079e7ae8dce5fb482c4ce5774240e76dc595f4d010c2b2e74b4f",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.11",
+        "financing_need": "95834.73",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.703125",
+        "treasury_par_yield_percent": "4.78",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-28",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-02-28",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999643.0000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-27",
+      "economics_digest": "sha256:c661c324785a587080df7fb0e079a4c22fb2f1b2a6bb7fa7c12a35a4bb34e061",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.11",
+        "financing_need": "95834.60",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.703125",
+        "treasury_par_yield_percent": "4.78",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-01",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "900000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "900000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-01",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999833.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "900000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "average_total_credits"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "average_total_credits",
+            "customer reserve deposit is short of the requirement by 900000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-02-28",
+      "economics_digest": "sha256:0e2839b70fd9cc7a495079b474e8d94307f15e60055a47bc95a318be1aa8c6d3",
+      "fails_by_age": {},
+      "holds": [
+        "STALE_MARKET_DATA",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": null,
+        "book_customer_total_credits": "900000000.00",
+        "book_pab_total_credits": "1795650.00",
+        "customer_credit_balance": "900000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": null,
+        "filed_credit_history_count": 11,
+        "financing_charge": "12.10",
+        "financing_need": "95771.36",
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "179565",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.640625",
+        "treasury_par_yield_percent": "4.81",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-02",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-02",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          }
+        },
+        "dispositions": {
+          "net_capital": "HOLD",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "pab_reserve_requirement": null,
+          "reserve_requirement": null
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "pab_reserve": [
+            "15c3-3a.item.01",
+            "average_total_credits"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-6703]"
+          ],
+          "reserve": [
+            "15c3-3a.item.01",
+            "average_total_credits"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "STALE_DATA_HOLD",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-01",
+      "economics_digest": "sha256:e44e56944fe03ea9e6685a35b9c6afd807c637837da6b42097a03ccf2050cb32",
+      "fails_by_age": {},
+      "holds": [
+        "STALE_MARKET_DATA",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "2404900.00",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.09",
+        "financing_need": "95629.59",
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "240490",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.5",
+        "treasury_par_yield_percent": "4.89",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-03",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-03",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          }
+        },
+        "dispositions": {
+          "net_capital": "HOLD",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "pab_reserve_requirement": null,
+          "reserve_requirement": null
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "15c3-3a.item.01"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-9864]"
+          ],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "15c3-3a.item.01"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "STALE_DATA_HOLD",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-02",
+      "economics_digest": "sha256:3121583fb13ec816f6a02f39790ca46a20b2947a696c9d491f99561249fd820f",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.09",
+        "financing_need": "95632.39",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.5",
+        "treasury_par_yield_percent": "4.89",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-06",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-06",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999581.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-03",
+      "economics_digest": "sha256:322293ed3cc187501bdd5babd9416ed86d32aa653332ae8d239af1f52afd1691",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.09",
+        "financing_need": "95681.46",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.546875",
+        "treasury_par_yield_percent": "4.86",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-07",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-07",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          }
+        },
+        "dispositions": {
+          "net_capital": "HOLD",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "pab_reserve_requirement": null,
+          "reserve_requirement": null
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "15c3-3a.item.01"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-7772]"
+          ],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "15c3-3a.item.01"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "DEFAULT_CNS",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-06",
+      "economics_digest": "sha256:8e2290d207cb13dbade12acb108dd3fcd60ed29e48b2f25838b91c431f46e710",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "1926760.00",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.09",
+        "financing_need": "95631.83",
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "192676",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.5",
+        "treasury_par_yield_percent": "4.89",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-08",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-08",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "1926760.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "1926760.00"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999640.0000",
+          "pab_reserve_requirement": "1926760.00",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "pab reserve deposit is short of the requirement by 1926760.00"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": "reserve deposit is short of the requirement",
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-07",
+      "economics_digest": "sha256:2023cbb284da755fc11817f54269e36e181288ca381cd4afaf5df67b0f6cfb75",
+      "fails_by_age": {},
+      "holds": [
+        "STALE_MARKET_DATA",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "411330.00",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.06",
+        "financing_need": "95429.07",
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "41133",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.296875",
+        "treasury_par_yield_percent": "5.00",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-09",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-09",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          }
+        },
+        "dispositions": {
+          "net_capital": "HOLD",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "pab_reserve_requirement": null,
+          "reserve_requirement": null
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "15c3-3a.item.01"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-3008]"
+          ],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "15c3-3a.item.01"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "STALE_DATA_HOLD",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-08",
+      "economics_digest": "sha256:fd3a8cb2519c391115a7acbaa03c8d669872d9410f58731f8829c6e289ac1105",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "1086530.00",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.05",
+        "financing_need": "95333.66",
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "108653",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.203125",
+        "treasury_par_yield_percent": "5.05",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-10",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-10",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "1086530.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "1086530.00"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999851.5000",
+          "pab_reserve_requirement": "1086530.00",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "pab reserve deposit is short of the requirement by 1086530.00"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": "reserve deposit is short of the requirement",
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-09",
+      "economics_digest": "sha256:23debd39479f6099a1ca39f3fed9ce6bd861bd38d8cea4e1fc7bc0cbff12089b",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.08",
+        "financing_need": "95617.54",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "95.484375",
+        "treasury_par_yield_percent": "4.90",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-13",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-13",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999638.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "EX_DATE_REFUSAL",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-10",
+      "economics_digest": "sha256:89e56f40473a7545403b231fc56aff903fa7c5c1cc9d8aba6e6f37b1cca63ef1",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.15",
+        "financing_need": "96162.66",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96.03125",
+        "treasury_par_yield_percent": "4.60",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-14",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-14",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999854.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-13",
+      "economics_digest": "sha256:112ef1396e93f739b790da7195c02a2d0849fac7cb7c017bd8b53aee8f411ddb",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.29",
+        "financing_need": "97222.30",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "97.09375",
+        "treasury_par_yield_percent": "4.03",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-15",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-15",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999740.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-14",
+      "economics_digest": "sha256:4720995f7e9a0977bcb8c23e4ee234d03ad547e33235b5001bfc7e5a9655a7f7",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "HALT": 1
+      },
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.25",
+        "financing_need": "96893.38",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96.765625",
+        "treasury_par_yield_percent": "4.20",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-16",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-16",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999553.0000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "HALT",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-15",
+      "economics_digest": "sha256:20553dda0f7c476922f8d3ccf273d715429cccdc2e75566226f71251e041afad",
+      "fails_by_age": {},
+      "holds": [
+        "STALE_MARKET_DATA",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.39",
+        "financing_need": "97414.55",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.58",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "97.28125",
+        "treasury_par_yield_percent": "3.93",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-17",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-17",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": null,
+            "opening_balance": "0",
+            "outcome": "NOT_COMPUTED",
+            "requirement": null
+          }
+        },
+        "dispositions": {
+          "net_capital": "HOLD",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "HOLD",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": null,
+          "net_capital": null,
+          "pab_reserve_requirement": null,
+          "reserve_requirement": null
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [
+            "net_worth"
+          ],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "15c3-3a.item.01"
+          ],
+          "possession_or_control": [
+            "fully_paid[SYN-EQ-5071]"
+          ],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "15c3-3a.item.01"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": null
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_BUY_IN",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "FINRA_11810_BUY_IN",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "STALE_DATA_HOLD",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-16",
+      "economics_digest": "sha256:916348b13f3cd60d0393222253a311593ae4afd9ec7e461c462265291c66b83d",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.32",
+        "financing_need": "97021.76",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.57",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96.890625",
+        "treasury_par_yield_percent": "4.14",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-20",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-20",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999721.0000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-17",
+      "economics_digest": "sha256:7a9ba7fa176f34f8a17637a835b1faf19a251d5618521bdf17295872a430d21c",
+      "fails_by_age": {},
+      "holds": [
+        "DTC_CAP_OR_COLLATERAL",
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.47",
+        "financing_need": "98628.33",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "97.5",
+        "treasury_par_yield_percent": "3.81",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-21",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-21",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999679.0000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "DTC_CAP_HOLD",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-20",
+      "economics_digest": "sha256:7c4fa4a5dc06aa28e3bbcc0e7cad70a302db37b49fb57931ef71c7dcf6f8f998",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.31",
+        "financing_need": "97428.41",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "97.296875",
+        "treasury_par_yield_percent": "3.92",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-22",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-22",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999754.0000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-21",
+      "economics_digest": "sha256:740e3063f6e03e35cb589cd931b51347c5d4dc66913fce10263f620ffb61163d",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "1546310.00",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.25",
+        "financing_need": "96958.20",
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "154631",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "96.828125",
+        "treasury_par_yield_percent": "4.17",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-23",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-23",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "1546310.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "1546310.00"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999703.0000",
+          "pab_reserve_requirement": "1546310.00",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "pab reserve deposit is short of the requirement by 1546310.00"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": "reserve deposit is short of the requirement",
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-22",
+      "economics_digest": "sha256:d88abfd98023ff027fc8374f5b093bca8fbc97d8b7c6d5b0149ecbe13cd7191b",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "2256120.00",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "12.30",
+        "financing_need": "97351.28",
+        "pab_fail_to_receive_contract_price": "10.00",
+        "pab_fail_to_receive_quantity": "225612",
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.55",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "97.21875",
+        "treasury_par_yield_percent": "3.96",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-24",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-24",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "2256120.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "2256120.00"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "HOLD",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999689.5000",
+          "pab_reserve_requirement": "2256120.00",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": true,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "pab reserve deposit is short of the requirement by 2256120.00"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": "reserve deposit is short of the requirement",
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-23",
+      "economics_digest": "sha256:8a11a33805479374886c3a3deabced91f2ec2580982f1e5a7bc7f053ba20403a",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {},
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "13.03",
+        "financing_need": "97726.50",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.80",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "97.59375",
+        "treasury_par_yield_percent": "3.76",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": true,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-27",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-27",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999551.5000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "TREASURY_64TH"
+      ]
+    },
+    {
+      "breaks": [],
+      "business_date": "2023-03-24",
+      "economics_digest": "sha256:23e46a94fd4c48e84ff9cb61d10ea5bd96cc124a36a09df113488696d49c1aac",
+      "fails_by_age": {},
+      "holds": [
+        "PROTECTION_INPUTS"
+      ],
+      "invariant_results": {
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "market_access_refusals": {
+        "RULE_204_B": 1
+      },
+      "market_data": {
+        "average_total_credits": "516816304.1666666666666666667",
+        "book_customer_total_credits": "50000000.00",
+        "book_pab_total_credits": "0",
+        "customer_credit_balance": "50000000",
+        "daily_exit_notice_date": null,
+        "daily_requirement_effective_date": "2023-09-01",
+        "filed_credit_history_count": 12,
+        "financing_charge": "13.03",
+        "financing_need": "97725.95",
+        "pab_fail_to_receive_contract_price": null,
+        "pab_fail_to_receive_quantity": null,
+        "previously_daily_required": false,
+        "reserve_mode": "weekly",
+        "sofr_percent": "4.80",
+        "sofr_source": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2023-01-01&endDate=2023-12-31&type=rate",
+        "treasury_clean_price_64ths": "97.59375",
+        "treasury_par_yield_percent": "3.76",
+        "treasury_tenor": "2 Yr",
+        "treasury_yield_source": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2023/all?type=daily_treasury_yield_curve&field_tdr_date_value=2023&page&_format=csv"
+      },
+      "money_residual": "0.00",
+      "normal_day": false,
+      "protection": {
+        "deposits": {
+          "customer": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-28",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "50000000.00",
+            "opening_balance": "0",
+            "outcome": "NOT_DECLARED_IN_PACK",
+            "requirement": "50000000.00"
+          },
+          "pab": {
+            "amount": "0",
+            "balance_at_deadline": "0",
+            "closing_balance": "0",
+            "deadline": "2023-03-28",
+            "deposit_date": null,
+            "drawn_outcome": "NOT_DECLARED_IN_PACK",
+            "needed": "0",
+            "opening_balance": "0",
+            "outcome": "NO_DEPOSIT_NEEDED",
+            "requirement": "0"
+          }
+        },
+        "dispositions": {
+          "net_capital": "PASS",
+          "pab_reserve": "PASS",
+          "possession_or_control": "PASS",
+          "reserve": "HOLD"
+        },
+        "figures": {
+          "control_shortfall": "0",
+          "net_capital": "999580.0000",
+          "pab_reserve_requirement": "0",
+          "reserve_requirement": "50000000.00"
+        },
+        "holds_required": {
+          "pab_reserve": false,
+          "reserve": true
+        },
+        "reasons": {
+          "net_capital": [],
+          "pab_reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date"
+          ],
+          "possession_or_control": [],
+          "reserve": [
+            "the six-month daily-computation phase-in has not reached its evidenced effective date",
+            "customer reserve deposit is short of the requirement by 50000000.00"
+          ]
+        },
+        "reasons_required": {
+          "pab_reserve": null,
+          "reserve": "reserve deposit is short of the requirement"
+        },
+        "required_hold": true
+      },
+      "replay_digest_check": true,
+      "scenarios": [
+        "CASH_RAIL",
+        "CLOSE_AUCTION",
+        "CNS_DAY",
+        "CNS_NIGHT",
+        "GSD_FUNDS_ONLY",
+        "GSD_SECURITIES_NET",
+        "LATE_REPORT",
+        "MULTI_PRINT",
+        "ODD_LOT",
+        "OPEN_AUCTION",
+        "QUEUE_PRIORITY",
+        "RULE_204_SHORT",
+        "TREASURY_64TH"
+      ]
+    }
+  ],
+  "days": 31,
+  "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
+  "economics_digest": "sha256:867bc313b7541ce680c98dce5ea1757dcc03bb5878d2161fde37f6eeeebc0ed8",
+  "filed_credit_history": [
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2022-03-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2022-04-30",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2022-05-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2022-06-30",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2022-07-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "50000000",
+      "month_end": "2022-08-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "50000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2022-09-30",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2022-10-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2022-11-30",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2022-12-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "1000000000",
+      "month_end": "2023-01-31",
+      "pab_total_credits": "0",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "1000000000"
+    },
+    {
+      "customer_total_credits": "900000000.00",
+      "month_end": "2023-02-28",
+      "pab_total_credits": "1795650.00",
+      "source": "SIMULATED_FOCUS_STAND_IN_FROM_ATREIDES_BOOKS",
+      "total_credits": "901795650.00"
+    }
+  ],
+  "normal_day_count": 19,
+  "not_tested": [
+    "second venue",
+    "best execution",
+    "options",
+    "repo",
+    "clearing fund waterfall"
+  ],
+  "ny_fed_notices": [
+    "The SOFR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the SOFR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
+    "The BGCR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the BGCR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
+    "The TGCR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the TGCR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
+    "The EFFR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the EFFR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions.",
+    "The OBFR is subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the OBFR by Bill Ravelo, CFMA research, does not sanction or endorse any particular republication, and has no liability for your use. Distributed content remains subject to the same permissions, conditions, and restrictions."
+  ],
+  "repository_shas": {
+    "Cato-FICC-MCP": "a1ece40b032bc427868f39ca93e1e8e9b2e24721",
+    "L.C.": "f9f95474a7dff6123c9e8788ec6a7949864b353b",
+    "atreides": "21348fea502dcc8a87e33e70365203c6404efe0d",
+    "aureon": "254713b5c411e9c83ced17a61cb800f9bfae3998",
+    "cannae-kernel": "549604c1af78ac7aace64d7fefb68d22d99bc394"
+  },
+  "scenario_counts": {
+    "CASH_RAIL": 31,
+    "CLOSE_AUCTION": 31,
+    "CNS_BUY_IN": 2,
+    "CNS_DAY": 31,
+    "CNS_NIGHT": 31,
+    "DEFAULT_CNS": 1,
+    "DEFAULT_DTC": 0,
+    "DEFAULT_GSD": 1,
+    "DTC_CAP_HOLD": 2,
+    "EX_DATE_REFUSAL": 2,
+    "FINRA_11810_BUY_IN": 2,
+    "GSD_FUNDS_ONLY": 31,
+    "GSD_SECURITIES_NET": 31,
+    "HALT": 1,
+    "LATE_REPORT": 31,
+    "MULTI_PRINT": 31,
+    "ODD_LOT": 31,
+    "OPEN_AUCTION": 31,
+    "QUEUE_PRIORITY": 31,
+    "RULE_204_LONG": 1,
+    "RULE_204_SHORT": 1,
+    "STALE_DATA_HOLD": 5,
+    "TREASURY_64TH": 31
+  },
+  "scenarios_declared": [
+    "QUEUE_PRIORITY",
+    "LATE_REPORT",
+    "MULTI_PRINT",
+    "ODD_LOT",
+    "OPEN_AUCTION",
+    "CLOSE_AUCTION",
+    "HALT",
+    "TREASURY_64TH",
+    "EX_DATE_REFUSAL",
+    "CNS_NIGHT",
+    "CNS_DAY",
+    "RULE_204_SHORT",
+    "RULE_204_LONG",
+    "CNS_BUY_IN",
+    "FINRA_11810_BUY_IN",
+    "GSD_SECURITIES_NET",
+    "GSD_FUNDS_ONLY",
+    "DTC_CAP_HOLD",
+    "CASH_RAIL",
+    "DEFAULT_CNS",
+    "DEFAULT_GSD",
+    "DEFAULT_DTC",
+    "STALE_DATA_HOLD"
+  ],
+  "scenarios_exercised": [
+    "CASH_RAIL",
+    "CLOSE_AUCTION",
+    "CNS_BUY_IN",
+    "CNS_DAY",
+    "CNS_NIGHT",
+    "DEFAULT_CNS",
+    "DEFAULT_GSD",
+    "DTC_CAP_HOLD",
+    "EX_DATE_REFUSAL",
+    "FINRA_11810_BUY_IN",
+    "GSD_FUNDS_ONLY",
+    "GSD_SECURITIES_NET",
+    "HALT",
+    "LATE_REPORT",
+    "MULTI_PRINT",
+    "ODD_LOT",
+    "OPEN_AUCTION",
+    "QUEUE_PRIORITY",
+    "RULE_204_LONG",
+    "RULE_204_SHORT",
+    "STALE_DATA_HOLD",
+    "TREASURY_64TH"
+  ],
+  "scenarios_not_exercised": [
+    "DEFAULT_DTC"
+  ],
+  "schema_version": "sim.run/1",
+  "seed": 20261024,
+  "window_basis": "explicit dated-pack window",
+  "window_end": "2023-03-24",
+  "window_start": "2023-02-09"
+}

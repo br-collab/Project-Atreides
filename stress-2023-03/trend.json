@@ -1,0 +1,25 @@
+{
+  "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
+  "failures_found_this_week": 0,
+  "green_nights_in_row": 1,
+  "never_failed_invariants": [
+    "I1",
+    "I2",
+    "I3",
+    "I4",
+    "I5",
+    "I6",
+    "I7",
+    "I8"
+  ],
+  "not_tested": [
+    "second venue",
+    "best execution",
+    "options",
+    "repo",
+    "clearing fund waterfall"
+  ],
+  "review_flag": "an invariant that never fails may be too weak",
+  "schema_version": "sim.trend/1",
+  "time_to_merged_fix": null
+}
