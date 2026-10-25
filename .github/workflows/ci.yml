@@ -163,6 +163,21 @@ jobs:
       - name: Production import refusal
         run: '! ATREIDES_PROFILE=production uv run python -c "import simulator"'
 
+  scf-small-five-day:
+    name: SCF-1 small five-day close
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.11"
+          enable-cache: true
+      - run: uv sync --locked --extra dev
+      - name: Declared-synthetic firm at volume
+        run: >-
+          uv run python -m tools.run_simulator --firm small --seed 20261024 --days 5
+          --output "$RUNNER_TEMP/firm-small"
+
   publish-agents-snapshot:
     name: Publish agent activation snapshot
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

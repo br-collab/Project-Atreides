@@ -1,0 +1,157 @@
+{
+  "days": [
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-04",
+      "economics_digest": "sha256:9a2166ff69659924418759858a5848acc4959fd4d5d72f4232369b8fe9e69063",
+      "executions": 1000,
+      "fails_by_age": {},
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "HOLD",
+        "pab_reserve": "PASS",
+        "possession_or_control": "HOLD",
+        "reserve": "PASS"
+      }
+    },
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-05",
+      "economics_digest": "sha256:3060e005fe908f338c9cc564dfa4db5f9409fc5626faa89cf387ae5980cab3e0",
+      "executions": 1000,
+      "fails_by_age": {},
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "HOLD",
+        "reserve": "PASS"
+      }
+    },
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-06",
+      "economics_digest": "sha256:1b7d022b1648bbf351ddd542e25887cac1b6b33b723702b8c9851aaff199e041",
+      "executions": 1000,
+      "fails_by_age": {},
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "HOLD",
+        "reserve": "HOLD"
+      }
+    },
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-07",
+      "economics_digest": "sha256:ef7f76d58144d4eeca1d7e631e5590c8b8bef57c578acdebdb899cafe5b6eef7",
+      "executions": 1000,
+      "fails_by_age": {},
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "HOLD",
+        "reserve": "HOLD"
+      }
+    },
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-08",
+      "economics_digest": "sha256:845317bc65b61021321790a241237ea7ebbfd49743a5877ecd2202fe96841a2d",
+      "executions": 1000,
+      "fails_by_age": {},
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "HOLD",
+        "pab_reserve": "PASS",
+        "possession_or_control": "HOLD",
+        "reserve": "HOLD"
+      }
+    }
+  ],
+  "elapsed_seconds": 30.098768463998567,
+  "executions_per_second": 166.11975357000233,
+  "not_claimed": [
+    "regulatory approval",
+    "production readiness",
+    "clearing-agency membership",
+    "real customer assets",
+    "real firm, account or security identifiers"
+  ],
+  "peak_memory_bytes": 83959808,
+  "profile": {
+    "accounts": 200,
+    "buy_share": "0.50",
+    "executions_per_day": 1000,
+    "issues": 20,
+    "margin_account_share": "0.65",
+    "order_size_max": 500,
+    "order_size_min": 1,
+    "pab_activity_share": "0.10",
+    "price_max": "250.00",
+    "price_min": "5.00",
+    "seed_stream": "SCF-1",
+    "sell_share": "0.40",
+    "short_sale_share": "0.10",
+    "synthetic": true,
+    "tier": "small"
+  },
+  "seed": 20261024
+}

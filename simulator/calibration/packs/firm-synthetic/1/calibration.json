@@ -1,0 +1,27 @@
+{
+  "inputs": [
+    {
+      "input_id": "firm_profile",
+      "source_url": "synthetic://scf-1/firm-profile-v1",
+      "citation": "ORDER-SCF-1 v0.1 WP1 declared synthetic load levels",
+      "license_class": "SYNTHETIC",
+      "values": {
+        "seed_stream": "SCF-1",
+        "margin_account_share": "0.65",
+        "pab_activity_share": "0.10",
+        "buy_share": "0.50",
+        "sell_share": "0.40",
+        "short_sale_share": "0.10",
+        "order_size_min": 1,
+        "order_size_max": 500,
+        "price_min": "5.00",
+        "price_max": "250.00",
+        "tiers": {
+          "small": {"accounts": 200, "issues": 20, "executions_per_day": 1000},
+          "medium": {"accounts": 2000, "issues": 200, "executions_per_day": 10000},
+          "large": {"accounts": 20000, "issues": 1000, "executions_per_day": 100000}
+        }
+      }
+    }
+  ]
+}
