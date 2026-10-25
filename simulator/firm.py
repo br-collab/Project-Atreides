@@ -49,6 +49,8 @@ from atreides.books.ledger import (
     LedgerLine,
     PostingSource,
     RecordSide,
+    ReserveActivity,
+    ReserveSourceFact,
 )
 from atreides.books.projections import (
     project_customer_protection,
@@ -58,6 +60,8 @@ from atreides.books.projections import (
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import (
+    EXHIBIT_A_CREDITS,
+    EXHIBIT_A_DEBITS,
     ComputationMode,
     compute_reserve,
     with_customer_excess_debits,
@@ -75,7 +79,9 @@ from simulator.estate import (
     _complete_reserve_inputs,
     _post_reserve_deposits,
     _wire,
+    simulated_filed_credit_total,
 )
+from simulator.settlement import rule_204_deadline
 
 TierName = Literal["small", "medium", "large"]
 TIERS: tuple[TierName, ...] = ("small", "medium", "large")
@@ -108,6 +114,8 @@ class FirmProfile:
     refusal_rate: Decimal
     reserve_short_fraction: Decimal
     reserve_bank_equity_capital: Decimal
+    filed_history_months: int
+    filed_history_credit: Decimal
     seed_stream: str
     synthetic: bool = True
 
@@ -141,6 +149,8 @@ class FirmDay:
     breaks_by_owner: dict[str, int]
     protection_dispositions: dict[str, str]
     protection_reasons: dict[str, tuple[str, ...]]
+    protection_figures: dict[str, Decimal | None]
+    rule_204_close_outs: dict[str, date]
     economics_digest: str
 
 
@@ -197,12 +207,7 @@ def attack_firm_run(run: FirmRun) -> dict[str, tuple[str, ...]]:
         )
         attacked[mutation] = tuple(
             sorted(
-                {
-                    name
-                    for day in mutated.days
-                    for name, held in day.invariants.items()
-                    if not held
-                }
+                {name for day in mutated.days for name, held in day.invariants.items() if not held}
             )
         )
     return attacked
@@ -228,12 +233,12 @@ def load_firm_profile(pack: CalibrationPack, tier: TierName) -> FirmProfile:
         price_max=Decimal(str(pack.value("firm_profile", "price_max"))),
         fail_rate=Decimal(str(pack.value("firm_profile", "fail_rate"))),
         refusal_rate=Decimal(str(pack.value("firm_profile", "refusal_rate"))),
-        reserve_short_fraction=Decimal(
-            str(pack.value("firm_profile", "reserve_short_fraction"))
-        ),
+        reserve_short_fraction=Decimal(str(pack.value("firm_profile", "reserve_short_fraction"))),
         reserve_bank_equity_capital=Decimal(
             str(pack.value("firm_profile", "reserve_bank_equity_capital"))
         ),
+        filed_history_months=int(cast(int, pack.value("firm_profile", "filed_history_months"))),
+        filed_history_credit=Decimal(str(pack.value("firm_profile", "filed_history_credit"))),
         seed_stream=str(pack.value("firm_profile", "seed_stream")),
     )
 
@@ -603,6 +608,81 @@ def _seed_inventory(books: EquitiesBooks, profile: FirmProfile, start: date, day
         )
 
 
+def synthetic_filed_history(profile: FirmProfile, start: date) -> tuple[Decimal, ...] | None:
+    """Return the declared 12-month SIMULATED_FOCUS_STAND_IN, or honest absence."""
+    if profile.filed_history_months == 0:
+        return None
+    return tuple(
+        sum(
+            simulated_filed_credit_total(
+                start - timedelta(days=30 * month), profile.filed_history_credit
+            ),
+            Decimal(),
+        )
+        for month in range(1, profile.filed_history_months + 1)
+    )
+
+
+def _post_stock_borrows(
+    books: EquitiesBooks,
+    carried_fails: dict[str, tuple[Decimal, Decimal, date]],
+    business_date: date,
+    prices: dict[str, Decimal],
+    day_index: int,
+) -> None:
+    """Post declared synthetic borrows that cover open CNS fails through the real books."""
+    for offset, (issue, (quantity, cash, settlement_date)) in enumerate(
+        sorted(carried_fails.items())
+    ):
+        if quantity == 0:
+            continue
+        event_id = _id("evt_", 840_000_000 + day_index * 10_000 + offset)
+        borrowed = abs(quantity)
+        books.post(
+            JournalEntry(
+                entry_id=f"SCF2-BORROW-{day_index}-{offset}",
+                source_event_id=event_id,
+                source=PostingSource.CNS_FAIL,
+                effective_date=business_date,
+                effective_date_basis="SETTLEMENT_DATE",
+                authority="SCF2_SYNTHETIC_BORROW_POLICY",
+                lines=(
+                    LedgerLine(
+                        account_id="SYN-SCF2-STOCK-BORROWED",
+                        account_type=AccountType.STOCK_BORROWED,
+                        record_side=RecordSide.OWNERSHIP,
+                        issue=issue,
+                        quantity=borrowed,
+                    ),
+                    LedgerLine(
+                        account_id="SYN-SCF1-FIRM-INVENTORY",
+                        account_type=AccountType.FIRM_PROPRIETARY,
+                        record_side=RecordSide.OWNERSHIP,
+                        issue=issue,
+                        quantity=-borrowed,
+                    ),
+                ),
+                reserve_source_facts=(
+                    ReserveSourceFact(
+                        account_type=AccountType.STOCK_BORROWED,
+                        issue=issue,
+                        activity=ReserveActivity.CUSTOMER,
+                        settlement_date=settlement_date,
+                        contract_price=prices.get(issue, abs(cash / quantity)),
+                    ),
+                ),
+                posting=BooksPosting(
+                    posted_record_id=f"SCF2-BORROW-{day_index}-{offset}",
+                    posting_authority=_actor(),
+                    effective_time=datetime.combine(business_date, datetime.min.time(), tzinfo=UTC),
+                    source_event_id=EventId(event_id),
+                    provenance=Provenance.FACT_SYNTHETIC,
+                ),
+                synthetic=True,
+            )
+        )
+
+
 def _protections(
     books: EquitiesBooks,
     business_date: date,
@@ -610,7 +690,12 @@ def _protections(
     profile: FirmProfile,
     run_number: int,
     mutation: str | None,
-) -> tuple[dict[str, str], dict[str, tuple[str, ...]], bool]:
+) -> tuple[
+    dict[str, str],
+    dict[str, tuple[str, ...]],
+    dict[str, Decimal | None],
+    bool,
+]:
     calendar = MarketCalendar.load(Market.US_EQUITIES)
     if mutation == "FORCE_RESERVE_PASS_ON_SHORT_DAY" and run_number == 0:
         event_id = _id("evt_", 830_000_000)
@@ -641,9 +726,7 @@ def _protections(
                 posting=BooksPosting(
                     posted_record_id="SCF1-MUTATION-RESERVE-CREDIT",
                     posting_authority=_actor(),
-                    effective_time=datetime.combine(
-                        business_date, datetime.min.time(), tzinfo=UTC
-                    ),
+                    effective_time=datetime.combine(business_date, datetime.min.time(), tzinfo=UTC),
                     source_event_id=EventId(event_id),
                     provenance=Provenance.FACT_SYNTHETIC,
                 ),
@@ -668,19 +751,22 @@ def _protections(
         calendar=calendar,
         margin_results=margins,
     )
+    history = synthetic_filed_history(profile, business_date)
+    average_credits = None if history is None else sum(history, Decimal()) / len(history)
+    daily_threshold_met = average_credits is not None and average_credits >= Decimal("500000000")
     customer_inputs = _complete_reserve_inputs(
         projected.reserve,
-        average_total_credits=Decimal(),
-        daily_requirement_effective_date=None,
-        computation_mode=ComputationMode.WEEKLY,
+        average_total_credits=average_credits,
+        daily_requirement_effective_date=business_date if daily_threshold_met else None,
+        computation_mode=(ComputationMode.DAILY if daily_threshold_met else ComputationMode.WEEKLY),
         previously_daily_required=False,
         daily_exit_notice_date=None,
     )
     pab_inputs = _complete_reserve_inputs(
         projected.pab_reserve,
-        average_total_credits=Decimal(),
-        daily_requirement_effective_date=None,
-        computation_mode=ComputationMode.WEEKLY,
+        average_total_credits=average_credits,
+        daily_requirement_effective_date=business_date if daily_threshold_met else None,
+        computation_mode=(ComputationMode.DAILY if daily_threshold_met else ComputationMode.WEEKLY),
         previously_daily_required=False,
         daily_exit_notice_date=None,
     )
@@ -733,19 +819,38 @@ def _protections(
         "net_capital": capital.reasons + capital.missing_inputs + capital.breaches,
         "possession_or_control": control.reasons + control.missing_inputs + control.breaches,
     }
-    reserve_holds = {
-        item.computation: item.outcome in DEPOSIT_BREACH_OUTCOMES for item in deposits
-    }
+    reserve_holds = {item.computation: item.outcome in DEPOSIT_BREACH_OUTCOMES for item in deposits}
     required = {
         "reserve": "HOLD" if reserve_holds["customer"] else "PASS",
         "pab_reserve": "HOLD" if reserve_holds["pab"] else "PASS",
         "net_capital": "HOLD" if capital.breaches or capital.missing_inputs else "PASS",
-        "possession_or_control": (
-            "HOLD" if control.breaches or control.missing_inputs else "PASS"
+        "possession_or_control": ("HOLD" if control.breaches or control.missing_inputs else "PASS"),
+    }
+
+    def total(lines: tuple[Any, ...], rule_ids: tuple[str, ...]) -> Decimal | None:
+        selected = [line.amount for line in lines if line.rule_id in rule_ids]
+        return (
+            None
+            if any(value is None for value in selected)
+            else sum((cast(Decimal, value) for value in selected), Decimal())
+        )
+
+    figures = {
+        "customer_credits": total(customer_inputs.lines, EXHIBIT_A_CREDITS),
+        "customer_debits": total(customer_inputs.lines, EXHIBIT_A_DEBITS),
+        "average_total_credits": average_credits,
+        "reserve_requirement": customer.requirement,
+        "pab_reserve_requirement": pab.requirement,
+        "net_capital": capital.net_capital,
+        "control_shortfall": sum(
+            (item.shortfall for item in control.issues if item.shortfall is not None), Decimal()
         ),
     }
-    return dispositions, reasons, all(
-        dispositions[name] == expected for name, expected in required.items()
+    return (
+        dispositions,
+        reasons,
+        figures,
+        all(dispositions[name] == expected for name, expected in required.items()),
     )
 
 
@@ -779,9 +884,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         activity_positions: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
         activity_cash: dict[str, Decimal] = defaultdict(Decimal)
         carried_input = (
-            {}
-            if mutation == "AGE_FAIL_WITHOUT_CARRY" and day_index == 1
-            else carried_fails
+            {} if mutation == "AGE_FAIL_WITHOUT_CARRY" and day_index == 1 else carried_fails
         )
         cns_trades: list[tuple[str, Decimal]] = [
             (issue, quantity) for issue, (quantity, _, _) in carried_input.items()
@@ -847,6 +950,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 activity_cash[account] += -sign * consideration
             cns_trades.extend((row.issue, row.signed_quantity) for row in rows)
         prices = {execution.issue: execution.price for execution in executions}
+        _post_stock_borrows(books, carried_input, business_date, prices, day_index)
         settlements = []
         profile_cns = MarketProfile(
             market_id="NSCC_SYNTHETIC",
@@ -868,22 +972,25 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 and position.security_id == omitted_issue
             ):
                 continue
-            cash = (position.quantity * prices[position.security_id]).quantize(Decimal("0.01"))
-            allocated_quantity = (
-                position.quantity * (Decimal(1) - profile.fail_rate)
-            ).quantize(Decimal("1"))
-            allocated_cash = (cash * (Decimal(1) - profile.fail_rate)).quantize(
-                Decimal("0.01")
+            carried_quantity, carried_cash, _ = carried_input.get(
+                position.security_id, (Decimal(), Decimal(), business_date)
             )
+            mark = prices.get(position.security_id)
+            if mark is None:
+                mark = abs(carried_cash / carried_quantity)
+                prices[position.security_id] = mark
+            cash = (position.quantity * mark).quantize(Decimal("0.01"))
+            allocated_quantity = (position.quantity * (Decimal(1) - profile.fail_rate)).quantize(
+                Decimal("1")
+            )
+            allocated_cash = (cash * (Decimal(1) - profile.fail_rate)).quantize(Decimal("0.01"))
             calendar = MarketCalendar.load(Market.US_EQUITIES)
             settlement_date = carried_input.get(
                 position.security_id,
                 (
                     Decimal(),
                     Decimal(),
-                    calendar.add_business_days(
-                        business_date, position.settlement_date_offset_days
-                    ),
+                    calendar.add_business_days(business_date, position.settlement_date_offset_days),
                 ),
             )[2]
             result = settle_net_position(
@@ -929,7 +1036,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             for issue, sides in books.quantities().items()
         }
         breaks = books.verify_stock_record(observed_locations=observed)
-        protections, protection_reasons, i6 = _protections(
+        protections, protection_reasons, protection_figures, i6 = _protections(
             books, business_date, prices, profile, day_index, mutation
         )
         carry_complete = set(carried_fails) <= set(carried_input)
@@ -943,18 +1050,13 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 result.residual is None
                 or (result.residual.quantity is not None and result.residual.cash is not None)
                 for result in settlements
-            ) and {position.security_id for position in cns_positions} <= covered_cns_issues,
+            )
+            and {position.security_id for position in cns_positions} <= covered_cns_issues,
             "I6_DEFAULT_AND_STALE_HOLD": i6,
-            "I7_MARKET_ACCESS_REFUSES": bool(
-                tuple(item for item in executions if item.refused)
-            )
+            "I7_MARKET_ACCESS_REFUSES": bool(tuple(item for item in executions if item.refused))
+            and all(item.quantity > profile.order_size_max for item in executions if item.refused)
             and all(
-                item.quantity > profile.order_size_max for item in executions if item.refused
-            )
-            and all(
-                item.quantity <= profile.order_size_max
-                for item in executions
-                if not item.refused
+                item.quantity <= profile.order_size_max for item in executions if not item.refused
             ),
             "I8_REPLAY_DIGEST": before == books.digest(),
             "I11_POSITION_ROLL_FORWARD": i11,
@@ -983,6 +1085,15 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 ),
                 protection_dispositions=protections,
                 protection_reasons=protection_reasons,
+                protection_figures=protection_figures,
+                rule_204_close_outs={
+                    issue: rule_204_deadline(
+                        settlement_date=settlement_date,
+                        sale_kind="SHORT",
+                        calendar=MarketCalendar.load(Market.US_EQUITIES),
+                    )
+                    for issue, (_, _, settlement_date) in carried_input.items()
+                },
                 economics_digest="sha256:"
                 + hashlib.sha256(
                     canonical_bytes_of(
@@ -1034,7 +1145,5 @@ def publish_firm(run: FirmRun, output: Path) -> None:
     payload = asdict(run)
     payload["firm_profile"] = payload["profile"]
     payload["closes"] = payload.pop("days")
-    payload["all_invariants_pass"] = all(
-        all(day.invariants.values()) for day in run.days
-    )
+    payload["all_invariants_pass"] = all(all(day.invariants.values()) for day in run.days)
     publish_run(payload, output)
