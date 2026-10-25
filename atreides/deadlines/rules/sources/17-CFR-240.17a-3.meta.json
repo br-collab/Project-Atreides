@@ -1,0 +1,9 @@
+{
+  "citation": "17 CFR 240.17a-3",
+  "ecfr_up_to_date_as_of": "2026-10-22",
+  "pin_status": "INDETERMINATE",
+  "reason": "The official section was verified through www.ecfr.gov, but the host returned a Request Access page to the byte-fetching client and 406 from its versioner API. No false local source pin was created.",
+  "retrieval_dtg": "20261025",
+  "sha256": null,
+  "url": "https://www.ecfr.gov/current/title-17/chapter-II/part-240/section-240.17a-3"
+}
