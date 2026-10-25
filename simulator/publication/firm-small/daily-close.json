@@ -2,34 +2,11 @@
   {
     "breaks_by_owner": {},
     "business_date": "2027-01-04",
-    "economics_digest": "sha256:9a2166ff69659924418759858a5848acc4959fd4d5d72f4232369b8fe9e69063",
+    "economics_digest": "sha256:ed65448654cf0c2ab859d049e9d6e71aa976a02a8cf2e46a28b218f5edf15cf4",
     "executions": 1000,
-    "fails_by_age": {},
-    "invariants": {
-      "I11_POSITION_ROLL_FORWARD": true,
-      "I12_IDEMPOTENT_REPLAY": true,
-      "I1_QUANTITY_MONEY_CONSERVE": true,
-      "I2_BOOKED_FROM_REPORTS": true,
-      "I3_STOCK_RECORD_EQUALS_STREET": true,
-      "I4_EVERY_DIFFERENCE_OWNED": true,
-      "I5_RESIDUALS_TWO_SIDED": true,
-      "I6_DEFAULT_AND_STALE_HOLD": true,
-      "I7_MARKET_ACCESS_REFUSES": true,
-      "I8_REPLAY_DIGEST": true
+    "fails_by_age": {
+      "0": 20
     },
-    "protection_dispositions": {
-      "net_capital": "HOLD",
-      "pab_reserve": "PASS",
-      "possession_or_control": "HOLD",
-      "reserve": "PASS"
-    }
-  },
-  {
-    "breaks_by_owner": {},
-    "business_date": "2027-01-05",
-    "economics_digest": "sha256:3060e005fe908f338c9cc564dfa4db5f9409fc5626faa89cf387ae5980cab3e0",
-    "executions": 1000,
-    "fails_by_age": {},
     "invariants": {
       "I11_POSITION_ROLL_FORWARD": true,
       "I12_IDEMPOTENT_REPLAY": true,
@@ -47,14 +24,138 @@
       "pab_reserve": "PASS",
       "possession_or_control": "HOLD",
       "reserve": "PASS"
+    },
+    "protection_figures": {
+      "average_total_credits": "600000000.00",
+      "control_shortfall": "0",
+      "customer_credits": "4958857.35",
+      "customer_debits": "6923940.52",
+      "net_capital": "338700347.3905",
+      "pab_reserve_requirement": "0",
+      "reserve_requirement": "0"
+    },
+    "protection_reasons": {
+      "net_capital": [],
+      "pab_reserve": [],
+      "possession_or_control": [
+        "excess_margin[SYN-SCF1-ISSUE-0000]",
+        "excess_margin[SYN-SCF1-ISSUE-0001]",
+        "excess_margin[SYN-SCF1-ISSUE-0002]",
+        "excess_margin[SYN-SCF1-ISSUE-0003]",
+        "excess_margin[SYN-SCF1-ISSUE-0004]",
+        "excess_margin[SYN-SCF1-ISSUE-0005]",
+        "excess_margin[SYN-SCF1-ISSUE-0006]",
+        "excess_margin[SYN-SCF1-ISSUE-0007]",
+        "excess_margin[SYN-SCF1-ISSUE-0008]",
+        "excess_margin[SYN-SCF1-ISSUE-0009]",
+        "excess_margin[SYN-SCF1-ISSUE-0010]",
+        "excess_margin[SYN-SCF1-ISSUE-0011]",
+        "excess_margin[SYN-SCF1-ISSUE-0012]",
+        "excess_margin[SYN-SCF1-ISSUE-0013]",
+        "excess_margin[SYN-SCF1-ISSUE-0014]",
+        "excess_margin[SYN-SCF1-ISSUE-0015]",
+        "excess_margin[SYN-SCF1-ISSUE-0016]",
+        "excess_margin[SYN-SCF1-ISSUE-0017]",
+        "excess_margin[SYN-SCF1-ISSUE-0018]",
+        "excess_margin[SYN-SCF1-ISSUE-0019]"
+      ],
+      "reserve": []
+    },
+    "rule_204_close_outs": {}
+  },
+  {
+    "breaks_by_owner": {},
+    "business_date": "2027-01-05",
+    "economics_digest": "sha256:5ffd54cdd2d9b5e0f23ce9611728a816c067efc12ad992f79508cb2d2b91689e",
+    "executions": 1000,
+    "fails_by_age": {
+      "0": 20
+    },
+    "invariants": {
+      "I11_POSITION_ROLL_FORWARD": true,
+      "I12_IDEMPOTENT_REPLAY": true,
+      "I1_QUANTITY_MONEY_CONSERVE": true,
+      "I2_BOOKED_FROM_REPORTS": true,
+      "I3_STOCK_RECORD_EQUALS_STREET": true,
+      "I4_EVERY_DIFFERENCE_OWNED": true,
+      "I5_RESIDUALS_TWO_SIDED": true,
+      "I6_DEFAULT_AND_STALE_HOLD": true,
+      "I7_MARKET_ACCESS_REFUSES": true,
+      "I8_REPLAY_DIGEST": true
+    },
+    "protection_dispositions": {
+      "net_capital": "PASS",
+      "pab_reserve": "PASS",
+      "possession_or_control": "HOLD",
+      "reserve": "PASS"
+    },
+    "protection_figures": {
+      "average_total_credits": "600000000.00",
+      "control_shortfall": "0",
+      "customer_credits": "6254925.16",
+      "customer_debits": "9328183.69",
+      "net_capital": "310059594.0790",
+      "pab_reserve_requirement": "0",
+      "reserve_requirement": "0"
+    },
+    "protection_reasons": {
+      "net_capital": [],
+      "pab_reserve": [],
+      "possession_or_control": [
+        "excess_margin[SYN-SCF1-ISSUE-0000]",
+        "excess_margin[SYN-SCF1-ISSUE-0001]",
+        "excess_margin[SYN-SCF1-ISSUE-0002]",
+        "excess_margin[SYN-SCF1-ISSUE-0003]",
+        "excess_margin[SYN-SCF1-ISSUE-0004]",
+        "excess_margin[SYN-SCF1-ISSUE-0005]",
+        "excess_margin[SYN-SCF1-ISSUE-0006]",
+        "excess_margin[SYN-SCF1-ISSUE-0007]",
+        "excess_margin[SYN-SCF1-ISSUE-0008]",
+        "excess_margin[SYN-SCF1-ISSUE-0009]",
+        "excess_margin[SYN-SCF1-ISSUE-0010]",
+        "excess_margin[SYN-SCF1-ISSUE-0011]",
+        "excess_margin[SYN-SCF1-ISSUE-0012]",
+        "excess_margin[SYN-SCF1-ISSUE-0013]",
+        "excess_margin[SYN-SCF1-ISSUE-0014]",
+        "excess_margin[SYN-SCF1-ISSUE-0015]",
+        "excess_margin[SYN-SCF1-ISSUE-0016]",
+        "excess_margin[SYN-SCF1-ISSUE-0017]",
+        "excess_margin[SYN-SCF1-ISSUE-0018]",
+        "excess_margin[SYN-SCF1-ISSUE-0019]"
+      ],
+      "reserve": []
+    },
+    "rule_204_close_outs": {
+      "SYN-SCF1-ISSUE-0000": "2027-01-06",
+      "SYN-SCF1-ISSUE-0001": "2027-01-06",
+      "SYN-SCF1-ISSUE-0002": "2027-01-06",
+      "SYN-SCF1-ISSUE-0003": "2027-01-06",
+      "SYN-SCF1-ISSUE-0004": "2027-01-06",
+      "SYN-SCF1-ISSUE-0005": "2027-01-06",
+      "SYN-SCF1-ISSUE-0006": "2027-01-06",
+      "SYN-SCF1-ISSUE-0007": "2027-01-06",
+      "SYN-SCF1-ISSUE-0008": "2027-01-06",
+      "SYN-SCF1-ISSUE-0009": "2027-01-06",
+      "SYN-SCF1-ISSUE-0010": "2027-01-06",
+      "SYN-SCF1-ISSUE-0011": "2027-01-06",
+      "SYN-SCF1-ISSUE-0012": "2027-01-06",
+      "SYN-SCF1-ISSUE-0013": "2027-01-06",
+      "SYN-SCF1-ISSUE-0014": "2027-01-06",
+      "SYN-SCF1-ISSUE-0015": "2027-01-06",
+      "SYN-SCF1-ISSUE-0016": "2027-01-06",
+      "SYN-SCF1-ISSUE-0017": "2027-01-06",
+      "SYN-SCF1-ISSUE-0018": "2027-01-06",
+      "SYN-SCF1-ISSUE-0019": "2027-01-06"
     }
   },
   {
     "breaks_by_owner": {},
     "business_date": "2027-01-06",
-    "economics_digest": "sha256:1b7d022b1648bbf351ddd542e25887cac1b6b33b723702b8c9851aaff199e041",
+    "economics_digest": "sha256:e57a49ab79ccf1e45bad6214f374cc3f954367b2da9262c7437140ac4628bb79",
     "executions": 1000,
-    "fails_by_age": {},
+    "fails_by_age": {
+      "1": 20
+    },
     "invariants": {
       "I11_POSITION_ROLL_FORWARD": true,
       "I12_IDEMPOTENT_REPLAY": true,
@@ -71,15 +172,75 @@
       "net_capital": "PASS",
       "pab_reserve": "PASS",
       "possession_or_control": "HOLD",
-      "reserve": "HOLD"
+      "reserve": "PASS"
+    },
+    "protection_figures": {
+      "average_total_credits": "600000000.00",
+      "control_shortfall": "0",
+      "customer_credits": "7962799.20",
+      "customer_debits": "10741137.46",
+      "net_capital": "65633831.6815",
+      "pab_reserve_requirement": "0",
+      "reserve_requirement": "0"
+    },
+    "protection_reasons": {
+      "net_capital": [],
+      "pab_reserve": [],
+      "possession_or_control": [
+        "excess_margin[SYN-SCF1-ISSUE-0000]",
+        "excess_margin[SYN-SCF1-ISSUE-0001]",
+        "excess_margin[SYN-SCF1-ISSUE-0002]",
+        "excess_margin[SYN-SCF1-ISSUE-0003]",
+        "excess_margin[SYN-SCF1-ISSUE-0004]",
+        "excess_margin[SYN-SCF1-ISSUE-0005]",
+        "excess_margin[SYN-SCF1-ISSUE-0006]",
+        "excess_margin[SYN-SCF1-ISSUE-0007]",
+        "excess_margin[SYN-SCF1-ISSUE-0008]",
+        "excess_margin[SYN-SCF1-ISSUE-0009]",
+        "excess_margin[SYN-SCF1-ISSUE-0010]",
+        "excess_margin[SYN-SCF1-ISSUE-0011]",
+        "excess_margin[SYN-SCF1-ISSUE-0012]",
+        "excess_margin[SYN-SCF1-ISSUE-0013]",
+        "excess_margin[SYN-SCF1-ISSUE-0014]",
+        "excess_margin[SYN-SCF1-ISSUE-0015]",
+        "excess_margin[SYN-SCF1-ISSUE-0016]",
+        "excess_margin[SYN-SCF1-ISSUE-0017]",
+        "excess_margin[SYN-SCF1-ISSUE-0018]",
+        "excess_margin[SYN-SCF1-ISSUE-0019]"
+      ],
+      "reserve": []
+    },
+    "rule_204_close_outs": {
+      "SYN-SCF1-ISSUE-0000": "2027-01-06",
+      "SYN-SCF1-ISSUE-0001": "2027-01-06",
+      "SYN-SCF1-ISSUE-0002": "2027-01-06",
+      "SYN-SCF1-ISSUE-0003": "2027-01-06",
+      "SYN-SCF1-ISSUE-0004": "2027-01-06",
+      "SYN-SCF1-ISSUE-0005": "2027-01-06",
+      "SYN-SCF1-ISSUE-0006": "2027-01-06",
+      "SYN-SCF1-ISSUE-0007": "2027-01-06",
+      "SYN-SCF1-ISSUE-0008": "2027-01-06",
+      "SYN-SCF1-ISSUE-0009": "2027-01-06",
+      "SYN-SCF1-ISSUE-0010": "2027-01-06",
+      "SYN-SCF1-ISSUE-0011": "2027-01-06",
+      "SYN-SCF1-ISSUE-0012": "2027-01-06",
+      "SYN-SCF1-ISSUE-0013": "2027-01-06",
+      "SYN-SCF1-ISSUE-0014": "2027-01-06",
+      "SYN-SCF1-ISSUE-0015": "2027-01-06",
+      "SYN-SCF1-ISSUE-0016": "2027-01-06",
+      "SYN-SCF1-ISSUE-0017": "2027-01-06",
+      "SYN-SCF1-ISSUE-0018": "2027-01-06",
+      "SYN-SCF1-ISSUE-0019": "2027-01-06"
     }
   },
   {
     "breaks_by_owner": {},
     "business_date": "2027-01-07",
-    "economics_digest": "sha256:ef7f76d58144d4eeca1d7e631e5590c8b8bef57c578acdebdb899cafe5b6eef7",
+    "economics_digest": "sha256:1f1d28c811ba04246ae86904c0ebedd2cbdc53c23eafaba1b9b146e3769c5cb2",
     "executions": 1000,
-    "fails_by_age": {},
+    "fails_by_age": {
+      "2": 20
+    },
     "invariants": {
       "I11_POSITION_ROLL_FORWARD": true,
       "I12_IDEMPOTENT_REPLAY": true,
@@ -96,15 +257,75 @@
       "net_capital": "PASS",
       "pab_reserve": "PASS",
       "possession_or_control": "HOLD",
-      "reserve": "HOLD"
+      "reserve": "PASS"
+    },
+    "protection_figures": {
+      "average_total_credits": "600000000.00",
+      "control_shortfall": "0",
+      "customer_credits": "10152874.71",
+      "customer_debits": "12171677.79",
+      "net_capital": "128084837.8930",
+      "pab_reserve_requirement": "0",
+      "reserve_requirement": "0"
+    },
+    "protection_reasons": {
+      "net_capital": [],
+      "pab_reserve": [],
+      "possession_or_control": [
+        "excess_margin[SYN-SCF1-ISSUE-0000]",
+        "excess_margin[SYN-SCF1-ISSUE-0001]",
+        "excess_margin[SYN-SCF1-ISSUE-0002]",
+        "excess_margin[SYN-SCF1-ISSUE-0003]",
+        "excess_margin[SYN-SCF1-ISSUE-0004]",
+        "excess_margin[SYN-SCF1-ISSUE-0005]",
+        "excess_margin[SYN-SCF1-ISSUE-0006]",
+        "excess_margin[SYN-SCF1-ISSUE-0007]",
+        "excess_margin[SYN-SCF1-ISSUE-0008]",
+        "excess_margin[SYN-SCF1-ISSUE-0009]",
+        "excess_margin[SYN-SCF1-ISSUE-0010]",
+        "excess_margin[SYN-SCF1-ISSUE-0011]",
+        "excess_margin[SYN-SCF1-ISSUE-0012]",
+        "excess_margin[SYN-SCF1-ISSUE-0013]",
+        "excess_margin[SYN-SCF1-ISSUE-0014]",
+        "excess_margin[SYN-SCF1-ISSUE-0015]",
+        "excess_margin[SYN-SCF1-ISSUE-0016]",
+        "excess_margin[SYN-SCF1-ISSUE-0017]",
+        "excess_margin[SYN-SCF1-ISSUE-0018]",
+        "excess_margin[SYN-SCF1-ISSUE-0019]"
+      ],
+      "reserve": []
+    },
+    "rule_204_close_outs": {
+      "SYN-SCF1-ISSUE-0000": "2027-01-06",
+      "SYN-SCF1-ISSUE-0001": "2027-01-06",
+      "SYN-SCF1-ISSUE-0002": "2027-01-06",
+      "SYN-SCF1-ISSUE-0003": "2027-01-06",
+      "SYN-SCF1-ISSUE-0004": "2027-01-06",
+      "SYN-SCF1-ISSUE-0005": "2027-01-06",
+      "SYN-SCF1-ISSUE-0006": "2027-01-06",
+      "SYN-SCF1-ISSUE-0007": "2027-01-06",
+      "SYN-SCF1-ISSUE-0008": "2027-01-06",
+      "SYN-SCF1-ISSUE-0009": "2027-01-06",
+      "SYN-SCF1-ISSUE-0010": "2027-01-06",
+      "SYN-SCF1-ISSUE-0011": "2027-01-06",
+      "SYN-SCF1-ISSUE-0012": "2027-01-06",
+      "SYN-SCF1-ISSUE-0013": "2027-01-06",
+      "SYN-SCF1-ISSUE-0014": "2027-01-06",
+      "SYN-SCF1-ISSUE-0015": "2027-01-06",
+      "SYN-SCF1-ISSUE-0016": "2027-01-06",
+      "SYN-SCF1-ISSUE-0017": "2027-01-06",
+      "SYN-SCF1-ISSUE-0018": "2027-01-06",
+      "SYN-SCF1-ISSUE-0019": "2027-01-06"
     }
   },
   {
     "breaks_by_owner": {},
     "business_date": "2027-01-08",
-    "economics_digest": "sha256:845317bc65b61021321790a241237ea7ebbfd49743a5877ecd2202fe96841a2d",
+    "economics_digest": "sha256:4287a03416c7f2aacb960d2c881207c50d0e5609b43634b82d5d7e1d3a497fa9",
     "executions": 1000,
-    "fails_by_age": {},
+    "fails_by_age": {
+      "3": 20
+    },
     "invariants": {
       "I11_POSITION_ROLL_FORWARD": true,
       "I12_IDEMPOTENT_REPLAY": true,
@@ -118,10 +339,68 @@
       "I8_REPLAY_DIGEST": true
     },
     "protection_dispositions": {
-      "net_capital": "HOLD",
+      "net_capital": "PASS",
       "pab_reserve": "PASS",
       "possession_or_control": "HOLD",
-      "reserve": "HOLD"
+      "reserve": "PASS"
+    },
+    "protection_figures": {
+      "average_total_credits": "600000000.00",
+      "control_shortfall": "0",
+      "customer_credits": "12340532.00",
+      "customer_debits": "13250494.92",
+      "net_capital": "59270118.3370",
+      "pab_reserve_requirement": "0",
+      "reserve_requirement": "0"
+    },
+    "protection_reasons": {
+      "net_capital": [],
+      "pab_reserve": [],
+      "possession_or_control": [
+        "excess_margin[SYN-SCF1-ISSUE-0000]",
+        "excess_margin[SYN-SCF1-ISSUE-0001]",
+        "excess_margin[SYN-SCF1-ISSUE-0002]",
+        "excess_margin[SYN-SCF1-ISSUE-0003]",
+        "excess_margin[SYN-SCF1-ISSUE-0004]",
+        "excess_margin[SYN-SCF1-ISSUE-0005]",
+        "excess_margin[SYN-SCF1-ISSUE-0006]",
+        "excess_margin[SYN-SCF1-ISSUE-0007]",
+        "excess_margin[SYN-SCF1-ISSUE-0008]",
+        "excess_margin[SYN-SCF1-ISSUE-0009]",
+        "excess_margin[SYN-SCF1-ISSUE-0010]",
+        "excess_margin[SYN-SCF1-ISSUE-0011]",
+        "excess_margin[SYN-SCF1-ISSUE-0012]",
+        "excess_margin[SYN-SCF1-ISSUE-0013]",
+        "excess_margin[SYN-SCF1-ISSUE-0014]",
+        "excess_margin[SYN-SCF1-ISSUE-0015]",
+        "excess_margin[SYN-SCF1-ISSUE-0016]",
+        "excess_margin[SYN-SCF1-ISSUE-0017]",
+        "excess_margin[SYN-SCF1-ISSUE-0018]",
+        "excess_margin[SYN-SCF1-ISSUE-0019]"
+      ],
+      "reserve": []
+    },
+    "rule_204_close_outs": {
+      "SYN-SCF1-ISSUE-0000": "2027-01-06",
+      "SYN-SCF1-ISSUE-0001": "2027-01-06",
+      "SYN-SCF1-ISSUE-0002": "2027-01-06",
+      "SYN-SCF1-ISSUE-0003": "2027-01-06",
+      "SYN-SCF1-ISSUE-0004": "2027-01-06",
+      "SYN-SCF1-ISSUE-0005": "2027-01-06",
+      "SYN-SCF1-ISSUE-0006": "2027-01-06",
+      "SYN-SCF1-ISSUE-0007": "2027-01-06",
+      "SYN-SCF1-ISSUE-0008": "2027-01-06",
+      "SYN-SCF1-ISSUE-0009": "2027-01-06",
+      "SYN-SCF1-ISSUE-0010": "2027-01-06",
+      "SYN-SCF1-ISSUE-0011": "2027-01-06",
+      "SYN-SCF1-ISSUE-0012": "2027-01-06",
+      "SYN-SCF1-ISSUE-0013": "2027-01-06",
+      "SYN-SCF1-ISSUE-0014": "2027-01-06",
+      "SYN-SCF1-ISSUE-0015": "2027-01-06",
+      "SYN-SCF1-ISSUE-0016": "2027-01-06",
+      "SYN-SCF1-ISSUE-0017": "2027-01-06",
+      "SYN-SCF1-ISSUE-0018": "2027-01-06",
+      "SYN-SCF1-ISSUE-0019": "2027-01-06"
     }
   }
 ]

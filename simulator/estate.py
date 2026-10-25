@@ -923,6 +923,7 @@ def _post_reserve_deposits(
     sized_from: tuple[ReserveResult, ReserveResult],
     opening: tuple[Decimal, Decimal],
     policy: DepositPolicy | None,
+    opening_already_posted: bool = False,
 ) -> tuple[ReserveResult, ReserveResult, tuple[ReserveDeposit, ...]]:
     """SIM-1G: post each computation's Reserve Bank Account deposit, then recompute.
 
@@ -959,7 +960,7 @@ def _post_reserve_deposits(
         zip(accounts, sized_from, opening, draws, strict=True)
     ):
         base_event = 400_000_000 + run_number * 10 + index * 3
-        if balance != 0:
+        if balance != 0 and not opening_already_posted:
             books.post(
                 _deposit_entry(
                     entry_id=f"SIM-1G-{name.upper()}-BROUGHT-FORWARD-{run_number}",

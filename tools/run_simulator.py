@@ -8,12 +8,14 @@ from pathlib import Path
 from simulator.calibration import load_calibration_pack
 from simulator.conversion import VARIANTS, publish_conversion, run_conversion_variant
 from simulator.firm import TIERS, load_firm_profile, publish_firm, run_firm
+from simulator.phase2 import publish_phase2
 from simulator.runner import publish_run, run_simulation
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int)
 parser.add_argument("--conversion-variant", choices=VARIANTS)
 parser.add_argument("--firm", choices=TIERS)
+parser.add_argument("--phase-2", action="store_true")
 parser.add_argument("--days", type=int, choices=range(1, 251))
 parser.add_argument("--start", type=date.fromisoformat)
 parser.add_argument("--end", type=date.fromisoformat)
@@ -22,7 +24,9 @@ parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--repository-sha", action="append", default=[])
 args = parser.parse_args()
 repository_shas = dict(value.split("=", 1) for value in args.repository_sha)
-if args.firm:
+if args.phase_2:
+    publish_phase2(args.output)
+elif args.firm:
     publish_firm(
         run_firm(
             load_firm_profile(load_calibration_pack("firm-synthetic/1"), args.firm),

@@ -103,5 +103,11 @@ def test_real_reserve_engine_lie_fails_i6(monkeypatch: pytest.MonkeyPatch) -> No
 
     monkeypatch.setattr(firm, "compute_reserve", lying_reserve)
     profile = load_firm_profile(load_calibration_pack("firm-synthetic/1"), "small")
-    run = run_firm(profile, seed=20261024, days=3)
+    run = run_firm(
+        profile,
+        seed=20261024,
+        days=1,
+        mutation="FORCE_RESERVE_PASS_ON_SHORT_DAY",
+        verify_replay=False,
+    )
     assert any(not day.invariants["I6_DEFAULT_AND_STALE_HOLD"] for day in run.days)

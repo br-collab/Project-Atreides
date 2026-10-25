@@ -124,7 +124,10 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     pab_lines = customer_lines.copy()
     customer_cash: dict[str, Decimal] = {}
     positions: dict[str, Decimal] = {}
-    holdings: dict[str, list[Holding]] = {}
+    # Location lines are journal movements. Aggregate their signed balances before
+    # taking the holding magnitude; summing ``abs(line.quantity)`` over history
+    # double-counts every movement and can manufacture a control break.
+    location_balances: dict[tuple[str, str], Decimal] = {}
     ownership: dict[str, Decimal] = {}
     customer_positions: dict[str, dict[str, Decimal]] = {}
     stock_loaned_market_value = Decimal(0)
@@ -159,9 +162,14 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                     AccountType.STOCK_LOANED: "15c3-3.noncontrol.d1",
                     AccountType.IN_TRANSFER: "15c3-3.noncontrol.d4",
                 }.get(line.account_type, "UNMAPPED_LOCATION")
-                holdings.setdefault(line.issue, []).append(
-                    Holding(location=location_rule, quantity=abs(line.quantity))
-                )
+                key = (line.issue, location_rule)
+                location_balances[key] = location_balances.get(key, Decimal(0)) + line.quantity
+    holdings: dict[str, list[Holding]] = {}
+    for (issue, location), balance in location_balances.items():
+        if balance:
+            holdings.setdefault(issue, []).append(
+                Holding(location=location, quantity=abs(balance))
+            )
     customer_debits = sum(
         (max(-balance, Decimal(0)) for balance in customer_cash.values()), Decimal(0)
     )

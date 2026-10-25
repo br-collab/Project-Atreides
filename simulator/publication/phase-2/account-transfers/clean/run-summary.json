@@ -1,0 +1,34 @@
+{
+  "declared_policy": {
+    "partial_rate": "0",
+    "reject_rate": "0",
+    "residual_sweep_rate": "0"
+  },
+  "finra_claim_reason": "reproduction permission not established; existing pin retained",
+  "finra_license_gate": "INDETERMINATE",
+  "schema_version": "sim.account-transfers/1",
+  "synthetic": true,
+  "transfers": [
+    {
+      "account": "SYN-CUST-101",
+      "disposition": "PASS",
+      "i10_migration_conserved": true,
+      "i10_reason": "statement compared independently with posted share and cent totals",
+      "posted_cash": "123456.79",
+      "posted_quantity": "137",
+      "reasons": [],
+      "transfer_id": "SYN-ACATS-0001"
+    },
+    {
+      "account": "SYN-CUST-202",
+      "disposition": "PASS",
+      "i10_migration_conserved": true,
+      "i10_reason": "statement compared independently with posted share and cent totals",
+      "posted_cash": "87654.32",
+      "posted_quantity": "211",
+      "reasons": [],
+      "transfer_id": "SYN-ACATS-0002"
+    }
+  ],
+  "variant": "clean"
+}

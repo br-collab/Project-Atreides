@@ -1,0 +1,38 @@
+{
+  "declared_policy": {
+    "partial_rate": "0",
+    "reject_rate": "1",
+    "residual_sweep_rate": "0"
+  },
+  "finra_claim_reason": "reproduction permission not established; existing pin retained",
+  "finra_license_gate": "INDETERMINATE",
+  "schema_version": "sim.account-transfers/1",
+  "synthetic": true,
+  "transfers": [
+    {
+      "account": "SYN-CUST-101",
+      "disposition": "HOLD",
+      "i10_migration_conserved": null,
+      "i10_reason": "rejected transfer never posts; reconciliation not applicable",
+      "posted_cash": "0",
+      "posted_quantity": "0",
+      "reasons": [
+        "declared synthetic reject"
+      ],
+      "transfer_id": "SYN-ACATS-0001"
+    },
+    {
+      "account": "SYN-CUST-202",
+      "disposition": "HOLD",
+      "i10_migration_conserved": null,
+      "i10_reason": "rejected transfer never posts; reconciliation not applicable",
+      "posted_cash": "0",
+      "posted_quantity": "0",
+      "reasons": [
+        "declared synthetic reject"
+      ],
+      "transfer_id": "SYN-ACATS-0002"
+    }
+  ],
+  "variant": "reject"
+}

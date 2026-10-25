@@ -1,0 +1,10 @@
+{
+  "citation": "SEC Form X-17A-5 Part II",
+  "edition_date": null,
+  "edition_note": "The official form does not state an edition date. Its cover states OMB 3235-0123 expires 2026-11-30 and OMB 3235-0749 expires 2027-07-31.",
+  "pin_status": "INDETERMINATE",
+  "reason": "The official PDF was verified on www.sec.gov, but the host returned 403 to the byte-fetching client. No false local source pin was created.",
+  "retrieval_dtg": "20261025",
+  "sha256": null,
+  "url": "https://www.sec.gov/files/formx-17a-5_2.pdf"
+}
