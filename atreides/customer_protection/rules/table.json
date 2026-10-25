@@ -164,6 +164,16 @@
       "quote": "Note E(3) to § 240.15c3-3a which reduces debit balances by 1 percent does not apply to the PAB reserve computation"
     },
     {
+      "id": "15c3-3.a5.excess_margin_threshold",
+      "kind": "PERCENT",
+      "citation": "17 CFR 240.15c3-3(a)(5)",
+      "source_id": "17cfr240.15c3-3",
+      "sha256": "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443",
+      "quote": "having a market value in excess of 140 percent of the total of the debit balances",
+      "figure": "140 percent",
+      "value": "1.40"
+    },
+    {
       "id": "15c3-3.e3iB1.daily_threshold",
       "kind": "USD",
       "citation": "17 CFR 240.15c3-3(e)(3)(i)(B)(1)",

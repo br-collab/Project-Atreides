@@ -23,9 +23,27 @@
         "filed_history_months": 12,
         "filed_history_credit": "600000000.00",
         "tiers": {
-          "small": {"accounts": 200, "issues": 20, "executions_per_day": 1000},
-          "medium": {"accounts": 2000, "issues": 200, "executions_per_day": 10000},
-          "large": {"accounts": 20000, "issues": 1000, "executions_per_day": 100000}
+          "small": {
+            "accounts": 200,
+            "issues": 20,
+            "executions_per_day": 1000
+          },
+          "medium": {
+            "accounts": 2000,
+            "issues": 200,
+            "executions_per_day": 10000
+          },
+          "large": {
+            "accounts": 20000,
+            "issues": 1000,
+            "executions_per_day": 100000
+          }
+        },
+        "control_deficit": {
+          "day_index": 1,
+          "issue_index": 0,
+          "shortfall_shares": 100,
+          "basis": "FIX-11 declared synthetic stock loan of firm inventory that leaves one issue short of its possession-or-control requirement for one close; recalled the next business day"
         }
       }
     }

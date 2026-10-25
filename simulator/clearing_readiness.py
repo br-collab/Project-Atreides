@@ -106,8 +106,8 @@ def run_clearing_readiness(
         "disposition": "HOLD" if reasons else "PASS",
         "reasons": reasons,
         "invariants": {
-            "I11_MEMBERSHIP_EVIDENCE_COMPLETE": not missing,
-            "I12_FUNDING_NEED_COVERED": daily_funding_need <= inputs.available_cash,
+            "I14_MEMBERSHIP_EVIDENCE_COMPLETE": not missing,
+            "I15_FUNDING_NEED_COVERED": daily_funding_need <= inputs.available_cash,
         },
     }
 
@@ -118,4 +118,4 @@ def attack_clearing_readiness() -> dict[str, bool]:
     invariants = result["invariants"]
     if not isinstance(invariants, dict):
         raise TypeError("readiness run did not return invariants")
-    return {"inflate-fund-call": invariants["I12_FUNDING_NEED_COVERED"] is False}
+    return {"inflate-fund-call": invariants["I15_FUNDING_NEED_COVERED"] is False}

@@ -9,8 +9,8 @@
   "disposition": "HOLD",
   "dtcc_license_gate": "INDETERMINATE",
   "invariants": {
-    "I11_MEMBERSHIP_EVIDENCE_COMPLETE": false,
-    "I12_FUNDING_NEED_COVERED": true
+    "I14_MEMBERSHIP_EVIDENCE_COMPLETE": false,
+    "I15_FUNDING_NEED_COVERED": true
   },
   "membership_evidence": {
     "dtc": "SYN-DTC-PARTICIPANT",

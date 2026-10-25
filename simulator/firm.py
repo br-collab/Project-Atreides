@@ -81,9 +81,13 @@ from simulator.estate import (
     _wire,
     simulated_filed_credit_total,
 )
+from simulator.protection_oracle import EXCESS_MARGIN_THRESHOLD, required_net_capital
+from simulator.protection_oracle import required_control as required_possession_or_control
 from simulator.settlement import rule_204_deadline
 
 TierName = Literal["small", "medium", "large"]
+#: FIX-11 honest stress inputs: a credit that creates a requirement, with a short deposit.
+ReserveStress = Literal["customer", "pab"]
 TIERS: tuple[TierName, ...] = ("small", "medium", "large")
 DISCLAIMER = "SYNTHETIC LOAD LEVEL: no claim about any real firm"
 NOT_CLAIMED = (
@@ -118,6 +122,8 @@ class FirmProfile:
     filed_history_credit: Decimal
     seed_stream: str
     synthetic: bool = True
+    #: FIX-11 declared control deficit: (day index, issue index, shares short), or None.
+    control_deficit: tuple[int, int, Decimal] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +154,7 @@ class FirmDay:
     fails_by_age: dict[str, int]
     breaks_by_owner: dict[str, int]
     protection_dispositions: dict[str, str]
+    protection_required: dict[str, str]
     protection_reasons: dict[str, tuple[str, ...]]
     protection_figures: dict[str, Decimal | None]
     rule_204_close_outs: dict[str, date]
@@ -240,6 +247,19 @@ def load_firm_profile(pack: CalibrationPack, tier: TierName) -> FirmProfile:
         filed_history_months=int(cast(int, pack.value("firm_profile", "filed_history_months"))),
         filed_history_credit=Decimal(str(pack.value("firm_profile", "filed_history_credit"))),
         seed_stream=str(pack.value("firm_profile", "seed_stream")),
+        control_deficit=_control_deficit(pack),
+    )
+
+
+def _control_deficit(pack: CalibrationPack) -> tuple[int, int, Decimal] | None:
+    try:
+        declared = cast(dict[str, object], pack.value("firm_profile", "control_deficit"))
+    except (KeyError, ValueError):
+        return None
+    return (
+        int(cast(int, declared["day_index"])),
+        int(cast(int, declared["issue_index"])),
+        Decimal(str(declared["shortfall_shares"])),
     )
 
 
@@ -687,6 +707,141 @@ def _post_stock_borrows(
     return dict(activity)
 
 
+def _loan_entry(
+    entry_id: str, event_number: int, issue: str, quantity: Decimal, business_date: date
+) -> JournalEntry:
+    event_id = _id("evt_", event_number)
+    return JournalEntry(
+        entry_id=entry_id,
+        source_event_id=event_id,
+        source=PostingSource.STOCK_LOAN,
+        effective_date=business_date,
+        effective_date_basis="SETTLEMENT_DATE",
+        authority="FIX11_DECLARED_CONTROL_DEFICIT",
+        lines=(
+            LedgerLine(
+                account_id="DTC",
+                account_type=AccountType.DTC,
+                record_side=RecordSide.LOCATION,
+                issue=issue,
+                quantity=quantity,
+            ),
+            LedgerLine(
+                account_id="SYN-FIX11-STOCK-LOANED",
+                account_type=AccountType.STOCK_LOANED,
+                record_side=RecordSide.LOCATION,
+                issue=issue,
+                quantity=-quantity,
+            ),
+        ),
+        posting=BooksPosting(
+            posted_record_id=entry_id,
+            posting_authority=_actor(),
+            effective_time=datetime.combine(business_date, datetime.min.time(), tzinfo=UTC),
+            source_event_id=EventId(event_id),
+            provenance=Provenance.FACT_SYNTHETIC,
+        ),
+        synthetic=True,
+    )
+
+
+def _post_control_deficit(
+    books: EquitiesBooks,
+    profile: FirmProfile,
+    business_date: date,
+    prices: dict[str, Decimal],
+    day_index: int,
+) -> None:
+    """Post the declared stock loan that leaves one issue short of control, then recall it.
+
+    The loan moves firm inventory from DTC (a Rule 15c3-3(c) control location) to stock
+    loaned (a (d)(1) noncontrol location). Ownership does not change, so the stock record
+    still balances. The loan is sized from the independent requirement, so the issue is
+    short by exactly the declared number of shares on the declared close.
+    """
+    if profile.control_deficit is None:
+        return
+    deficit_day, issue_index, shortfall = profile.control_deficit
+    issue = f"SYN-SCF1-ISSUE-{issue_index:04d}"
+    if day_index == deficit_day + 1:
+        loaned = sum(
+            (
+                -line.quantity
+                for entry in books.entries
+                if entry.authority == "FIX11_DECLARED_CONTROL_DEFICIT"
+                for line in entry.lines
+                if line.account_type is AccountType.STOCK_LOANED
+            ),
+            Decimal(),
+        )
+        if loaned:
+            books.post(
+                _loan_entry(
+                    f"FIX11-RECALL-{day_index}", 850_000_001, issue, -loaned, business_date
+                )
+            )
+        return
+    if day_index != deficit_day:
+        return
+    requirement = required_possession_or_control(books, prices, load_rule_table())
+    if requirement is None:
+        raise ValueError("the control deficit needs a derivable control requirement")
+    required = requirement.required.get(issue, Decimal())
+    held = requirement.in_control.get(issue, Decimal())
+    loan = held - required + shortfall
+    if loan <= 0 or loan > held:
+        raise ValueError(f"declared control deficit cannot be built for {issue}")
+    books.post(_loan_entry(f"FIX11-LOAN-{day_index}", 850_000_000, issue, loan, business_date))
+
+
+def _pab_fail_to_receive(business_date: date, prices: dict[str, Decimal]) -> JournalEntry:
+    """FIX-11 honest PAB stress: a declared PAB fail to receive, an Exhibit A Item 4 credit."""
+    issue = sorted(prices)[0]
+    quantity = Decimal(1_000_000)
+    event_id = _id("evt_", 860_000_000)
+    return JournalEntry(
+        entry_id="FIX11-PAB-FAIL-TO-RECEIVE",
+        source_event_id=event_id,
+        source=PostingSource.CNS_FAIL,
+        effective_date=business_date,
+        effective_date_basis="SETTLEMENT_DATE",
+        authority="FIX11_DECLARED_PAB_STRESS",
+        lines=(
+            LedgerLine(
+                account_id="SYN-FIX11-PAB-ACCOUNT",
+                account_type=AccountType.PAB,
+                record_side=RecordSide.OWNERSHIP,
+                issue=issue,
+                quantity=quantity,
+            ),
+            LedgerLine(
+                account_id="SYN-FIX11-FAIL-TO-RECEIVE",
+                account_type=AccountType.FAIL_TO_RECEIVE,
+                record_side=RecordSide.LOCATION,
+                issue=issue,
+                quantity=-quantity,
+            ),
+        ),
+        reserve_source_facts=(
+            ReserveSourceFact(
+                account_type=AccountType.FAIL_TO_RECEIVE,
+                issue=issue,
+                activity=ReserveActivity.PAB,
+                settlement_date=business_date,
+                contract_price=prices[issue],
+            ),
+        ),
+        posting=BooksPosting(
+            posted_record_id="FIX11-PAB-FAIL-TO-RECEIVE",
+            posting_authority=_actor(),
+            effective_time=datetime.combine(business_date, datetime.min.time(), tzinfo=UTC),
+            source_event_id=EventId(event_id),
+            provenance=Provenance.FACT_SYNTHETIC,
+        ),
+        synthetic=True,
+    )
+
+
 def _protections(
     books: EquitiesBooks,
     business_date: date,
@@ -694,14 +849,23 @@ def _protections(
     profile: FirmProfile,
     run_number: int,
     mutation: str | None,
+    *,
+    net_worth: Decimal = Decimal("1000000000"),
+    reserve_stress: ReserveStress | None = None,
 ) -> tuple[
+    dict[str, str],
     dict[str, str],
     dict[str, tuple[str, ...]],
     dict[str, Decimal | None],
     bool,
 ]:
     calendar = MarketCalendar.load(Market.US_EQUITIES)
-    if mutation == "FORCE_RESERVE_PASS_ON_SHORT_DAY" and run_number == 0:
+    rules = load_rule_table()
+    forced = mutation == "FORCE_RESERVE_PASS_ON_SHORT_DAY"
+    stressed = "customer" if forced else reserve_stress
+    if stressed == "pab" and run_number == 0:
+        books.post(_pab_fail_to_receive(business_date, prices))
+    if stressed == "customer" and run_number == 0:
         event_id = _id("evt_", 830_000_000)
         books.post(
             JournalEntry(
@@ -751,9 +915,10 @@ def _protections(
         books,
         as_of=business_date,
         prices=prices,
-        net_worth=Decimal("1000000000"),
+        net_worth=net_worth,
         calendar=calendar,
         margin_results=margins,
+        excess_margin_threshold=_rule_value(rules, EXCESS_MARGIN_THRESHOLD),
     )
     history = synthetic_filed_history(profile, business_date)
     average_credits = None if history is None else sum(history, Decimal()) / len(history)
@@ -774,11 +939,10 @@ def _protections(
         previously_daily_required=False,
         daily_exit_notice_date=None,
     )
-    rules = load_rule_table()
     customer = compute_reserve(customer_inputs, rules)
     pab = compute_reserve(with_customer_excess_debits(pab_inputs, customer), rules)
     opening_balances = reserve_bank_balances(books, through=date.max)
-    deposit_outcome = "SHORT" if mutation == "FORCE_RESERVE_PASS_ON_SHORT_DAY" else "ON_TIME"
+    deposit_outcome = "SHORT" if stressed == "customer" else "ON_TIME"
     customer, pab, deposits = _post_reserve_deposits(
         books=books,
         run_number=70_000 + run_number,
@@ -795,12 +959,14 @@ def _protections(
         ),
         policy=DepositPolicy(
             customer=DepositDraw(deposit_outcome, profile.reserve_short_fraction),
-            pab=DepositDraw("ON_TIME", profile.reserve_short_fraction),
+            pab=DepositDraw(
+                "SHORT" if stressed == "pab" else "ON_TIME", profile.reserve_short_fraction
+            ),
             bank_equity_capital=profile.reserve_bank_equity_capital,
         ),
         opening_already_posted=True,
     )
-    if mutation == "FORCE_RESERVE_PASS_ON_SHORT_DAY":
+    if forced:
         customer = customer.model_copy(update={"disposition": "PASS", "breaches": ()})
     capital_inputs = projected.net_capital.model_copy(
         update={
@@ -823,12 +989,20 @@ def _protections(
         "net_capital": capital.reasons + capital.missing_inputs + capital.breaches,
         "possession_or_control": control.reasons + control.missing_inputs + control.breaches,
     }
+    # Every required outcome comes from declared inputs and the books, never from an
+    # engine's own disposition, breaches, reasons or missing inputs (FIX-11 D1).
     reserve_holds = {item.computation: item.outcome in DEPOSIT_BREACH_OUTCOMES for item in deposits}
+    required_capital = required_net_capital(books, prices, net_worth, rules)
+    required_control = required_possession_or_control(books, prices, rules)
     required = {
         "reserve": "HOLD" if reserve_holds["customer"] else "PASS",
         "pab_reserve": "HOLD" if reserve_holds["pab"] else "PASS",
-        "net_capital": "HOLD" if capital.breaches or capital.missing_inputs else "PASS",
-        "possession_or_control": ("HOLD" if control.breaches or control.missing_inputs else "PASS"),
+        "net_capital": (
+            "UNDERIVABLE" if required_capital is None else required_capital.outcome
+        ),
+        "possession_or_control": (
+            "UNDERIVABLE" if required_control is None else required_control.outcome
+        ),
     }
 
     def total(lines: tuple[Any, ...], rule_ids: tuple[str, ...]) -> Decimal | None:
@@ -850,12 +1024,22 @@ def _protections(
             (item.shortfall for item in control.issues if item.shortfall is not None), Decimal()
         ),
     }
+    if required_capital is not None:
+        figures["independent_net_capital"] = required_capital.net_capital
+    if required_control is not None:
+        figures["independent_control_short_issues"] = Decimal(len(required_control.short_issues))
     return (
         dispositions,
+        required,
         reasons,
         figures,
         all(dispositions[name] == expected for name, expected in required.items()),
     )
+
+
+def _rule_value(table: Any, rule_id: str) -> Decimal | None:
+    item = table.get(rule_id)
+    return None if item is None else cast(Decimal | None, item.value)
 
 
 def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources visible
@@ -866,6 +1050,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
     start: date = date(2027, 1, 4),
     mutation: str | None = None,
     verify_replay: bool = True,
+    net_worth: Decimal = Decimal("1000000000"),
+    reserve_stress: ReserveStress | None = None,
 ) -> FirmRun:
     if mutation is not None and mutation not in MUTATIONS:
         raise ValueError(f"unknown firm mutation: {mutation}")
@@ -957,6 +1143,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         borrow_activity = _post_stock_borrows(
             books, carried_input, business_date, prices, day_index
         )
+        _post_control_deficit(books, profile, business_date, prices, day_index)
         settlements = []
         profile_cns = MarketProfile(
             market_id="NSCC_SYNTHETIC",
@@ -1060,8 +1247,15 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             for issue, sides in books.quantities().items()
         }
         breaks = books.verify_stock_record(observed_locations=observed)
-        protections, protection_reasons, protection_figures, i6 = _protections(
-            books, business_date, prices, profile, day_index, mutation
+        protections, required_outcomes, protection_reasons, protection_figures, i6 = _protections(
+            books,
+            business_date,
+            prices,
+            profile,
+            day_index,
+            mutation,
+            net_worth=net_worth,
+            reserve_stress=reserve_stress,
         )
         carry_complete = set(carried_fails) <= set(carried_input)
         covered_cns_issues = {item.position.security_id for item in settlements}
@@ -1108,6 +1302,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     )
                 ),
                 protection_dispositions=protections,
+                protection_required=required_outcomes,
                 protection_reasons=protection_reasons,
                 protection_figures=protection_figures,
                 rule_204_close_outs={
@@ -1147,7 +1342,14 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
     )
     if verify_replay:
         replay = run_firm(
-            profile, seed=seed, days=days, start=start, mutation=mutation, verify_replay=False
+            profile,
+            seed=seed,
+            days=days,
+            start=start,
+            mutation=mutation,
+            verify_replay=False,
+            net_worth=net_worth,
+            reserve_stress=reserve_stress,
         )
         firm_run = replace(
             firm_run,
