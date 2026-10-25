@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 from typing import Literal, cast
 
@@ -29,6 +29,11 @@ from atreides.customer_protection.reserve import (
 )
 from atreides.deadlines.calendar import MarketCalendar
 from atreides.margin.engine import MarginAccount, MarginPosition, MarginResult
+
+EXCESS_MARGIN_METHOD = (
+    "declared method PRO_RATA_ROUNDED_UP: Rule 15c3-3(a)(5) excess value over the pinned "
+    "percentage of the debit balance, taken pro rata from every long holding"
+)
 
 
 class SyntheticFirmProfile(BaseModel):
@@ -115,8 +120,14 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     calendar: MarketCalendar,
     margin_results: tuple[MarginResult, ...],
     firm_profile: SyntheticFirmProfile = SYNTHETIC_FIRM_PROFILE,
+    excess_margin_threshold: Decimal | None = None,
 ) -> ProtectionInputs:
-    """Build all three engine inputs from the same journal replay."""
+    """Build all three engine inputs from the same journal replay.
+
+    ``excess_margin_threshold`` is the pinned Rule 15c3-3(a)(5) percentage
+    (``15c3-3.a5.excess_margin_threshold``). Without it, excess margin quantities for
+    accounts with a debit balance stay absent, as before.
+    """
     mapping = _mapping()
     customer_lines: dict[str, Decimal | None] = {
         rule_id: None for rule_id in (*EXHIBIT_A_CREDITS, *EXHIBIT_A_DEBITS)
@@ -159,6 +170,8 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                     AccountType.DTC: "15c3-3.control.c1",
                     AccountType.BANK_CONTROL: "15c3-3.control.c5",
                     AccountType.FAIL_TO_DELIVER: "15c3-3.noncontrol.d2",
+                    # Rule 15c3-3(d)(2) names securities "failed to receive"; FIX-11.
+                    AccountType.FAIL_TO_RECEIVE: "15c3-3.noncontrol.d2",
                     AccountType.STOCK_LOANED: "15c3-3.noncontrol.d1",
                     AccountType.IN_TRANSFER: "15c3-3.noncontrol.d4",
                 }.get(line.account_type, "UNMAPPED_LOCATION")
@@ -323,6 +336,29 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 )
             elif result.debit_balance == 0:
                 fully_paid_by_issue[issue] = fully_paid_by_issue.get(issue, Decimal(0)) + quantity
+            elif excess_margin_threshold is not None:
+                # Rule 15c3-3(a)(5): securities whose market value exceeds the pinned
+                # percentage of the debit balance are excess margin securities. The rule
+                # leaves the choice of which securities to the firm; the declared method
+                # here takes the same fraction of every long holding, rounded up so the
+                # control requirement is never understated.
+                excess_value = max(
+                    result.long_market_value - excess_margin_threshold * result.debit_balance,
+                    Decimal(0),
+                )
+                share = (
+                    Decimal(0)
+                    if result.long_market_value <= 0
+                    else excess_value / result.long_market_value
+                )
+                excess_quantity = min(
+                    quantity, (quantity * share).to_integral_value(rounding=ROUND_CEILING)
+                )
+                current = excess_margin_by_issue.get(issue, Decimal(0))
+                excess_margin_by_issue[issue] = (
+                    None if current is None else current + excess_quantity
+                )
+                reasons.setdefault(f"15c3-3.excess_margin[{issue}]", EXCESS_MARGIN_METHOD)
             else:
                 # The margin engine computes money requirements, not the security
                 # quantity that is "excess margin" under Rule 15c3-3. Do not invent it.

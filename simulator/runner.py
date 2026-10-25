@@ -556,7 +556,7 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
     if not quantity_ok:
         breaks.append(
             Break(
-                invariant="I1_CONSERVATION",
+                invariant="I1_QUANTITY_MONEY_CONSERVE",
                 owner="SIM_SETTLEMENT_OPS",
                 age_business_days=calendar.business_days_after(business_date, business_date),
                 reason="share residual",
@@ -565,7 +565,7 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
     if not money_ok:
         breaks.append(
             Break(
-                invariant="I2_REPORT_PRICE",
+                invariant="I2_BOOKED_FROM_REPORTS",
                 owner="SIM_BOOKS",
                 age_business_days=calendar.business_days_after(business_date, business_date),
                 reason="cent residual",
@@ -977,9 +977,14 @@ def publish_run(run: dict[str, object], output: Path) -> None:
                 for close in firm_closes
                 if cast(dict[str, str], close["protection_dispositions"])[name] == "HOLD"
             ]
+            required = [
+                cast(dict[str, str], close.get("protection_required", {})).get(name, "ABSENT")
+                for close in firm_closes
+            ]
             protection_lines.append(
                 f"- {name}: `{dispositions.count('PASS')}` PASS, "
-                f"`{dispositions.count('HOLD')}` HOLD; reasons: "
+                f"`{dispositions.count('HOLD')}` HOLD; independently required: "
+                f"`{' / '.join(required)}`; reasons: "
                 f"`{' | '.join(hold_reasons) if hold_reasons else 'none'}`"
             )
         invariants = cast(dict[str, bool], firm_closes[-1]["invariants"])

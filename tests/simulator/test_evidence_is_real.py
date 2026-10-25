@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 SIMULATOR = Path(__file__).parents[2] / "simulator"
@@ -58,3 +59,13 @@ def test_invariant_expressions_are_not_relabelled_copies() -> None:
             and key.value.startswith("I")
         ]
         assert len(expressions) == len(set(expressions))
+
+
+def test_each_invariant_number_has_one_name_across_the_simulator() -> None:
+    """FIX-11 D3: one invariant number means one thing everywhere."""
+    names: dict[str, set[str]] = {}
+    for path in SIMULATOR.glob("*.py"):
+        for match in re.finditer(r"\b(I\d+)_([A-Z0-9_]+)\b", path.read_text()):
+            names.setdefault(match.group(1), set()).add(match.group(0))
+    collisions = {number: found for number, found in names.items() if len(found) > 1}
+    assert not collisions, collisions

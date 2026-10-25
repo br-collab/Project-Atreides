@@ -22,7 +22,7 @@
     "protection_dispositions": {
       "net_capital": "PASS",
       "pab_reserve": "PASS",
-      "possession_or_control": "HOLD",
+      "possession_or_control": "PASS",
       "reserve": "PASS"
     },
     "protection_figures": {
@@ -30,6 +30,8 @@
       "control_shortfall": "0",
       "customer_credits": "4958857.35",
       "customer_debits": "6923940.52",
+      "independent_control_short_issues": "0",
+      "independent_net_capital": "338700347.3905",
       "net_capital": "338700347.3905",
       "pab_reserve_requirement": "0",
       "reserve_requirement": "0"
@@ -37,36 +39,21 @@
     "protection_reasons": {
       "net_capital": [],
       "pab_reserve": [],
-      "possession_or_control": [
-        "excess_margin[SYN-SCF1-ISSUE-0000]",
-        "excess_margin[SYN-SCF1-ISSUE-0001]",
-        "excess_margin[SYN-SCF1-ISSUE-0002]",
-        "excess_margin[SYN-SCF1-ISSUE-0003]",
-        "excess_margin[SYN-SCF1-ISSUE-0004]",
-        "excess_margin[SYN-SCF1-ISSUE-0005]",
-        "excess_margin[SYN-SCF1-ISSUE-0006]",
-        "excess_margin[SYN-SCF1-ISSUE-0007]",
-        "excess_margin[SYN-SCF1-ISSUE-0008]",
-        "excess_margin[SYN-SCF1-ISSUE-0009]",
-        "excess_margin[SYN-SCF1-ISSUE-0010]",
-        "excess_margin[SYN-SCF1-ISSUE-0011]",
-        "excess_margin[SYN-SCF1-ISSUE-0012]",
-        "excess_margin[SYN-SCF1-ISSUE-0013]",
-        "excess_margin[SYN-SCF1-ISSUE-0014]",
-        "excess_margin[SYN-SCF1-ISSUE-0015]",
-        "excess_margin[SYN-SCF1-ISSUE-0016]",
-        "excess_margin[SYN-SCF1-ISSUE-0017]",
-        "excess_margin[SYN-SCF1-ISSUE-0018]",
-        "excess_margin[SYN-SCF1-ISSUE-0019]"
-      ],
+      "possession_or_control": [],
       "reserve": []
+    },
+    "protection_required": {
+      "net_capital": "PASS",
+      "pab_reserve": "PASS",
+      "possession_or_control": "PASS",
+      "reserve": "PASS"
     },
     "rule_204_close_outs": {}
   },
   {
     "breaks_by_owner": {},
     "business_date": "2027-01-05",
-    "economics_digest": "sha256:5ffd54cdd2d9b5e0f23ce9611728a816c067efc12ad992f79508cb2d2b91689e",
+    "economics_digest": "sha256:bfb50a53a91f27bb04d6f7dba8d2ff7e928efbbb45c02ec94e59b3fe5b078be7",
     "executions": 1000,
     "fails_by_age": {
       "0": 20
@@ -91,9 +78,11 @@
     },
     "protection_figures": {
       "average_total_credits": "600000000.00",
-      "control_shortfall": "0",
+      "control_shortfall": "100",
       "customer_credits": "6254925.16",
       "customer_debits": "9328183.69",
+      "independent_control_short_issues": "1",
+      "independent_net_capital": "310059594.0790",
       "net_capital": "310059594.0790",
       "pab_reserve_requirement": "0",
       "reserve_requirement": "0"
@@ -102,28 +91,16 @@
       "net_capital": [],
       "pab_reserve": [],
       "possession_or_control": [
-        "excess_margin[SYN-SCF1-ISSUE-0000]",
-        "excess_margin[SYN-SCF1-ISSUE-0001]",
-        "excess_margin[SYN-SCF1-ISSUE-0002]",
-        "excess_margin[SYN-SCF1-ISSUE-0003]",
-        "excess_margin[SYN-SCF1-ISSUE-0004]",
-        "excess_margin[SYN-SCF1-ISSUE-0005]",
-        "excess_margin[SYN-SCF1-ISSUE-0006]",
-        "excess_margin[SYN-SCF1-ISSUE-0007]",
-        "excess_margin[SYN-SCF1-ISSUE-0008]",
-        "excess_margin[SYN-SCF1-ISSUE-0009]",
-        "excess_margin[SYN-SCF1-ISSUE-0010]",
-        "excess_margin[SYN-SCF1-ISSUE-0011]",
-        "excess_margin[SYN-SCF1-ISSUE-0012]",
-        "excess_margin[SYN-SCF1-ISSUE-0013]",
-        "excess_margin[SYN-SCF1-ISSUE-0014]",
-        "excess_margin[SYN-SCF1-ISSUE-0015]",
-        "excess_margin[SYN-SCF1-ISSUE-0016]",
-        "excess_margin[SYN-SCF1-ISSUE-0017]",
-        "excess_margin[SYN-SCF1-ISSUE-0018]",
-        "excess_margin[SYN-SCF1-ISSUE-0019]"
+        "loaned[SYN-SCF1-ISSUE-0000]",
+        "SYN-SCF1-ISSUE-0000: 100 fully paid or excess margin securities are not in possession or control"
       ],
       "reserve": []
+    },
+    "protection_required": {
+      "net_capital": "PASS",
+      "pab_reserve": "PASS",
+      "possession_or_control": "HOLD",
+      "reserve": "PASS"
     },
     "rule_204_close_outs": {
       "SYN-SCF1-ISSUE-0000": "2027-01-06",
@@ -151,7 +128,7 @@
   {
     "breaks_by_owner": {},
     "business_date": "2027-01-06",
-    "economics_digest": "sha256:e57a49ab79ccf1e45bad6214f374cc3f954367b2da9262c7437140ac4628bb79",
+    "economics_digest": "sha256:7440a45e5c24e2f16a153b8f5a0fea70f546bda710544e2be5cf247776430f57",
     "executions": 1000,
     "fails_by_age": {
       "1": 20
@@ -171,7 +148,7 @@
     "protection_dispositions": {
       "net_capital": "PASS",
       "pab_reserve": "PASS",
-      "possession_or_control": "HOLD",
+      "possession_or_control": "PASS",
       "reserve": "PASS"
     },
     "protection_figures": {
@@ -179,6 +156,8 @@
       "control_shortfall": "0",
       "customer_credits": "7962799.20",
       "customer_debits": "10741137.46",
+      "independent_control_short_issues": "0",
+      "independent_net_capital": "65633831.6815",
       "net_capital": "65633831.6815",
       "pab_reserve_requirement": "0",
       "reserve_requirement": "0"
@@ -186,29 +165,14 @@
     "protection_reasons": {
       "net_capital": [],
       "pab_reserve": [],
-      "possession_or_control": [
-        "excess_margin[SYN-SCF1-ISSUE-0000]",
-        "excess_margin[SYN-SCF1-ISSUE-0001]",
-        "excess_margin[SYN-SCF1-ISSUE-0002]",
-        "excess_margin[SYN-SCF1-ISSUE-0003]",
-        "excess_margin[SYN-SCF1-ISSUE-0004]",
-        "excess_margin[SYN-SCF1-ISSUE-0005]",
-        "excess_margin[SYN-SCF1-ISSUE-0006]",
-        "excess_margin[SYN-SCF1-ISSUE-0007]",
-        "excess_margin[SYN-SCF1-ISSUE-0008]",
-        "excess_margin[SYN-SCF1-ISSUE-0009]",
-        "excess_margin[SYN-SCF1-ISSUE-0010]",
-        "excess_margin[SYN-SCF1-ISSUE-0011]",
-        "excess_margin[SYN-SCF1-ISSUE-0012]",
-        "excess_margin[SYN-SCF1-ISSUE-0013]",
-        "excess_margin[SYN-SCF1-ISSUE-0014]",
-        "excess_margin[SYN-SCF1-ISSUE-0015]",
-        "excess_margin[SYN-SCF1-ISSUE-0016]",
-        "excess_margin[SYN-SCF1-ISSUE-0017]",
-        "excess_margin[SYN-SCF1-ISSUE-0018]",
-        "excess_margin[SYN-SCF1-ISSUE-0019]"
-      ],
+      "possession_or_control": [],
       "reserve": []
+    },
+    "protection_required": {
+      "net_capital": "PASS",
+      "pab_reserve": "PASS",
+      "possession_or_control": "PASS",
+      "reserve": "PASS"
     },
     "rule_204_close_outs": {
       "SYN-SCF1-ISSUE-0000": "2027-01-06",
@@ -236,7 +200,7 @@
   {
     "breaks_by_owner": {},
     "business_date": "2027-01-07",
-    "economics_digest": "sha256:1f1d28c811ba04246ae86904c0ebedd2cbdc53c23eafaba1b9b146e3769c5cb2",
+    "economics_digest": "sha256:1ce122c5d36c9bef606039bee175b41fdbee163245c07eafd644701fdfc98bdc",
     "executions": 1000,
     "fails_by_age": {
       "2": 20
@@ -256,7 +220,7 @@
     "protection_dispositions": {
       "net_capital": "PASS",
       "pab_reserve": "PASS",
-      "possession_or_control": "HOLD",
+      "possession_or_control": "PASS",
       "reserve": "PASS"
     },
     "protection_figures": {
@@ -264,6 +228,8 @@
       "control_shortfall": "0",
       "customer_credits": "10152874.71",
       "customer_debits": "12171677.79",
+      "independent_control_short_issues": "0",
+      "independent_net_capital": "128084837.8930",
       "net_capital": "128084837.8930",
       "pab_reserve_requirement": "0",
       "reserve_requirement": "0"
@@ -271,29 +237,14 @@
     "protection_reasons": {
       "net_capital": [],
       "pab_reserve": [],
-      "possession_or_control": [
-        "excess_margin[SYN-SCF1-ISSUE-0000]",
-        "excess_margin[SYN-SCF1-ISSUE-0001]",
-        "excess_margin[SYN-SCF1-ISSUE-0002]",
-        "excess_margin[SYN-SCF1-ISSUE-0003]",
-        "excess_margin[SYN-SCF1-ISSUE-0004]",
-        "excess_margin[SYN-SCF1-ISSUE-0005]",
-        "excess_margin[SYN-SCF1-ISSUE-0006]",
-        "excess_margin[SYN-SCF1-ISSUE-0007]",
-        "excess_margin[SYN-SCF1-ISSUE-0008]",
-        "excess_margin[SYN-SCF1-ISSUE-0009]",
-        "excess_margin[SYN-SCF1-ISSUE-0010]",
-        "excess_margin[SYN-SCF1-ISSUE-0011]",
-        "excess_margin[SYN-SCF1-ISSUE-0012]",
-        "excess_margin[SYN-SCF1-ISSUE-0013]",
-        "excess_margin[SYN-SCF1-ISSUE-0014]",
-        "excess_margin[SYN-SCF1-ISSUE-0015]",
-        "excess_margin[SYN-SCF1-ISSUE-0016]",
-        "excess_margin[SYN-SCF1-ISSUE-0017]",
-        "excess_margin[SYN-SCF1-ISSUE-0018]",
-        "excess_margin[SYN-SCF1-ISSUE-0019]"
-      ],
+      "possession_or_control": [],
       "reserve": []
+    },
+    "protection_required": {
+      "net_capital": "PASS",
+      "pab_reserve": "PASS",
+      "possession_or_control": "PASS",
+      "reserve": "PASS"
     },
     "rule_204_close_outs": {
       "SYN-SCF1-ISSUE-0000": "2027-01-06",
@@ -321,7 +272,7 @@
   {
     "breaks_by_owner": {},
     "business_date": "2027-01-08",
-    "economics_digest": "sha256:4287a03416c7f2aacb960d2c881207c50d0e5609b43634b82d5d7e1d3a497fa9",
+    "economics_digest": "sha256:2c606942fc2fd19fdb748405fa889831fc208877ef02f6364e5da85d21549d04",
     "executions": 1000,
     "fails_by_age": {
       "3": 20
@@ -341,7 +292,7 @@
     "protection_dispositions": {
       "net_capital": "PASS",
       "pab_reserve": "PASS",
-      "possession_or_control": "HOLD",
+      "possession_or_control": "PASS",
       "reserve": "PASS"
     },
     "protection_figures": {
@@ -349,6 +300,8 @@
       "control_shortfall": "0",
       "customer_credits": "12340532.00",
       "customer_debits": "13250494.92",
+      "independent_control_short_issues": "0",
+      "independent_net_capital": "59270118.3370",
       "net_capital": "59270118.3370",
       "pab_reserve_requirement": "0",
       "reserve_requirement": "0"
@@ -356,29 +309,14 @@
     "protection_reasons": {
       "net_capital": [],
       "pab_reserve": [],
-      "possession_or_control": [
-        "excess_margin[SYN-SCF1-ISSUE-0000]",
-        "excess_margin[SYN-SCF1-ISSUE-0001]",
-        "excess_margin[SYN-SCF1-ISSUE-0002]",
-        "excess_margin[SYN-SCF1-ISSUE-0003]",
-        "excess_margin[SYN-SCF1-ISSUE-0004]",
-        "excess_margin[SYN-SCF1-ISSUE-0005]",
-        "excess_margin[SYN-SCF1-ISSUE-0006]",
-        "excess_margin[SYN-SCF1-ISSUE-0007]",
-        "excess_margin[SYN-SCF1-ISSUE-0008]",
-        "excess_margin[SYN-SCF1-ISSUE-0009]",
-        "excess_margin[SYN-SCF1-ISSUE-0010]",
-        "excess_margin[SYN-SCF1-ISSUE-0011]",
-        "excess_margin[SYN-SCF1-ISSUE-0012]",
-        "excess_margin[SYN-SCF1-ISSUE-0013]",
-        "excess_margin[SYN-SCF1-ISSUE-0014]",
-        "excess_margin[SYN-SCF1-ISSUE-0015]",
-        "excess_margin[SYN-SCF1-ISSUE-0016]",
-        "excess_margin[SYN-SCF1-ISSUE-0017]",
-        "excess_margin[SYN-SCF1-ISSUE-0018]",
-        "excess_margin[SYN-SCF1-ISSUE-0019]"
-      ],
+      "possession_or_control": [],
       "reserve": []
+    },
+    "protection_required": {
+      "net_capital": "PASS",
+      "pab_reserve": "PASS",
+      "possession_or_control": "PASS",
+      "reserve": "PASS"
     },
     "rule_204_close_outs": {
       "SYN-SCF1-ISSUE-0000": "2027-01-06",
