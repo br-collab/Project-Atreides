@@ -629,8 +629,9 @@ def _post_stock_borrows(
     business_date: date,
     prices: dict[str, Decimal],
     day_index: int,
-) -> None:
+) -> dict[tuple[str, str], Decimal]:
     """Post declared synthetic borrows that cover open CNS fails through the real books."""
+    activity: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
     for offset, (issue, (quantity, cash, settlement_date)) in enumerate(
         sorted(carried_fails.items())
     ):
@@ -638,6 +639,8 @@ def _post_stock_borrows(
             continue
         event_id = _id("evt_", 840_000_000 + day_index * 10_000 + offset)
         borrowed = abs(quantity)
+        activity[("SYN-SCF2-STOCK-BORROWED", issue)] += borrowed
+        activity[("SYN-SCF1-FIRM-INVENTORY", issue)] -= borrowed
         books.post(
             JournalEntry(
                 entry_id=f"SCF2-BORROW-{day_index}-{offset}",
@@ -681,6 +684,7 @@ def _post_stock_borrows(
                 synthetic=True,
             )
         )
+    return dict(activity)
 
 
 def _protections(
@@ -950,7 +954,9 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 activity_cash[account] += -sign * consideration
             cns_trades.extend((row.issue, row.signed_quantity) for row in rows)
         prices = {execution.issue: execution.price for execution in executions}
-        _post_stock_borrows(books, carried_input, business_date, prices, day_index)
+        borrow_activity = _post_stock_borrows(
+            books, carried_input, business_date, prices, day_index
+        )
         settlements = []
         profile_cns = MarketProfile(
             market_id="NSCC_SYNTHETIC",
@@ -1011,16 +1017,34 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     settlement_date,
                 )
         closing_positions, closing_cash = _balances(books)
+        full_position_activity = dict(activity_positions)
+        for key, quantity in borrow_activity.items():
+            full_position_activity[key] = full_position_activity.get(key, Decimal()) + quantity
         expected_positions, expected_cash = roll_forward(
-            opening_positions, opening_cash, dict(activity_positions), dict(activity_cash)
+            opening_positions, opening_cash, full_position_activity, dict(activity_cash)
         )
         i11 = expected_positions == closing_positions and expected_cash == closing_cash
-        venue_position = sum((item.signed_quantity for item in accepted), Decimal())
-        venue_money = sum((item.signed_money for item in accepted), Decimal())
+        booked_position_activity: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
+        booked_cash_activity: dict[str, Decimal] = defaultdict(Decimal)
+        for entry in books.entries:
+            if (
+                entry.source is not PostingSource.CNS_SETTLEMENT
+                or entry.effective_date != business_date
+                or entry.authority != "NSCC_SYNTHETIC"
+            ):
+                continue
+            for line in entry.lines:
+                if line.record_side is RecordSide.OWNERSHIP and line.issue is not None:
+                    booked_position_activity[(line.account_id, line.issue)] += line.quantity
+                elif (
+                    line.record_side is RecordSide.MONEY
+                    and line.account_type is not AccountType.CASH
+                ):
+                    booked_cash_activity[line.account_id] += line.money
         i1 = (
-            venue_position == sum(activity_positions.values(), Decimal())
-            and venue_money == sum(activity_cash.values(), Decimal())
-            and i11
+            dict(activity_positions) == dict(booked_position_activity)
+            and dict(activity_cash) == dict(booked_cash_activity)
+            and len(posted) == len(groups)
         )
         posted_sources = {
             entry.source_event_id
@@ -1105,7 +1129,9 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 ).hexdigest(),
             )
         )
-        opening_positions, opening_cash = closing_positions, closing_cash
+        # Protection posts same-day reserve movements after the trading close.
+        # They are real book activity and therefore form the next day's opening.
+        opening_positions, opening_cash = _balances(books)
         carried_fails = next_fails
     elapsed = time.perf_counter() - started
     peak_memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
@@ -1125,6 +1151,11 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         )
         firm_run = replace(
             firm_run,
+            peak_memory_bytes=max(
+                value
+                for value in (firm_run.peak_memory_bytes, replay.peak_memory_bytes)
+                if value is not None
+            ),
             days=tuple(
                 replace(
                     day,

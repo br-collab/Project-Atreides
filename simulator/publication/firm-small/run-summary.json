@@ -27,6 +27,15 @@
         "possession_or_control": "HOLD",
         "reserve": "PASS"
       },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "0",
+        "customer_credits": "4958857.35",
+        "customer_debits": "6923940.52",
+        "net_capital": "338700347.3905",
+        "pab_reserve_requirement": "0",
+        "reserve_requirement": "0"
+      },
       "protection_reasons": {
         "net_capital": [],
         "pab_reserve": [],
@@ -53,12 +62,13 @@
           "excess_margin[SYN-SCF1-ISSUE-0019]"
         ],
         "reserve": []
-      }
+      },
+      "rule_204_close_outs": {}
     },
     {
       "breaks_by_owner": {},
       "business_date": "2027-01-05",
-      "economics_digest": "sha256:c9a3cd813dd0ada097dea87b6f3e02dbc70377a46f781155b0a80205cee3cbf1",
+      "economics_digest": "sha256:5ffd54cdd2d9b5e0f23ce9611728a816c067efc12ad992f79508cb2d2b91689e",
       "executions": 1000,
       "fails_by_age": {
         "0": 20
@@ -81,6 +91,15 @@
         "possession_or_control": "HOLD",
         "reserve": "PASS"
       },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "0",
+        "customer_credits": "6254925.16",
+        "customer_debits": "9328183.69",
+        "net_capital": "310059594.0790",
+        "pab_reserve_requirement": "0",
+        "reserve_requirement": "0"
+      },
       "protection_reasons": {
         "net_capital": [],
         "pab_reserve": [],
@@ -107,12 +126,34 @@
           "excess_margin[SYN-SCF1-ISSUE-0019]"
         ],
         "reserve": []
+      },
+      "rule_204_close_outs": {
+        "SYN-SCF1-ISSUE-0000": "2027-01-06",
+        "SYN-SCF1-ISSUE-0001": "2027-01-06",
+        "SYN-SCF1-ISSUE-0002": "2027-01-06",
+        "SYN-SCF1-ISSUE-0003": "2027-01-06",
+        "SYN-SCF1-ISSUE-0004": "2027-01-06",
+        "SYN-SCF1-ISSUE-0005": "2027-01-06",
+        "SYN-SCF1-ISSUE-0006": "2027-01-06",
+        "SYN-SCF1-ISSUE-0007": "2027-01-06",
+        "SYN-SCF1-ISSUE-0008": "2027-01-06",
+        "SYN-SCF1-ISSUE-0009": "2027-01-06",
+        "SYN-SCF1-ISSUE-0010": "2027-01-06",
+        "SYN-SCF1-ISSUE-0011": "2027-01-06",
+        "SYN-SCF1-ISSUE-0012": "2027-01-06",
+        "SYN-SCF1-ISSUE-0013": "2027-01-06",
+        "SYN-SCF1-ISSUE-0014": "2027-01-06",
+        "SYN-SCF1-ISSUE-0015": "2027-01-06",
+        "SYN-SCF1-ISSUE-0016": "2027-01-06",
+        "SYN-SCF1-ISSUE-0017": "2027-01-06",
+        "SYN-SCF1-ISSUE-0018": "2027-01-06",
+        "SYN-SCF1-ISSUE-0019": "2027-01-06"
       }
     },
     {
       "breaks_by_owner": {},
       "business_date": "2027-01-06",
-      "economics_digest": "sha256:8765e77c1d5d30d5882310c62b7959011292cb1807d8167c5ea61096230993d7",
+      "economics_digest": "sha256:e57a49ab79ccf1e45bad6214f374cc3f954367b2da9262c7437140ac4628bb79",
       "executions": 1000,
       "fails_by_age": {
         "1": 20
@@ -135,6 +176,15 @@
         "possession_or_control": "HOLD",
         "reserve": "PASS"
       },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "0",
+        "customer_credits": "7962799.20",
+        "customer_debits": "10741137.46",
+        "net_capital": "65633831.6815",
+        "pab_reserve_requirement": "0",
+        "reserve_requirement": "0"
+      },
       "protection_reasons": {
         "net_capital": [],
         "pab_reserve": [],
@@ -161,12 +211,34 @@
           "excess_margin[SYN-SCF1-ISSUE-0019]"
         ],
         "reserve": []
+      },
+      "rule_204_close_outs": {
+        "SYN-SCF1-ISSUE-0000": "2027-01-06",
+        "SYN-SCF1-ISSUE-0001": "2027-01-06",
+        "SYN-SCF1-ISSUE-0002": "2027-01-06",
+        "SYN-SCF1-ISSUE-0003": "2027-01-06",
+        "SYN-SCF1-ISSUE-0004": "2027-01-06",
+        "SYN-SCF1-ISSUE-0005": "2027-01-06",
+        "SYN-SCF1-ISSUE-0006": "2027-01-06",
+        "SYN-SCF1-ISSUE-0007": "2027-01-06",
+        "SYN-SCF1-ISSUE-0008": "2027-01-06",
+        "SYN-SCF1-ISSUE-0009": "2027-01-06",
+        "SYN-SCF1-ISSUE-0010": "2027-01-06",
+        "SYN-SCF1-ISSUE-0011": "2027-01-06",
+        "SYN-SCF1-ISSUE-0012": "2027-01-06",
+        "SYN-SCF1-ISSUE-0013": "2027-01-06",
+        "SYN-SCF1-ISSUE-0014": "2027-01-06",
+        "SYN-SCF1-ISSUE-0015": "2027-01-06",
+        "SYN-SCF1-ISSUE-0016": "2027-01-06",
+        "SYN-SCF1-ISSUE-0017": "2027-01-06",
+        "SYN-SCF1-ISSUE-0018": "2027-01-06",
+        "SYN-SCF1-ISSUE-0019": "2027-01-06"
       }
     },
     {
       "breaks_by_owner": {},
       "business_date": "2027-01-07",
-      "economics_digest": "sha256:04b7ebb2cbd415ec88e11c79eb5f5aad189acfacd45c350a8bac604ee49260d1",
+      "economics_digest": "sha256:1f1d28c811ba04246ae86904c0ebedd2cbdc53c23eafaba1b9b146e3769c5cb2",
       "executions": 1000,
       "fails_by_age": {
         "2": 20
@@ -189,6 +261,15 @@
         "possession_or_control": "HOLD",
         "reserve": "PASS"
       },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "0",
+        "customer_credits": "10152874.71",
+        "customer_debits": "12171677.79",
+        "net_capital": "128084837.8930",
+        "pab_reserve_requirement": "0",
+        "reserve_requirement": "0"
+      },
       "protection_reasons": {
         "net_capital": [],
         "pab_reserve": [],
@@ -215,12 +296,34 @@
           "excess_margin[SYN-SCF1-ISSUE-0019]"
         ],
         "reserve": []
+      },
+      "rule_204_close_outs": {
+        "SYN-SCF1-ISSUE-0000": "2027-01-06",
+        "SYN-SCF1-ISSUE-0001": "2027-01-06",
+        "SYN-SCF1-ISSUE-0002": "2027-01-06",
+        "SYN-SCF1-ISSUE-0003": "2027-01-06",
+        "SYN-SCF1-ISSUE-0004": "2027-01-06",
+        "SYN-SCF1-ISSUE-0005": "2027-01-06",
+        "SYN-SCF1-ISSUE-0006": "2027-01-06",
+        "SYN-SCF1-ISSUE-0007": "2027-01-06",
+        "SYN-SCF1-ISSUE-0008": "2027-01-06",
+        "SYN-SCF1-ISSUE-0009": "2027-01-06",
+        "SYN-SCF1-ISSUE-0010": "2027-01-06",
+        "SYN-SCF1-ISSUE-0011": "2027-01-06",
+        "SYN-SCF1-ISSUE-0012": "2027-01-06",
+        "SYN-SCF1-ISSUE-0013": "2027-01-06",
+        "SYN-SCF1-ISSUE-0014": "2027-01-06",
+        "SYN-SCF1-ISSUE-0015": "2027-01-06",
+        "SYN-SCF1-ISSUE-0016": "2027-01-06",
+        "SYN-SCF1-ISSUE-0017": "2027-01-06",
+        "SYN-SCF1-ISSUE-0018": "2027-01-06",
+        "SYN-SCF1-ISSUE-0019": "2027-01-06"
       }
     },
     {
       "breaks_by_owner": {},
       "business_date": "2027-01-08",
-      "economics_digest": "sha256:6a668bbc5557dee2060e6873994bdfbc679c48a9dc9ce3617bb84cde2fa9ee3e",
+      "economics_digest": "sha256:4287a03416c7f2aacb960d2c881207c50d0e5609b43634b82d5d7e1d3a497fa9",
       "executions": 1000,
       "fails_by_age": {
         "3": 20
@@ -243,6 +346,15 @@
         "possession_or_control": "HOLD",
         "reserve": "PASS"
       },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "0",
+        "customer_credits": "12340532.00",
+        "customer_debits": "13250494.92",
+        "net_capital": "59270118.3370",
+        "pab_reserve_requirement": "0",
+        "reserve_requirement": "0"
+      },
       "protection_reasons": {
         "net_capital": [],
         "pab_reserve": [],
@@ -269,16 +381,40 @@
           "excess_margin[SYN-SCF1-ISSUE-0019]"
         ],
         "reserve": []
+      },
+      "rule_204_close_outs": {
+        "SYN-SCF1-ISSUE-0000": "2027-01-06",
+        "SYN-SCF1-ISSUE-0001": "2027-01-06",
+        "SYN-SCF1-ISSUE-0002": "2027-01-06",
+        "SYN-SCF1-ISSUE-0003": "2027-01-06",
+        "SYN-SCF1-ISSUE-0004": "2027-01-06",
+        "SYN-SCF1-ISSUE-0005": "2027-01-06",
+        "SYN-SCF1-ISSUE-0006": "2027-01-06",
+        "SYN-SCF1-ISSUE-0007": "2027-01-06",
+        "SYN-SCF1-ISSUE-0008": "2027-01-06",
+        "SYN-SCF1-ISSUE-0009": "2027-01-06",
+        "SYN-SCF1-ISSUE-0010": "2027-01-06",
+        "SYN-SCF1-ISSUE-0011": "2027-01-06",
+        "SYN-SCF1-ISSUE-0012": "2027-01-06",
+        "SYN-SCF1-ISSUE-0013": "2027-01-06",
+        "SYN-SCF1-ISSUE-0014": "2027-01-06",
+        "SYN-SCF1-ISSUE-0015": "2027-01-06",
+        "SYN-SCF1-ISSUE-0016": "2027-01-06",
+        "SYN-SCF1-ISSUE-0017": "2027-01-06",
+        "SYN-SCF1-ISSUE-0018": "2027-01-06",
+        "SYN-SCF1-ISSUE-0019": "2027-01-06"
       }
     }
   ],
-  "elapsed_seconds": 32.286265147005906,
-  "executions_per_second": 154.8646143254411,
+  "elapsed_seconds": 32.34707237998373,
+  "executions_per_second": 154.57349404807294,
   "firm_profile": {
     "accounts": 200,
     "buy_share": "0.50",
     "executions_per_day": 1000,
     "fail_rate": "0.03",
+    "filed_history_credit": "600000000.00",
+    "filed_history_months": 12,
     "issues": 20,
     "margin_account_share": "0.65",
     "order_size_max": 500,
@@ -302,12 +438,14 @@
     "real customer assets",
     "real firm, account or security identifiers"
   ],
-  "peak_memory_bytes": 83496960,
+  "peak_memory_bytes": 103231488,
   "profile": {
     "accounts": 200,
     "buy_share": "0.50",
     "executions_per_day": 1000,
     "fail_rate": "0.03",
+    "filed_history_credit": "600000000.00",
+    "filed_history_months": 12,
     "issues": 20,
     "margin_account_share": "0.65",
     "order_size_max": 500,

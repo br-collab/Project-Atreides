@@ -1,0 +1,70 @@
+{
+  "legs": {
+    "CONV-2": {
+      "clean": {
+        "HOLD": 0,
+        "PASS": 2,
+        "reasons": []
+      },
+      "late": {
+        "HOLD": 2,
+        "PASS": 0,
+        "reasons": [
+          "finra_11870.completion_overdue"
+        ]
+      },
+      "partial-residual": {
+        "HOLD": 0,
+        "PASS": 2,
+        "reasons": []
+      },
+      "reject": {
+        "HOLD": 2,
+        "PASS": 0,
+        "reasons": [
+          "declared synthetic reject"
+        ]
+      }
+    },
+    "CONV-3": {
+      "fund-call": {
+        "HOLD": 1,
+        "PASS": 0,
+        "reasons": [
+          "declared clearing fund call above available cash"
+        ]
+      },
+      "missing-membership": {
+        "HOLD": 1,
+        "PASS": 0,
+        "reasons": [
+          "missing declared NSCC membership evidence"
+        ]
+      },
+      "ready": {
+        "HOLD": 0,
+        "PASS": 1,
+        "reasons": []
+      }
+    },
+    "CONV-4": {
+      "HOLD": 0,
+      "PASS": 3,
+      "reasons": []
+    }
+  },
+  "license_gates": {
+    "DTCC": "INDETERMINATE",
+    "FINRA": "INDETERMINATE",
+    "eCFR_SEC_local_pins": "INDETERMINATE"
+  },
+  "not_claimed": [
+    "production correctness",
+    "regulatory approval or filing",
+    "clearing-agency membership",
+    "real customer assets",
+    "real firm, account or security identifiers"
+  ],
+  "schema_version": "sim.phase-2/1",
+  "synthetic": true
+}

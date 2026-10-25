@@ -1,0 +1,104 @@
+{
+  "closes": [
+    {
+      "17a_3_records": {
+        "not_produced": [
+          "order memoranda",
+          "associated-person records",
+          "customer communications"
+        ],
+        "produced": [
+          "daily cash blotter",
+          "general ledger",
+          "account ledger",
+          "securities record by issue and location"
+        ]
+      },
+      "break_owners": {},
+      "engine_lines": {
+        "net_capital": "1000000",
+        "possession_or_control_shortfall": "0",
+        "reserve_total_credits": "0",
+        "reserve_total_debits": "0"
+      },
+      "focus_lines_from_books": {
+        "net_capital": "1000000",
+        "possession_or_control_shortfall": "0",
+        "reserve_total_credits": "0",
+        "reserve_total_debits": "0"
+      },
+      "invariants": {
+        "I13_FOCUS_TIE_OUT": true
+      },
+      "month_end": "2026-09-30"
+    },
+    {
+      "17a_3_records": {
+        "not_produced": [
+          "order memoranda",
+          "associated-person records",
+          "customer communications"
+        ],
+        "produced": [
+          "daily cash blotter",
+          "general ledger",
+          "account ledger",
+          "securities record by issue and location"
+        ]
+      },
+      "break_owners": {},
+      "engine_lines": {
+        "net_capital": "1000000",
+        "possession_or_control_shortfall": "0",
+        "reserve_total_credits": "0",
+        "reserve_total_debits": "0"
+      },
+      "focus_lines_from_books": {
+        "net_capital": "1000000",
+        "possession_or_control_shortfall": "0",
+        "reserve_total_credits": "0",
+        "reserve_total_debits": "0"
+      },
+      "invariants": {
+        "I13_FOCUS_TIE_OUT": true
+      },
+      "month_end": "2026-10-31"
+    },
+    {
+      "17a_3_records": {
+        "not_produced": [
+          "order memoranda",
+          "associated-person records",
+          "customer communications"
+        ],
+        "produced": [
+          "daily cash blotter",
+          "general ledger",
+          "account ledger",
+          "securities record by issue and location"
+        ]
+      },
+      "break_owners": {},
+      "engine_lines": {
+        "net_capital": "1000000",
+        "possession_or_control_shortfall": "0",
+        "reserve_total_credits": "0",
+        "reserve_total_debits": "0"
+      },
+      "focus_lines_from_books": {
+        "net_capital": "1000000",
+        "possession_or_control_shortfall": "0",
+        "reserve_total_credits": "0",
+        "reserve_total_debits": "0"
+      },
+      "invariants": {
+        "I13_FOCUS_TIE_OUT": true
+      },
+      "month_end": "2026-11-30"
+    }
+  ],
+  "schema_version": "sim.focus/1",
+  "source_pin_reason": "official pages verified; local byte retrieval refused by hosts",
+  "source_pin_status": "INDETERMINATE",
+  "synthetic": true
+}

@@ -87,6 +87,11 @@ class MarginResult(_Frozen):
 
 
 def _load_rules() -> tuple[dict[str, Decimal], tuple[RuleTrace, ...], tuple[str, ...]]:
+    """Verify and load the packaged table for every decision.
+
+    A source pin is an evidence gate, so a previously verified result must not
+    outlive a changed or missing source file in the same process.
+    """
     base = Path(__file__).with_name("rules")
     document = json.loads((base / "table.json").read_text(encoding="utf-8"))
     values: dict[str, Decimal] = {}

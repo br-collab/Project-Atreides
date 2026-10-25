@@ -1,0 +1,31 @@
+{
+  "cns_money_settlement": "13884.69",
+  "daily_funding_need": "1213884.69",
+  "declared_funding_inputs": {
+    "available_cash": "1000000",
+    "clearing_fund_requirement": "1200000",
+    "collateral_requirement": "175000"
+  },
+  "disposition": "HOLD",
+  "dtcc_license_gate": "INDETERMINATE",
+  "invariants": {
+    "I11_MEMBERSHIP_EVIDENCE_COMPLETE": true,
+    "I12_FUNDING_NEED_COVERED": false
+  },
+  "membership_evidence": {
+    "dtc": "SYN-DTC-PARTICIPANT",
+    "ficc": "SYN-FICC-GSD-MEMBERSHIP",
+    "nscc": "SYN-NSCC-MEMBERSHIP"
+  },
+  "reasons": [
+    "declared clearing fund call above available cash"
+  ],
+  "rule_references": [
+    "NSCC Rules and Procedures \u2014 membership and clearing fund",
+    "DTC Rules, By-Laws and Organization Certificate \u2014 participant eligibility",
+    "FICC GSD Rules \u2014 membership and clearing fund"
+  ],
+  "schema_version": "sim.clearing-readiness/1",
+  "synthetic": true,
+  "variant": "fund-call"
+}
