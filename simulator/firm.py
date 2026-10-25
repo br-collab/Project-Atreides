@@ -590,7 +590,7 @@ def _seed_inventory(books: EquitiesBooks, profile: FirmProfile, start: date, day
 
 def _protections(
     books: EquitiesBooks, business_date: date, prices: dict[str, Decimal]
-) -> dict[str, str]:
+) -> tuple[dict[str, str], dict[str, bool]]:
     calendar = MarketCalendar.load(Market.US_EQUITIES)
     margins = tuple(
         compute_margin(
@@ -638,12 +638,18 @@ def _protections(
     )
     capital = compute_net_capital(capital_inputs, rules)
     control = check_possession_or_control(projected.control, rules)
-    return {
-        "reserve": customer.disposition.value,
-        "pab_reserve": pab.disposition.value,
-        "net_capital": capital.disposition.value,
-        "possession_or_control": control.disposition.value,
-    }
+    return (
+        {
+            "reserve": customer.disposition.value,
+            "pab_reserve": pab.disposition.value,
+            "net_capital": capital.disposition.value,
+            "possession_or_control": control.disposition.value,
+        },
+        {
+            "reserve": customer.requirement is not None and customer.requirement > 0,
+            "pab_reserve": pab.requirement is not None and pab.requirement > 0,
+        },
+    )
 
 
 def run_firm(
@@ -726,7 +732,7 @@ def run_firm(
             for issue, sides in books.quantities().items()
         }
         breaks = books.verify_stock_record(observed_locations=observed)
-        protections = _protections(books, business_date, prices)
+        protections, protection_holds_required = _protections(books, business_date, prices)
         invariants = {
             "I1_QUANTITY_MONEY_CONSERVE": i11,
             "I2_BOOKED_FROM_REPORTS": i11,
@@ -738,7 +744,12 @@ def run_firm(
                 for result in settlements
             ),
             "I6_DEFAULT_AND_STALE_HOLD": all(
-                value != "INDETERMINATE" for value in protections.values()
+                (protections[name] == "HOLD") if required else (protections[name] != "HOLD")
+                for name, required in protection_holds_required.items()
+            )
+            and all(
+                protections[name] != "INDETERMINATE"
+                for name in ("net_capital", "possession_or_control")
             ),
             "I7_MARKET_ACCESS_REFUSES": (
                 len(executions) == profile.executions_per_day

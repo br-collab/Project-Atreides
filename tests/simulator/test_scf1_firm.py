@@ -5,10 +5,14 @@ from __future__ import annotations
 import json
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
+import pytest
+from cannae_kernel.disposition import Disposition
 from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
+from simulator import firm
 from simulator.firm import (
     MUTATIONS,
     attack_firm_run,
@@ -87,3 +91,17 @@ def test_small_day_drives_real_estate_and_mutations_fail(tmp_path) -> None:
     summary = json.loads((tmp_path / "run-summary.json").read_text())
     assert summary["profile"]["synthetic"]
     assert "real firm, account or security identifiers" in summary["not_claimed"]
+
+
+def test_real_reserve_engine_lie_fails_i6(monkeypatch: pytest.MonkeyPatch) -> None:
+    """SCF-1 WP4: force the real reserve engine to PASS while a deposit is short."""
+    original = firm.compute_reserve
+
+    def lying_reserve(*args: Any, **kwargs: Any) -> Any:
+        result = original(*args, **kwargs)
+        return result.model_copy(update={"disposition": Disposition.PASS, "breaches": ()})
+
+    monkeypatch.setattr(firm, "compute_reserve", lying_reserve)
+    profile = load_firm_profile(load_calibration_pack("firm-synthetic/1"), "small")
+    run = run_firm(profile, seed=20261024, days=3)
+    assert any(not day.invariants["I6_DEFAULT_AND_STALE_HOLD"] for day in run.days)

@@ -126,8 +126,8 @@
       }
     }
   ],
-  "elapsed_seconds": 31.154666827991605,
-  "executions_per_second": 160.48959944285582,
+  "elapsed_seconds": 30.098768463998567,
+  "executions_per_second": 166.11975357000233,
   "not_claimed": [
     "regulatory approval",
     "production readiness",
@@ -135,7 +135,7 @@
     "real customer assets",
     "real firm, account or security identifiers"
   ],
-  "peak_memory_bytes": 84172800,
+  "peak_memory_bytes": 83959808,
   "profile": {
     "accounts": 200,
     "buy_share": "0.50",
