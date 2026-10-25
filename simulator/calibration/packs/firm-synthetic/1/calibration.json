@@ -16,6 +16,10 @@
         "order_size_max": 500,
         "price_min": "5.00",
         "price_max": "250.00",
+        "fail_rate": "0.03",
+        "refusal_rate": "0.01",
+        "reserve_short_fraction": "0.25",
+        "reserve_bank_equity_capital": "1000000000.00",
         "tiers": {
           "small": {"accounts": 200, "issues": 20, "executions_per_day": 1000},
           "medium": {"accounts": 2000, "issues": 200, "executions_per_day": 10000},

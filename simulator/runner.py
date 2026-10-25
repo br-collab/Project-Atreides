@@ -10,7 +10,7 @@ from dataclasses import asdict
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from cannae_kernel.canonical import canonical_bytes_of
 
@@ -936,6 +936,73 @@ def reserve_section(closes: list[dict[str, Any]]) -> str:
 
 def publish_run(run: dict[str, object], output: Path) -> None:
     output.mkdir(parents=True, exist_ok=True)
+    if "firm_profile" in run:
+        firm_closes = cast(list[dict[str, object]], run["closes"])
+        profile = cast(dict[str, object], run["firm_profile"])
+        (output / "run-summary.json").write_text(
+            json.dumps(run, default=str, indent=2, sort_keys=True) + "\n"
+        )
+        (output / "daily-close.json").write_text(
+            json.dumps(firm_closes, default=str, indent=2, sort_keys=True) + "\n"
+        )
+        (output / "trend.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "sim.trend/1",
+                    "green_nights_in_row": len(firm_closes) if run["all_invariants_pass"] else 0,
+                    "review_flag": "an invariant that never fails may be too weak",
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
+        fails: dict[str, int] = {}
+        breaks: dict[str, int] = {}
+        for close in firm_closes:
+            for age, count in cast(dict[str, int], close["fails_by_age"]).items():
+                fails[age] = fails.get(age, 0) + count
+            for owner, count in cast(dict[str, int], close["breaks_by_owner"]).items():
+                breaks[owner] = breaks.get(owner, 0) + count
+        protection_lines: list[str] = []
+        for name in ("reserve", "pab_reserve", "net_capital", "possession_or_control"):
+            dispositions = [
+                cast(dict[str, str], close["protection_dispositions"])[name]
+                for close in firm_closes
+            ]
+            hold_reasons = [
+                "; ".join(
+                    cast(dict[str, list[str]], close["protection_reasons"])[name]
+                )
+                for close in firm_closes
+                if cast(dict[str, str], close["protection_dispositions"])[name] == "HOLD"
+            ]
+            protection_lines.append(
+                f"- {name}: `{dispositions.count('PASS')}` PASS, "
+                f"`{dispositions.count('HOLD')}` HOLD; reasons: "
+                f"`{' | '.join(hold_reasons) if hold_reasons else 'none'}`"
+            )
+        invariants = cast(dict[str, bool], firm_closes[-1]["invariants"])
+        (output / "SUMMARY.md").write_text(
+            "# SCF-1 firm at volume\n\n"
+            "**SYNTHETIC LOAD LEVEL: no claim about any real firm.**\n\n"
+            f"Tier `{profile['tier']}`: {int(cast(int, profile['accounts'])):,} accounts, "
+            f"{int(cast(int, profile['issues'])):,} issues, "
+            f"{int(cast(int, profile['executions_per_day'])):,} executions per day. "
+            f"All close invariants green: `{run['all_invariants_pass']}`.\n\n"
+            "## Firm section\n\n"
+            f"- Executions: {sum(cast(int, close['executions']) for close in firm_closes):,}\n"
+            f"- Fails by age: `{fails}`\n"
+            f"- Breaks by owner: `{breaks}`\n"
+            f"- I11 position roll-forward: `{invariants['I11_POSITION_ROLL_FORWARD']}`\n"
+            f"- I12 idempotent replay: `{invariants['I12_IDEMPOTENT_REPLAY']}`\n\n"
+            "## Reserve protection\n\n"
+            + "\n".join(protection_lines)
+            + "\n\n## Not claimed\n\n- "
+            + "\n- ".join(cast(list[str], run["not_claimed"]))
+            + "\n"
+        )
+        return
     closes = run["closes"]
     assert isinstance(closes, list)
     (output / "run-summary.json").write_text(json.dumps(run, indent=2, sort_keys=True) + "\n")
