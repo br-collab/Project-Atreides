@@ -257,7 +257,8 @@ def _customer_sell_control(
 
     INST-1 Amendment 3 (WP2b). The seller's capacity is read from the digest-bound payload,
     never from a caller. A control result counts only if it names this obligation's issue,
-    is as of its settlement date, passes, and holds at least the delivery quantity in
+    is as of the settlement business date in the attested envelope (a cash leg must settle that
+    same day), passes, and holds at least the (positive) delivery quantity in
     control locations. Anything else HOLDs with a named code.
     """
     name = "customer_sell_possession_or_control"
@@ -265,6 +266,14 @@ def _customer_sell_control(
         return _passed(name, "The firm receives securities; customer-sell control does not apply.")
     if candidate.securities_leg is None:
         return _passed(name, "No securities move under this obligation (for example a premium).")
+    delivered = candidate.securities_leg.quantity
+    if delivered is None or not delivered.is_finite() or delivered <= 0:
+        return _result(
+            name,
+            Disposition.INDETERMINATE,
+            "The delivery quantity is absent, not finite, or not positive.",
+            "DELIVERY_QUANTITY_INVALID",
+        )
     capacity = candidate.seller_capacity
     if capacity is None:
         return _result(
@@ -292,16 +301,18 @@ def _customer_sell_control(
     securities = candidate.securities_leg
     cash = candidate.cash_leg
     issue = securities.instrument_id if securities is not None else None
-    quantity = securities.quantity if securities is not None else None
-    settles = cash.value_date if cash is not None else None
+    # The settlement business date is the attested envelope's. A cash leg that settles on
+    # another day makes the obligation's own dates disagree, so no control can be bound to it.
+    settles = envelope.session.business_date.value.isoformat()
+    if cash is not None and cash.value_date != settles:
+        return _result(
+            name,
+            Disposition.HOLD,
+            "The cash value date is not the obligation's settlement business date.",
+            "SETTLEMENT_DATE_CONFLICT",
+        )
     checked = next((item for item in control.issues if item.issue == issue), None)
-    if (
-        issue is None
-        or quantity is None
-        or settles is None
-        or control.as_of.isoformat() != settles
-        or checked is None
-    ):
+    if issue is None or control.as_of.isoformat() != settles or checked is None:
         return _result(
             name,
             Disposition.HOLD,
@@ -315,7 +326,7 @@ def _customer_sell_control(
             "Customer securities are not established in possession or control.",
             "CUSTOMER_CONTROL_NOT_ESTABLISHED",
         )
-    if checked.in_control < quantity:
+    if checked.in_control < delivered:
         return _result(
             name,
             Disposition.HOLD,

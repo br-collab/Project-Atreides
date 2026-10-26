@@ -16,6 +16,12 @@ Versions before 0.4.0 were tagged without a changelog; their contents are in the
   result counts only for the obligation's issue, settlement date and delivery quantity; and the
   account-to-BIC registry is a versioned `ParticipantRegistry` whose digest the payload names
   (`participant_registry_digest`). The `is_customer_sell` keyword is removed.
+- Grok's WP2b review (Claude's fix): a control result binds to the envelope's settlement
+  business date, and a cash leg that settles another day is `SETTLEMENT_DATE_CONFLICT`; a
+  delivery quantity that is not positive and finite is `DELIVERY_QUANTITY_INVALID`; a CUSTOMER
+  free delivery (no cash leg) binds to the envelope's business date, where before it could
+  never pass. The registry digest is recorded on the acceptance record transitively: the record
+  names the envelope digest, which binds the payload, which names the registry.
 - The tag is reserved for Bill after the INST-1 WP2b pull request merges (HOLD 2).
 
 ## Unreleased — EQ-1

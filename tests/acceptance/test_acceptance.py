@@ -605,6 +605,79 @@ def test_a_control_result_counts_only_for_this_issue_date_and_quantity(
     assert code in _reason(record)
 
 
+def _free_customer_delivery(business_day: date) -> tuple[SettlementObligationEnvelope, bytes]:
+    envelope, payload = _wire(
+        _candidate(cash_leg=None, delivery_pattern="FOP", seller_capacity="CUSTOMER")
+    )
+    session = envelope.session.model_copy(
+        update={
+            "business_date": envelope.session.business_date.model_copy(
+                update={"value": business_day}
+            )
+        }
+    )
+    return (
+        envelope.model_copy(
+            update={
+                "firm_securities_direction": FirmSecuritiesDirection.DELIVER,
+                "session": session,
+            }
+        ),
+        payload,
+    )
+
+
+def test_a_free_customer_delivery_binds_control_to_the_envelope_business_date() -> None:
+    """A free delivery has no cash value date; its control must be as of the obligation's day.
+
+    Before this, a CUSTOMER free delivery could never pass: every control result was UNBOUND.
+    """
+    envelope, payload = _free_customer_delivery(date(2026, 9, 21))
+    bound = _reason(_decide(envelope, payload, _control(as_of=date(2026, 9, 21))))
+    assert "CUSTOMER_CONTROL" not in bound
+    assert "CUSTOMER_SELL_CLASSIFICATION_MISSING" not in bound
+    stale = _decide(envelope, payload, _control(as_of=date(2026, 9, 18)))
+    assert "CUSTOMER_CONTROL_UNBOUND" in _reason(stale)
+    assert "CUSTOMER_CONTROL_EVIDENCE_MISSING" in _reason(_decide(envelope, payload))
+
+
+def _customer_sale(**changes: Any) -> tuple[SettlementObligationEnvelope, bytes]:
+    envelope, payload = _wire(_candidate(seller_capacity="CUSTOMER", **changes))
+    return (
+        envelope.model_copy(update={"firm_securities_direction": FirmSecuritiesDirection.DELIVER}),
+        payload,
+    )
+
+
+def _cash_on(value_date: str) -> CashLeg:
+    return _candidate().cash_leg.model_copy(update={"value_date": value_date})  # type: ignore[union-attr]
+
+
+def test_control_binds_to_the_settlement_business_date_not_the_cash_value_date() -> None:
+    """Grok review of WP2b: the as-of day must be the envelope's settlement business date.
+
+    The envelope settles 18 Sep 2026. A cash leg dated 21 Sep makes the obligation's dates
+    disagree, so neither a result as of 21 Sep nor one as of 18 Sep can bind to it.
+    """
+    envelope, payload = _customer_sale(cash_leg=_cash_on("2026-09-21"))
+    for as_of in (date(2026, 9, 21), date(2026, 9, 18)):
+        record = _decide(envelope, payload, _control(as_of=as_of))
+        assert record.disposition is not Disposition.PASS
+        assert "SETTLEMENT_DATE_CONFLICT" in _reason(record)
+    agreeing = _decide(*_customer_sale(), _control(as_of=date(2026, 9, 18)))
+    assert agreeing.disposition is Disposition.PASS
+
+
+@pytest.mark.parametrize("quantity", [D("0"), D("-1")])
+def test_a_customer_delivery_of_no_or_negative_quantity_is_not_covered(quantity: Decimal) -> None:
+    """Grok review of WP2b: ``in_control < quantity`` let 0 and -1 pass with nothing held."""
+    leg = _candidate().securities_leg.model_copy(update={"quantity": quantity})  # type: ignore[union-attr]
+    envelope, payload = _customer_sale(securities_leg=leg)
+    record = _decide(envelope, payload, _control(in_control=D("0")))
+    assert record.disposition is not Disposition.PASS
+    assert "DELIVERY_QUANTITY_INVALID" in _reason(record)
+
+
 def test_preparation_refuses_a_registry_the_obligation_does_not_name() -> None:
     """INST-1 Amendment 3 V5: the account-to-BIC mapping is attested reference data."""
     envelope, payload, acceptance = _accepted_wire()
