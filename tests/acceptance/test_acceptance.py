@@ -35,12 +35,13 @@ from atreides.acceptance.candidate import (
     SourceManifest,
     SourceReference,
 )
+from atreides.acceptance.registry import ParticipantRegistry
 from atreides.acceptance.service import (
     PreparationRefusedError,
     evaluate_candidate,
     prepare_instruction,
 )
-from atreides.customer_protection.control import ControlResult
+from atreides.customer_protection.control import ControlResult, IssueControl
 from atreides.messaging.canonical import (
     CashLegInstruction,
     FinancialInstitution,
@@ -115,6 +116,7 @@ def _candidate(**changes: Any) -> ObligationCandidate:
             ExpectedFinality(leg="CASH", finality_type="CASH_FINAL", governing_rule_set="cash/1"),
         ),
         "corrections": (),
+        "participant_registry_digest": _registry().digest,
     }
     fields.update(changes)
     return ObligationCandidate(**fields)
@@ -385,11 +387,14 @@ def _instruction() -> CashLegInstruction:
     )
 
 
-def _registry() -> dict[str, FinancialInstitution]:
-    return {
-        "CASH-BUYER": FinancialInstitution("DDDDUS33"),
-        "CASH-SELLER": FinancialInstitution("EEEEUS33"),
-    }
+def _registry(version: str = "synthetic-registry/1") -> ParticipantRegistry:
+    return ParticipantRegistry(
+        version=version,
+        entries=(
+            ("CASH-BUYER", FinancialInstitution("DDDDUS33")),
+            ("CASH-SELLER", FinancialInstitution("EEEEUS33")),
+        ),
+    )
 
 
 def _accepted_wire() -> tuple[SettlementObligationEnvelope, bytes, ObligationAcceptanceRecord]:
@@ -499,59 +504,213 @@ def test_cash_gate_binds_evaluated_economics_and_net_obligation() -> None:
         assert code in _reason(record)
 
 
-def test_customer_sell_requires_possession_or_control_evidence() -> None:
-    envelope, payload = _wire(_candidate())
+def _selling(capacity: str | None) -> tuple[SettlementObligationEnvelope, bytes]:
+    envelope, payload = _wire(_candidate(seller_capacity=capacity))
     selling = envelope.model_copy(
         update={"firm_securities_direction": FirmSecuritiesDirection.DELIVER}
     )
-    gate = _gate(selling)
-    missing = evaluate_candidate(
-        selling,
-        payload,
-        acceptance_id=uuid.uuid4(),
-        evaluated_at=T,
-        decided_by=ACTOR,
-        gate_decision=gate,
-        halt=None,
-        is_customer_sell=True,
-    )
-    assert missing.disposition is Disposition.HOLD
-    assert "CUSTOMER_CONTROL_EVIDENCE_MISSING" in _reason(missing)
-    proprietary = evaluate_candidate(
-        selling,
-        payload,
-        acceptance_id=uuid.uuid4(),
-        evaluated_at=T,
-        decided_by=ACTOR,
-        gate_decision=gate,
-        halt=None,
-        is_customer_sell=False,
-    )
-    assert proprietary.disposition is Disposition.PASS
+    return selling, payload
 
-    established = ControlResult(
-        as_of=date(2026, 9, 17),
-        disposition=Disposition.PASS,
-        issues=(),
+
+DELIVERED = Decimal("1000000")
+
+
+def _control(
+    *,
+    issue: str = "912828XX1",
+    as_of: date = date(2026, 9, 18),
+    in_control: Decimal = DELIVERED,
+    disposition: Disposition = Disposition.PASS,
+) -> ControlResult:
+    return ControlResult(
+        as_of=as_of,
+        disposition=disposition,
+        issues=(
+            IssueControl(
+                issue=issue,
+                required=D("1000000"),
+                in_control=in_control,
+                in_noncontrol=D("0"),
+                at_unknown_locations=D("0"),
+                books_total=in_control,
+                conserved=True,
+                shortfall=max(D("1000000") - in_control, D("0")),
+                actions=(),
+            ),
+        ),
         missing_rules=(),
         missing_inputs=(),
         unrecognised_inputs=(),
         breaches=(),
-        reasons=("Customer securities established in control locations.",),
+        reasons=(),
         rules_used=(),
     )
-    customer = evaluate_candidate(
-        selling,
+
+
+def _decide(
+    envelope: SettlementObligationEnvelope, payload: bytes, control: ControlResult | None = None
+) -> ObligationAcceptanceRecord:
+    return evaluate_candidate(
+        envelope,
         payload,
         acceptance_id=uuid.uuid4(),
         evaluated_at=T,
         decided_by=ACTOR,
-        gate_decision=gate,
+        gate_decision=_gate(envelope),
         halt=None,
-        is_customer_sell=True,
-        customer_control=established,
+        customer_control=control,
     )
-    assert customer.disposition is Disposition.PASS
+
+
+def test_a_cash_only_delivery_needs_no_securities_control() -> None:
+    """An option premium paid by the firm moves no securities, so no capacity is needed."""
+    envelope, payload = _wire(_candidate(securities_leg=None, delivery_pattern="FREE_OF_PAYMENT"))
+    selling = envelope.model_copy(
+        update={"firm_securities_direction": FirmSecuritiesDirection.DELIVER}
+    )
+    record = _decide(selling, payload)
+    assert "CUSTOMER_SELL_CLASSIFICATION_MISSING" not in _reason(record)
+
+
+def test_seller_capacity_is_read_from_the_payload_not_a_caller() -> None:
+    """INST-1 Amendment 3 V4/V5: no keyword can declare a customer sale proprietary."""
+    unstated = _decide(*_selling(None))
+    assert unstated.disposition is Disposition.HOLD
+    assert "CUSTOMER_SELL_CLASSIFICATION_MISSING" in _reason(unstated)
+    unknown = _decide(*_selling("AFFILIATE"))
+    assert unknown.disposition is Disposition.INDETERMINATE
+    assert "SELLER_CAPACITY_UNKNOWN" in _reason(unknown)
+    assert _decide(*_selling("PROPRIETARY")).disposition is Disposition.PASS
+    customer = _decide(*_selling("CUSTOMER"))
+    assert customer.disposition is Disposition.HOLD
+    assert "CUSTOMER_CONTROL_EVIDENCE_MISSING" in _reason(customer)
+    assert _decide(*_selling("CUSTOMER"), _control()).disposition is Disposition.PASS
+
+
+@pytest.mark.parametrize(
+    ("control", "code"),
+    [
+        (_control(issue="OTHER-ISSUE"), "CUSTOMER_CONTROL_UNBOUND"),
+        (_control(as_of=date(2026, 9, 17)), "CUSTOMER_CONTROL_UNBOUND"),
+        (_control(in_control=D("999999")), "CUSTOMER_CONTROL_INSUFFICIENT"),
+        (_control(disposition=Disposition.HOLD), "CUSTOMER_CONTROL_NOT_ESTABLISHED"),
+    ],
+)
+def test_a_control_result_counts_only_for_this_issue_date_and_quantity(
+    control: ControlResult, code: str
+) -> None:
+    """INST-1 Amendment 3 V5: a passing result from another issue or day is not evidence."""
+    record = _decide(*_selling("CUSTOMER"), control)
+    assert record.disposition is Disposition.HOLD
+    assert code in _reason(record)
+
+
+def _free_customer_delivery(business_day: date) -> tuple[SettlementObligationEnvelope, bytes]:
+    envelope, payload = _wire(
+        _candidate(cash_leg=None, delivery_pattern="FOP", seller_capacity="CUSTOMER")
+    )
+    session = envelope.session.model_copy(
+        update={
+            "business_date": envelope.session.business_date.model_copy(
+                update={"value": business_day}
+            )
+        }
+    )
+    return (
+        envelope.model_copy(
+            update={
+                "firm_securities_direction": FirmSecuritiesDirection.DELIVER,
+                "session": session,
+            }
+        ),
+        payload,
+    )
+
+
+def test_a_free_customer_delivery_binds_control_to_the_envelope_business_date() -> None:
+    """A free delivery has no cash value date; its control must be as of the obligation's day.
+
+    Before this, a CUSTOMER free delivery could never pass: every control result was UNBOUND.
+    """
+    envelope, payload = _free_customer_delivery(date(2026, 9, 21))
+    bound = _reason(_decide(envelope, payload, _control(as_of=date(2026, 9, 21))))
+    assert "CUSTOMER_CONTROL" not in bound
+    assert "CUSTOMER_SELL_CLASSIFICATION_MISSING" not in bound
+    stale = _decide(envelope, payload, _control(as_of=date(2026, 9, 18)))
+    assert "CUSTOMER_CONTROL_UNBOUND" in _reason(stale)
+    assert "CUSTOMER_CONTROL_EVIDENCE_MISSING" in _reason(_decide(envelope, payload))
+
+
+def _customer_sale(**changes: Any) -> tuple[SettlementObligationEnvelope, bytes]:
+    envelope, payload = _wire(_candidate(seller_capacity="CUSTOMER", **changes))
+    return (
+        envelope.model_copy(update={"firm_securities_direction": FirmSecuritiesDirection.DELIVER}),
+        payload,
+    )
+
+
+def _cash_on(value_date: str) -> CashLeg:
+    return _candidate().cash_leg.model_copy(update={"value_date": value_date})  # type: ignore[union-attr]
+
+
+def test_control_binds_to_the_settlement_business_date_not_the_cash_value_date() -> None:
+    """Grok review of WP2b: the as-of day must be the envelope's settlement business date.
+
+    The envelope settles 18 Sep 2026. A cash leg dated 21 Sep makes the obligation's dates
+    disagree, so neither a result as of 21 Sep nor one as of 18 Sep can bind to it.
+    """
+    envelope, payload = _customer_sale(cash_leg=_cash_on("2026-09-21"))
+    for as_of in (date(2026, 9, 21), date(2026, 9, 18)):
+        record = _decide(envelope, payload, _control(as_of=as_of))
+        assert record.disposition is not Disposition.PASS
+        assert "SETTLEMENT_DATE_CONFLICT" in _reason(record)
+    agreeing = _decide(*_customer_sale(), _control(as_of=date(2026, 9, 18)))
+    assert agreeing.disposition is Disposition.PASS
+
+
+@pytest.mark.parametrize("quantity", [D("0"), D("-1")])
+def test_a_customer_delivery_of_no_or_negative_quantity_is_not_covered(quantity: Decimal) -> None:
+    """Grok review of WP2b: ``in_control < quantity`` let 0 and -1 pass with nothing held."""
+    leg = _candidate().securities_leg.model_copy(update={"quantity": quantity})  # type: ignore[union-attr]
+    envelope, payload = _customer_sale(securities_leg=leg)
+    record = _decide(envelope, payload, _control(in_control=D("0")))
+    assert record.disposition is not Disposition.PASS
+    assert "DELIVERY_QUANTITY_INVALID" in _reason(record)
+
+
+def test_preparation_refuses_a_registry_the_obligation_does_not_name() -> None:
+    """INST-1 Amendment 3 V5: the account-to-BIC mapping is attested reference data."""
+    envelope, payload, acceptance = _accepted_wire()
+    swapped = ParticipantRegistry(
+        version="synthetic-registry/1",
+        entries=(
+            ("CASH-BUYER", FinancialInstitution("ZZZZUS33")),
+            ("CASH-SELLER", FinancialInstitution("EEEEUS33")),
+        ),
+    )
+    instruction = replace(_instruction(), debtor=FinancialInstitution("ZZZZUS33"))
+    with pytest.raises(PreparationRefusedError, match="PARTICIPANT_REGISTRY_MISMATCH"):
+        prepare_instruction(
+            envelope, payload, acceptance, instruction, participant_registry=swapped
+        )
+    with pytest.raises(PreparationRefusedError, match="PARTICIPANT_REGISTRY_MISMATCH"):
+        prepare_instruction(
+            envelope,
+            payload,
+            acceptance,
+            _instruction(),
+            participant_registry=_registry(version="synthetic-registry/2"),
+        )
+
+
+def test_preparation_refuses_an_obligation_that_names_no_registry() -> None:
+    envelope, payload = _wire(_candidate(participant_registry_digest=None))
+    acceptance = _decide(envelope, payload)
+    assert acceptance.disposition is Disposition.PASS
+    with pytest.raises(PreparationRefusedError, match="does not name a participant registry"):
+        prepare_instruction(
+            envelope, payload, acceptance, _instruction(), participant_registry=_registry()
+        )
 
 
 def test_preparation_refuses_acceptance_for_another_envelope() -> None:

@@ -8,6 +8,7 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
+    "SELLER_CAPACITIES",
     "CandidatePathDescriptor",
     "CashLeg",
     "Correction",
@@ -20,6 +21,11 @@ __all__ = [
 ]
 
 ExactDecimal = Annotated[Decimal, Field(strict=False)]
+Sha256Digest = Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")]
+
+#: INST-1 Amendment 3 (WP2b): the capacity of the account that delivers the securities,
+#: carried in the digest-bound payload so Atreides never takes it from a caller.
+SELLER_CAPACITIES = frozenset({"CUSTOMER", "PAB", "PROPRIETARY"})
 IsoDate = Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}$")]
 
 
@@ -91,3 +97,9 @@ class ObligationCandidate(_Payload):
     candidate_paths: tuple[CandidatePathDescriptor, ...] = ()
     expected_finality: tuple[ExpectedFinality, ...] = ()
     corrections: tuple[Correction, ...] = ()
+    #: Capacity of the delivering account (``SELLER_CAPACITIES``). L.C. sets it from the
+    #: attested account-capacity document. Absent on a DELIVER obligation means HOLD.
+    seller_capacity: str | None = None
+    #: Digest of the participant registry version L.C. formed this obligation against.
+    #: ``prepare_instruction`` refuses a registry whose digest differs.
+    participant_registry_digest: Sha256Digest | None = None
