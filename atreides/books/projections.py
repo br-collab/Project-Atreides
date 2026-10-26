@@ -425,6 +425,37 @@ def reserve_bank_balances(books: EquitiesBooks, *, through: date) -> dict[Accoun
     return balances
 
 
+#: Books account types that record who owns securities or money (not where they sit).
+OWNERSHIP_ACCOUNT_TYPES = frozenset(
+    {
+        AccountType.CUSTOMER_CASH,
+        AccountType.CUSTOMER_MARGIN,
+        AccountType.PAB,
+        AccountType.FIRM_PROPRIETARY,
+    }
+)
+
+
+def classify_accounts(books: EquitiesBooks) -> dict[str, AccountType]:
+    """Each ownership account's books type, read from the journal.
+
+    INST-1 Amendment 3 (WP1b item 4): the capacity an obligation carries is derived from this,
+    never from an order author. An account booked under two ownership types is refused.
+    """
+    types: dict[str, AccountType] = {}
+    for entry in books.entries:
+        for line in entry.lines:
+            if line.account_type not in OWNERSHIP_ACCOUNT_TYPES:
+                continue
+            known = types.setdefault(line.account_id, line.account_type)
+            if known is not line.account_type:
+                raise ValueError(
+                    f"account {line.account_id} is booked as {known.value} and "
+                    f"{line.account_type.value}"
+                )
+    return types
+
+
 def project_margin_accounts(
     books: EquitiesBooks,
     *,

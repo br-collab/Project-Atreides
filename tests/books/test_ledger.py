@@ -474,3 +474,33 @@ def test_reserve_source_date_must_be_a_past_business_day(
             calendar=MarketCalendar.load(Market.US_EQUITIES),
             margin_results=(),
         )
+
+
+def test_inst1_accounts_are_classified_from_their_books_type_and_never_two() -> None:
+    """INST-1 Amendment 3 (WP1b item 4): capacity comes from the journal, one type per account."""
+    from atreides.books.projections import classify_accounts
+
+    class _Line:
+        def __init__(self, account_id: str, account_type: AccountType) -> None:
+            self.account_id, self.account_type = account_id, account_type
+
+    class _Entry:
+        def __init__(self, *lines: _Line) -> None:
+            self.lines = lines
+
+    class _Books:
+        def __init__(self, *entries: _Entry) -> None:
+            self.entries = entries
+
+    books = _Books(
+        _Entry(_Line("C-1", AccountType.CUSTOMER_CASH), _Line("DTC", AccountType.DTC)),
+        _Entry(_Line("P-1", AccountType.PAB), _Line("FIRM-1", AccountType.FIRM_PROPRIETARY)),
+    )
+    assert classify_accounts(books) == {  # type: ignore[arg-type]
+        "C-1": AccountType.CUSTOMER_CASH,
+        "P-1": AccountType.PAB,
+        "FIRM-1": AccountType.FIRM_PROPRIETARY,
+    }
+    twice = _Books(_Entry(_Line("X", AccountType.PAB), _Line("X", AccountType.CUSTOMER_MARGIN)))
+    with pytest.raises(ValueError, match="booked as PAB and CUSTOMER_MARGIN"):
+        classify_accounts(twice)  # type: ignore[arg-type]

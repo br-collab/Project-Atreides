@@ -253,7 +253,7 @@ def _customer_sell_control(
     candidate: ObligationCandidate,
     control: ControlResult | None,
 ) -> PredicateResult:
-    """Rule 15c3-3(b)(1): customer securities delivered on a sale must be in possession or control.
+    """Rule 15c3-3(b)(1) and (b)(5): customer and PAB securities delivered must be controlled.
 
     INST-1 Amendment 3 (WP2b). The seller's capacity is read from the digest-bound payload,
     never from a caller. A control result counts only if it names this obligation's issue,
@@ -289,8 +289,18 @@ def _customer_sell_control(
             "The payload states an unknown seller capacity.",
             "SELLER_CAPACITY_UNKNOWN",
         )
-    if capacity != "CUSTOMER":
-        return _passed(name, f"The delivering account's capacity is {capacity}.")
+    if candidate.account_capacity_digest is None:
+        return _result(
+            name,
+            Disposition.HOLD,
+            "The payload states a capacity but names no attested capacity document.",
+            "SELLER_CAPACITY_UNATTESTED",
+        )
+    if capacity == "PROPRIETARY":
+        return _passed(name, "The delivering account's capacity is PROPRIETARY.")
+    # CUSTOMER securities under Rule 15c3-3(b)(1); PAB securities under (b)(5), which also
+    # requires possession or control. The (b)(5) exception (written notice that PAB securities
+    # may be used, and an opportunity to object) is not modelled, so PAB is held to control.
     if control is None:
         return _result(
             name,
@@ -323,7 +333,7 @@ def _customer_sell_control(
         return _result(
             name,
             Disposition.HOLD,
-            "Customer securities are not established in possession or control.",
+            f"{capacity} securities are not established in possession or control.",
             "CUSTOMER_CONTROL_NOT_ESTABLISHED",
         )
     if checked.in_control < delivered:
@@ -333,7 +343,7 @@ def _customer_sell_control(
             "Fewer securities are in control than the delivery requires.",
             "CUSTOMER_CONTROL_INSUFFICIENT",
         )
-    return _passed(name, "Customer securities are established in possession or control.")
+    return _passed(name, f"{capacity} securities are established in possession or control.")
 
 
 def _frozen_record(
