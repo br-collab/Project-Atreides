@@ -76,7 +76,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from enum import StrEnum
 from typing import Final
 
@@ -229,9 +229,7 @@ class MarketProfile:
         # Coerce at the boundary - see DeterminationProfile for the reasoning.
         # An exported profile that cannot be read back in is not portable.
         if not isinstance(self.close_out_regime, CloseOutRegime):
-            object.__setattr__(
-                self, "close_out_regime", CloseOutRegime(self.close_out_regime)
-            )
+            object.__setattr__(self, "close_out_regime", CloseOutRegime(self.close_out_regime))
         if not isinstance(self.processing_date_rule, ProcessingDateRule):
             object.__setattr__(
                 self,
@@ -269,13 +267,8 @@ class MarketProfile:
             self.close_out_regime is not CloseOutRegime.MANDATORY_DEADLINE
             and self.close_out_deadline_days is not None
         ):
-            raise ValueError(
-                "close_out_deadline_days is meaningful only under "
-                "MANDATORY_DEADLINE"
-            )
-        message_determined = (
-            self.processing_date_rule is ProcessingDateRule.SESSION_CLOSURE_MESSAGE
-        )
+            raise ValueError("close_out_deadline_days is meaningful only under MANDATORY_DEADLINE")
+        message_determined = self.processing_date_rule is ProcessingDateRule.SESSION_CLOSURE_MESSAGE
         if message_determined and not self.session_closure_message:
             raise ValueError(
                 "SESSION_CLOSURE_MESSAGE requires the message to be named; an "
@@ -284,10 +277,8 @@ class MarketProfile:
             )
         if self.session_closure_message and not message_determined:
             raise ValueError(
-                "session_closure_message is meaningful only under "
-                "SESSION_CLOSURE_MESSAGE"
+                "session_closure_message is meaningful only under SESSION_CLOSURE_MESSAGE"
             )
-
 
     @property
     def settlement_date_follows_from_trade_date(self) -> bool:
@@ -300,8 +291,7 @@ class MarketProfile:
         added to close.
         """
         return (
-            self.processing_date_rule
-            is ProcessingDateRule.FIXED_CYCLE_FROM_TRADE_DATE
+            self.processing_date_rule is ProcessingDateRule.FIXED_CYCLE_FROM_TRADE_DATE
             and self.settlement_cycle_days is not None
         )
 
@@ -316,9 +306,7 @@ def absent_market_profile(market_id: str) -> MarketProfile:
     return MarketProfile(market_id=market_id)
 
 
-def close_out_deadline(
-    profile: MarketProfile, settlement_date_offset_days: int
-) -> int | None:
+def close_out_deadline(profile: MarketProfile, settlement_date_offset_days: int) -> int | None:
     """Business-day offset by which an open fail must be closed out.
 
     Returns ``None`` where the market publishes no deadline **and** where
@@ -334,9 +322,7 @@ def close_out_deadline(
     return settlement_date_offset_days + profile.close_out_deadline_days
 
 
-def processing_date_offset(
-    profile: MarketProfile, position: NetPosition
-) -> int | None:
+def processing_date_offset(profile: MarketProfile, position: NetPosition) -> int | None:
     """Business-date offset, from trade date, this position clears for.
 
     Returns ``0`` on a market whose processing date is the trade date, the
@@ -462,13 +448,9 @@ def _exact_finite_balance(name: str, value: object) -> Decimal:
     elif isinstance(value, int) and not isinstance(value, bool):
         decimal = Decimal(value)
     else:
-        raise ValueError(
-            f"{name} must be an exact finite decimal, not {type(value).__name__}"
-        )
+        raise ValueError(f"{name} must be an exact finite decimal, not {type(value).__name__}")
     if not decimal.is_finite():
-        raise ValueError(
-            f"{name} must be an exact finite decimal; {decimal!r} is not finite"
-        )
+        raise ValueError(f"{name} must be an exact finite decimal; {decimal!r} is not finite")
     return decimal
 
 
@@ -524,9 +506,7 @@ class RecordDatePosition:
             "obligated_balance",
             "uncovered_protect_balance",
         ):
-            object.__setattr__(
-                self, name, _exact_finite_balance(name, getattr(self, name))
-            )
+            object.__setattr__(self, name, _exact_finite_balance(name, getattr(self, name)))
 
     @property
     def diverges(self) -> bool:
@@ -606,6 +586,11 @@ class SecuritiesBreakCode(StrEnum):
     """No settlement outcome was reported for the position. Fail-safe: not
     a settled position."""
 
+    MARKET_PROFILE_MISMATCH = "market_profile_mismatch"
+    ALLOCATION_NOT_FINITE = "allocation_not_finite"
+    ALLOCATION_WRONG_SIGN = "allocation_wrong_sign"
+    ALLOCATION_EXCEEDS_POSITION = "allocation_exceeds_position"
+
 
 @dataclass(frozen=True, slots=True)
 class SecuritiesBreak:
@@ -652,10 +637,7 @@ class NetSettlementResult:
         the venue says otherwise, and a day with an unexplained movement in it
         is not a completed day.
         """
-        if any(
-            b.code is SecuritiesBreakCode.ALLOCATION_AGAINST_FLAT_POSITION
-            for b in self.breaks
-        ):
+        if any(b.code is SecuritiesBreakCode.ALLOCATION_AGAINST_FLAT_POSITION for b in self.breaks):
             return False
         return self.disposition in {
             CNSDisposition.SETTLED_IN_FULL,
@@ -693,7 +675,18 @@ def net_positions(
     totals: dict[str, Decimal] = {}
     counts: dict[str, int] = {}
     for security_id, quantity in trades:
-        totals[security_id] = totals.get(security_id, Decimal(0)) + quantity
+        if isinstance(quantity, bool):
+            raise ValueError("QUANTITY_BOOLEAN_REFUSED")
+        if not isinstance(quantity, Decimal) or not quantity.is_finite():
+            raise ValueError("QUANTITY_NOT_FINITE")
+        if abs(quantity) > Decimal("1E+30"):
+            raise ValueError("QUANTITY_EXCEEDS_DECLARED_CONTEXT")
+        with localcontext() as context:
+            context.prec = 80
+            total = totals.get(security_id, Decimal(0)) + quantity
+        if abs(total) > Decimal("1E+30"):
+            raise ValueError("NET_POSITION_EXCEEDS_DECLARED_CONTEXT")
+        totals[security_id] = total
         counts[security_id] = counts.get(security_id, 0) + 1
 
     return tuple(
@@ -703,9 +696,7 @@ def net_positions(
             settlement_date_offset_days=settlement_date_offset_days,
             market_id=market_id,
             constituent_trade_count=counts[security_id],
-            assigned_processing_date_offset_days=(
-                assigned_processing_date_offset_days
-            ),
+            assigned_processing_date_offset_days=(assigned_processing_date_offset_days),
         )
         for security_id in sorted(totals)
     )
@@ -736,13 +727,20 @@ def settle_net_position(
     """
     breaks: list[SecuritiesBreak] = []
 
-    # 0. Is the date this position clears for even established? Asked before
-    #    anything about allocation, and attached to every outcome including
-    #    a full settlement, because "it settled" and "it settled on the date
-    #    we assumed" are different assertions and only the first is
-    #    observable here. A fully settled position on the wrong side of a
-    #    session-closure boundary is still a reconciliation break the next
-    #    morning.
+    def refuse_allocation(code: SecuritiesBreakCode, detail: str) -> NetSettlementResult:
+        breaks.append(SecuritiesBreak(code, detail, position.security_id))
+        return NetSettlementResult(
+            disposition=CNSDisposition.INDETERMINATE,
+            position=position,
+            allocated_quantity=Decimal(0),
+            allocated_cash=Decimal(0),
+            residual=None,
+            breaks=tuple(breaks),
+            rationale=detail,
+        )
+
+    # A missing message-determined processing date remains visible even when
+    # an independently invalid allocation also makes the result indeterminate.
     if (
         profile.processing_date_rule is ProcessingDateRule.SESSION_CLOSURE_MESSAGE
         and position.assigned_processing_date_offset_days is None
@@ -761,6 +759,43 @@ def settle_net_position(
             )
         )
 
+    if position.market_id != profile.market_id:
+        return refuse_allocation(
+            SecuritiesBreakCode.MARKET_PROFILE_MISMATCH,
+            f"MARKET_PROFILE_MISMATCH: position {position.market_id} cannot settle "
+            f"under profile {profile.market_id}",
+        )
+    for name, value in (
+        ("allocated_quantity", allocated_quantity),
+        ("allocated_cash", allocated_cash),
+    ):
+        if value is not None and (not isinstance(value, Decimal) or not value.is_finite()):
+            return refuse_allocation(
+                SecuritiesBreakCode.ALLOCATION_NOT_FINITE,
+                f"ALLOCATION_NOT_FINITE: {name}={value!r}",
+            )
+    if allocated_quantity is not None:
+        wrong_sign = (position.quantity > 0 and allocated_quantity < 0) or (
+            position.quantity < 0 and allocated_quantity > 0
+        )
+        if wrong_sign:
+            return refuse_allocation(
+                SecuritiesBreakCode.ALLOCATION_WRONG_SIGN,
+                "ALLOCATION_WRONG_SIGN: allocation opposes the net position",
+            )
+        if position.quantity != 0 and abs(allocated_quantity) > abs(position.quantity):
+            return refuse_allocation(
+                SecuritiesBreakCode.ALLOCATION_EXCEEDS_POSITION,
+                "ALLOCATION_EXCEEDS_POSITION: allocation is larger than the net position",
+            )
+
+    # 0. Is the date this position clears for even established? Asked before
+    #    anything about allocation, and attached to every outcome including
+    #    a full settlement, because "it settled" and "it settled on the date
+    #    we assumed" are different assertions and only the first is
+    #    observable here. A fully settled position on the wrong side of a
+    #    session-closure boundary is still a reconciliation break the next
+    #    morning.
     def build(
         disposition: CNSDisposition,
         allocated: Decimal,
@@ -964,8 +999,10 @@ def _open_fail_breaks(
         )
 
     if spans_record_date:
-        side = "pending receipt (fail long)" if position.is_receive else (
-            "pending delivery (fail short)"
+        side = (
+            "pending receipt (fail long)"
+            if position.is_receive
+            else ("pending delivery (fail short)")
         )
         out.append(
             SecuritiesBreak(

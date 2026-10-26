@@ -60,6 +60,8 @@ def test_decision_carries_the_obligation_and_gate_set_version() -> None:
     assert (decision.obligation_id, decision.obligation_digest) == (OBLIGATION, DIGEST)
     assert decision.gate_set_version == GATE_SET_VERSION
     assert decision.checks_evaluated
+    assert decision.evaluated_notional == D("1000000.00")
+    assert decision.evaluated_currency == "USD"
 
 
 def _proceed(**changes: Any) -> CatoCashDecision:
@@ -165,3 +167,16 @@ def test_a_record_from_another_gate_set_version_is_not_judged() -> None:
     record = CatoCashDecisionRecord.capture(decision_id=uuid.uuid4(), **_inputs())
     older = record.model_copy(update={"gate_set_version": "cato-cash-gates/0.2"})
     assert older.reproduces() is None
+
+
+def test_pre_inst1_decision_replays_only_as_an_explicit_older_version() -> None:
+    record = CatoCashDecisionRecord.capture(decision_id=uuid.uuid4(), **_inputs())
+    raw = json.loads(record.model_dump_json())
+    raw["decision"].pop("evaluated_notional")
+    raw["decision"].pop("evaluated_currency")
+    raw["gate_set_version"] = "cato-cash-gates/0.3"
+    raw["decision"]["gate_set_version"] = "cato-cash-gates/0.3"
+    restored = CatoCashDecisionRecord.model_validate(raw)
+    assert restored.decision.evaluated_notional is None
+    assert restored.decision.evaluated_currency is None
+    assert restored.reproduces() is None

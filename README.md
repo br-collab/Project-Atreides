@@ -7,7 +7,8 @@
 > *experimental*, *validated* and *production-qualified*; all five repositories are at
 > the first, and this label changes only when evidence changes it.
 
-**Last updated:** 242250Z OCT 26. Reflects `main` at `e4ba312`, package version 0.6.1 (tag `v0.6.1`). Latest merged change: #144, CONV-1, a synthetic self-clearing conversion scenario; independent verification found defects in its I9 invariant and gates, tracked by ORDER CONV-1B.
+**Last updated:** 26 Oct 2026. INST-1 release candidate, package version 0.7.0. The `v0.7.0`
+tag is reserved for Bill after this branch merges; this statement does not claim the tag exists.
 
 
 Atreides is a **governance layer for multi-asset settlement**. It sits above the

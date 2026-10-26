@@ -2,6 +2,17 @@
 
 Versions before 0.4.0 were tagged without a changelog; their contents are in the pull requests and in the commit history. This file starts at the Wave 2 release.
 
+## 0.7.0 — INST-1 release candidate
+
+- Pinned the breaking kernel 2.0 obligation contract and bound approved-intent direction.
+- Bound prepared ISO 20022 cash instructions to the obligation's amount, currency and
+  account-to-BIC participant registry; malformed amounts, control characters and same-party
+  instructions refuse before emission.
+- Bound Cato Cash decisions to evaluated notional and currency and required the recorded net
+  obligation to cover the obligation's cash total.
+- Added fail-closed allocation, market-profile and customer-sell possession-or-control gates.
+- The tag is reserved for Bill after the INST-1 Atreides pull request merges.
+
 ## Unreleased — EQ-1
 
 - Replaced the embedded 2026 repo holiday set with one data-backed, fail-closed market calendar

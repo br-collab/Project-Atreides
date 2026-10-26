@@ -87,9 +87,7 @@ class TestSchemaConformance:
         assert schema.validate(hdr), str(schema.error_log)
 
     @pytest.mark.parametrize("method", list(SettlementMethod))
-    def test_every_settlement_method_yields_a_valid_message(
-        self, method: SettlementMethod
-    ) -> None:
+    def test_every_settlement_method_yields_a_valid_message(self, method: SettlementMethod) -> None:
         doc = etree.fromstring(emit_fi_credit_transfer(_instr(settlement_method=method)))
         schema = _schema("pacs.009.001.13")
         assert schema.validate(doc), str(schema.error_log)
@@ -116,16 +114,14 @@ class TestSchemaCaughtRegressions:
 
     def test_non_utc_offset_is_rendered_with_a_colon(self) -> None:
         est = timezone(timedelta(hours=-5))
-        doc = etree.fromstring(
-            emit_fi_credit_transfer(_instr(created_at=T0.astimezone(est)))
-        )
+        doc = etree.fromstring(emit_fi_credit_transfer(_instr(created_at=T0.astimezone(est))))
         schema = _schema("pacs.009.001.13")
         assert schema.validate(doc), str(schema.error_log)
 
     def test_monetary_scale_is_preserved(self) -> None:
         """normalize() turns 1000000.00 into 1E+6, losing cents."""
         xml = emit_fi_credit_transfer(_instr()).decode()
-        assert "<IntrBkSttlmAmt Ccy=\"USD\">1000000.00</IntrBkSttlmAmt>" in xml
+        assert '<IntrBkSttlmAmt Ccy="USD">1000000.00</IntrBkSttlmAmt>' in xml
 
     def test_large_round_amount_is_not_scientific_notation(self) -> None:
         xml = emit_fi_credit_transfer(_instr(amount=Decimal("1E+6"))).decode()
@@ -157,6 +153,18 @@ class TestDomainStricterThanSchema:
     def test_non_positive_amount_rejected(self) -> None:
         with pytest.raises(ValueError, match="positive"):
             _instr(amount=Decimal("0"))
+
+    @pytest.mark.parametrize("amount", [Decimal("1.000001"), Decimal("1E+18"), Decimal("NaN")])
+    def test_amount_facets_and_finiteness_are_enforced(self, amount: Decimal) -> None:
+        with pytest.raises(ValueError, match=r"finite|totalDigits|fractionDigits"):
+            _instr(amount=amount)
+
+    def test_control_characters_and_same_party_are_refused(self) -> None:
+        with pytest.raises(ValueError, match="control character"):
+            _instr(message_id="BAD\nID")
+        same = FinancialInstitution("DDDDUS33")
+        with pytest.raises(ValueError, match="must differ"):
+            _instr(debtor=same, creditor=same)
 
     def test_currency_must_be_three_letters(self) -> None:
         with pytest.raises(ValueError, match="ActiveCurrencyCode"):
@@ -191,9 +199,7 @@ class TestRailToSettlementMethod:
             CashRail.PORTS_WHOLESALE,
         ],
     )
-    def test_non_pacs_rails_raise_rather_than_defaulting(
-        self, rail: CashRail
-    ) -> None:
+    def test_non_pacs_rails_raise_rather_than_defaulting(self, rail: CashRail) -> None:
         """Defaulting these to CLRG would assert a clearing-system
         settlement that never happens."""
         with pytest.raises(ValueError, match="no ISO 20022 credit-transfer"):

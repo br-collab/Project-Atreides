@@ -168,19 +168,34 @@ class CashLegInstruction:
         ):
             if not (1 <= len(value) <= _MAX35):
                 raise ValueError(
-                    f"{field} must be 1..{_MAX35} characters (Max35Text); "
-                    f"got {len(value)}"
+                    f"{field} must be 1..{_MAX35} characters (Max35Text); got {len(value)}"
                 )
+        if not self.amount.is_finite():
+            raise ValueError("amount must be finite")
         if self.amount <= 0:
             raise ValueError("amount must be positive")
+        sign, digits, exponent = self.amount.as_tuple()
+        del sign
+        assert isinstance(exponent, int)
+        fraction_digits = max(-exponent, 0)
+        total_digits = len(digits) + max(exponent, 0)
+        # ISO 20022 pacs.009 ActiveCurrencyAndAmount facets in the pinned
+        # schema fixture: totalDigits=18, fractionDigits=5.
+        if total_digits > 18 or fraction_digits > 5:
+            raise ValueError("amount exceeds ISO 20022 totalDigits=18 or fractionDigits=5")
         if not re.match(r"^[A-Z]{3}$", self.currency):
-            raise ValueError(
-                f"currency {self.currency!r} must be a 3-letter "
-                f"ActiveCurrencyCode"
-            )
+            raise ValueError(f"currency {self.currency!r} must be a 3-letter ActiveCurrencyCode")
         if self.created_at.tzinfo is None:
             raise ValueError(
                 "created_at must be timezone-aware — ISODateTime on the "
                 "wire is unambiguous and a naive timestamp silently "
                 "asserts the emitter's local zone"
             )
+        if self.debtor.bicfi == self.creditor.bicfi:
+            raise ValueError("debtor and creditor BICFI must differ")
+        for name, value in (
+            ("message_id", self.message_id),
+            ("end_to_end_id", self.end_to_end_id),
+        ):
+            if any(ord(character) < 32 for character in value):
+                raise ValueError(f"{name} contains a control character")

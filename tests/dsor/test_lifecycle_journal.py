@@ -232,7 +232,7 @@ def test_lifecycle_journal_verifies_and_renders_deterministically() -> None:
     assert envelopes[3].actor == ATREIDES_DSOR_ACTOR
     assert envelopes[4].provenance is Provenance.FACT_SYNTHETIC
     assert envelopes[5].actor.actor_kind is ActorKind.EXTERNAL_EMULATOR
-    assert envelopes[2].rule_version == "cato-cash-gates/0.3"
+    assert envelopes[2].rule_version == "cato-cash-gates/0.4"
     assert isinstance(first.payload, DSORRecordRef)
     assert first.payload.stored_payload_digest == digest_bytes(
         store.payload_bytes(records[0].record_id)

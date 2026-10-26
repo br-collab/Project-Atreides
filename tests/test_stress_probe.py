@@ -65,8 +65,8 @@ import stress_probe  # noqa: E402
 #: BROKE -> HELD (the DSOR output union carries CatoCashDecisionRecord). One BROKE
 #: remains: E6.4, the quorum validator (ATR-I-08, Wave 6).
 EXPECTED = {
-    "HELD": 38,
-    "BY_DESIGN": 15,
+    "HELD": 39,
+    "BY_DESIGN": 14,
     "BROKE": 1,
     "NO_TARGET": 6,
 }

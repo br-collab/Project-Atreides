@@ -88,7 +88,7 @@ DOCTRINE_VERSION: Final[str] = "AUR-CUSTODY-CASH-001-v0.2"
 #: Version of the check set evaluate() runs, recorded on every decision so a
 #: replay can tell "same inputs, same gates" from "same inputs, newer gates".
 #: Wave 2 (W2A-1, W2A-3) added the unrecognised-input and halt checks.
-GATE_SET_VERSION: Final[str] = "cato-cash-gates/0.3"
+GATE_SET_VERSION: Final[str] = "cato-cash-gates/0.4"
 
 _DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 
@@ -425,10 +425,7 @@ class Counterparty:
             object.__setattr__(self, "standing", CounterpartyStanding(self.standing))
         if not self.counterparty_id:
             raise ValueError("counterparty_id is required")
-        if (
-            self.standing is not CounterpartyStanding.NOT_ASSESSED
-            and not self.provenance
-        ):
+        if self.standing is not CounterpartyStanding.NOT_ASSESSED and not self.provenance:
             raise ValueError(
                 "an assessed counterparty standing requires provenance; an "
                 "unattributed assessment is indistinguishable from a guess"
@@ -609,6 +606,10 @@ class CatoCashDecision:
     rationale: str
     checks_evaluated: tuple[tuple[str, str], ...]
     funding_state_snapshot: tuple[tuple[str, str], ...]
+    #: Cash economics actually evaluated. ``None`` only on an absent or
+    #: historical decision that did not record the input; consumers fail closed.
+    evaluated_notional: Decimal | None = None
+    evaluated_currency: str | None = None
     doctrine_version: str = DOCTRINE_VERSION
     dsor_lineage_uri: str | None = None
     #: The OBLIGATION's finality class, where it has one of its own. None
@@ -696,9 +697,7 @@ def _serviceable(state: RailState, operation: OperationContext) -> bool:
     # serviceable for this operation even though it is open.
     if not operation.within_business_hours:
         return continuously_available(
-            is_ledger_final=(
-                RAIL_FINALITY.get(state.rail) is FinalityClass.LEDGER_FINAL
-            ),
+            is_ledger_final=(RAIL_FINALITY.get(state.rail) is FinalityClass.LEDGER_FINAL),
             perimeter=operation.settlement_perimeter,
         )
     return True
@@ -787,9 +786,10 @@ def _recommend_rail(
 
     # 1. Stress posture — elevated but below the HOLD band. Deferred-net
     #    exposure is the wrong risk to carry into a stressed window.
-    if ofr_stlfsi4 >= OFR_STRESS_PREFERENCE_THRESHOLD and (
-        chosen := _prefer(gross_final)
-    ) is not None:
+    if (
+        ofr_stlfsi4 >= OFR_STRESS_PREFERENCE_THRESHOLD
+        and (chosen := _prefer(gross_final)) is not None
+    ):
         return chosen, (
             f"Elevated systemic stress (OFR {ofr_stlfsi4} >= "
             f"{OFR_STRESS_PREFERENCE_THRESHOLD}); prefer gross-final "
@@ -900,6 +900,8 @@ def evaluate(
             ),
             checks_evaluated=(("halt", f"active:{halt.halt_id}:v{halt.version}"),),
             funding_state_snapshot=_snapshot_funding(funding),
+            evaluated_notional=operation.notional,
+            evaluated_currency=operation.currency,
             dsor_lineage_uri=dsor_lineage_uri,
             obligation_id=obligation_id,
             obligation_digest=obligation_digest,
@@ -927,6 +929,8 @@ def evaluate(
             ),
             checks_evaluated=values,
             funding_state_snapshot=_snapshot_funding(funding),
+            evaluated_notional=operation.notional,
+            evaluated_currency=operation.currency,
             dsor_lineage_uri=dsor_lineage_uri,
             obligation_id=obligation_id,
             obligation_digest=obligation_digest,
@@ -986,6 +990,8 @@ def evaluate(
             rationale=rationale,
             checks_evaluated=tuple(checks),
             funding_state_snapshot=snapshot,
+            evaluated_notional=operation.notional,
+            evaluated_currency=operation.currency,
             dsor_lineage_uri=dsor_lineage_uri,
             obligation_finality_class=obligation_class,
             settlement_perimeter=operation.settlement_perimeter,
@@ -1223,10 +1229,7 @@ def evaluate(
             and any(
                 RAIL_FINALITY.get(rail) is FinalityClass.LEDGER_FINAL
                 and state.usable
-                and (
-                    state.value_cap is None
-                    or operation.notional <= state.value_cap
-                )
+                and (state.value_cap is None or operation.notional <= state.value_cap)
                 for rail, state in rails.items()
                 if rail is not CashRail.PORTS_WHOLESALE
             )
@@ -1295,9 +1298,7 @@ def evaluate(
         )
 
     # 10. Cleared — recommend a rail.
-    selection = _recommend_rail(
-        operation=operation, rails=rails, ofr_stlfsi4=ofr_stlfsi4
-    )
+    selection = _recommend_rail(operation=operation, rails=rails, ofr_stlfsi4=ofr_stlfsi4)
     if selection is None:
         # The ladder returns None where check 6 was skipped for a
         # depository-linked operation whose linked rail cannot carry it
@@ -1306,8 +1307,7 @@ def evaluate(
         # record says which remedy applies.
         linked = operation.depository_linked_rail
         why = (
-            f"the linked rail {linked.value} "
-            f"{_linked_rail_blocker(linked, rails, operation)}"
+            f"the linked rail {linked.value} {_linked_rail_blocker(linked, rails, operation)}"
             if linked is not None
             else "the rail ladder found no rail able to carry it"
         )
@@ -1330,9 +1330,7 @@ def evaluate(
         # refused them would be describing a market that does not exist.
         # The qualification is a disclosure, and it is recorded on the
         # decision in `obligation_finality_class` as well as here.
-        bounded = (
-            operation.determination_outcome is DeterminationOutcome.QUALIFIED_BOUNDED
-        )
+        bounded = operation.determination_outcome is DeterminationOutcome.QUALIFIED_BOUNDED
         rationale += (
             " NOTE: obligation is DETERMINATION_DEPENDENT — the cash leg is "
             "final on its rail and the venue retains authority to cancel the "
@@ -1392,6 +1390,7 @@ def absent_gate_decision(reason: str = "Cato Cash unavailable") -> CatoCashDecis
 # Any second implementation of Cato Cash must reproduce these exactly.
 # ---------------------------------------------------------------------------
 
+
 def _std_rails() -> dict[CashRail, RailState]:
     return {
         CashRail.FEDWIRE: RailState(CashRail.FEDWIRE, RailStatus.AVAILABLE, 7200),
@@ -1399,9 +1398,7 @@ def _std_rails() -> dict[CashRail, RailState]:
         CashRail.FEDNOW: RailState(
             CashRail.FEDNOW, RailStatus.AVAILABLE, None, Decimal("10000000")
         ),
-        CashRail.PORTS_WHOLESALE: RailState(
-            CashRail.PORTS_WHOLESALE, RailStatus.NOT_YET_ISSUED
-        ),
+        CashRail.PORTS_WHOLESALE: RailState(CashRail.PORTS_WHOLESALE, RailStatus.NOT_YET_ISSUED),
     }
 
 
