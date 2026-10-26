@@ -22,6 +22,13 @@ Versions before 0.4.0 were tagged without a changelog; their contents are in the
   free delivery (no cash leg) binds to the envelope's business date, where before it could
   never pass. The registry digest is recorded on the acceptance record transitively: the record
   names the envelope digest, which binds the payload, which names the registry.
+- Grok's WP1b review (Claude's fix): the account-capacity document is now
+  `atreides.equities_account_capacity/3`. Each account carries its `capacity` (CUSTOMER, PAB
+  or PROPRIETARY) derived from its books ownership type (`classify_accounts`), and the
+  document names the carrying firm's `firm_participant_id`. An account with no ownership type,
+  or booked under two, is refused. A stated seller capacity with no `account_capacity_digest`
+  on the payload is `SELLER_CAPACITY_UNATTESTED`. PAB securities are held to possession or
+  control under Rule 15c3-3(b)(5); its written-notice exception is not modelled.
 - The tag is reserved for Bill after the INST-1 WP2b pull request merges (HOLD 2).
 
 ## Unreleased — EQ-1

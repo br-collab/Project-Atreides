@@ -21,7 +21,11 @@ from atreides.books.ledger import (
     ReserveActivity,
     ReserveSourceFact,
 )
-from atreides.books.projections import project_customer_protection, project_margin_accounts
+from atreides.books.projections import (
+    classify_accounts,
+    project_customer_protection,
+    project_margin_accounts,
+)
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import compute_reserve
@@ -54,6 +58,8 @@ ACTOR = ActorRef(
 )
 PRICES = {"ACME": Decimal(100), "PENNY": Decimal(4)}
 MOVED_PRICES = {"ACME": Decimal(30), "PENNY": Decimal(4)}
+#: The synthetic carrying firm's settlement participant (no real participant identifier).
+FIRM_PARTICIPANT_ID = "SYNTHETIC-FIRM-PARTICIPANT"
 
 
 def _json(value: BaseModel | dict[str, object]) -> bytes:
@@ -354,6 +360,8 @@ def build_equities_publications(taken_at: datetime) -> dict[str, bytes]:
         maximum_age_seconds=300,
         margin_results=initial_results,
         accounts=accounts,
+        account_types=classify_accounts(books),
+        firm_participant_id=FIRM_PARTICIPANT_ID,
     )
     protection_inputs = project_customer_protection(
         books,
