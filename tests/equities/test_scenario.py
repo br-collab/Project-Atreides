@@ -26,6 +26,10 @@ def test_end_to_end_atreides_run_replays_byte_for_byte() -> None:
     capacity = json.loads(capacity_envelope["payload"])
     assert books["journal_digest"] == margin["journal_digest"] == capacity["journal_digest"]
     assert len(capacity["accounts"]) == 3
+    # INST-1 Amendment 3 (WP1b items 1 and 4): capacity and the firm participant are attested.
+    assert capacity["schema_version"] == "atreides.equities_account_capacity/3"
+    assert capacity["firm_participant_id"] == "SYNTHETIC-FIRM-PARTICIPANT"
+    assert {item["capacity"] for item in capacity["accounts"]} == {"CUSTOMER"}
     assert set(books["stock_record"]) == {"ACME", "PENNY"}
     assert protection["projection"]["derived"] == [
         "15c3-3a.item.01",

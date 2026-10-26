@@ -100,6 +100,9 @@ class ObligationCandidate(_Payload):
     #: Capacity of the delivering account (``SELLER_CAPACITIES``). L.C. sets it from the
     #: attested account-capacity document. Absent on a DELIVER obligation means HOLD.
     seller_capacity: str | None = None
+    #: Digest of the attested account-capacity document (``atreides.equities_account_capacity``)
+    #: the capacity was read from. A stated capacity with no attested source HOLDs.
+    account_capacity_digest: Sha256Digest | None = None
     #: Digest of the participant registry version L.C. formed this obligation against.
     #: ``prepare_instruction`` refuses a registry whose digest differs.
     participant_registry_digest: Sha256Digest | None = None

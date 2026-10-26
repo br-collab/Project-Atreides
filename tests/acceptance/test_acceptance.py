@@ -71,6 +71,10 @@ ACTOR = ActorRef(
 )
 
 
+#: Stands for the attested ``atreides.equities_account_capacity/3`` document L.C. read.
+CAPACITY_DOCUMENT_DIGEST = "sha256:" + "4" * 64
+
+
 def _candidate(**changes: Any) -> ObligationCandidate:
     fields: dict[str, Any] = {
         "source_manifest": SourceManifest(
@@ -117,6 +121,7 @@ def _candidate(**changes: Any) -> ObligationCandidate:
         ),
         "corrections": (),
         "participant_registry_digest": _registry().digest,
+        "account_capacity_digest": CAPACITY_DOCUMENT_DIGEST,
     }
     fields.update(changes)
     return ObligationCandidate(**fields)
@@ -587,6 +592,32 @@ def test_seller_capacity_is_read_from_the_payload_not_a_caller() -> None:
     assert _decide(*_selling("CUSTOMER"), _control()).disposition is Disposition.PASS
 
 
+def test_pab_securities_are_held_to_possession_or_control() -> None:
+    """Grok review of WP1b: PAB passed with no control evidence.
+
+    Rule 15c3-3(b)(5) requires possession or control of PAB securities unless the firm gave
+    written notice that they may be used and an opportunity to object. That exception is not
+    modelled, so a PAB delivery needs the same evidence as a customer delivery.
+    """
+    held = _decide(*_selling("PAB"))
+    assert held.disposition is Disposition.HOLD
+    assert "CUSTOMER_CONTROL_EVIDENCE_MISSING" in _reason(held)
+    assert _decide(*_selling("PAB"), _control()).disposition is Disposition.PASS
+
+
+def test_a_capacity_with_no_attested_source_holds() -> None:
+    """Grok review of WP1b: a capacity an order author wrote is not evidence."""
+    envelope, payload = _wire(
+        _candidate(seller_capacity="PROPRIETARY", account_capacity_digest=None)
+    )
+    selling = envelope.model_copy(
+        update={"firm_securities_direction": FirmSecuritiesDirection.DELIVER}
+    )
+    record = _decide(selling, payload)
+    assert record.disposition is Disposition.HOLD
+    assert "SELLER_CAPACITY_UNATTESTED" in _reason(record)
+
+
 @pytest.mark.parametrize(
     ("control", "code"),
     [
@@ -607,7 +638,29 @@ def test_a_control_result_counts_only_for_this_issue_date_and_quantity(
 
 def _free_customer_delivery(business_day: date) -> tuple[SettlementObligationEnvelope, bytes]:
     envelope, payload = _wire(
-        _candidate(cash_leg=None, delivery_pattern="FOP", seller_capacity="CUSTOMER")
+        _candidate(
+            cash_leg=None,
+            delivery_pattern="FOP",
+            seller_capacity="CUSTOMER",
+            participants=(
+                Participant(participant_id="P-SELLER", account_id="SEC-SELLER", role="DELIVERER"),
+                Participant(participant_id="P-BUYER", account_id="SEC-BUYER", role="RECEIVER"),
+            ),
+            candidate_paths=(
+                CandidatePathDescriptor(
+                    path_id="fedwire-fop",
+                    rail="Fedwire",
+                    securities_route="securities",
+                    cash_route="none",
+                    delivery_pattern="FOP",
+                ),
+            ),
+            expected_finality=(
+                ExpectedFinality(
+                    leg="SECURITIES", finality_type="ASSET_FINAL", governing_rule_set="sec/1"
+                ),
+            ),
+        )
     )
     session = envelope.session.model_copy(
         update={
@@ -633,12 +686,28 @@ def test_a_free_customer_delivery_binds_control_to_the_envelope_business_date() 
     Before this, a CUSTOMER free delivery could never pass: every control result was UNBOUND.
     """
     envelope, payload = _free_customer_delivery(date(2026, 9, 21))
-    bound = _reason(_decide(envelope, payload, _control(as_of=date(2026, 9, 21))))
-    assert "CUSTOMER_CONTROL" not in bound
-    assert "CUSTOMER_SELL_CLASSIFICATION_MISSING" not in bound
-    stale = _decide(envelope, payload, _control(as_of=date(2026, 9, 18)))
+
+    def decide(control: ControlResult | None) -> ObligationAcceptanceRecord:
+        # A free delivery moves no cash, so no cash gate decision is supplied.
+        return evaluate_candidate(
+            envelope,
+            payload,
+            acceptance_id=uuid.uuid4(),
+            evaluated_at=T,
+            decided_by=ACTOR,
+            gate_decision=None,
+            halt=None,
+            customer_control=control,
+        )
+
+    bound = decide(_control(as_of=date(2026, 9, 21)))
+    assert bound.disposition is Disposition.PASS, _reason(bound)
+    stale = decide(_control(as_of=date(2026, 9, 18)))
+    assert stale.disposition is Disposition.HOLD
     assert "CUSTOMER_CONTROL_UNBOUND" in _reason(stale)
-    assert "CUSTOMER_CONTROL_EVIDENCE_MISSING" in _reason(_decide(envelope, payload))
+    missing = decide(None)
+    assert missing.disposition is Disposition.HOLD
+    assert "CUSTOMER_CONTROL_EVIDENCE_MISSING" in _reason(missing)
 
 
 def _customer_sale(**changes: Any) -> tuple[SettlementObligationEnvelope, bytes]:
