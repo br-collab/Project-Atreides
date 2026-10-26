@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
+from xml.etree import ElementTree
 
 from cannae_kernel.absence import AbsenceKind, Absent, Recorded
 from cannae_kernel.actor import ActorRef
@@ -11,8 +14,8 @@ from cannae_kernel.canonical import digest, digest_bytes
 from cannae_kernel.delivery import DeliveryPattern
 from cannae_kernel.disposition import Disposition
 from cannae_kernel.domains import Domain
+from cannae_kernel.envelopes import FirmSecuritiesDirection, SettlementObligationEnvelope
 from cannae_kernel.envelopes import ObligationAcceptanceRecord as FrozenAcceptanceRecord
-from cannae_kernel.envelopes import SettlementObligationEnvelope
 from cannae_kernel.finality import FinalityType
 from cannae_kernel.halt import HaltContext, gate_under_halt
 from cannae_kernel.provenance import Provenance
@@ -20,7 +23,8 @@ from pydantic import ValidationError
 
 from atreides.acceptance.candidate import ObligationCandidate
 from atreides.acceptance.record import PredicateResult
-from atreides.messaging.canonical import CashLegInstruction
+from atreides.customer_protection.control import ControlResult
+from atreides.messaging.canonical import CashLegInstruction, FinancialInstitution
 from atreides.messaging.emit import InstructionArtifact, emit_instruction_artifact
 from atreides.messaging.profile import BASE_ISO_20022, DepositoryProfile
 from atreides.rails.cato_cash import CatoCashDecision, GateDecision
@@ -200,7 +204,83 @@ def _funding(
             f"Cato Cash returned {decision.decision.value}.",
             f"CASH_GATE_{decision.decision.value}:{decision.reason_code.value}",
         )
+    cash = candidate.cash_leg
+    if cash is None or cash.total is None or cash.currency is None:
+        return _result(
+            name,
+            Disposition.INDETERMINATE,
+            "Cash leg is absent.",
+            "CASH_GATE_CASH_LEG_MISSING",
+        )
+    if decision.evaluated_notional != cash.total:
+        return _result(
+            name,
+            Disposition.INDETERMINATE,
+            "Cash notional differs.",
+            "CASH_GATE_NOTIONAL_MISMATCH",
+        )
+    if decision.evaluated_currency != cash.currency:
+        return _result(
+            name,
+            Disposition.INDETERMINATE,
+            "Cash currency differs.",
+            "CASH_GATE_CURRENCY_MISMATCH",
+        )
+    snapshot = dict(decision.funding_state_snapshot)
+    try:
+        net_obligation = Decimal(snapshot["net_obligation"])
+    except (KeyError, ValueError):
+        return _result(
+            name,
+            Disposition.INDETERMINATE,
+            "Net obligation absent.",
+            "CASH_GATE_NET_OBLIGATION_MISSING",
+        )
+    # Netting against other obligations remains possible; the snapshot need
+    # only cover this obligation's total, not equal it.
+    if net_obligation < cash.total:
+        return _result(
+            name,
+            Disposition.HOLD,
+            "Net obligation does not cover cash total.",
+            "CASH_GATE_NET_OBLIGATION_INSUFFICIENT",
+        )
     return _passed(name, "Cato Cash PROCEED is bound to this frozen envelope.")
+
+
+def _customer_sell_control(
+    envelope: SettlementObligationEnvelope,
+    *,
+    is_customer_sell: bool | None,
+    control: ControlResult | None,
+) -> PredicateResult:
+    name = "customer_sell_possession_or_control"
+    if envelope.firm_securities_direction is not FirmSecuritiesDirection.DELIVER:
+        return _passed(name, "The firm receives securities; customer-sell control does not apply.")
+    if is_customer_sell is None:
+        return _result(
+            name,
+            Disposition.HOLD,
+            "Sell ownership classification is absent.",
+            "CUSTOMER_SELL_CLASSIFICATION_MISSING",
+        )
+    if not is_customer_sell:
+        return _passed(name, "The sell is not classified as a customer sale.")
+    if control is None:
+        return _result(
+            name,
+            Disposition.HOLD,
+            "No possession-or-control result supplied.",
+            "CUSTOMER_CONTROL_EVIDENCE_MISSING",
+        )
+    if control.disposition is not Disposition.PASS:
+        return _result(
+            name,
+            Disposition.HOLD,
+            "Customer securities are not established in possession or control.",
+            "CUSTOMER_CONTROL_NOT_ESTABLISHED",
+        )
+    return _passed(name, "Customer securities are established in possession or control.")
 
 
 def _frozen_record(
@@ -238,6 +318,8 @@ def evaluate_candidate(
     decided_by: ActorRef,
     gate_decision: CatoCashDecision | None,
     halt: HaltContext | None,
+    is_customer_sell: bool | None = None,
+    customer_control: ControlResult | None = None,
 ) -> FrozenAcceptanceRecord:
     """Verify attested bytes, parse them internally, then apply every predicate."""
     if evaluated_at.tzinfo is None:
@@ -267,6 +349,9 @@ def evaluate_candidate(
         _leg_linkage(candidate),
         _halt(halt),
         _funding(envelope, candidate, envelope_digest, gate_decision),
+        _customer_sell_control(
+            envelope, is_customer_sell=is_customer_sell, control=customer_control
+        ),
     )
     disposition = next(
         severity for severity in _SEVERITY if any(p.disposition is severity for p in predicates)
@@ -293,6 +378,7 @@ def prepare_instruction(
     profile: DepositoryProfile = BASE_ISO_20022,
     *,
     halt: HaltContext | None = None,
+    participant_registry: Mapping[str, FinancialInstitution] | None = None,
 ) -> InstructionArtifact:
     """Prepare only from payload bytes attested and accepted by frozen records."""
     if digest_bytes(payload) != envelope.payload_digest:
@@ -315,4 +401,28 @@ def prepare_instruction(
             "Acceptance record does not reference this envelope digest; "
             "nothing is prepared (ATR-I-01)."
         )
-    return emit_instruction_artifact(instruction, profile, halt=halt)
+    candidate = ObligationCandidate.model_validate_json(payload)
+    cash = candidate.cash_leg
+    if cash is None or cash.total is None or cash.currency is None:
+        raise PreparationRefusedError("INSTRUCTION_UNBOUND: cash leg is absent.")
+    if instruction.amount != cash.total:
+        raise PreparationRefusedError("INSTRUCTION_AMOUNT_MISMATCH")
+    if instruction.currency != cash.currency:
+        raise PreparationRefusedError("INSTRUCTION_CURRENCY_MISMATCH")
+    if participant_registry is None:
+        raise PreparationRefusedError("INSTRUCTION_UNBOUND: participant registry is absent.")
+    payer = participant_registry.get(cash.paying_account_id or "")
+    receiver = participant_registry.get(cash.receiving_account_id or "")
+    if payer is None or receiver is None:
+        raise PreparationRefusedError("INSTRUCTION_UNBOUND: account-to-BIC mapping is absent.")
+    if instruction.debtor != payer or instruction.creditor != receiver:
+        raise PreparationRefusedError("INSTRUCTION_PARTY_MISMATCH")
+    if instruction.debtor.bicfi == instruction.creditor.bicfi:
+        raise PreparationRefusedError("INSTRUCTION_PARTY_MISMATCH: debtor equals creditor.")
+    artifact = emit_instruction_artifact(instruction, profile, halt=halt)
+    try:
+        ElementTree.fromstring(artifact.header_xml)
+        ElementTree.fromstring(artifact.document_xml)
+    except ElementTree.ParseError as exc:
+        raise PreparationRefusedError("INSTRUCTION_XML_INVALID") from exc
+    return artifact

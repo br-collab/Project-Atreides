@@ -12,7 +12,7 @@ is defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ## Documentation coverage
 
-**212 of 219 enumeration values (97%) state what they mean in
+**212 of 223 enumeration values (95%) state what they mean in
 source.** The remainder are listed below rather than rendered as blank cells,
 because a blank cell in a generated table reads as a tooling failure and a
 counted gap reads as work.
@@ -23,7 +23,7 @@ unattributed registry entry - and the guess will be made by whoever is
 furthest from the decision.
 
 <details>
-<summary>Values with no stated meaning (7)</summary>
+<summary>Values with no stated meaning (11)</summary>
 
 - `lifecycle_evidence.EvidenceStage.UNREAD`
 - `lifecycle_evidence.EvidenceStage.EXECUTION_RECEIVED`
@@ -32,6 +32,10 @@ furthest from the decision.
 - `lifecycle_evidence.EvidenceStage.BOOKS_POSTED`
 - `lifecycle_evidence.EvidenceStage.OUTPUT_PRODUCED`
 - `lifecycle_evidence.EvidenceStage.OUTPUT_DELIVERED`
+- `cns.SecuritiesBreakCode.MARKET_PROFILE_MISMATCH`
+- `cns.SecuritiesBreakCode.ALLOCATION_NOT_FINITE`
+- `cns.SecuritiesBreakCode.ALLOCATION_WRONG_SIGN`
+- `cns.SecuritiesBreakCode.ALLOCATION_EXCEEDS_POSITION`
 
 </details>
 
@@ -276,13 +280,15 @@ Gate output per AUR-CUSTODY-CASH-001 Section V.D.
 | `rationale` | `str` | required |
 | `checks_evaluated` | `tuple[tuple[str, str], ...]` | required |
 | `funding_state_snapshot` | `tuple[tuple[str, str], ...]` | required |
+| `evaluated_notional` | `Decimal \| None` | `None` |
+| `evaluated_currency` | `str \| None` | `None` |
 | `doctrine_version` | `str` | `'AUR-CUSTODY-CASH-001-v0.2'` |
 | `dsor_lineage_uri` | `str \| None` | `None` |
 | `obligation_finality_class` | `FinalityClass \| None` | `None` |
 | `settlement_perimeter` | `SettlementPerimeter` | `<SettlementPerimeter.NOT_ASSESSED: 'NOT_ASSESSED'>` |
 | `obligation_id` | `str \| None` | `None` |
 | `obligation_digest` | `str \| None` | `None` |
-| `gate_set_version` | `str` | `'cato-cash-gates/0.3'` |
+| `gate_set_version` | `str` | `'cato-cash-gates/0.4'` |
 
 #### `Counterparty`
 
@@ -680,6 +686,10 @@ Break taxonomy for the equities rail.
 | `processing_date_not_established` | The market fixes its processing date by a session-closure message and no processing date has been reported for this position. The settlement offset the position carries was derived from a trade timestamp, and on this market a timestamp does not establish a business date. The offset is therefore an assumption wearing the shape of a record. Closed by the market reporting the date, not by anything the member can do. See :func:`absent_processing_date`. |
 | `allocation_against_flat_position` | The venue reported a movement in a security this member had netted to zero. Either the member's book is wrong - a trade booked to the wrong side, a wrong-CUSIP capture, a trade never captured at all - or the venue allocated against a position that does not exist. Both are serious and the framework cannot tell them apart from the participant seat, so it records the disagreement rather than resolving it. The disposition stays FLAT because the net position genuinely is flat. What changes is that the day no longer reads clean. |
 | `outcome_not_reported` | No settlement outcome was reported for the position. Fail-safe: not a settled position. |
+| `market_profile_mismatch` |  |
+| `allocation_not_finite` |  |
+| `allocation_wrong_sign` |  |
+| `allocation_exceeds_position` |  |
 
 ---
 

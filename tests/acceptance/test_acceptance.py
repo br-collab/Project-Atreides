@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
@@ -13,7 +14,11 @@ from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes_of, digest, digest_bytes
 from cannae_kernel.disposition import Disposition
 from cannae_kernel.domains import Domain
-from cannae_kernel.envelopes import ObligationAcceptanceRecord, SettlementObligationEnvelope
+from cannae_kernel.envelopes import (
+    FirmSecuritiesDirection,
+    ObligationAcceptanceRecord,
+    SettlementObligationEnvelope,
+)
 from cannae_kernel.halt import HaltContext
 from cannae_kernel.ids import ActorId, HaltId, LifecycleId, ObligationId
 from cannae_kernel.provenance import Provenance
@@ -35,6 +40,7 @@ from atreides.acceptance.service import (
     evaluate_candidate,
     prepare_instruction,
 )
+from atreides.customer_protection.control import ControlResult
 from atreides.messaging.canonical import (
     CashLegInstruction,
     FinancialInstitution,
@@ -120,6 +126,8 @@ def _wire(candidate: ObligationCandidate) -> tuple[SettlementObligationEnvelope,
         obligation_id=OBL,
         lifecycle_id=LIF,
         transformation_digest="sha256:" + "2" * 64,
+        approved_intent_digest="sha256:" + "3" * 64,
+        firm_securities_direction=FirmSecuritiesDirection.RECEIVE,
         session=SessionContext(
             session=MarketSession.REGULAR,
             business_date=BusinessDate(
@@ -377,6 +385,13 @@ def _instruction() -> CashLegInstruction:
     )
 
 
+def _registry() -> dict[str, FinancialInstitution]:
+    return {
+        "CASH-BUYER": FinancialInstitution("DDDDUS33"),
+        "CASH-SELLER": FinancialInstitution("EEEEUS33"),
+    }
+
+
 def _accepted_wire() -> tuple[SettlementObligationEnvelope, bytes, ObligationAcceptanceRecord]:
     envelope, payload = _wire(_candidate())
     acceptance = evaluate_candidate(
@@ -394,7 +409,13 @@ def _accepted_wire() -> tuple[SettlementObligationEnvelope, bytes, ObligationAcc
 
 def test_preparation_requires_the_accepted_frozen_envelope_and_payload() -> None:
     envelope, payload, acceptance = _accepted_wire()
-    artifact = prepare_instruction(envelope, payload, acceptance, _instruction())
+    artifact = prepare_instruction(
+        envelope,
+        payload,
+        acceptance,
+        _instruction(),
+        participant_registry=_registry(),
+    )
     assert artifact.is_submission is False
 
 
@@ -423,6 +444,116 @@ def test_preparation_refuses_tampered_payload() -> None:
         prepare_instruction(envelope, tampered, acceptance, _instruction())
 
 
+@pytest.mark.parametrize(
+    ("instruction", "code"),
+    [
+        (replace(_instruction(), amount=D("996234.55")), "INSTRUCTION_AMOUNT_MISMATCH"),
+        (replace(_instruction(), currency="EUR"), "INSTRUCTION_CURRENCY_MISMATCH"),
+        (
+            replace(_instruction(), debtor=FinancialInstitution("ZZZZUS33")),
+            "INSTRUCTION_PARTY_MISMATCH",
+        ),
+    ],
+)
+def test_preparation_binds_instruction_economics_and_parties(
+    instruction: CashLegInstruction, code: str
+) -> None:
+    envelope, payload, acceptance = _accepted_wire()
+    with pytest.raises(PreparationRefusedError, match=code):
+        prepare_instruction(
+            envelope,
+            payload,
+            acceptance,
+            instruction,
+            participant_registry=_registry(),
+        )
+
+
+def test_preparation_refuses_missing_account_to_bic_mapping() -> None:
+    envelope, payload, acceptance = _accepted_wire()
+    with pytest.raises(PreparationRefusedError, match="INSTRUCTION_UNBOUND"):
+        prepare_instruction(envelope, payload, acceptance, _instruction())
+
+
+def test_cash_gate_binds_evaluated_economics_and_net_obligation() -> None:
+    envelope, payload = _wire(_candidate())
+    gate = _gate(envelope)
+    for changed, code in (
+        ({"evaluated_notional": D("996234.55")}, "CASH_GATE_NOTIONAL_MISMATCH"),
+        ({"evaluated_currency": "EUR"}, "CASH_GATE_CURRENCY_MISMATCH"),
+        (
+            {"funding_state_snapshot": (("net_obligation", "996234.55"),)},
+            "CASH_GATE_NET_OBLIGATION_INSUFFICIENT",
+        ),
+    ):
+        record = evaluate_candidate(
+            envelope,
+            payload,
+            acceptance_id=uuid.uuid4(),
+            evaluated_at=T,
+            decided_by=ACTOR,
+            gate_decision=replace(gate, **changed),
+            halt=None,
+        )
+        assert record.disposition is not Disposition.PASS
+        assert code in _reason(record)
+
+
+def test_customer_sell_requires_possession_or_control_evidence() -> None:
+    envelope, payload = _wire(_candidate())
+    selling = envelope.model_copy(
+        update={"firm_securities_direction": FirmSecuritiesDirection.DELIVER}
+    )
+    gate = _gate(selling)
+    missing = evaluate_candidate(
+        selling,
+        payload,
+        acceptance_id=uuid.uuid4(),
+        evaluated_at=T,
+        decided_by=ACTOR,
+        gate_decision=gate,
+        halt=None,
+        is_customer_sell=True,
+    )
+    assert missing.disposition is Disposition.HOLD
+    assert "CUSTOMER_CONTROL_EVIDENCE_MISSING" in _reason(missing)
+    proprietary = evaluate_candidate(
+        selling,
+        payload,
+        acceptance_id=uuid.uuid4(),
+        evaluated_at=T,
+        decided_by=ACTOR,
+        gate_decision=gate,
+        halt=None,
+        is_customer_sell=False,
+    )
+    assert proprietary.disposition is Disposition.PASS
+
+    established = ControlResult(
+        as_of=date(2026, 9, 17),
+        disposition=Disposition.PASS,
+        issues=(),
+        missing_rules=(),
+        missing_inputs=(),
+        unrecognised_inputs=(),
+        breaches=(),
+        reasons=("Customer securities established in control locations.",),
+        rules_used=(),
+    )
+    customer = evaluate_candidate(
+        selling,
+        payload,
+        acceptance_id=uuid.uuid4(),
+        evaluated_at=T,
+        decided_by=ACTOR,
+        gate_decision=gate,
+        halt=None,
+        is_customer_sell=True,
+        customer_control=established,
+    )
+    assert customer.disposition is Disposition.PASS
+
+
 def test_preparation_refuses_acceptance_for_another_envelope() -> None:
     envelope, payload, acceptance = _accepted_wire()
     other_acceptance = acceptance.model_copy(
@@ -439,4 +570,11 @@ def test_preparation_refuses_acceptance_for_another_envelope() -> None:
 def test_preparation_still_honours_a_halt() -> None:
     envelope, payload, acceptance = _accepted_wire()
     with pytest.raises(PreparationHaltedError):
-        prepare_instruction(envelope, payload, acceptance, _instruction(), halt=_halt())
+        prepare_instruction(
+            envelope,
+            payload,
+            acceptance,
+            _instruction(),
+            halt=_halt(),
+            participant_registry=_registry(),
+        )

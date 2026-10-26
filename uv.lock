@@ -81,7 +81,7 @@ wheels = [
 
 [[package]]
 name = "atreides"
-version = "0.6.1"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "cannae-kernel" },
@@ -107,9 +107,9 @@ dev = [
 requires-dist = [
     { name = "boto3", marker = "extra == 'dev'", specifier = ">=1.35,<2.0" },
     { name = "boto3-stubs", extras = ["s3"], marker = "extra == 'dev'", specifier = ">=1.35,<2.0" },
-    { name = "cannae-kernel", git = "https://github.com/br-collab/cannae-kernel.git?rev=v1.1.2" },
+    { name = "cannae-kernel", git = "https://github.com/br-collab/cannae-kernel.git?rev=v2.0.0" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },
-    { name = "legiones-cannenses", marker = "extra == 'dev'", git = "https://github.com/br-collab/L.C..git?rev=a6d748523507a76990ecbc034ce3bffbd287fdf6" },
+    { name = "legiones-cannenses", marker = "extra == 'dev'", git = "https://github.com/br-collab/L.C..git?rev=66f6597d49c2451acb2141b50a34506c1a7450bc" },
     { name = "lxml", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9" },
     { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=23.0.1,<24" },
@@ -179,8 +179,8 @@ wheels = [
 
 [[package]]
 name = "cannae-kernel"
-version = "1.1.2"
-source = { git = "https://github.com/br-collab/cannae-kernel.git?rev=v1.1.2#dc3d6ada840422d1b8925eebf32ab7f97ff3d652" }
+version = "2.0.0"
+source = { git = "https://github.com/br-collab/cannae-kernel.git?rev=v2.0.0#bed73a45ad2496f8c6f672ff0ed4cb6bf5fd846a" }
 dependencies = [
     { name = "pydantic" },
 ]
@@ -418,7 +418,7 @@ wheels = [
 [[package]]
 name = "legiones-cannenses"
 version = "0.1.0"
-source = { git = "https://github.com/br-collab/L.C..git?rev=a6d748523507a76990ecbc034ce3bffbd287fdf6#a6d748523507a76990ecbc034ce3bffbd287fdf6" }
+source = { git = "https://github.com/br-collab/L.C..git?rev=66f6597d49c2451acb2141b50a34506c1a7450bc#66f6597d49c2451acb2141b50a34506c1a7450bc" }
 dependencies = [
     { name = "cannae-kernel" },
     { name = "pydantic" },

@@ -53,7 +53,9 @@ def settle_net_position(position, profile, *, allocated_quantity=None, **kwargs)
     current_offset = kwargs.pop("current_offset_days", 0) or 0
     kwargs.pop("aged_days", None)
     return _settle_net_position(
-        position, profile, allocated_quantity=allocated_quantity,
+        position,
+        profile,
+        allocated_quantity=allocated_quantity,
         signed_cash=position.quantity,
         allocated_cash=allocated_quantity,
         settlement_date=settlement_date,
@@ -80,7 +82,7 @@ def _position(quantity: Decimal | None = None, **kw: object):
     quantity = D("1000") if quantity is None else quantity
     positions = net_positions(
         ((str(kw.get("security_id", "SEC-A")), quantity),),
-        market_id="XCLR",
+        market_id=str(kw.get("market_id", "XCLR")),
         settlement_date_offset_days=int(kw.get("settlement_date_offset_days", 1)),
     )
     return positions[0]
@@ -89,13 +91,49 @@ def _position(quantity: Decimal | None = None, **kw: object):
 def test_cash_residual_prevents_full_settlement_and_calendar_ages_fail() -> None:
     calendar = MarketCalendar.load(Market.US_EQUITIES)
     result = settle_net_position(
-        _position(D("100")), _profile(close_out_deadline_days=1),
-        allocated_quantity=D("100"), signed_cash=D("10000"), allocated_cash=D("9999.99"),
-        settlement_date=date(2026, 12, 31), as_of_date=date(2027, 1, 4), calendar=calendar,
+        _position(D("100")),
+        _profile(close_out_deadline_days=1),
+        allocated_quantity=D("100"),
+        signed_cash=D("10000"),
+        allocated_cash=D("9999.99"),
+        settlement_date=date(2026, 12, 31),
+        as_of_date=date(2027, 1, 4),
+        calendar=calendar,
     )
     assert result.disposition is not CNSDisposition.SETTLED_IN_FULL
     assert result.residual is not None and result.residual.cash == D("0.01")
     assert result.residual.aged_business_days == 1
+
+
+@pytest.mark.parametrize(
+    ("allocated", "code"),
+    [
+        (D("NaN"), SecuritiesBreakCode.ALLOCATION_NOT_FINITE),
+        (D("-1"), SecuritiesBreakCode.ALLOCATION_WRONG_SIGN),
+        (D("100.01"), SecuritiesBreakCode.ALLOCATION_EXCEEDS_POSITION),
+    ],
+)
+def test_invalid_allocations_are_indeterminate_with_named_codes(
+    allocated: Decimal, code: SecuritiesBreakCode
+) -> None:
+    result = settle_net_position(_position(D("100")), _profile(), allocated_quantity=allocated)
+    assert result.disposition is CNSDisposition.INDETERMINATE
+    assert result.breaks[0].code is code
+
+
+def test_market_profile_mismatch_is_indeterminate() -> None:
+    result = settle_net_position(
+        _position(D("100")), _profile(market_id="OTHER"), allocated_quantity=D("100")
+    )
+    assert result.disposition is CNSDisposition.INDETERMINATE
+    assert result.breaks[0].code is SecuritiesBreakCode.MARKET_PROFILE_MISMATCH
+
+
+def test_netting_refuses_boolean_and_out_of_context_quantities() -> None:
+    with pytest.raises(ValueError, match="QUANTITY_BOOLEAN_REFUSED"):
+        net_positions((("SEC-A", True),), market_id="XCLR", settlement_date_offset_days=1)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="QUANTITY_EXCEEDS_DECLARED_CONTEXT"):
+        net_positions((("SEC-A", D("1E+31")),), market_id="XCLR", settlement_date_offset_days=1)
 
 
 # ---------------------------------------------------------------------------
@@ -108,8 +146,7 @@ def test_there_is_no_trade_level_fail_attribution_api() -> None:
     correspondence before settlement ran. Any per-trade attribution would be
     an inference presented as an observation."""
     assert not any(
-        "attribute_fail_to_trade" in name or name.startswith("fail_for_trade")
-        for name in dir(cns)
+        "attribute_fail_to_trade" in name or name.startswith("fail_for_trade") for name in dir(cns)
     )
 
 
@@ -140,9 +177,7 @@ def test_constituent_trade_count_is_recorded_and_never_attributed() -> None:
 def test_netting_is_order_independent() -> None:
     trades = (("SEC-A", D("100")), ("SEC-B", D("-50")), ("SEC-A", D("-30")))
     a = net_positions(trades, market_id="XCLR", settlement_date_offset_days=1)
-    b = net_positions(
-        tuple(reversed(trades)), market_id="XCLR", settlement_date_offset_days=1
-    )
+    b = net_positions(tuple(reversed(trades)), market_id="XCLR", settlement_date_offset_days=1)
     assert a == b
 
 
@@ -260,12 +295,8 @@ def test_fail_to_deliver_on_a_net_short() -> None:
 def test_the_two_fail_directions_are_not_one_disposition_with_a_sign() -> None:
     """Same event from opposite sides, different remedies, different
     regulatory consequences."""
-    receive = settle_net_position(
-        _position(D("1000")), _profile(), allocated_quantity=D("0")
-    )
-    deliver = settle_net_position(
-        _position(D("-1000")), _profile(), allocated_quantity=D("0")
-    )
+    receive = settle_net_position(_position(D("1000")), _profile(), allocated_quantity=D("0"))
+    deliver = settle_net_position(_position(D("-1000")), _profile(), allocated_quantity=D("0"))
     assert receive.disposition is not deliver.disposition
 
 
@@ -301,9 +332,7 @@ def test_unassessed_profile_may_not_state_a_cycle() -> None:
 
 def test_assessed_profile_requires_provenance() -> None:
     with pytest.raises(ValueError, match="requires provenance"):
-        MarketProfile(
-            market_id="XCLR", close_out_regime=CloseOutRegime.NONE_PUBLISHED
-        )
+        MarketProfile(market_id="XCLR", close_out_regime=CloseOutRegime.NONE_PUBLISHED)
 
 
 def test_mandatory_deadline_requires_the_deadline() -> None:
@@ -351,12 +380,8 @@ def test_close_out_deadline_is_computed_from_the_market_not_a_constant() -> None
 def test_an_open_fail_on_an_unread_market_breaks() -> None:
     """Whether a deadline is running is unknown rather than absent. Closed by
     populating the registry, not by any market action."""
-    r = settle_net_position(
-        _position(), absent_market_profile("XCLR"), allocated_quantity=D("0")
-    )
-    assert SecuritiesBreakCode.CLOSE_OUT_DEADLINE_UNREADABLE in {
-        b.code for b in r.breaks
-    }
+    r = settle_net_position(_position(), absent_market_profile("XCLR"), allocated_quantity=D("0"))
+    assert SecuritiesBreakCode.CLOSE_OUT_DEADLINE_UNREADABLE in {b.code for b in r.breaks}
 
 
 def test_a_passed_close_out_deadline_breaks() -> None:
@@ -376,17 +401,13 @@ def test_a_deadline_not_yet_reached_does_not_break() -> None:
         allocated_quantity=D("0"),
         current_offset_days=2,
     )
-    assert SecuritiesBreakCode.CLOSE_OUT_DEADLINE_PASSED not in {
-        b.code for b in r.breaks
-    }
+    assert SecuritiesBreakCode.CLOSE_OUT_DEADLINE_PASSED not in {b.code for b in r.breaks}
 
 
 def test_an_unsupplied_current_day_never_asserts_a_passed_deadline() -> None:
     """The module has no clock and will not invent one."""
     r = settle_net_position(_position(), _profile(), allocated_quantity=D("0"))
-    assert SecuritiesBreakCode.CLOSE_OUT_DEADLINE_PASSED not in {
-        b.code for b in r.breaks
-    }
+    assert SecuritiesBreakCode.CLOSE_OUT_DEADLINE_PASSED not in {b.code for b in r.breaks}
 
 
 def test_a_settled_position_carries_no_open_fail_findings() -> None:
@@ -413,11 +434,7 @@ def test_a_fail_across_a_record_date_breaks() -> None:
         allocated_quantity=D("0"),
         spans_record_date=True,
     )
-    (found,) = [
-        b
-        for b in r.breaks
-        if b.code is SecuritiesBreakCode.ELIGIBLE_SETTLED_DIVERGENCE
-    ]
+    (found,) = [b for b in r.breaks if b.code is SecuritiesBreakCode.ELIGIBLE_SETTLED_DIVERGENCE]
     assert "pending receipt (fail long)" in found.detail
     assert "does not state the outcome" in found.detail
 
@@ -474,9 +491,7 @@ def test_corporate_action_findings_attach_to_partials_too() -> None:
         spans_record_date=True,
     )
     assert r.disposition is CNSDisposition.PARTIAL_ALLOCATION
-    assert SecuritiesBreakCode.ELIGIBLE_SETTLED_DIVERGENCE in {
-        b.code for b in r.breaks
-    }
+    assert SecuritiesBreakCode.ELIGIBLE_SETTLED_DIVERGENCE in {b.code for b in r.breaks}
 
 
 # ---------------------------------------------------------------------------
@@ -492,18 +507,14 @@ def test_a_partial_on_an_opaque_market_breaks() -> None:
         _profile(allocation_rule_published=False),
         allocated_quantity=D("400"),
     )
-    assert SecuritiesBreakCode.PARTIAL_WITH_UNEXPLAINED_ALLOCATION in {
-        b.code for b in r.breaks
-    }
+    assert SecuritiesBreakCode.PARTIAL_WITH_UNEXPLAINED_ALLOCATION in {b.code for b in r.breaks}
 
 
 def test_a_partial_on_a_transparent_market_does_not_break_on_that_ground() -> None:
     r = settle_net_position(
         _position(), _profile(allocation_rule_published=True), allocated_quantity=D("400")
     )
-    assert SecuritiesBreakCode.PARTIAL_WITH_UNEXPLAINED_ALLOCATION not in {
-        b.code for b in r.breaks
-    }
+    assert SecuritiesBreakCode.PARTIAL_WITH_UNEXPLAINED_ALLOCATION not in {b.code for b in r.breaks}
 
 
 def test_a_full_fail_is_not_an_allocation_transparency_question() -> None:
@@ -513,9 +524,7 @@ def test_a_full_fail_is_not_an_allocation_transparency_question() -> None:
         _profile(allocation_rule_published=False),
         allocated_quantity=D("0"),
     )
-    assert SecuritiesBreakCode.PARTIAL_WITH_UNEXPLAINED_ALLOCATION not in {
-        b.code for b in r.breaks
-    }
+    assert SecuritiesBreakCode.PARTIAL_WITH_UNEXPLAINED_ALLOCATION not in {b.code for b in r.breaks}
 
 
 # ---------------------------------------------------------------------------
@@ -655,9 +664,7 @@ def test_a_record_date_balance_refuses_a_float(field: str, bad: float) -> None:
     "bad",
     [D("NaN"), D("sNaN"), D("Infinity"), D("-Infinity")],
 )
-def test_a_record_date_balance_refuses_a_non_finite_decimal(
-    field: str, bad: Decimal
-) -> None:
+def test_a_record_date_balance_refuses_a_non_finite_decimal(field: str, bad: Decimal) -> None:
     with pytest.raises(ValueError, match=f"{field} must be an exact finite decimal"):
         _record_date(**{field: bad})
 
@@ -673,9 +680,7 @@ def test_a_record_date_balance_refuses_a_non_finite_decimal(
         ("uncovered_protect_balance", D("1000.000")),
     ],
 )
-def test_a_record_date_balance_keeps_a_decimal_exactly(
-    field: str, kept: Decimal
-) -> None:
+def test_a_record_date_balance_keeps_a_decimal_exactly(field: str, kept: Decimal) -> None:
     """The value is stored unchanged, including its scale and its sign.
 
     A negative balance is a short position. It is kept, and the entitlement
@@ -765,9 +770,7 @@ def test_the_processing_date_rule_is_unassessed_by_default() -> None:
     """Not FIXED_CYCLE_FROM_TRADE_DATE. Defaulting to the familiar case is
     the specific error this field exists to prevent, and it is the same
     error the module's own docstring warns about for settlement cycles."""
-    assert absent_market_profile("XCLR").processing_date_rule is (
-        ProcessingDateRule.NOT_ASSESSED
-    )
+    assert absent_market_profile("XCLR").processing_date_rule is (ProcessingDateRule.NOT_ASSESSED)
     assert _profile().processing_date_rule is ProcessingDateRule.NOT_ASSESSED
 
 
@@ -799,9 +802,7 @@ def test_an_unread_rule_does_not_read_as_a_fixed_cycle() -> None:
 
 
 def test_a_fixed_cycle_market_dates_settlement_from_the_trade_date() -> None:
-    fixed = _profile(
-        processing_date_rule=ProcessingDateRule.FIXED_CYCLE_FROM_TRADE_DATE
-    )
+    fixed = _profile(processing_date_rule=ProcessingDateRule.FIXED_CYCLE_FROM_TRADE_DATE)
     assert fixed.settlement_date_follows_from_trade_date is True
     assert processing_date_offset(fixed, _position()) == 0
 
@@ -831,7 +832,7 @@ def test_an_unestablished_processing_date_is_a_break_on_a_settled_position() -> 
     for a business date nobody has established. "It settled" and "it settled
     on the date we assumed" are different assertions."""
     result = settle_net_position(
-        _position(), _message_market(), allocated_quantity=D("1000")
+        _position(market_id="XCLR-EXT"), _message_market(), allocated_quantity=D("1000")
     )
     assert result.disposition is CNSDisposition.SETTLED_IN_FULL
     assert result.completed is True
@@ -841,7 +842,7 @@ def test_an_unestablished_processing_date_is_a_break_on_a_settled_position() -> 
 
 def test_the_break_names_the_markets_own_message() -> None:
     result = settle_net_position(
-        _position(), _message_market(), allocated_quantity=D("1000")
+        _position(market_id="XCLR-EXT"), _message_market(), allocated_quantity=D("1000")
     )
     detail = next(
         b.detail
@@ -858,9 +859,7 @@ def test_a_reported_processing_date_closes_the_break() -> None:
         settlement_date_offset_days=1,
         assigned_processing_date_offset_days=0,
     )[0]
-    result = settle_net_position(
-        position, _message_market(), allocated_quantity=D("1000")
-    )
+    result = settle_net_position(position, _message_market(), allocated_quantity=D("1000"))
     assert SecuritiesBreakCode.PROCESSING_DATE_NOT_ESTABLISHED not in {
         b.code for b in result.breaks
     }
@@ -869,9 +868,7 @@ def test_a_reported_processing_date_closes_the_break() -> None:
 def test_a_fixed_cycle_market_never_raises_the_break() -> None:
     """The break is a property of how the market fixes its dates, not a tax
     on every position everywhere."""
-    fixed = _profile(
-        processing_date_rule=ProcessingDateRule.FIXED_CYCLE_FROM_TRADE_DATE
-    )
+    fixed = _profile(processing_date_rule=ProcessingDateRule.FIXED_CYCLE_FROM_TRADE_DATE)
     result = settle_net_position(_position(), fixed, allocated_quantity=D("1000"))
     assert result.breaks == ()
 

@@ -589,7 +589,17 @@ def test_allocated_plus_residual_is_what_was_owed(
         position, profile, allocated_quantity=allocated, spans_record_date=spans
     )
     if result.disposition is CNSDisposition.INDETERMINATE:
-        assert allocated is None
+        if allocated is None:
+            return
+        codes = {item.code for item in result.breaks}
+        assert codes & {
+            SecuritiesBreakCode.ALLOCATION_NOT_FINITE,
+            SecuritiesBreakCode.ALLOCATION_WRONG_SIGN,
+            SecuritiesBreakCode.ALLOCATION_EXCEEDS_POSITION,
+        }
+        assert result.residual is None
+        assert result.allocated_quantity == 0
+        return
         return
     residual = result.residual.quantity if result.residual else Decimal(0)
     assert result.allocated_quantity + residual == position.quantity

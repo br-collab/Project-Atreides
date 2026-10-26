@@ -1440,19 +1440,16 @@ def e5_5() -> tuple[str, str]:
         allocated_cash=D("500"), settlement_date=date(2026, 10, 1),
         as_of_date=date(2026, 10, 1), calendar=MarketCalendar.load(Market.US_EQUITIES),
     )
-    residual = r.residual.quantity if r.residual else D(0)
-    conserved = r.allocated_quantity + residual == pos.quantity
-    # REFUTED by an existing property test. tests/test_properties.py:515 draws
-    # quantity and allocated INDEPENDENTLY, so over-allocation is generated on
-    # every deep run, and the asserted invariant is exactly
-    # allocated + residual == owed - which a negative residual satisfies. The
-    # conservation law is the doctrine. Separately, a CCP cannot allocate more
-    # than the net position, so the input is not producible.
-    return (BY_DESIGN if conserved else BROKE), (
+    codes = {item.code.value for item in r.breaks}
+    held = (
+        r.disposition.value == "indeterminate"
+        and "allocation_exceeds_position" in codes
+        and r.residual is None
+    )
+    return (HELD if held else BROKE), (
         f"position=100 allocated=500 -> {r.disposition.value} "
-        f"residual={residual} conservation_holds={conserved}. Refuted: a "
-        f"Hypothesis property already generates this and asserts the "
-        f"conservation law it satisfies."
+        f"breaks={sorted(codes)} residual={r.residual}. The engine must refuse "
+        f"the impossible allocation rather than manufacture a negative residual."
     )
 
 
