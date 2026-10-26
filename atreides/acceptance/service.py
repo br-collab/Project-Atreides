@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
@@ -21,10 +20,11 @@ from cannae_kernel.halt import HaltContext, gate_under_halt
 from cannae_kernel.provenance import Provenance
 from pydantic import ValidationError
 
-from atreides.acceptance.candidate import ObligationCandidate
+from atreides.acceptance.candidate import SELLER_CAPACITIES, ObligationCandidate
 from atreides.acceptance.record import PredicateResult
+from atreides.acceptance.registry import ParticipantRegistry
 from atreides.customer_protection.control import ControlResult
-from atreides.messaging.canonical import CashLegInstruction, FinancialInstitution
+from atreides.messaging.canonical import CashLegInstruction
 from atreides.messaging.emit import InstructionArtifact, emit_instruction_artifact
 from atreides.messaging.profile import BASE_ISO_20022, DepositoryProfile
 from atreides.rails.cato_cash import CatoCashDecision, GateDecision
@@ -250,22 +250,36 @@ def _funding(
 
 def _customer_sell_control(
     envelope: SettlementObligationEnvelope,
-    *,
-    is_customer_sell: bool | None,
+    candidate: ObligationCandidate,
     control: ControlResult | None,
 ) -> PredicateResult:
+    """Rule 15c3-3(b)(1): customer securities delivered on a sale must be in possession or control.
+
+    INST-1 Amendment 3 (WP2b). The seller's capacity is read from the digest-bound payload,
+    never from a caller. A control result counts only if it names this obligation's issue,
+    is as of its settlement date, passes, and holds at least the delivery quantity in
+    control locations. Anything else HOLDs with a named code.
+    """
     name = "customer_sell_possession_or_control"
     if envelope.firm_securities_direction is not FirmSecuritiesDirection.DELIVER:
         return _passed(name, "The firm receives securities; customer-sell control does not apply.")
-    if is_customer_sell is None:
+    capacity = candidate.seller_capacity
+    if capacity is None:
         return _result(
             name,
             Disposition.HOLD,
-            "Sell ownership classification is absent.",
+            "The payload does not state the delivering account's capacity.",
             "CUSTOMER_SELL_CLASSIFICATION_MISSING",
         )
-    if not is_customer_sell:
-        return _passed(name, "The sell is not classified as a customer sale.")
+    if capacity not in SELLER_CAPACITIES:
+        return _result(
+            name,
+            Disposition.INDETERMINATE,
+            "The payload states an unknown seller capacity.",
+            "SELLER_CAPACITY_UNKNOWN",
+        )
+    if capacity != "CUSTOMER":
+        return _passed(name, f"The delivering account's capacity is {capacity}.")
     if control is None:
         return _result(
             name,
@@ -273,12 +287,38 @@ def _customer_sell_control(
             "No possession-or-control result supplied.",
             "CUSTOMER_CONTROL_EVIDENCE_MISSING",
         )
+    securities = candidate.securities_leg
+    cash = candidate.cash_leg
+    issue = securities.instrument_id if securities is not None else None
+    quantity = securities.quantity if securities is not None else None
+    settles = cash.value_date if cash is not None else None
+    checked = next((item for item in control.issues if item.issue == issue), None)
+    if (
+        issue is None
+        or quantity is None
+        or settles is None
+        or control.as_of.isoformat() != settles
+        or checked is None
+    ):
+        return _result(
+            name,
+            Disposition.HOLD,
+            "The control result does not name this obligation's issue and settlement date.",
+            "CUSTOMER_CONTROL_UNBOUND",
+        )
     if control.disposition is not Disposition.PASS:
         return _result(
             name,
             Disposition.HOLD,
             "Customer securities are not established in possession or control.",
             "CUSTOMER_CONTROL_NOT_ESTABLISHED",
+        )
+    if checked.in_control < quantity:
+        return _result(
+            name,
+            Disposition.HOLD,
+            "Fewer securities are in control than the delivery requires.",
+            "CUSTOMER_CONTROL_INSUFFICIENT",
         )
     return _passed(name, "Customer securities are established in possession or control.")
 
@@ -318,7 +358,6 @@ def evaluate_candidate(
     decided_by: ActorRef,
     gate_decision: CatoCashDecision | None,
     halt: HaltContext | None,
-    is_customer_sell: bool | None = None,
     customer_control: ControlResult | None = None,
 ) -> FrozenAcceptanceRecord:
     """Verify attested bytes, parse them internally, then apply every predicate."""
@@ -349,9 +388,7 @@ def evaluate_candidate(
         _leg_linkage(candidate),
         _halt(halt),
         _funding(envelope, candidate, envelope_digest, gate_decision),
-        _customer_sell_control(
-            envelope, is_customer_sell=is_customer_sell, control=customer_control
-        ),
+        _customer_sell_control(envelope, candidate, customer_control),
     )
     disposition = next(
         severity for severity in _SEVERITY if any(p.disposition is severity for p in predicates)
@@ -378,7 +415,7 @@ def prepare_instruction(
     profile: DepositoryProfile = BASE_ISO_20022,
     *,
     halt: HaltContext | None = None,
-    participant_registry: Mapping[str, FinancialInstitution] | None = None,
+    participant_registry: ParticipantRegistry | None = None,
 ) -> InstructionArtifact:
     """Prepare only from payload bytes attested and accepted by frozen records."""
     if digest_bytes(payload) != envelope.payload_digest:
@@ -411,8 +448,16 @@ def prepare_instruction(
         raise PreparationRefusedError("INSTRUCTION_CURRENCY_MISMATCH")
     if participant_registry is None:
         raise PreparationRefusedError("INSTRUCTION_UNBOUND: participant registry is absent.")
-    payer = participant_registry.get(cash.paying_account_id or "")
-    receiver = participant_registry.get(cash.receiving_account_id or "")
+    if candidate.participant_registry_digest is None:
+        raise PreparationRefusedError(
+            "INSTRUCTION_UNBOUND: the obligation does not name a participant registry."
+        )
+    if participant_registry.digest != candidate.participant_registry_digest:
+        raise PreparationRefusedError(
+            "PARTICIPANT_REGISTRY_MISMATCH: the registry is not the version the obligation names."
+        )
+    payer = participant_registry.institution(cash.paying_account_id)
+    receiver = participant_registry.institution(cash.receiving_account_id)
     if payer is None or receiver is None:
         raise PreparationRefusedError("INSTRUCTION_UNBOUND: account-to-BIC mapping is absent.")
     if instruction.debtor != payer or instruction.creditor != receiver:
