@@ -562,6 +562,16 @@ def _decide(
     )
 
 
+def test_a_cash_only_delivery_needs_no_securities_control() -> None:
+    """An option premium paid by the firm moves no securities, so no capacity is needed."""
+    envelope, payload = _wire(_candidate(securities_leg=None, delivery_pattern="FREE_OF_PAYMENT"))
+    selling = envelope.model_copy(
+        update={"firm_securities_direction": FirmSecuritiesDirection.DELIVER}
+    )
+    record = _decide(selling, payload)
+    assert "CUSTOMER_SELL_CLASSIFICATION_MISSING" not in _reason(record)
+
+
 def test_seller_capacity_is_read_from_the_payload_not_a_caller() -> None:
     """INST-1 Amendment 3 V4/V5: no keyword can declare a customer sale proprietary."""
     unstated = _decide(*_selling(None))

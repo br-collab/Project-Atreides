@@ -263,6 +263,8 @@ def _customer_sell_control(
     name = "customer_sell_possession_or_control"
     if envelope.firm_securities_direction is not FirmSecuritiesDirection.DELIVER:
         return _passed(name, "The firm receives securities; customer-sell control does not apply.")
+    if candidate.securities_leg is None:
+        return _passed(name, "No securities move under this obligation (for example a premium).")
     capacity = candidate.seller_capacity
     if capacity is None:
         return _result(
