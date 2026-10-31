@@ -2,7 +2,7 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 
 # SIM-1 run summary
 
-- Seed: `41042799150`
+- Seed: `41191764324`
 - Pack: `synthetic` version `1`
 - Manifest: `sha256:08626b1c09c14c78384a16d8d0b6116cbe46c5d766da63b65a768d9f7408d643`
 - Classes: `SYNTHETIC`
@@ -17,9 +17,9 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 ## Reserve protection
 
 - Customer deposit policy: declared SYNTHETIC in the pack
-- Customer reserve: `220` PASS, `30` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `30` missing inputs or other engine reasons)
+- Customer reserve: `228` PASS, `22` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `22` missing inputs or other engine reasons)
 - PAB deposit policy: declared SYNTHETIC in the pack
-- PAB reserve: `213` PASS, `37` HOLD (`0` no declared deposit, `7` simulated short or late deposit, `30` missing inputs or other engine reasons)
+- PAB reserve: `224` PASS, `26` HOLD (`0` no declared deposit, `4` simulated short or late deposit, `22` missing inputs or other engine reasons)
 
 ## New York Fed notices
 
