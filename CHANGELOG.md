@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.2 - 7 Nov 2026
+
+Add a zero-baseline Ruff and strict mypy quality ratchet.
+
 ## 0.9.1 - 7 Nov 2026
 
 Allow builders to enable check-gated auto-merge while preserving Bill's sole release authority.
