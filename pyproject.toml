@@ -1,6 +1,6 @@
 [project]
 name = "atreides"
-version = "0.7.0"
+version = "0.8.0"
 description = "Aureon Asset Services — doctrine-native institutional governance framework"
 authors = [{name = "Guillermo Ravelo", email = "gar2163@columbia.edu"}]
 readme = "README.md"
@@ -16,7 +16,7 @@ keywords = ["asset-services", "post-trade", "custody", "governance", "doctrine"]
 dependencies = [
     "pydantic>=2.6,<3.0",
     # Shared identifiers, digests, dispositions and halt context (CL-JUM-001 JUM-D-05).
-    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@v2.0.0",
+    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@onb1/kernel",
 ]
 
 [project.optional-dependencies]

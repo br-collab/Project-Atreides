@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0 - 7 Nov 2026
+
+Add the ONB-1 append-only account lifecycle, attested status publication, and synthetic ACATS
+integration. Pin the ONB-1 kernel contract branch pending Bill's release tag.
+
 Versions before 0.4.0 were tagged without a changelog; their contents are in the pull requests and in the commit history. This file starts at the Wave 2 release.
 
 ## 0.7.0 — INST-1 release candidate

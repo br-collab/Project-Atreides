@@ -63,6 +63,13 @@ def build_phase2_summary() -> dict[str, object]:
     return {
         "schema_version": "sim.phase-2/1",
         "synthetic": True,
+        "approved_to_first_funded_trade_seconds": {
+            "label": "synthetic",
+            "count": 3,
+            "minimum": 900,
+            "median": 1200,
+            "maximum": 1800,
+        },
         "legs": {
             "CONV-2": transfer_counts,
             "CONV-3": clearing_counts,

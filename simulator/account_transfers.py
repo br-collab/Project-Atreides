@@ -50,6 +50,8 @@ class TransferClose:
     posted_cash: Decimal
     i10_migration_conserved: bool | None
     i10_reason: str
+    lifecycle_status: str
+    exception_owner: str | None
 
 
 POLICIES = {
@@ -218,6 +220,15 @@ def run_account_transfers(
             invariant = quantity == line.quantity and cash == line.cash_credit
             invariant_reason = "statement compared independently with posted share and cent totals"
         disposition = "HOLD" if reasons or rejected else assessment.disposition.value
+        if variant == "clean" and invariant:
+            lifecycle_status = "FUNDED"
+            exception_owner = None
+        elif variant == "partial-residual" and invariant:
+            lifecycle_status = "FUNDED"
+            exception_owner = "ACATS_RESIDUAL_OPERATIONS"
+        else:
+            lifecycle_status = "APPROVED"
+            exception_owner = "ACATS_TRANSFER_OPERATIONS"
         closes.append(
             TransferClose(
                 transfer_id=transfer_id,
@@ -228,6 +239,8 @@ def run_account_transfers(
                 posted_cash=cash,
                 i10_migration_conserved=invariant,
                 i10_reason=invariant_reason,
+                lifecycle_status=lifecycle_status,
+                exception_owner=exception_owner,
             )
         )
 
