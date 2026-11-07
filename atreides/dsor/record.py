@@ -40,6 +40,7 @@ from atreides.corporate_actions.record import CorporateActionEventRecord
 from atreides.customer_protection.record import CustomerProtectionComputationRecord
 from atreides.dsor.books import BooksPostingRecord
 from atreides.dsor.client_output import ClientOutputRecord
+from atreides.dsor.governance_scenario import GovernanceScenarioEvidence
 from atreides.dsor.lifecycle_records import (
     ExternalActionReceiptRecord,
     FinalityAssertedRecord,
@@ -61,6 +62,7 @@ SettlementDomainOutput = (
     | ExternalActionReceiptRecord
     | ClientOutputRecord
     | BooksPostingRecord
+    | GovernanceScenarioEvidence
 )
 
 #: Deprecated until Wave 3: use ``SettlementDomainOutput``.
@@ -86,6 +88,7 @@ RecordKind = Literal[
     "external_action_receipt",
     "client_output",
     "books_posting",
+    "governance_scenario",
 ]
 
 

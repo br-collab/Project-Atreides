@@ -9,6 +9,7 @@ from typing import cast
 from simulator.account_transfers import TRANSFER_VARIANTS, run_account_transfers
 from simulator.clearing_readiness import run_clearing_readiness
 from simulator.focus import run_focus
+from simulator.governance_scenarios import run_governance_scenarios
 
 NOT_CLAIMED = (
     "production correctness",
@@ -75,6 +76,7 @@ def build_phase2_summary() -> dict[str, object]:
             "CONV-3": clearing_counts,
             "CONV-4": focus_counts,
         },
+        "governance_scenarios": run_governance_scenarios(),
         "license_gates": {
             "FINRA": "INDETERMINATE",
             "DTCC": "INDETERMINATE",

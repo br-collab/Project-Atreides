@@ -26,7 +26,7 @@ Demonstrate how the intraday funding model answers the question "can this leg se
 
 6. **Phase 06 - Settlement Execution.** The Tier 1 Settlement Operations Analyst evaluates DSOR pre-trade lineage, then the intraday funding position, then clearing-fund compliance, then the net obligation, then the rail. **This scenario halts here, at the funding sub-gate.**
 
-7. **Phase 07 - Decision-of-Record.** Append-only, DTG-stamped, deterministically replayable.
+7. **Phase 07 - Decision System of Record.** Append-only, DTG-stamped, deterministically replayable.
 
 **The Disposition Set:**
 
