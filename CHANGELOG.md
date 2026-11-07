@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0 - 7 Nov 2026
+
+Add SIM-1 governance scenarios for vendor model regression, hosting provider loss, and a refused
+unauthorized account lifecycle write. Add replayable Decision System of Record evidence and
+negative controls, retire four external Word documents, and clarify merge authority.
+
 ## 0.8.0 - 7 Nov 2026
 
 Add the ONB-1 append-only account lifecycle, attested status publication, and synthetic ACATS

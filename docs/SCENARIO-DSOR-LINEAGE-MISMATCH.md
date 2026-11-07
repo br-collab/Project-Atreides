@@ -18,7 +18,7 @@ Demonstrate the framework's behaviour when the governance record itself is the t
 
 2. **Phase 06 - Settlement Execution.** DSOR pre-trade verification is the first ordered check the Tier 1 Settlement Operations Analyst runs, before funding, before clearing fund, before the net obligation. The operation carries a lineage reference that does not resolve to the pre-trade decision record. **The sequence stops here**, and the four downstream checks are never reached.
 
-3. **Phase 07 - Decision-of-Record.** The hold is appended with the mismatch detail.
+3. **Phase 07 - Decision System of Record.** The hold is appended with the mismatch detail.
 
 **Decision:**
 
