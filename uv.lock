@@ -81,7 +81,7 @@ wheels = [
 
 [[package]]
 name = "atreides"
-version = "0.7.0"
+version = "0.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "cannae-kernel" },
@@ -107,9 +107,9 @@ dev = [
 requires-dist = [
     { name = "boto3", marker = "extra == 'dev'", specifier = ">=1.35,<2.0" },
     { name = "boto3-stubs", extras = ["s3"], marker = "extra == 'dev'", specifier = ">=1.35,<2.0" },
-    { name = "cannae-kernel", git = "https://github.com/br-collab/cannae-kernel.git?rev=v2.0.0" },
+    { name = "cannae-kernel", git = "https://github.com/br-collab/cannae-kernel.git?rev=onb1%2Fkernel" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100" },
-    { name = "legiones-cannenses", marker = "extra == 'dev'", git = "https://github.com/br-collab/L.C..git?rev=66f6597d49c2451acb2141b50a34506c1a7450bc" },
+    { name = "legiones-cannenses", marker = "extra == 'dev'", git = "https://github.com/br-collab/L.C..git?rev=onb1%2Flc" },
     { name = "lxml", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9" },
     { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=23.0.1,<24" },
@@ -179,8 +179,8 @@ wheels = [
 
 [[package]]
 name = "cannae-kernel"
-version = "2.0.0"
-source = { git = "https://github.com/br-collab/cannae-kernel.git?rev=v2.0.0#bed73a45ad2496f8c6f672ff0ed4cb6bf5fd846a" }
+version = "3.0.0"
+source = { git = "https://github.com/br-collab/cannae-kernel.git?rev=onb1%2Fkernel#156f5446dd96a4d8462ef8f8828af7cadd1d59e2" }
 dependencies = [
     { name = "pydantic" },
 ]
@@ -417,8 +417,8 @@ wheels = [
 
 [[package]]
 name = "legiones-cannenses"
-version = "0.1.0"
-source = { git = "https://github.com/br-collab/L.C..git?rev=66f6597d49c2451acb2141b50a34506c1a7450bc#66f6597d49c2451acb2141b50a34506c1a7450bc" }
+version = "0.2.0"
+source = { git = "https://github.com/br-collab/L.C..git?rev=onb1%2Flc#9fb03c0e9afd37e26283a28c7c94a9ac1c493195" }
 dependencies = [
     { name = "cannae-kernel" },
     { name = "pydantic" },

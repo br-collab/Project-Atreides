@@ -38,7 +38,7 @@ dev = [
     "pyarrow-stubs>=20",
     # SIM-1B is source-only test infrastructure. It drives the committed L.C.
     # lifecycle/capture/allocation package; production imports still refuse simulator/.
-    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@66f6597d49c2451acb2141b50a34506c1a7450bc",
+    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@onb1/lc",
 ]
 
 [build-system]
