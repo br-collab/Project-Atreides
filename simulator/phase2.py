@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from statistics import median
 from typing import cast
 
 from simulator.account_transfers import TRANSFER_VARIANTS, run_account_transfers
@@ -34,11 +35,7 @@ def build_phase2_summary() -> dict[str, object]:
             "PASS": sum(row["disposition"] == "PASS" for row in rows),
             "HOLD": sum(row["disposition"] == "HOLD" for row in rows),
             "reasons": sorted(
-                {
-                    reason
-                    for row in rows
-                    for reason in cast(tuple[str, ...], row["reasons"])
-                }
+                {reason for row in rows for reason in cast(tuple[str, ...], row["reasons"])}
             ),
         }
     clearing_counts = {
@@ -61,15 +58,16 @@ def build_phase2_summary() -> dict[str, object]:
         ),
         "reasons": [],
     }
+    trade_seconds = cast(list[int], transfers["clean"]["approved_to_first_funded_trade_seconds"])
     return {
         "schema_version": "sim.phase-2/1",
         "synthetic": True,
         "approved_to_first_funded_trade_seconds": {
             "label": "synthetic",
-            "count": 3,
-            "minimum": 900,
-            "median": 1200,
-            "maximum": 1800,
+            "count": len(trade_seconds),
+            "minimum": min(trade_seconds),
+            "median": median(trade_seconds),
+            "maximum": max(trade_seconds),
         },
         "legs": {
             "CONV-2": transfer_counts,
@@ -102,7 +100,11 @@ def publish_phase2(output: Path) -> None:
         )
         + "\n\n## Not claimed\n\n- "
         + "\n- ".join(cast(list[str], summary["not_claimed"]))
-        + "\n"
+        + "\n\n## Governance scenario scope\n\n"
+        + "- G1: scenario walkthrough; the control is simulated inside the scenario "
+        + "and is not a production control\n"
+        + "- G2: scenario walkthrough; the control is simulated inside the scenario "
+        + "and is not a production control\n"
     )
     for variant in TRANSFER_VARIANTS:
         target = output / "account-transfers" / variant

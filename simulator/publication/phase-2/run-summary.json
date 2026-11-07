@@ -1,4 +1,156 @@
 {
+  "approved_to_first_funded_trade_seconds": {
+    "count": 2,
+    "label": "synthetic",
+    "maximum": 345720,
+    "median": 345690.0,
+    "minimum": 345660
+  },
+  "governance_scenarios": {
+    "controlled": {
+      "G1": {
+        "control_enabled": true,
+        "label": "scenario walkthrough; the control is simulated inside the scenario and is not a production control",
+        "records": [
+          {
+            "action_class": "CHANGE_LIMIT_OR_CONTROL",
+            "autonomy_level": "DECISION_SUPPORT",
+            "detail": "output drift 0.18 exceeded tolerance 0.05",
+            "kind": "governance_scenario",
+            "model_version": "2.0.0",
+            "observed_at": "2026-11-07T17:00:00Z",
+            "operation_id": "00000000-0000-0000-0000-000000000065",
+            "result": "DRIFT_DETECTED",
+            "scenario": "G1",
+            "stage": "detection"
+          },
+          {
+            "action_class": "CHANGE_LIMIT_OR_CONTROL",
+            "autonomy_level": "DECISION_SUPPORT",
+            "detail": "vendor model excluded from advisory service",
+            "kind": "governance_scenario",
+            "model_version": "2.0.0",
+            "observed_at": "2026-11-07T17:00:00Z",
+            "operation_id": "00000000-0000-0000-0000-000000000066",
+            "result": "VERSION_QUARANTINED",
+            "scenario": "G1",
+            "stage": "quarantine"
+          },
+          {
+            "action_class": "CHANGE_LIMIT_OR_CONTROL",
+            "autonomy_level": "DECISION_SUPPORT",
+            "detail": "last good pinned model restored",
+            "kind": "governance_scenario",
+            "model_version": "1.4.2",
+            "observed_at": "2026-11-07T17:00:00Z",
+            "operation_id": "00000000-0000-0000-0000-000000000067",
+            "result": "PIN_RESTORED",
+            "scenario": "G1",
+            "stage": "rollback"
+          }
+        ],
+        "replay_identical": true,
+        "scenario": "G1"
+      },
+      "G2": {
+        "control_enabled": true,
+        "label": "simulated, not a tested exit plan; scenario walkthrough; the control is simulated inside the scenario and is not a production control",
+        "records": [
+          {
+            "action_class": "CHANGE_LIMIT_OR_CONTROL",
+            "autonomy_level": "DECISION_SUPPORT",
+            "detail": "failover target synthetic-secondary; recovery point objective 5 minutes; recovery time objective 30 minutes; simulated, not a tested exit plan",
+            "kind": "governance_scenario",
+            "model_version": null,
+            "observed_at": "2026-11-07T17:00:00Z",
+            "operation_id": "00000000-0000-0000-0000-0000000000c9",
+            "result": "PRIMARY_UNAVAILABLE",
+            "scenario": "G2",
+            "stage": "detection"
+          },
+          {
+            "action_class": "CHANGE_LIMIT_OR_CONTROL",
+            "autonomy_level": "DECISION_SUPPORT",
+            "detail": "failover target synthetic-secondary; recovery point objective 5 minutes; recovery time objective 30 minutes; simulated, not a tested exit plan",
+            "kind": "governance_scenario",
+            "model_version": null,
+            "observed_at": "2026-11-07T17:00:00Z",
+            "operation_id": "00000000-0000-0000-0000-0000000000ca",
+            "result": "HUMAN_APPROVED",
+            "scenario": "G2",
+            "stage": "exit_decision"
+          },
+          {
+            "action_class": "CHANGE_LIMIT_OR_CONTROL",
+            "autonomy_level": "DECISION_SUPPORT",
+            "detail": "failover target synthetic-secondary; recovery point objective 5 minutes; recovery time objective 30 minutes; simulated, not a tested exit plan",
+            "kind": "governance_scenario",
+            "model_version": null,
+            "observed_at": "2026-11-07T17:00:00Z",
+            "operation_id": "00000000-0000-0000-0000-0000000000cb",
+            "result": "SECONDARY_RESTORED",
+            "scenario": "G2",
+            "stage": "restore"
+          }
+        ],
+        "replay_identical": true,
+        "scenario": "G2"
+      },
+      "G3": {
+        "control_enabled": true,
+        "named_refusal": "HUMAN_APPROVER_REQUIRED",
+        "records": [
+          {
+            "action_class": "WRITE_CORE_RECORD",
+            "autonomy_level": "DECISION_SUPPORT",
+            "detail": "APPLIED to APPROVED core-record write refused",
+            "kind": "governance_scenario",
+            "model_version": null,
+            "observed_at": "2026-11-07T17:00:00Z",
+            "operation_id": "00000000-0000-0000-0000-00000000012d",
+            "result": "HUMAN_APPROVER_REQUIRED",
+            "scenario": "G3",
+            "stage": "refused_write"
+          },
+          {
+            "action_class": "WRITE_CORE_RECORD",
+            "autonomy_level": "DECISION_SUPPORT",
+            "detail": "escalated after named refusal HUMAN_APPROVER_REQUIRED",
+            "kind": "governance_scenario",
+            "model_version": null,
+            "observed_at": "2026-11-07T17:00:00Z",
+            "operation_id": "00000000-0000-0000-0000-00000000012e",
+            "result": "HUMAN_REVIEW_REQUIRED",
+            "scenario": "G3",
+            "stage": "escalation"
+          }
+        ],
+        "replay_identical": true,
+        "scenario": "G3"
+      }
+    },
+    "negative_controls": {
+      "G1": {
+        "control_enabled": false,
+        "failed_as_expected": true,
+        "failure": "drift went undetected",
+        "scenario": "G1"
+      },
+      "G2": {
+        "control_enabled": false,
+        "failed_as_expected": true,
+        "failure": "no exit was executed",
+        "scenario": "G2"
+      },
+      "G3": {
+        "accepted_status": "APPROVED",
+        "control_enabled": false,
+        "failed_as_expected": true,
+        "failure": "unauthorized write was accepted",
+        "scenario": "G3"
+      }
+    }
+  },
   "legs": {
     "CONV-2": {
       "clean": {

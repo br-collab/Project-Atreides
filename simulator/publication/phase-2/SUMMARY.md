@@ -19,3 +19,8 @@
 - clearing-agency membership
 - real customer assets
 - real firm, account or security identifiers
+
+## Governance scenario scope
+
+- G1: scenario walkthrough; the control is simulated inside the scenario and is not a production control
+- G2: scenario walkthrough; the control is simulated inside the scenario and is not a production control
