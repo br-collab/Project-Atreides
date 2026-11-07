@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1 - 7 Nov 2026
+
+Allow builders to enable check-gated auto-merge while preserving Bill's sole release authority.
+
 ## 0.9.0 - 7 Nov 2026
 
 Add SIM-1 governance scenarios for vendor model regression, hosting provider loss, and a refused
