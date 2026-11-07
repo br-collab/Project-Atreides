@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.3 - 7 Nov 2026
+
+Harden account lifecycle evidence, chaining, transfers, metrics, and governance walkthroughs.
+
 ## 0.9.2 - 7 Nov 2026
 
 Add a zero-baseline Ruff and strict mypy quality ratchet.

@@ -498,6 +498,9 @@ Every document begins: `SYNTHETIC SIMULATION: invariants held on generated data;
 not evidence of production correctness`. A green run makes no claim about a second venue,
 protected quotes, best execution, options, repo, or the clearing-fund waterfall.
 
+G1 and G2 are scenario walkthroughs; each control is simulated inside its scenario and is not
+a production control. They remain candidates for separate production control work.
+
 ---
 
 ## License and standing
