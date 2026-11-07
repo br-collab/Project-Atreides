@@ -26,7 +26,7 @@ from cannae_kernel.envelopes import ApprovedIntentEnvelope, ExecutionEvent
 from cannae_kernel.ids import ActorId, AllocationId, EventId, IntentId, LifecycleId, OrderId
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
-from lc.events import LifecycleState
+from lc.events import LifecycleState, OrderTerms, OrderType, TimeInForce
 from lc.lifecycle import (
     ApprovedIntentPayload,
     AuthorityManifest,
@@ -397,7 +397,20 @@ def _lc_allocate_batch(
         actor=actor,
         children=(
             ChildOrder(
-                order_id=child, quantity=total, event=_event(4_000_003 + sequence * 10, base)
+                order_id=child,
+                quantity=total,
+                event=_event(4_000_003 + sequence * 10, base),
+                terms=OrderTerms(
+                    account_id=rows[0].account,
+                    strategy_id="SCF-1",
+                    issue=rows[0].issue,
+                    side=payload.side.value,
+                    order_type=OrderType.MARKET,
+                    time_in_force=TimeInForce.DAY,
+                    control_price=rows[0].price,
+                    approved_intent_digest=digest(payload),
+                    policy_expires_at=base + timedelta(days=1),
+                ),
             ),
         ),
     ).journal

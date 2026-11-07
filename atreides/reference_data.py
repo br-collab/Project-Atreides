@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from cannae_kernel.account import AccountStatus
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -29,6 +30,7 @@ class AccountRecord(_Record):
     account_id: str = Field(min_length=1)
     owner_lei: str = Field(pattern=r"^[0-9A-Z]{20}$")
     account_type: str = Field(min_length=1)
+    status: AccountStatus = AccountStatus.APPLIED
 
 
 class SettlementInstructionRecord(_Record):

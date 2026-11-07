@@ -14,7 +14,7 @@ from cannae_kernel.envelopes import ApprovedIntentEnvelope, ExecutionEvent
 from cannae_kernel.ids import ActorId, AllocationId, EventId, IntentId, LifecycleId, OrderId
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
-from lc.events import LifecycleState
+from lc.events import LifecycleState, OrderTerms, OrderType, TimeInForce
 from lc.lifecycle import (
     ApprovedIntentPayload,
     AuthorityManifest,
@@ -389,6 +389,17 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 order_id=child_id,
                 quantity=total_quantity,
                 event=_event(40_003 + run_number * 20, base),
+                terms=OrderTerms(
+                    account_id="SIM-1B-ESTATE",
+                    strategy_id="SIM-1B",
+                    issue=issue,
+                    side=payload.side.value,
+                    order_type=OrderType.MARKET,
+                    time_in_force=TimeInForce.DAY,
+                    control_price=prior_close,
+                    approved_intent_digest=digest(payload),
+                    policy_expires_at=base + timedelta(days=1),
+                ),
             ),
         ),
     ).journal
