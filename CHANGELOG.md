@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.4 - 8 Nov 2026
+
+Resolve lifecycle evidence from authoritative producer stores instead of caller-built values.
+
 ## 0.9.3 - 7 Nov 2026
 
 Harden account lifecycle evidence, chaining, transfers, metrics, and governance walkthroughs.
