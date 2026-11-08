@@ -1,20 +1,33 @@
 from datetime import UTC, datetime, timedelta
+from inspect import signature
 
 import pytest
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import digest_bytes
 from cannae_kernel.ids import ActorId
+from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
     ALLOWED_TRANSITIONS,
     TRANSITION_RULES,
     AccountLifecycleStore,
     AccountTransitionRefusedError,
+    ActorRegistryApproverVerifier,
+    AuthoritativeEvidenceResolver,
+    EligibilityResultRecord,
     FirstPermittedTradeRecord,
-    KYCDecisionReference,
+    KYCDecisionRecord,
     RefusalReason,
     TransferInRecord,
+    attest_first_permitted_trade,
+)
+from atreides.agents.tier2.eligibility import (
+    EligibilityInputs,
+    KYCEvidence,
+    OFACScreeningEvidence,
+    SanctionsScreeningEvidence,
+    verify_eligibility,
 )
 from atreides.agents.tier2.outputs import (
     EligibilityCheck,
@@ -22,16 +35,14 @@ from atreides.agents.tier2.outputs import (
     EligibilityVerification,
 )
 
-NOW = datetime(2026, 11, 7, 16, tzinfo=UTC)
-
-
-class TestApproverVerifier:
-    def is_verified_human(self, candidate: ActorRef, approval_ref: str) -> bool:
-        return bool(
-            candidate.actor_kind is ActorKind.HUMAN
-            and candidate.authenticated
-            and approval_ref == "SYN-HUMAN-001"
-        )
+NOW = datetime(2026, 11, 8, 9, tzinfo=UTC)
+ACCOUNT = "SYN-ACCOUNT-001"
+OTHER_ACCOUNT = "SYN-ACCOUNT-OTHER"
+KYC_ID = "SYN-KYC-001"
+ELIGIBILITY_ID = "SYN-ELIGIBILITY-001"
+TRANSFER_ID = "SYN-ACATS-001"
+TRADE_ID = "SYN-ORDER-001"
+APPROVAL_ID = "SYN-HUMAN-001"
 
 
 def actor(kind: ActorKind = ActorKind.HUMAN) -> ActorRef:
@@ -44,37 +55,121 @@ def actor(kind: ActorKind = ActorKind.HUMAN) -> ActorRef:
     )
 
 
-def store() -> AccountLifecycleStore:
-    return AccountLifecycleStore(TestApproverVerifier())
-
-
-def kyc(path: str = "KYC_ELIGIBLE_CLEAR", *, at: datetime = NOW) -> KYCDecisionReference:
-    payload = f'{{"path_id":"{path}"}}'
-    return KYCDecisionReference(
-        record_id="SYN-KYC-001",
-        path_id=path,
-        decided_at=at,
-        maximum_age_seconds=300,
-        payload=payload,
-        payload_digest=digest_bytes(payload.encode()),
-    )
-
-
 def eligibility(*, at: datetime = NOW, passed: bool = True) -> EligibilityVerification:
-    return EligibilityVerification(
-        checks=tuple(
-            EligibilityCheck(
-                kind=kind,
-                passed=passed,
-                failure_reason=None if passed else "synthetic eligibility failure",
-                verified_at=at,
+    if not passed:
+        return EligibilityVerification(
+            checks=tuple(
+                EligibilityCheck(
+                    kind=kind,
+                    passed=False,
+                    failure_reason="synthetic eligibility failure",
+                    verified_at=at,
+                )
+                for kind in EligibilityCheckKind
             )
-            for kind in EligibilityCheckKind
+        )
+    return verify_eligibility(
+        EligibilityInputs(
+            check_time=at,
+            kyc=KYCEvidence(
+                beneficial_owner_id="SYN-OWNER-001",
+                kyc_reference_id=KYC_ID,
+                verified_at=at - timedelta(days=1),
+                expires_at=at + timedelta(days=30),
+            ),
+            requires_kyb=False,
+            ofac_screenings=(
+                OFACScreeningEvidence(
+                    subject_id="SYN-OWNER-001",
+                    screening_id="SYN-OFAC-001",
+                    matched=False,
+                    screened_at=at,
+                ),
+            ),
+            sanctions_screenings=(
+                SanctionsScreeningEvidence(
+                    subject_id="SYN-OWNER-001",
+                    screening_id="SYN-SANCTIONS-001",
+                    matched=False,
+                    screened_at=at,
+                ),
+            ),
         )
     )
 
 
-def approve(store: AccountLifecycleStore, account: str = "SYN-ACCOUNT-001") -> None:
+def resolver(
+    *,
+    account: str = ACCOUNT,
+    kyc_path: str = "KYC_ELIGIBLE_CLEAR",
+    kyc_at: datetime = NOW,
+    kyc_chain_valid: bool = True,
+    eligibility_id: str = ELIGIBILITY_ID,
+    eligibility_at: datetime = NOW,
+    eligible: bool = True,
+    transfer_id: str = TRANSFER_ID,
+    transfer_completed: bool = True,
+    trade_wire: bytes | None = None,
+) -> AuthoritativeEvidenceResolver:
+    trade = FirstPermittedTradeRecord(
+        record_id=TRADE_ID,
+        account_id=account,
+        permitted=True,
+        traded_at=NOW,
+    )
+    return AuthoritativeEvidenceResolver(
+        kyc_dsor_records={
+            KYC_ID: KYCDecisionRecord(
+                record_id=KYC_ID,
+                account_id=account,
+                path_id=kyc_path,
+                decided_at=kyc_at,
+                maximum_age_seconds=300,
+            )
+        },
+        kyc_chain_reports={
+            KYC_ID: ChainReport(
+                ok=kyc_chain_valid,
+                event_count=1,
+                head_digest="sha256:" + "11" * 32,
+                issues=(),
+            )
+        },
+        eligibility_records={
+            eligibility_id: EligibilityResultRecord(
+                record_id=eligibility_id,
+                account_id=account,
+                verified_at=eligibility_at,
+                result=eligibility(at=eligibility_at, passed=eligible),
+            )
+        },
+        transfer_records={
+            transfer_id: TransferInRecord(
+                record_id=transfer_id,
+                account_id=account,
+                completed=transfer_completed,
+                completed_at=NOW,
+            )
+        },
+        first_trade_attestations={
+            TRADE_ID: trade_wire
+            if trade_wire is not None
+            else attest_first_permitted_trade(trade)
+        },
+    )
+
+
+def store(
+    evidence: AuthoritativeEvidenceResolver | None = None,
+    *,
+    registered: ActorRef | None = None,
+) -> AccountLifecycleStore:
+    registered = registered or actor()
+    verifier = ActorRegistryApproverVerifier({str(registered.actor_id): registered})
+    return AccountLifecycleStore(verifier, evidence or resolver())
+
+
+def approve(store: AccountLifecycleStore, account: str = ACCOUNT) -> None:
     store.apply(account)
     store.transition(
         account,
@@ -82,10 +177,10 @@ def approve(store: AccountLifecycleStore, account: str = "SYN-ACCOUNT-001") -> N
         actor=actor(),
         timestamp=NOW,
         reason="synthetic approval",
-        evidence_refs=("SYN-KYC-001", "SYN-ELIGIBILITY-001", "SYN-HUMAN-001"),
-        kyc_evidence=kyc(),
-        eligibility=eligibility(),
-        human_approval_ref="SYN-HUMAN-001",
+        evidence_refs=(APPROVAL_ID,),
+        kyc_record_id=KYC_ID,
+        eligibility_record_id=ELIGIBILITY_ID,
+        human_approval_ref=APPROVAL_ID,
     )
 
 
@@ -98,7 +193,7 @@ def approve(store: AccountLifecycleStore, account: str = "SYN-ACCOUNT-001") -> N
     ],
 )
 def test_approval_refusals(outcome, eligible, approval, reason) -> None:
-    lifecycle = store()
+    lifecycle = store(resolver(kyc_path=outcome, eligible=eligible))
     with pytest.raises(AccountTransitionRefusedError) as caught:
         lifecycle.transition(
             "SYN-ACCOUNT-001",
@@ -107,8 +202,8 @@ def test_approval_refusals(outcome, eligible, approval, reason) -> None:
             timestamp=NOW,
             reason="synthetic approval",
             evidence_refs=("SYN-EVIDENCE-001",),
-            kyc_evidence=kyc(outcome),
-            eligibility=eligibility(passed=eligible),
+            kyc_record_id=KYC_ID,
+            eligibility_record_id=ELIGIBILITY_ID,
             human_approval_ref=approval,
         )
     assert caught.value.reason is reason
@@ -123,8 +218,8 @@ def test_end_to_end_lifecycle_and_append_only_events() -> None:
         actor=actor(),
         timestamp=NOW,
         reason="clean synthetic ACATS transfer",
-        evidence_refs=("SYN-ACATS-001",),
-        transfer=TransferInRecord(record_id="SYN-ACATS-001", completed=True, completed_at=NOW),
+        evidence_refs=(),
+        transfer_record_id=TRANSFER_ID,
     )
     lifecycle.transition(
         "SYN-ACCOUNT-001",
@@ -132,10 +227,8 @@ def test_end_to_end_lifecycle_and_append_only_events() -> None:
         actor=actor(),
         timestamp=NOW,
         reason="first permitted synthetic trade",
-        evidence_refs=("SYN-ORDER-001",),
-        first_trade=FirstPermittedTradeRecord(
-            record_id="SYN-ORDER-001", permitted=True, traded_at=NOW
-        ),
+        evidence_refs=(),
+        first_trade_record_id=TRADE_ID,
     )
     assert lifecycle.status("SYN-ACCOUNT-001") is AccountStatus.ACTIVE
     assert [event.payload.status for event in lifecycle.events] == [
@@ -148,7 +241,7 @@ def test_end_to_end_lifecycle_and_append_only_events() -> None:
     )
 
 
-def test_illegal_transition_and_transfer_refusal() -> None:
+def test_illegal_transition_is_refused() -> None:
     lifecycle = store()
     with pytest.raises(AccountTransitionRefusedError, match="ILLEGAL_TRANSITION"):
         lifecycle.transition(
@@ -158,10 +251,12 @@ def test_illegal_transition_and_transfer_refusal() -> None:
             timestamp=NOW,
             reason="skip",
             evidence_refs=("SYN-ORDER-001",),
-            first_trade=FirstPermittedTradeRecord(
-                record_id="SYN-ORDER-001", permitted=True, traded_at=NOW
-            ),
+            first_trade_record_id=TRADE_ID,
         )
+
+
+def test_incomplete_transfer_record_is_refused() -> None:
+    lifecycle = store(resolver(transfer_id="SYN-ACATS-REJECT", transfer_completed=False))
     approve(lifecycle)
     with pytest.raises(AccountTransitionRefusedError, match="TRANSFER_NOT_COMPLETED"):
         lifecycle.transition(
@@ -171,26 +266,22 @@ def test_illegal_transition_and_transfer_refusal() -> None:
             timestamp=NOW,
             reason="rejected",
             evidence_refs=("SYN-ACATS-REJECT",),
-            transfer=TransferInRecord(
-                record_id="SYN-ACATS-REJECT", completed=False, completed_at=NOW
-            ),
+            transfer_record_id="SYN-ACATS-REJECT",
         )
 
 
-def test_transfer_record_must_be_referenced_by_id() -> None:
+def test_transfer_record_id_that_does_not_exist_is_refused() -> None:
     lifecycle = store()
     approve(lifecycle)
-    with pytest.raises(AccountTransitionRefusedError, match="TRANSFER_NOT_COMPLETED"):
+    with pytest.raises(AccountTransitionRefusedError, match="TRANSFER_EVIDENCE_NOT_FOUND"):
         lifecycle.transition(
             "SYN-ACCOUNT-001",
             AccountStatus.FUNDED,
             actor=actor(),
             timestamp=NOW,
             reason="completed transfer",
-            evidence_refs=("SYN-ACATS-OTHER",),
-            transfer=TransferInRecord(
-                record_id="SYN-ACATS-001", completed=True, completed_at=NOW
-            ),
+            evidence_refs=(),
+            transfer_record_id="SYN-ACATS-OTHER",
         )
 
 
@@ -220,9 +311,123 @@ def test_service_actor_cannot_reopen_restricted_account() -> None:
             timestamp=NOW + timedelta(seconds=3),
             reason="claimed reopening",
             evidence_refs=("SYN-ATTACK",),
-            kyc_evidence=kyc(at=NOW + timedelta(seconds=2)),
-            eligibility=eligibility(at=NOW + timedelta(seconds=2)),
+            kyc_record_id=KYC_ID,
+            eligibility_record_id=ELIGIBILITY_ID,
             human_approval_ref="SELF-DECLARED",
+        )
+
+
+def test_hand_built_kyc_with_self_computed_digest_is_not_authoritative() -> None:
+    forged_payload = '{"account_id":"SYN-ACCOUNT-001","path_id":"KYC_ELIGIBLE_CLEAR"}'
+    forged = {
+        "record_id": "FORGED-KYC",
+        "path_id": "KYC_ELIGIBLE_CLEAR",
+        "payload": forged_payload,
+        "payload_digest": digest_bytes(forged_payload.encode()),
+    }
+    lifecycle = store()
+    with pytest.raises(AccountTransitionRefusedError, match="KYC_EVIDENCE_NOT_FOUND"):
+        lifecycle.transition(
+            ACCOUNT,
+            AccountStatus.APPROVED,
+            actor=actor(),
+            timestamp=NOW,
+            reason="forged KYC",
+            evidence_refs=(),
+            kyc_record_id=forged["record_id"],
+            eligibility_record_id=ELIGIBILITY_ID,
+            human_approval_ref=APPROVAL_ID,
+        )
+
+
+def test_kyc_record_for_another_account_is_refused() -> None:
+    lifecycle = store(resolver(account=OTHER_ACCOUNT))
+    with pytest.raises(AccountTransitionRefusedError, match="KYC_ACCOUNT_MISMATCH"):
+        approve(lifecycle)
+
+
+def test_kyc_record_with_invalid_chain_is_refused() -> None:
+    lifecycle = store(resolver(kyc_chain_valid=False))
+    with pytest.raises(AccountTransitionRefusedError, match="KYC_CHAIN_INVALID"):
+        approve(lifecycle)
+
+
+def test_hand_built_eligibility_cannot_enter_transition() -> None:
+    forged = EligibilityVerification(
+        checks=tuple(
+            EligibilityCheck(kind=kind, passed=True, verified_at=NOW)
+            for kind in EligibilityCheckKind
+        )
+    )
+    assert forged.all_passed
+    assert "eligibility" not in signature(AccountLifecycleStore.transition).parameters
+    lifecycle = store()
+    with pytest.raises(
+        AccountTransitionRefusedError, match="ELIGIBILITY_EVIDENCE_NOT_FOUND"
+    ):
+        lifecycle.transition(
+            ACCOUNT,
+            AccountStatus.APPROVED,
+            actor=actor(),
+            timestamp=NOW,
+            reason="forged eligibility",
+            evidence_refs=(),
+            kyc_record_id=KYC_ID,
+            eligibility_record_id="FORGED-ELIGIBILITY",
+            human_approval_ref=APPROVAL_ID,
+        )
+
+
+def test_first_trade_with_tampered_attestation_is_refused() -> None:
+    valid_trade = FirstPermittedTradeRecord(
+        record_id=TRADE_ID,
+        account_id=ACCOUNT,
+        permitted=True,
+        traded_at=NOW,
+    )
+    tampered = attest_first_permitted_trade(valid_trade).replace(
+        b'\\"permitted\\":true', b'\\"permitted\\":false'
+    )
+    assert tampered != attest_first_permitted_trade(valid_trade)
+    lifecycle = store(resolver(trade_wire=tampered))
+    approve(lifecycle)
+    lifecycle.transition(
+        ACCOUNT,
+        AccountStatus.FUNDED,
+        actor=actor(),
+        timestamp=NOW,
+        reason="funded",
+        evidence_refs=(),
+        transfer_record_id=TRANSFER_ID,
+    )
+    with pytest.raises(
+        AccountTransitionRefusedError, match="FIRST_TRADE_EVIDENCE_TAMPERED"
+    ):
+        lifecycle.transition(
+            ACCOUNT,
+            AccountStatus.ACTIVE,
+            actor=actor(),
+            timestamp=NOW,
+            reason="tampered trade",
+            evidence_refs=(),
+            first_trade_record_id=TRADE_ID,
+        )
+
+
+def test_registry_service_actor_is_not_a_human_approver() -> None:
+    service = actor(ActorKind.DETERMINISTIC_SERVICE)
+    lifecycle = store(registered=service)
+    with pytest.raises(AccountTransitionRefusedError, match="HUMAN_APPROVER_REQUIRED"):
+        lifecycle.transition(
+            ACCOUNT,
+            AccountStatus.APPROVED,
+            actor=service,
+            timestamp=NOW,
+            reason="service approval",
+            evidence_refs=(),
+            kyc_record_id=KYC_ID,
+            eligibility_record_id=ELIGIBILITY_ID,
+            human_approval_ref=APPROVAL_ID,
         )
 
 
@@ -237,7 +442,7 @@ def test_service_actor_cannot_reopen_restricted_account() -> None:
     ],
 )
 def test_ladder_outcomes_have_distinct_refusals(path, refusal) -> None:
-    lifecycle = store()
+    lifecycle = store(resolver(kyc_path=path))
     with pytest.raises(AccountTransitionRefusedError) as caught:
         lifecycle.transition(
             "SYN-ACCOUNT-001",
@@ -246,8 +451,8 @@ def test_ladder_outcomes_have_distinct_refusals(path, refusal) -> None:
             timestamp=NOW,
             reason="synthetic approval",
             evidence_refs=("SYN-KYC-001",),
-            kyc_evidence=kyc(path),
-            eligibility=eligibility(),
+            kyc_record_id=KYC_ID,
+            eligibility_record_id=ELIGIBILITY_ID,
             human_approval_ref="SYN-HUMAN-001",
         )
     assert caught.value.reason is refusal
@@ -277,8 +482,8 @@ def test_restricted_reapproval_requires_fresh_evidence() -> None:
             timestamp=NOW + timedelta(seconds=2),
             reason="stale reopening",
             evidence_refs=("SYN-KYC-001",),
-            kyc_evidence=kyc(),
-            eligibility=eligibility(),
+            kyc_record_id=KYC_ID,
+            eligibility_record_id=ELIGIBILITY_ID,
             human_approval_ref="SYN-HUMAN-001",
         )
 
@@ -292,8 +497,8 @@ def test_chain_detects_removal_reordering_and_editing() -> None:
         actor=actor(),
         timestamp=NOW + timedelta(seconds=1),
         reason="funded",
-        evidence_refs=("SYN-ACATS-001",),
-        transfer=TransferInRecord(record_id="SYN-ACATS-001", completed=True, completed_at=NOW),
+        evidence_refs=(),
+        transfer_record_id=TRANSFER_ID,
     )
     original = list(lifecycle._events)
     lifecycle._events = original[:1]

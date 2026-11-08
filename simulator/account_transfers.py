@@ -4,27 +4,32 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
-from cannae_kernel.canonical import digest_bytes
 from cannae_kernel.ids import ActorId
+from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
     AccountLifecycleStore,
     ActorRegistryApproverVerifier,
+    AuthoritativeEvidenceResolver,
+    EligibilityResultRecord,
     FirstPermittedTradeRecord,
-    KYCDecisionReference,
+    KYCDecisionRecord,
     TransferInRecord,
+    attest_first_permitted_trade,
 )
-from atreides.agents.tier2.outputs import (
-    EligibilityCheck,
-    EligibilityCheckKind,
-    EligibilityVerification,
+from atreides.agents.tier2.eligibility import (
+    EligibilityInputs,
+    KYCEvidence,
+    OFACScreeningEvidence,
+    SanctionsScreeningEvidence,
+    verify_eligibility,
 )
 from atreides.books.ledger import (
     AccountType,
@@ -48,33 +53,101 @@ TRANSFER_VARIANTS: tuple[TransferVariant, ...] = (
 FINRA_LICENSE_GATE = "INDETERMINATE"
 
 
-def _lifecycle_actor() -> ActorRef:
-    return ActorRef(
-        actor_id=ActorId("act_01K00000000000000000000000"),
-        actor_kind=ActorKind.HUMAN,
-        role="synthetic transfer approver",
-        entitlement_refs=("SIM-1-ACATS",),
-        authenticated=True,
+_C2_TRANSFER_APPROVER = ActorRef(
+    actor_id=ActorId("act_01K00000000000000000000000"),
+    actor_kind=ActorKind.HUMAN,
+    role="synthetic transfer approver",
+    entitlement_refs=("SIM-1-ACATS",),
+    authenticated=True,
+)
+_C2_ACTOR_REGISTRY = {
+    str(_C2_TRANSFER_APPROVER.actor_id): _C2_TRANSFER_APPROVER,
+}
+
+
+def _eligibility_result(account: str, at: datetime) -> EligibilityResultRecord:
+    result = verify_eligibility(
+        EligibilityInputs(
+            check_time=at,
+            kyc=KYCEvidence(
+                beneficial_owner_id=account,
+                kyc_reference_id=f"SIM-1-KYC-{account}",
+                verified_at=at,
+                expires_at=at + timedelta(days=30),
+            ),
+            requires_kyb=False,
+            ofac_screenings=(
+                OFACScreeningEvidence(
+                    subject_id=account,
+                    screening_id=f"SIM-1-OFAC-{account}",
+                    matched=False,
+                    screened_at=at,
+                ),
+            ),
+            sanctions_screenings=(
+                SanctionsScreeningEvidence(
+                    subject_id=account,
+                    screening_id=f"SIM-1-SANCTIONS-{account}",
+                    matched=False,
+                    screened_at=at,
+                ),
+            ),
+        )
+    )
+    return EligibilityResultRecord(
+        record_id=f"SIM-1-ELIGIBILITY-{account}",
+        account_id=account,
+        verified_at=at,
+        result=result,
     )
 
 
-def _approval_evidence(at: datetime) -> tuple[KYCDecisionReference, EligibilityVerification]:
-    payload = '{"path_id":"KYC_ELIGIBLE_CLEAR"}'
-    return (
-        KYCDecisionReference(
-            record_id="SIM-1-KYC",
+def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
+    kyc_records: dict[str, KYCDecisionRecord] = {}
+    eligibility_records: dict[str, EligibilityResultRecord] = {}
+    transfer_records: dict[str, TransferInRecord] = {}
+    trade_attestations: dict[str, bytes] = {}
+    for index, line in enumerate(STATEMENT, 1):
+        kyc_id = f"SIM-1-KYC-{line.account}"
+        transfer_id = f"SYN-ACATS-{index:04d}"
+        trade_id = f"SYN-LC-TRADE-{index:04d}"
+        kyc_records[kyc_id] = KYCDecisionRecord(
+            record_id=kyc_id,
+            account_id=line.account,
             path_id="KYC_ELIGIBLE_CLEAR",
             decided_at=at,
             maximum_age_seconds=300,
-            payload=payload,
-            payload_digest=digest_bytes(payload.encode()),
-        ),
-        EligibilityVerification(
-            checks=tuple(
-                EligibilityCheck(kind=kind, passed=True, verified_at=at)
-                for kind in EligibilityCheckKind
+        )
+        eligibility = _eligibility_result(line.account, at)
+        eligibility_records[eligibility.record_id] = eligibility
+        transfer_records[transfer_id] = TransferInRecord(
+            record_id=transfer_id,
+            account_id=line.account,
+            completed=True,
+            completed_at=datetime(2026, 10, 5, 14, tzinfo=UTC),
+        )
+        trade_attestations[trade_id] = attest_first_permitted_trade(
+            FirstPermittedTradeRecord(
+                record_id=trade_id,
+                account_id=line.account,
+                permitted=True,
+                traded_at=datetime(2026, 10, 5, 14, minute=14 + index, tzinfo=UTC),
             )
-        ),
+        )
+    return AuthoritativeEvidenceResolver(
+        kyc_dsor_records=kyc_records,
+        kyc_chain_reports={
+            record_id: ChainReport(
+                ok=True,
+                event_count=1,
+                head_digest="sha256:" + "11" * 32,
+                issues=(),
+            )
+            for record_id in kyc_records
+        },
+        eligibility_records=eligibility_records,
+        transfer_records=transfer_records,
+        first_trade_attestations=trade_attestations,
     )
 
 
@@ -211,14 +284,16 @@ def run_account_transfers(  # noqa: PLR0915
     evaluated_at = datetime(2026, 10, 9 if variant == "late" else 5, 14, tzinfo=UTC)
     books = EquitiesBooks(break_owner="CONV_2_TRANSFER_OPS")
     closes: list[TransferClose] = []
-    lifecycle_actor = _lifecycle_actor()
+    lifecycle_actor = _C2_TRANSFER_APPROVER
     lifecycle = AccountLifecycleStore(
-        ActorRegistryApproverVerifier({str(lifecycle_actor.actor_id): lifecycle_actor})
+        ActorRegistryApproverVerifier(_C2_ACTOR_REGISTRY),
+        _evidence_resolver(instruction_at),
     )
 
     for index, line in enumerate(STATEMENT, 1):
         transfer_id = f"SYN-ACATS-{index:04d}"
-        kyc_evidence, eligibility = _approval_evidence(instruction_at)
+        kyc_id = f"SIM-1-KYC-{line.account}"
+        eligibility_id = f"SIM-1-ELIGIBILITY-{line.account}"
         lifecycle.apply(line.account)
         lifecycle.transition(
             line.account,
@@ -226,9 +301,9 @@ def run_account_transfers(  # noqa: PLR0915
             actor=lifecycle_actor,
             timestamp=instruction_at,
             reason="synthetic account approved before transfer",
-            evidence_refs=(kyc_evidence.record_id, "SIM-1-ELIGIBILITY", "SIM-1-HUMAN"),
-            kyc_evidence=kyc_evidence,
-            eligibility=eligibility,
+            evidence_refs=("SIM-1-HUMAN",),
+            kyc_record_id=kyc_id,
+            eligibility_record_id=eligibility_id,
             human_approval_ref="SIM-1-HUMAN",
         )
         assessment = assess_acats(
@@ -291,10 +366,8 @@ def run_account_transfers(  # noqa: PLR0915
                 actor=lifecycle_actor,
                 timestamp=evaluated_at,
                 reason="completed synthetic transfer-in",
-                evidence_refs=(transfer_id,),
-                transfer=TransferInRecord(
-                    record_id=transfer_id, completed=True, completed_at=evaluated_at
-                ),
+                evidence_refs=(),
+                transfer_record_id=transfer_id,
             )
             trade_time = evaluated_at.replace(minute=evaluated_at.minute + index)
             lifecycle.transition(
@@ -303,12 +376,8 @@ def run_account_transfers(  # noqa: PLR0915
                 actor=lifecycle_actor,
                 timestamp=trade_time,
                 reason="first permitted synthetic L.C. trade",
-                evidence_refs=(f"SYN-LC-TRADE-{index:04d}",),
-                first_trade=FirstPermittedTradeRecord(
-                    record_id=f"SYN-LC-TRADE-{index:04d}",
-                    permitted=True,
-                    traded_at=trade_time,
-                ),
+                evidence_refs=(),
+                first_trade_record_id=f"SYN-LC-TRADE-{index:04d}",
             )
             lifecycle_status = lifecycle.status(line.account).value
             exception_owner = None
@@ -319,10 +388,8 @@ def run_account_transfers(  # noqa: PLR0915
                 actor=lifecycle_actor,
                 timestamp=evaluated_at,
                 reason="completed transfer-in with owned residual",
-                evidence_refs=(transfer_id,),
-                transfer=TransferInRecord(
-                    record_id=transfer_id, completed=True, completed_at=evaluated_at
-                ),
+                evidence_refs=(),
+                transfer_record_id=transfer_id,
             )
             lifecycle_status = lifecycle.status(line.account).value
             exception_owner = "ACATS_RESIDUAL_OPERATIONS"

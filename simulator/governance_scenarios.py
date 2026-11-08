@@ -8,20 +8,24 @@ from uuid import UUID
 
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
-from cannae_kernel.canonical import digest_bytes
 from cannae_kernel.governance import ActionClass, AutonomyLevel
 from cannae_kernel.ids import ActorId
+from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
     AccountLifecycleStore,
     AccountTransitionRefusedError,
     ActorRegistryApproverVerifier,
-    KYCDecisionReference,
+    AuthoritativeEvidenceResolver,
+    EligibilityResultRecord,
+    KYCDecisionRecord,
 )
-from atreides.agents.tier2.outputs import (
-    EligibilityCheck,
-    EligibilityCheckKind,
-    EligibilityVerification,
+from atreides.agents.tier2.eligibility import (
+    EligibilityInputs,
+    KYCEvidence,
+    OFACScreeningEvidence,
+    SanctionsScreeningEvidence,
+    verify_eligibility,
 )
 from atreides.dsor.governance_scenario import GovernanceScenarioEvidence
 from atreides.dsor.store import DSORStore
@@ -32,6 +36,14 @@ _WALKTHROUGH_LABEL = (
     "scenario walkthrough; the control is simulated inside the scenario and is not a "
     "production control"
 )
+_G3_SERVICE_ACTOR = ActorRef(
+    actor_id=ActorId("act_01K00000000000000000000000"),
+    actor_kind=ActorKind.DETERMINISTIC_SERVICE,
+    role="synthetic account agent",
+    entitlement_refs=("SIM-1-G3",),
+    authenticated=True,
+)
+_C2_G3_ACTOR_REGISTRY = {str(_G3_SERVICE_ACTOR.actor_id): _G3_SERVICE_ACTOR}
 
 
 class _PermissiveApproverVerifier:
@@ -40,24 +52,63 @@ class _PermissiveApproverVerifier:
         return True
 
 
-def _kyc() -> KYCDecisionReference:
-    payload = '{"path_id":"KYC_ELIGIBLE_CLEAR"}'
-    return KYCDecisionReference(
-        record_id="SIM-1-G3-KYC",
-        path_id="KYC_ELIGIBLE_CLEAR",
-        decided_at=_NOW,
-        maximum_age_seconds=300,
-        payload=payload,
-        payload_digest=digest_bytes(payload.encode()),
-    )
-
-
-def _eligibility() -> EligibilityVerification:
-    return EligibilityVerification(
-        checks=tuple(
-            EligibilityCheck(kind=kind, passed=True, verified_at=_NOW)
-            for kind in EligibilityCheckKind
+def _evidence_resolver() -> AuthoritativeEvidenceResolver:
+    verification = verify_eligibility(
+        EligibilityInputs(
+            check_time=_NOW,
+            kyc=KYCEvidence(
+                beneficial_owner_id="SYN-G3-OWNER",
+                kyc_reference_id="SIM-1-G3-KYC",
+                verified_at=_NOW,
+                expires_at=datetime(2026, 12, 7, 17, tzinfo=UTC),
+            ),
+            requires_kyb=False,
+            ofac_screenings=(
+                OFACScreeningEvidence(
+                    subject_id="SYN-G3-OWNER",
+                    screening_id="SIM-1-G3-OFAC",
+                    matched=False,
+                    screened_at=_NOW,
+                ),
+            ),
+            sanctions_screenings=(
+                SanctionsScreeningEvidence(
+                    subject_id="SYN-G3-OWNER",
+                    screening_id="SIM-1-G3-SANCTIONS",
+                    matched=False,
+                    screened_at=_NOW,
+                ),
+            ),
         )
+    )
+    return AuthoritativeEvidenceResolver(
+        kyc_dsor_records={
+            "SIM-1-G3-KYC": KYCDecisionRecord(
+                record_id="SIM-1-G3-KYC",
+                account_id="SYN-G3",
+                path_id="KYC_ELIGIBLE_CLEAR",
+                decided_at=_NOW,
+                maximum_age_seconds=300,
+            )
+        },
+        kyc_chain_reports={
+            "SIM-1-G3-KYC": ChainReport(
+                ok=True,
+                event_count=1,
+                head_digest="sha256:" + "11" * 32,
+                issues=(),
+            )
+        },
+        eligibility_records={
+            "SIM-1-G3-ELIGIBILITY": EligibilityResultRecord(
+                record_id="SIM-1-G3-ELIGIBILITY",
+                account_id="SYN-G3",
+                verified_at=_NOW,
+                result=verification,
+            )
+        },
+        transfer_records={},
+        first_trade_attestations={},
     )
 
 
@@ -185,17 +236,13 @@ def run_hosting_provider_loss(*, control_enabled: bool = True) -> dict[str, obje
 
 def run_unauthorized_core_write(*, control_enabled: bool = True) -> dict[str, object]:
     """Exercise the ONB-1 human approval gate for a core lifecycle write."""
-    actor = ActorRef(
-        actor_id=ActorId("act_01K00000000000000000000000"),
-        actor_kind=ActorKind.DETERMINISTIC_SERVICE,
-        role="synthetic account agent",
-        entitlement_refs=("SIM-1-G3",),
-        authenticated=True,
-    )
+    actor = _G3_SERVICE_ACTOR
     verifier = (
-        ActorRegistryApproverVerifier({}) if control_enabled else _PermissiveApproverVerifier()
+        ActorRegistryApproverVerifier(_C2_G3_ACTOR_REGISTRY)
+        if control_enabled
+        else _PermissiveApproverVerifier()
     )
-    lifecycle = AccountLifecycleStore(verifier)
+    lifecycle = AccountLifecycleStore(verifier, _evidence_resolver())
     lifecycle.apply("SYN-G3")
     if not control_enabled:
         lifecycle.transition(
@@ -205,8 +252,8 @@ def run_unauthorized_core_write(*, control_enabled: bool = True) -> dict[str, ob
             timestamp=_NOW,
             reason="synthetic unauthorized transition attempt",
             evidence_refs=("SIM-1-G3",),
-            kyc_evidence=_kyc(),
-            eligibility=_eligibility(),
+            kyc_record_id="SIM-1-G3-KYC",
+            eligibility_record_id="SIM-1-G3-ELIGIBILITY",
             human_approval_ref="SYN-CLAIMED-APPROVAL",
         )
         return {
@@ -224,8 +271,8 @@ def run_unauthorized_core_write(*, control_enabled: bool = True) -> dict[str, ob
             timestamp=_NOW,
             reason="synthetic unauthorized transition attempt",
             evidence_refs=("SIM-1-G3",),
-            kyc_evidence=_kyc(),
-            eligibility=_eligibility(),
+            kyc_record_id="SIM-1-G3-KYC",
+            eligibility_record_id="SIM-1-G3-ELIGIBILITY",
             human_approval_ref="SYN-CLAIMED-APPROVAL",
         )
     except AccountTransitionRefusedError as exc:

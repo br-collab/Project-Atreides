@@ -35,12 +35,22 @@ class RefusalReason(StrEnum):
     PROHIBITED = "PROHIBITED"
     KYC_EVIDENCE_TAMPERED = "KYC_EVIDENCE_TAMPERED"
     KYC_EVIDENCE_STALE = "KYC_EVIDENCE_STALE"
+    KYC_EVIDENCE_NOT_FOUND = "KYC_EVIDENCE_NOT_FOUND"
+    KYC_ACCOUNT_MISMATCH = "KYC_ACCOUNT_MISMATCH"
+    KYC_CHAIN_INVALID = "KYC_CHAIN_INVALID"
     ATREIDES_ELIGIBILITY_FAILED = "ATREIDES_ELIGIBILITY_FAILED"
+    ELIGIBILITY_EVIDENCE_NOT_FOUND = "ELIGIBILITY_EVIDENCE_NOT_FOUND"
+    ELIGIBILITY_ACCOUNT_MISMATCH = "ELIGIBILITY_ACCOUNT_MISMATCH"
     HUMAN_APPROVAL_MISSING = "HUMAN_APPROVAL_MISSING"
     HUMAN_APPROVER_REQUIRED = "HUMAN_APPROVER_REQUIRED"
     EVIDENCE_NOT_FRESH = "EVIDENCE_NOT_FRESH"
     TRANSFER_NOT_COMPLETED = "TRANSFER_NOT_COMPLETED"
+    TRANSFER_EVIDENCE_NOT_FOUND = "TRANSFER_EVIDENCE_NOT_FOUND"
+    TRANSFER_ACCOUNT_MISMATCH = "TRANSFER_ACCOUNT_MISMATCH"
     FIRST_TRADE_NOT_PERMITTED = "FIRST_TRADE_NOT_PERMITTED"
+    FIRST_TRADE_EVIDENCE_NOT_FOUND = "FIRST_TRADE_EVIDENCE_NOT_FOUND"
+    FIRST_TRADE_ACCOUNT_MISMATCH = "FIRST_TRADE_ACCOUNT_MISMATCH"
+    FIRST_TRADE_EVIDENCE_TAMPERED = "FIRST_TRADE_EVIDENCE_TAMPERED"
     REASON_REQUIRED = "REASON_REQUIRED"
     CHAIN_INVALID = "CHAIN_INVALID"
 
@@ -60,21 +70,31 @@ class AccountEvent(BaseModel):
     evidence_refs: tuple[str, ...] = Field(min_length=1)
 
 
-class KYCDecisionReference(BaseModel):
-    """Attested Decision System of Record reference from the KYC ladder."""
+class KYCDecisionRecord(BaseModel):
+    """Authoritative KYC ladder record resolved from the DSOR."""
 
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
     record_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
     path_id: str = Field(min_length=1)
     decided_at: datetime
     maximum_age_seconds: int = Field(gt=0)
-    payload: str = Field(min_length=1)
-    payload_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+
+
+class EligibilityResultRecord(BaseModel):
+    """Stored output from one authoritative ``verify_eligibility`` run."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+    record_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
+    verified_at: datetime
+    result: EligibilityVerification
 
 
 class TransferInRecord(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
     record_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
     completed: bool
     completed_at: datetime
 
@@ -82,8 +102,105 @@ class TransferInRecord(BaseModel):
 class FirstPermittedTradeRecord(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
     record_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
     permitted: bool
     traded_at: datetime
+
+
+class AttestedFirstPermittedTradeRecord(BaseModel):
+    """Exact L.C. payload plus its digest, following the account-status pattern."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+    payload_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+    payload: str = Field(min_length=1)
+
+
+class EvidenceResolver(Protocol):
+    """Resolve references only across authoritative producer boundaries."""
+
+    def resolve_kyc(self, record_id: str) -> KYCDecisionRecord: ...
+
+    def resolve_eligibility(self, record_id: str) -> EligibilityResultRecord: ...
+
+    def resolve_transfer_in(self, record_id: str) -> TransferInRecord: ...
+
+    def resolve_first_trade(self, record_id: str) -> FirstPermittedTradeRecord: ...
+
+
+class AuthoritativeEvidenceResolver:
+    """Read-only resolver over DSOR, eligibility, ACATS, and L.C. producer stores."""
+
+    def __init__(
+        self,
+        *,
+        kyc_dsor_records: Mapping[str, KYCDecisionRecord],
+        kyc_chain_reports: Mapping[str, ChainReport],
+        eligibility_records: Mapping[str, EligibilityResultRecord],
+        transfer_records: Mapping[str, TransferInRecord],
+        first_trade_attestations: Mapping[str, bytes],
+    ) -> None:
+        self._kyc_dsor_records = kyc_dsor_records
+        self._kyc_chain_reports = kyc_chain_reports
+        self._eligibility_records = eligibility_records
+        self._transfer_records = transfer_records
+        self._first_trade_attestations = first_trade_attestations
+
+    def resolve_kyc(self, record_id: str) -> KYCDecisionRecord:
+        record = self._kyc_dsor_records.get(record_id)
+        if record is None:
+            raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_NOT_FOUND)
+        report = self._kyc_chain_reports.get(record_id)
+        if report is None or not report.ok:
+            raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
+        return record
+
+    def resolve_eligibility(self, record_id: str) -> EligibilityResultRecord:
+        record = self._eligibility_records.get(record_id)
+        if record is None:
+            raise AccountTransitionRefusedError(RefusalReason.ELIGIBILITY_EVIDENCE_NOT_FOUND)
+        return record
+
+    def resolve_transfer_in(self, record_id: str) -> TransferInRecord:
+        record = self._transfer_records.get(record_id)
+        if record is None:
+            raise AccountTransitionRefusedError(RefusalReason.TRANSFER_EVIDENCE_NOT_FOUND)
+        return record
+
+    def resolve_first_trade(self, record_id: str) -> FirstPermittedTradeRecord:
+        wire = self._first_trade_attestations.get(record_id)
+        if wire is None:
+            raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_NOT_FOUND)
+        try:
+            attestation = AttestedFirstPermittedTradeRecord.model_validate_json(wire)
+        except ValueError as exc:
+            raise AccountTransitionRefusedError(
+                RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED
+            ) from exc
+        payload = attestation.payload.encode()
+        if digest_bytes(payload) != attestation.payload_digest:
+            raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED)
+        try:
+            record = FirstPermittedTradeRecord.model_validate_json(payload)
+        except ValueError as exc:
+            raise AccountTransitionRefusedError(
+                RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED
+            ) from exc
+        if record.record_id != record_id:
+            raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED)
+        return record
+
+
+def attest_first_permitted_trade(record: FirstPermittedTradeRecord) -> bytes:
+    """Produce the L.C. attestation accepted by the authoritative resolver."""
+
+    payload = canonical_bytes(record)
+    return (
+        AttestedFirstPermittedTradeRecord(
+            payload_digest=digest_bytes(payload), payload=payload.decode()
+        )
+        .model_dump_json()
+        .encode()
+    )
 
 
 class ApproverVerifier(Protocol):
@@ -180,8 +297,11 @@ TRANSITION_RULES: dict[tuple[AccountStatus, AccountStatus], TransitionRule] = {
 
 
 class AccountLifecycleStore:
-    def __init__(self, approver_verifier: ApproverVerifier) -> None:
+    def __init__(
+        self, approver_verifier: ApproverVerifier, evidence_resolver: EvidenceResolver
+    ) -> None:
         self._approver_verifier = approver_verifier
+        self._evidence_resolver = evidence_resolver
         self._events: list[EventEnvelope[AccountEvent]] = []
         self._lifecycle_ids: dict[str, LifecycleId] = {}
         self._checkpoints: dict[str, JournalCheckpoint] = {}
@@ -218,11 +338,11 @@ class AccountLifecycleStore:
             raise AccountTransitionRefusedError(RefusalReason.HUMAN_APPROVER_REQUIRED)
 
     @staticmethod
-    def _verify_kyc(evidence: KYCDecisionReference | None, timestamp: datetime) -> None:
-        if evidence is None:
-            raise AccountTransitionRefusedError(RefusalReason.KYC_MISSING)
-        if digest_bytes(evidence.payload.encode()) != evidence.payload_digest:
-            raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_TAMPERED)
+    def _verify_kyc(
+        evidence: KYCDecisionRecord, account_id: str, timestamp: datetime
+    ) -> None:
+        if evidence.account_id != account_id:
+            raise AccountTransitionRefusedError(RefusalReason.KYC_ACCOUNT_MISMATCH)
         if (timestamp - evidence.decided_at).total_seconds() > evidence.maximum_age_seconds:
             raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_STALE)
         refusals = {
@@ -246,11 +366,11 @@ class AccountLifecycleStore:
         timestamp: datetime,
         reason: str,
         evidence_refs: tuple[str, ...],
-        kyc_evidence: KYCDecisionReference | None = None,
-        eligibility: EligibilityVerification | None = None,
+        kyc_record_id: str | None = None,
+        eligibility_record_id: str | None = None,
         human_approval_ref: str | None = None,
-        transfer: TransferInRecord | None = None,
-        first_trade: FirstPermittedTradeRecord | None = None,
+        transfer_record_id: str | None = None,
+        first_trade_record_id: str | None = None,
     ) -> EventEnvelope[AccountEvent]:
         prior = self.status(account_id)
         rule = TRANSITION_RULES.get((prior, target))
@@ -264,8 +384,11 @@ class AccountLifecycleStore:
         if Requirement.VERIFIED_HUMAN in requirements:
             self._verify_human(actor, human_approval_ref)
         if Requirement.VERIFIED_KYC in requirements:
+            if kyc_record_id is None:
+                raise AccountTransitionRefusedError(RefusalReason.KYC_MISSING)
+            kyc_evidence = self._evidence_resolver.resolve_kyc(kyc_record_id)
             try:
-                self._verify_kyc(kyc_evidence, timestamp)
+                self._verify_kyc(kyc_evidence, account_id, timestamp)
             except AccountTransitionRefusedError as exc:
                 if exc.reason is RefusalReason.PROHIBITED:
                     self._append_event(
@@ -274,47 +397,69 @@ class AccountLifecycleStore:
                         actor=actor,
                         timestamp=timestamp,
                         reason="prohibited KYC ladder outcome",
-                        evidence_refs=evidence_refs,
+                        evidence_refs=tuple(dict.fromkeys((*evidence_refs, kyc_record_id))),
                     )
                 raise
         if Requirement.VERIFIED_ELIGIBILITY in requirements:
-            if eligibility is None or not eligibility.all_passed:
+            if eligibility_record_id is None:
+                raise AccountTransitionRefusedError(
+                    RefusalReason.ELIGIBILITY_EVIDENCE_NOT_FOUND
+                )
+            eligibility = self._evidence_resolver.resolve_eligibility(
+                eligibility_record_id
+            )
+            if eligibility.account_id != account_id:
+                raise AccountTransitionRefusedError(
+                    RefusalReason.ELIGIBILITY_ACCOUNT_MISMATCH
+                )
+            if not eligibility.result.all_passed:
                 raise AccountTransitionRefusedError(RefusalReason.ATREIDES_ELIGIBILITY_FAILED)
         if Requirement.FRESH_AFTER_RESTRICTION in requirements:
             restriction_time = self._account_events(account_id)[-1].times.processing_time
-            eligibility_times = (
-                ()
-                if eligibility is None
-                else tuple(check.verified_at for check in eligibility.checks)
-            )
             if (
-                kyc_evidence is None
-                or kyc_evidence.decided_at <= restriction_time
-                or not eligibility_times
-                or min(eligibility_times) <= restriction_time
+                kyc_evidence.decided_at <= restriction_time
+                or eligibility.verified_at <= restriction_time
             ):
                 raise AccountTransitionRefusedError(RefusalReason.EVIDENCE_NOT_FRESH)
         if Requirement.COMPLETED_TRANSFER in requirements:
-            if (
-                transfer is None
-                or not transfer.completed
-                or transfer.record_id not in evidence_refs
-            ):
+            if transfer_record_id is None:
+                raise AccountTransitionRefusedError(
+                    RefusalReason.TRANSFER_EVIDENCE_NOT_FOUND
+                )
+            transfer = self._evidence_resolver.resolve_transfer_in(transfer_record_id)
+            if transfer.account_id != account_id:
+                raise AccountTransitionRefusedError(RefusalReason.TRANSFER_ACCOUNT_MISMATCH)
+            if not transfer.completed:
                 raise AccountTransitionRefusedError(RefusalReason.TRANSFER_NOT_COMPLETED)
         if Requirement.PERMITTED_TRADE in requirements:
-            if (
-                first_trade is None
-                or not first_trade.permitted
-                or first_trade.record_id not in evidence_refs
-            ):
+            if first_trade_record_id is None:
+                raise AccountTransitionRefusedError(
+                    RefusalReason.FIRST_TRADE_EVIDENCE_NOT_FOUND
+                )
+            first_trade = self._evidence_resolver.resolve_first_trade(first_trade_record_id)
+            if first_trade.account_id != account_id:
+                raise AccountTransitionRefusedError(
+                    RefusalReason.FIRST_TRADE_ACCOUNT_MISMATCH
+                )
+            if not first_trade.permitted:
                 raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_NOT_PERMITTED)
+        resolved_refs = tuple(
+            value
+            for value in (
+                kyc_record_id,
+                eligibility_record_id,
+                transfer_record_id,
+                first_trade_record_id,
+            )
+            if value is not None
+        )
         return self._append_event(
             account_id,
             target,
             actor=actor,
             timestamp=timestamp,
             reason=reason,
-            evidence_refs=evidence_refs,
+            evidence_refs=tuple(dict.fromkeys((*evidence_refs, *resolved_refs))),
         )
 
     def _append_event(
