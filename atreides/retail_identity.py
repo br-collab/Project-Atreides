@@ -15,6 +15,19 @@ from typing import Literal, Self, TypeVar
 from cannae_kernel.actor import ActorRef
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+PROFILE_COMPLETENESS_FIELDS = (
+    "employment_status",
+    "annual_income_band",
+    "net_worth_band",
+    "liquid_net_worth_band",
+    "tax_status",
+    "investment_objectives",
+    "risk_tolerance",
+    "time_horizon",
+    "liquidity_needs",
+    "investment_experience",
+)
+
 VerificationStatus = Literal["TO_VERIFY_AGAINST_PRIMARY_TEXT"]
 
 
@@ -90,6 +103,15 @@ ACCOUNT_RECORD_POLICIES = (
         retention_days=1825,
     ),
 )
+
+
+class PrincipalApproverPolicyRow(_Record):
+    citation: Literal["FINRA Rule 4512"] = "FINRA Rule 4512"
+    allow_same_person: bool
+    verification_status: VerificationStatus = "TO_VERIFY_AGAINST_PRIMARY_TEXT"
+
+
+PRINCIPAL_APPROVER_POLICY = PrincipalApproverPolicyRow(allow_same_person=False)
 
 
 class CIPOutcome(StrEnum):
@@ -227,19 +249,7 @@ class CustomerProfile(_Record):
 
     @property
     def missing_required_fields(self) -> tuple[str, ...]:
-        required = (
-            "employment_status",
-            "annual_income_band",
-            "net_worth_band",
-            "liquid_net_worth_band",
-            "tax_status",
-            "investment_objectives",
-            "risk_tolerance",
-            "time_horizon",
-            "liquidity_needs",
-            "investment_experience",
-        )
-        return tuple(name for name in required if not getattr(self, name))
+        return tuple(name for name in PROFILE_COMPLETENESS_FIELDS if not getattr(self, name))
 
     @property
     def complete(self) -> bool:
