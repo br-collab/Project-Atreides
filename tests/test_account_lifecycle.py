@@ -1,4 +1,5 @@
-from datetime import UTC, datetime, timedelta
+import json
+from datetime import UTC, date, datetime, timedelta
 from inspect import signature
 
 import pytest
@@ -7,6 +8,12 @@ from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import digest_bytes
 from cannae_kernel.ids import ActorId
 from cannae_kernel.journal import ChainReport
+from cannae_kernel.signed_attestation import (
+    PublicKeyRecord,
+    PublicKeyRegistry,
+    pinned_public_key_registry,
+)
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from atreides.account_lifecycle import (
     ALLOWED_TRANSITIONS,
@@ -19,7 +26,9 @@ from atreides.account_lifecycle import (
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
     FirstPermittedTradeRecord,
+    KYBClearResultRecord,
     KYCDecisionRecord,
+    LegalEntityEvidenceRecord,
     RefusalReason,
     TransferInRecord,
     attest_first_permitted_trade,
@@ -36,6 +45,7 @@ from atreides.agents.tier2.outputs import (
     EligibilityCheckKind,
     EligibilityVerification,
 )
+from atreides.reference_data import LegalEntityRecord
 
 NOW = datetime(2026, 11, 8, 9, tzinfo=UTC)
 ACCOUNT = "SYN-ACCOUNT-001"
@@ -46,11 +56,18 @@ TRANSFER_ID = "SYN-ACATS-001"
 TRADE_ID = "SYN-ORDER-001"
 APPROVAL_ID = "SYN-HUMAN-001"
 APPLICATION_ID = "SYN-APPLICATION-001"
+LEGAL_ENTITY_ID = "SYN-LEGAL-001"
+KYB_ID = "SYN-KYB-001"
+SIGNING_KEY_ID = "synthetic-lc-key-1"
+SIGNING_KEY = Ed25519PrivateKey.from_private_bytes(bytes(range(32)))
+SIGNING_KEYS = pinned_public_key_registry(
+    {SIGNING_KEY_ID: PublicKeyRecord("legiones-cannenses", SIGNING_KEY.public_key())}
+)
 
 
-def actor(kind: ActorKind = ActorKind.HUMAN) -> ActorRef:
+def actor(kind: ActorKind = ActorKind.HUMAN, number: int = 0) -> ActorRef:
     return ActorRef(
-        actor_id=ActorId("act_01K00000000000000000000000"),
+        actor_id=ActorId(f"act_{number:026d}"),
         actor_kind=kind,
         role="synthetic-approver",
         entitlement_refs=("approve-account",),
@@ -114,6 +131,11 @@ def resolver(
     transfer_id: str = TRANSFER_ID,
     transfer_completed: bool = True,
     trade_wire: bytes | None = None,
+    trade_key_registry: PublicKeyRegistry = SIGNING_KEYS,
+    legal_entity_record_id: str | None = LEGAL_ENTITY_ID,
+    kyb_result_record_id: str | None = KYB_ID,
+    kyb_clear: bool = True,
+    legal_entity_account: str | None = None,
 ) -> AuthoritativeEvidenceResolver:
     trade = FirstPermittedTradeRecord(
         record_id=TRADE_ID,
@@ -130,6 +152,8 @@ def resolver(
                 path_id=kyc_path,
                 decided_at=kyc_at,
                 maximum_age_seconds=300,
+                legal_entity_record_id=legal_entity_record_id,
+                kyb_result_record_id=kyb_result_record_id,
             )
         },
         kyc_chain_reports={
@@ -157,14 +181,40 @@ def resolver(
             )
         },
         first_trade_attestations={
-            TRADE_ID: trade_wire if trade_wire is not None else attest_first_permitted_trade(trade)
+            TRADE_ID: trade_wire
+            if trade_wire is not None
+            else attest_first_permitted_trade(trade, key_id=SIGNING_KEY_ID, private_key=SIGNING_KEY)
         },
+        first_trade_key_registry=trade_key_registry,
         application_records={
             APPLICATION_ID: AccountApplication(
                 record_id=APPLICATION_ID,
                 account_id=application_account,
                 account_type=AccountType.INSTITUTIONAL,
                 applied_at=NOW,
+                legal_entity_record_id=legal_entity_record_id,
+                kyb_result_record_id=kyb_result_record_id,
+            )
+        },
+        legal_entity_records={
+            LEGAL_ENTITY_ID: LegalEntityEvidenceRecord(
+                record_id=LEGAL_ENTITY_ID,
+                account_id=legal_entity_account or application_account,
+                legal_entity=LegalEntityRecord(
+                    provenance="synthetic fixture",
+                    effective_date=date(2026, 11, 8),
+                    lei="SYNTHETICLEI00000001",
+                    entity_id="SYN-ENTITY-001",
+                ),
+            )
+        },
+        kyb_records={
+            KYB_ID: KYBClearResultRecord(
+                record_id=KYB_ID,
+                account_id=application_account,
+                entity_id="SYN-ENTITY-001",
+                clear=kyb_clear,
+                verified_at=NOW,
             )
         },
     )
@@ -176,7 +226,10 @@ def store(
     registered: ActorRef | None = None,
 ) -> AccountLifecycleStore:
     registered = registered or actor()
-    verifier = ActorRegistryApproverVerifier({str(registered.actor_id): registered})
+    human = actor()
+    verifier = ActorRegistryApproverVerifier(
+        {str(human.actor_id): human, str(registered.actor_id): registered}
+    )
     lifecycle = AccountLifecycleStore(verifier, evidence or resolver())
     lifecycle.apply(APPLICATION_ID)
     return lifecycle
@@ -204,7 +257,12 @@ def approve(store: AccountLifecycleStore, account: str = ACCOUNT) -> None:
         ("KYC_ELIGIBLE_CLEAR", True, None, RefusalReason.HUMAN_APPROVAL_MISSING),
     ],
 )
-def test_approval_refusals(outcome, eligible, approval, reason) -> None:
+def test_approval_refusals(
+    outcome: str,
+    eligible: bool,
+    approval: str | None,
+    reason: RefusalReason,
+) -> None:
     lifecycle = store(resolver(kyc_path=outcome, eligible=eligible))
     with pytest.raises(AccountTransitionRefusedError) as caught:
         lifecycle.transition(
@@ -248,8 +306,11 @@ def test_end_to_end_lifecycle_and_append_only_events() -> None:
         AccountStatus.FUNDED,
         AccountStatus.ACTIVE,
     ]
-    assert b"atreides.attested_account_type_status/1" in lifecycle.publish_status(
-        as_of=NOW, maximum_age_seconds=300
+    assert b"cannae.signed_attestation/1" in lifecycle.publish_status(
+        as_of=NOW,
+        maximum_age_seconds=300,
+        key_id=SIGNING_KEY_ID,
+        private_key=SIGNING_KEY,
     )
 
 
@@ -305,12 +366,13 @@ def test_every_allowed_edge_has_a_declared_rule() -> None:
 
 
 def test_service_actor_cannot_reopen_restricted_account() -> None:
-    lifecycle = store()
+    service = actor(ActorKind.DETERMINISTIC_SERVICE, number=1)
+    lifecycle = store(registered=service)
     approve(lifecycle)
     lifecycle.transition(
         "SYN-ACCOUNT-001",
         AccountStatus.RESTRICTED,
-        actor=actor(ActorKind.DETERMINISTIC_SERVICE),
+        actor=service,
         timestamp=NOW + timedelta(seconds=1),
         reason="risk restriction",
         evidence_refs=("SYN-RESTRICT-001",),
@@ -319,7 +381,7 @@ def test_service_actor_cannot_reopen_restricted_account() -> None:
         lifecycle.transition(
             "SYN-ACCOUNT-001",
             AccountStatus.APPROVED,
-            actor=actor(ActorKind.DETERMINISTIC_SERVICE),
+            actor=service,
             timestamp=NOW + timedelta(seconds=3),
             reason="claimed reopening",
             evidence_refs=("SYN-ATTACK",),
@@ -395,10 +457,12 @@ def test_first_trade_with_tampered_attestation_is_refused() -> None:
         permitted=True,
         traded_at=NOW,
     )
-    tampered = attest_first_permitted_trade(valid_trade).replace(
-        b'\\"permitted\\":true', b'\\"permitted\\":false'
+    valid_wire = attest_first_permitted_trade(
+        valid_trade, key_id=SIGNING_KEY_ID, private_key=SIGNING_KEY
     )
-    assert tampered != attest_first_permitted_trade(valid_trade)
+    envelope = json.loads(valid_wire)
+    envelope["payload_b64"] = "dGFtcGVyZWQ="
+    tampered = json.dumps(envelope).encode()
     lifecycle = store(resolver(trade_wire=tampered))
     approve(lifecycle)
     lifecycle.transition(
@@ -410,7 +474,7 @@ def test_first_trade_with_tampered_attestation_is_refused() -> None:
         evidence_refs=(),
         transfer_record_id=TRANSFER_ID,
     )
-    with pytest.raises(AccountTransitionRefusedError, match="FIRST_TRADE_EVIDENCE_TAMPERED"):
+    with pytest.raises(AccountTransitionRefusedError, match="FIRST_TRADE_SIGNATURE_INVALID"):
         lifecycle.transition(
             ACCOUNT,
             AccountStatus.ACTIVE,
@@ -419,6 +483,79 @@ def test_first_trade_with_tampered_attestation_is_refused() -> None:
             reason="tampered trade",
             evidence_refs=(),
             first_trade_record_id=TRADE_ID,
+        )
+
+
+@pytest.mark.parametrize(
+    ("registry", "reason"),
+    [
+        (pinned_public_key_registry({}), RefusalReason.FIRST_TRADE_SIGNING_KEY_UNKNOWN),
+        (
+            pinned_public_key_registry(
+                {SIGNING_KEY_ID: PublicKeyRecord("atreides", SIGNING_KEY.public_key())}
+            ),
+            RefusalReason.FIRST_TRADE_PRODUCER_MISMATCH,
+        ),
+    ],
+)
+def test_first_trade_signer_identity_is_pinned(
+    registry: PublicKeyRegistry, reason: RefusalReason
+) -> None:
+    lifecycle = store(resolver(trade_key_registry=registry))
+    approve(lifecycle)
+    lifecycle.transition(
+        ACCOUNT,
+        AccountStatus.FUNDED,
+        actor=actor(),
+        timestamp=NOW,
+        reason="synthetic funding",
+        evidence_refs=(),
+        transfer_record_id=TRANSFER_ID,
+    )
+    with pytest.raises(AccountTransitionRefusedError) as caught:
+        lifecycle.transition(
+            ACCOUNT,
+            AccountStatus.ACTIVE,
+            actor=actor(),
+            timestamp=NOW,
+            reason="synthetic activation",
+            evidence_refs=(),
+            first_trade_record_id=TRADE_ID,
+        )
+    assert caught.value.reason is reason
+
+
+@pytest.mark.parametrize(
+    ("evidence", "reason"),
+    [
+        (resolver(legal_entity_record_id=None), RefusalReason.LEGAL_ENTITY_REQUIRED),
+        (
+            resolver(legal_entity_account=OTHER_ACCOUNT),
+            RefusalReason.LEGAL_ENTITY_ACCOUNT_MISMATCH,
+        ),
+        (resolver(kyb_clear=False), RefusalReason.KYB_NOT_CLEAR),
+    ],
+)
+def test_institutional_approval_requires_authoritative_entity_and_kyb(
+    evidence: AuthoritativeEvidenceResolver, reason: RefusalReason
+) -> None:
+    lifecycle = store(evidence)
+    with pytest.raises(AccountTransitionRefusedError) as caught:
+        approve(lifecycle)
+    assert caught.value.reason is reason
+
+
+def test_unregistered_actor_cannot_restrict() -> None:
+    lifecycle = store()
+    approve(lifecycle)
+    with pytest.raises(AccountTransitionRefusedError, match="ACTOR_NOT_REGISTERED"):
+        lifecycle.transition(
+            ACCOUNT,
+            AccountStatus.RESTRICTED,
+            actor=actor(ActorKind.DETERMINISTIC_SERVICE, number=2),
+            timestamp=NOW + timedelta(seconds=1),
+            reason="synthetic restriction",
+            evidence_refs=("SYN-RESTRICT-UNKNOWN",),
         )
 
 
@@ -449,7 +586,7 @@ def test_registry_service_actor_is_not_a_human_approver() -> None:
         ("AML_PROHIBITED_BLOCK", RefusalReason.PROHIBITED),
     ],
 )
-def test_ladder_outcomes_have_distinct_refusals(path, refusal) -> None:
+def test_ladder_outcomes_have_distinct_refusals(path: str, refusal: RefusalReason) -> None:
     lifecycle = store(resolver(kyc_path=path))
     with pytest.raises(AccountTransitionRefusedError) as caught:
         lifecycle.transition(

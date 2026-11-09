@@ -1,6 +1,6 @@
 [project]
 name = "atreides"
-version = "0.9.6"
+version = "0.9.7"
 description = "Aureon Asset Services — doctrine-native institutional governance framework"
 authors = [{name = "Guillermo Ravelo", email = "gar2163@columbia.edu"}]
 readme = "README.md"
@@ -14,9 +14,10 @@ classifiers = [
 keywords = ["asset-services", "post-trade", "custody", "governance", "doctrine"]
 
 dependencies = [
+    "cryptography==50.0.0",
     "pydantic>=2.6,<3.0",
     # Shared identifiers, digests, dispositions and halt context (CL-JUM-001 JUM-D-05).
-    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@b7b81600de6b3f0f2f81d293611172d38fbda0b9",
+    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@d062cebca06bf1c925c38c3514e036abf3b49ab3",
 ]
 
 [project.optional-dependencies]
@@ -38,7 +39,7 @@ dev = [
     "pyarrow-stubs>=20",
     # SIM-1B is source-only test infrastructure. It drives the committed L.C.
     # lifecycle/capture/allocation package; production imports still refuse simulator/.
-    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@5040ba3b75a932174aa9a8aadefb41a62941cc0f",
+    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@319b8506be264f1320e63935061800d47bc58377",
 ]
 
 [build-system]

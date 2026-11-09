@@ -399,6 +399,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                     control_price=prior_close,
                     approved_intent_digest=digest(payload),
                     policy_expires_at=base + timedelta(days=1),
+                    recommended=False,
                 ),
             ),
         ),

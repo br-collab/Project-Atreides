@@ -9,16 +9,25 @@ from typing import Literal, Protocol
 
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorRef
-from cannae_kernel.canonical import canonical_bytes, digest_bytes
+from cannae_kernel.canonical import canonical_bytes
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.domains import Domain
 from cannae_kernel.events import EventEnvelope, seal
 from cannae_kernel.ids import CheckpointId, EventId, LifecycleId
 from cannae_kernel.journal import ChainReport, JournalCheckpoint, verify_chain
 from cannae_kernel.provenance import Provenance
+from cannae_kernel.signed_attestation import (
+    AttestationRefusal,
+    AttestationVerificationError,
+    PublicKeyRegistry,
+    SigningKey,
+    sign_attestation,
+    verify_attestation,
+)
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atreides.agents.tier2.outputs import EligibilityVerification
+from atreides.reference_data import LegalEntityRecord
 from atreides.retail_identity import (
     PRINCIPAL_APPROVER_POLICY,
     CIPOutcome,
@@ -54,12 +63,17 @@ class RefusalReason(StrEnum):
     FIRST_TRADE_EVIDENCE_NOT_FOUND = "FIRST_TRADE_EVIDENCE_NOT_FOUND"
     FIRST_TRADE_ACCOUNT_MISMATCH = "FIRST_TRADE_ACCOUNT_MISMATCH"
     FIRST_TRADE_EVIDENCE_TAMPERED = "FIRST_TRADE_EVIDENCE_TAMPERED"
+    FIRST_TRADE_SIGNING_KEY_UNKNOWN = "FIRST_TRADE_SIGNING_KEY_UNKNOWN"
+    FIRST_TRADE_PRODUCER_MISMATCH = "FIRST_TRADE_PRODUCER_MISMATCH"
+    FIRST_TRADE_SIGNATURE_INVALID = "FIRST_TRADE_SIGNATURE_INVALID"
     CIP_EVIDENCE_NOT_FOUND = "CIP_EVIDENCE_NOT_FOUND"
     CIP_ACCOUNT_MISMATCH = "CIP_ACCOUNT_MISMATCH"
     CIP_PERSON_MISMATCH = "CIP_PERSON_MISMATCH"
     CIP_PENDING = "CIP_PENDING"
     CIP_UNABLE_TO_VERIFY = "CIP_UNABLE_TO_VERIFY"
     CIP_LIST_MATCH_ESCALATE = "CIP_LIST_MATCH_ESCALATE"
+    CIP_LIST_CHECK_REQUIRED = "CIP_LIST_CHECK_REQUIRED"
+    CIP_NOTICE_REQUIRED = "CIP_NOTICE_REQUIRED"
     PROFILE_EVIDENCE_NOT_FOUND = "PROFILE_EVIDENCE_NOT_FOUND"
     PROFILE_ACCOUNT_MISMATCH = "PROFILE_ACCOUNT_MISMATCH"
     PROFILE_PERSON_MISMATCH = "PROFILE_PERSON_MISMATCH"
@@ -70,6 +84,15 @@ class RefusalReason(StrEnum):
     ACCOUNT_APPLICATION_NOT_FOUND = "ACCOUNT_APPLICATION_NOT_FOUND"
     ACCOUNT_APPLICATION_MISMATCH = "ACCOUNT_APPLICATION_MISMATCH"
     ACCOUNT_TYPE_MISMATCH = "ACCOUNT_TYPE_MISMATCH"
+    LEGAL_ENTITY_REQUIRED = "LEGAL_ENTITY_REQUIRED"
+    LEGAL_ENTITY_NOT_FOUND = "LEGAL_ENTITY_NOT_FOUND"
+    LEGAL_ENTITY_ACCOUNT_MISMATCH = "LEGAL_ENTITY_ACCOUNT_MISMATCH"
+    LEGAL_ENTITY_FORBIDDEN = "LEGAL_ENTITY_FORBIDDEN"
+    KYB_RESULT_REQUIRED = "KYB_RESULT_REQUIRED"
+    KYB_RESULT_NOT_FOUND = "KYB_RESULT_NOT_FOUND"
+    KYB_ACCOUNT_MISMATCH = "KYB_ACCOUNT_MISMATCH"
+    KYB_NOT_CLEAR = "KYB_NOT_CLEAR"
+    ACTOR_NOT_REGISTERED = "ACTOR_NOT_REGISTERED"
     REASON_REQUIRED = "REASON_REQUIRED"
     CHAIN_INVALID = "CHAIN_INVALID"
 
@@ -105,6 +128,8 @@ class KYCDecisionRecord(BaseModel):
     path_id: str = Field(min_length=1)
     decided_at: datetime
     maximum_age_seconds: int = Field(gt=0)
+    legal_entity_record_id: str | None = None
+    kyb_result_record_id: str | None = None
 
     @model_validator(mode="after")
     def _person_binding_matches_account_type(self) -> KYCDecisionRecord:
@@ -139,14 +164,6 @@ class FirstPermittedTradeRecord(BaseModel):
     traded_at: datetime
 
 
-class AttestedFirstPermittedTradeRecord(BaseModel):
-    """Exact L.C. payload plus its digest, following the account-status pattern."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-    payload_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
-    payload: str = Field(min_length=1)
-
-
 class AccountApplication(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
     record_id: str = Field(min_length=1)
@@ -154,6 +171,8 @@ class AccountApplication(BaseModel):
     account_type: AccountType
     person_id: str | None = None
     applied_at: datetime
+    legal_entity_record_id: str | None = None
+    kyb_result_record_id: str | None = None
 
     @model_validator(mode="after")
     def _person_binding_matches_account_type(self) -> AccountApplication:
@@ -178,13 +197,20 @@ class AccountTypeStatusDocument(BaseModel):
     accounts: tuple[AccountTypeStatusEntry, ...]
 
 
-class AttestedAccountTypeStatusDocument(BaseModel):
+class LegalEntityEvidenceRecord(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-    schema_version: Literal["atreides.attested_account_type_status/1"] = (
-        "atreides.attested_account_type_status/1"
-    )
-    payload_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
-    payload: str = Field(min_length=1)
+    record_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
+    legal_entity: LegalEntityRecord
+
+
+class KYBClearResultRecord(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+    record_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
+    entity_id: str = Field(min_length=1)
+    clear: bool
+    verified_at: datetime
 
 
 class EvidenceResolver(Protocol):
@@ -206,6 +232,10 @@ class EvidenceResolver(Protocol):
 
     def resolve_application(self, record_id: str) -> AccountApplication: ...
 
+    def resolve_legal_entity(self, record_id: str) -> LegalEntityEvidenceRecord: ...
+
+    def resolve_kyb(self, record_id: str) -> KYBClearResultRecord: ...
+
 
 class AuthoritativeEvidenceResolver:
     """Read-only resolver over DSOR, eligibility, ACATS, and L.C. producer stores."""
@@ -218,22 +248,30 @@ class AuthoritativeEvidenceResolver:
         eligibility_records: Mapping[str, EligibilityResultRecord],
         transfer_records: Mapping[str, TransferInRecord],
         first_trade_attestations: Mapping[str, bytes],
+        first_trade_key_registry: PublicKeyRegistry | None = None,
         cip_records: Mapping[str, CIPRecord] | None = None,
         profile_records: Mapping[str, CustomerProfile] | None = None,
         principal_acceptance_records: Mapping[str, PrincipalAcceptanceRecord] | None = None,
         application_records: Mapping[str, AccountApplication] | None = None,
+        legal_entity_records: Mapping[str, LegalEntityEvidenceRecord] | None = None,
+        kyb_records: Mapping[str, KYBClearResultRecord] | None = None,
     ) -> None:
         self._kyc_dsor_records = kyc_dsor_records
         self._kyc_chain_reports = kyc_chain_reports
         self._eligibility_records = eligibility_records
         self._transfer_records = transfer_records
         self._first_trade_attestations = first_trade_attestations
+        self._first_trade_key_registry = (
+            {} if first_trade_key_registry is None else first_trade_key_registry
+        )
         self._cip_records = {} if cip_records is None else cip_records
         self._profile_records = {} if profile_records is None else profile_records
         self._principal_acceptance_records = (
             {} if principal_acceptance_records is None else principal_acceptance_records
         )
         self._application_records = {} if application_records is None else application_records
+        self._legal_entity_records = {} if legal_entity_records is None else legal_entity_records
+        self._kyb_records = {} if kyb_records is None else kyb_records
 
     def resolve_kyc(self, record_id: str) -> KYCDecisionRecord:
         record = self._kyc_dsor_records.get(record_id)
@@ -261,14 +299,19 @@ class AuthoritativeEvidenceResolver:
         if wire is None:
             raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_NOT_FOUND)
         try:
-            attestation = AttestedFirstPermittedTradeRecord.model_validate_json(wire)
-        except ValueError as exc:
-            raise AccountTransitionRefusedError(
-                RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED
-            ) from exc
-        payload = attestation.payload.encode()
-        if digest_bytes(payload) != attestation.payload_digest:
-            raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED)
+            payload = verify_attestation(
+                wire,
+                expected_producer="legiones-cannenses",
+                registry=self._first_trade_key_registry,
+            )
+        except AttestationVerificationError as exc:
+            refusals = {
+                AttestationRefusal.UNKNOWN_KEY: RefusalReason.FIRST_TRADE_SIGNING_KEY_UNKNOWN,
+                AttestationRefusal.WRONG_PRODUCER: RefusalReason.FIRST_TRADE_PRODUCER_MISMATCH,
+                AttestationRefusal.INVALID_SIGNATURE: RefusalReason.FIRST_TRADE_SIGNATURE_INVALID,
+                AttestationRefusal.MALFORMED: RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED,
+            }
+            raise AccountTransitionRefusedError(refusals[exc.refusal]) from exc
         try:
             record = FirstPermittedTradeRecord.model_validate_json(payload)
         except ValueError as exc:
@@ -303,22 +346,40 @@ class AuthoritativeEvidenceResolver:
             raise AccountTransitionRefusedError(RefusalReason.ACCOUNT_APPLICATION_NOT_FOUND)
         return record
 
+    def resolve_legal_entity(self, record_id: str) -> LegalEntityEvidenceRecord:
+        record = self._legal_entity_records.get(record_id)
+        if record is None:
+            raise AccountTransitionRefusedError(RefusalReason.LEGAL_ENTITY_NOT_FOUND)
+        return record
 
-def attest_first_permitted_trade(record: FirstPermittedTradeRecord) -> bytes:
+    def resolve_kyb(self, record_id: str) -> KYBClearResultRecord:
+        record = self._kyb_records.get(record_id)
+        if record is None:
+            raise AccountTransitionRefusedError(RefusalReason.KYB_RESULT_NOT_FOUND)
+        return record
+
+
+def attest_first_permitted_trade(
+    record: FirstPermittedTradeRecord,
+    *,
+    key_id: str,
+    private_key: SigningKey,
+) -> bytes:
     """Produce the L.C. attestation accepted by the authoritative resolver."""
 
     payload = canonical_bytes(record)
-    return (
-        AttestedFirstPermittedTradeRecord(
-            payload_digest=digest_bytes(payload), payload=payload.decode()
-        )
-        .model_dump_json()
-        .encode()
+    return sign_attestation(
+        payload,
+        producer="legiones-cannenses",
+        key_id=key_id,
+        private_key=private_key,
     )
 
 
 class ApproverVerifier(Protocol):
     def is_verified_human(self, actor: ActorRef, approval_ref: str) -> bool: ...
+
+    def is_registered(self, actor: ActorRef) -> bool: ...
 
 
 class ActorRegistryApproverVerifier:
@@ -335,6 +396,9 @@ class ActorRegistryApproverVerifier:
             and registered.authenticated
             and registered.actor_kind.value == "HUMAN"
         )
+
+    def is_registered(self, actor: ActorRef) -> bool:
+        return self._registry.get(str(actor.actor_id)) == actor
 
 
 class Requirement(StrEnum):
@@ -507,8 +571,9 @@ class AccountLifecycleStore:
         application = self._applications[account_id]
         if Requirement.REASON in requirements and not reason.strip():
             raise AccountTransitionRefusedError(RefusalReason.REASON_REQUIRED)
-        if Requirement.AUTHENTICATED_ACTOR in requirements and not actor.authenticated:
-            raise AccountTransitionRefusedError(RefusalReason.HUMAN_APPROVER_REQUIRED)
+        if Requirement.AUTHENTICATED_ACTOR in requirements:
+            if not actor.authenticated or not self._approver_verifier.is_registered(actor):
+                raise AccountTransitionRefusedError(RefusalReason.ACTOR_NOT_REGISTERED)
         if Requirement.VERIFIED_HUMAN in requirements:
             self._verify_human(actor, human_approval_ref)
         if Requirement.VERIFIED_KYC in requirements:
@@ -519,6 +584,39 @@ class AccountLifecycleStore:
                 raise AccountTransitionRefusedError(RefusalReason.ACCOUNT_TYPE_MISMATCH)
             if kyc_evidence.person_id != application.person_id:
                 raise AccountTransitionRefusedError(RefusalReason.KYC_ACCOUNT_MISMATCH)
+            if application.account_type is AccountType.INSTITUTIONAL:
+                if application.legal_entity_record_id is None:
+                    raise AccountTransitionRefusedError(RefusalReason.LEGAL_ENTITY_REQUIRED)
+                if application.kyb_result_record_id is None:
+                    raise AccountTransitionRefusedError(RefusalReason.KYB_RESULT_REQUIRED)
+                if (
+                    kyc_evidence.legal_entity_record_id != application.legal_entity_record_id
+                    or kyc_evidence.kyb_result_record_id != application.kyb_result_record_id
+                ):
+                    raise AccountTransitionRefusedError(RefusalReason.ACCOUNT_TYPE_MISMATCH)
+                legal_entity = self._evidence_resolver.resolve_legal_entity(
+                    application.legal_entity_record_id
+                )
+                if legal_entity.account_id != account_id:
+                    raise AccountTransitionRefusedError(RefusalReason.LEGAL_ENTITY_ACCOUNT_MISMATCH)
+                kyb = self._evidence_resolver.resolve_kyb(application.kyb_result_record_id)
+                if (
+                    kyb.account_id != account_id
+                    or kyb.entity_id != legal_entity.legal_entity.entity_id
+                ):
+                    raise AccountTransitionRefusedError(RefusalReason.KYB_ACCOUNT_MISMATCH)
+                if not kyb.clear:
+                    raise AccountTransitionRefusedError(RefusalReason.KYB_NOT_CLEAR)
+            elif any(
+                value is not None
+                for value in (
+                    application.legal_entity_record_id,
+                    application.kyb_result_record_id,
+                    kyc_evidence.legal_entity_record_id,
+                    kyc_evidence.kyb_result_record_id,
+                )
+            ):
+                raise AccountTransitionRefusedError(RefusalReason.LEGAL_ENTITY_FORBIDDEN)
             try:
                 self._verify_kyc(kyc_evidence, account_id, timestamp)
             except AccountTransitionRefusedError as exc:
@@ -542,6 +640,7 @@ class AccountLifecycleStore:
                 raise AccountTransitionRefusedError(RefusalReason.ATREIDES_ELIGIBILITY_FAILED)
         cip_evidence: CIPRecord | None = None
         profile_evidence: CustomerProfile | None = None
+        principal: PrincipalAcceptanceRecord | None = None
         if (
             target is AccountStatus.APPROVED
             and application.account_type is AccountType.NATURAL_PERSON
@@ -560,6 +659,10 @@ class AccountLifecycleStore:
             }
             if cip_evidence.outcome in cip_refusals:
                 raise AccountTransitionRefusedError(cip_refusals[cip_evidence.outcome])
+            if not cip_evidence.government_list_checked:
+                raise AccountTransitionRefusedError(RefusalReason.CIP_LIST_CHECK_REQUIRED)
+            if not cip_evidence.notice_given:
+                raise AccountTransitionRefusedError(RefusalReason.CIP_NOTICE_REQUIRED)
             if profile_record_id is None:
                 raise AccountTransitionRefusedError(RefusalReason.PROFILE_EVIDENCE_NOT_FOUND)
             profile_evidence = self._evidence_resolver.resolve_profile(profile_record_id)
@@ -596,8 +699,10 @@ class AccountLifecycleStore:
                     and (
                         cip_evidence is None
                         or profile_evidence is None
+                        or principal is None
                         or cip_evidence.verified_at <= restriction_time
                         or profile_evidence.updated_at <= restriction_time
+                        or principal.accepted_at <= restriction_time
                     )
                 )
             ):
@@ -695,7 +800,14 @@ class AccountLifecycleStore:
         )
         return envelope
 
-    def publish_status(self, *, as_of: datetime, maximum_age_seconds: int) -> bytes:
+    def publish_status(
+        self,
+        *,
+        as_of: datetime,
+        maximum_age_seconds: int,
+        key_id: str,
+        private_key: SigningKey,
+    ) -> bytes:
         document = AccountTypeStatusDocument(
             as_of=as_of,
             maximum_age_seconds=maximum_age_seconds,
@@ -715,12 +827,11 @@ class AccountLifecycleStore:
             ),
         )
         payload = canonical_bytes(document)
-        return (
-            AttestedAccountTypeStatusDocument(
-                payload_digest=digest_bytes(payload), payload=payload.decode()
-            )
-            .model_dump_json()
-            .encode()
+        return sign_attestation(
+            payload,
+            producer="atreides",
+            key_id=key_id,
+            private_key=private_key,
         )
 
     def approval_to_first_funded_trade_seconds(self) -> tuple[int, ...]:

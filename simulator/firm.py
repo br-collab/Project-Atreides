@@ -410,6 +410,7 @@ def _lc_allocate_batch(
                     control_price=rows[0].price,
                     approved_intent_digest=digest(payload),
                     policy_expires_at=base + timedelta(days=1),
+                    recommended=False,
                 ),
             ),
         ),

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.7 - 9 Nov 2026
+
+Verify producer-bound Ed25519 lifecycle evidence, require authoritative legal-entity and KYB
+records for institutional accounts, enforce complete CIP evidence, and require fresh principal
+acceptance after restriction.
+
 ## 0.9.6 - 9 Nov 2026
 
 Resolve account applications and account type from authoritative evidence, publish account type
