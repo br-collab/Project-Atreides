@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.5 - 9 Nov 2026
+
+Add synthetic retail CIP, customer profile, account record, and principal acceptance evidence.
+
 ## 0.9.4 - 8 Nov 2026
 
 Resolve lifecycle evidence from authoritative producer stores instead of caller-built values.

@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 
-def test_fixtures_do_not_contain_real_identifier_shapes() -> None:
+def scan_real_identifier_shapes(roots: tuple[Path, ...]) -> tuple[str, ...]:
     patterns = {
         "Social Security number": re.compile(r"(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)"),
         "passport number": re.compile(r'(?i)passport[^\n]{0,24}["\': ]+[A-Z0-9]{6,9}'),
@@ -12,9 +12,8 @@ def test_fixtures_do_not_contain_real_identifier_shapes() -> None:
             r'(?i)(?:bank|account)[_-]?number[^\n]{0,16}["\': ]+\d{8,17}'
         ),
     }
-    fixture_roots = (Path("tests/fixtures"), Path("simulator/publication"))
     findings: list[str] = []
-    for root in fixture_roots:
+    for root in roots:
         if not root.exists():
             continue
         for path in root.rglob("*"):
@@ -27,4 +26,19 @@ def test_fixtures_do_not_contain_real_identifier_shapes() -> None:
             for label, pattern in patterns.items():
                 if pattern.search(text):
                     findings.append(f"{path}: value shaped like a real {label}")
+    return tuple(findings)
+
+
+def test_fixtures_do_not_contain_real_identifier_shapes() -> None:
+    findings = scan_real_identifier_shapes(
+        (Path("tests/fixtures"), Path("simulator/publication"))
+    )
     assert not findings, "\n".join(findings)
+
+
+def test_fixture_check_refuses_social_security_number_shape(tmp_path: Path) -> None:
+    fixture = tmp_path / "synthetic-attack.json"
+    fixture.write_text('{"tax_token":"' + "123" + "-" + "45" + "-" + "6789" + '"}')
+    findings = scan_real_identifier_shapes((tmp_path,))
+    assert len(findings) == 1
+    assert findings[0].endswith("value shaped like a real Social Security number")
