@@ -708,10 +708,10 @@
   "ny_fed_notices": [],
   "repository_shas": {
     "Cato-FICC-MCP": "db7e46ed044f655e9138340eeeb1c9ab59221748",
-    "L.C.": "87e380541a51d0a53db97df0fe73e18f88cdb479",
-    "atreides": "5743422ae77e30ff8f1eba23d521c3185c0af5c9",
-    "aureon": "3cab5ef57b361fede16c14621219af449c27c003",
-    "cannae-kernel": "fb530f3d5db639c1d209bb1ff5f61edf08c29467"
+    "L.C.": "319b8506be264f1320e63935061800d47bc58377",
+    "atreides": "0cb4652c5912c0d7b082efdec1eeb1e4df9e37de",
+    "aureon": "5799d54402a4b657f67b7c48a1e95bb5e4cd0812",
+    "cannae-kernel": "d062cebca06bf1c925c38c3514e036abf3b49ab3"
   },
   "scenario_counts": {
     "CASH_RAIL": 5,
