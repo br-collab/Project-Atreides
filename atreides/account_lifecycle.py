@@ -24,6 +24,12 @@ from cannae_kernel.provenance import Provenance
 from pydantic import BaseModel, ConfigDict, Field
 
 from atreides.agents.tier2.outputs import EligibilityVerification
+from atreides.retail_identity import (
+    CIPOutcome,
+    CIPRecord,
+    CustomerProfile,
+    PrincipalAcceptanceRecord,
+)
 
 
 class RefusalReason(StrEnum):
@@ -51,6 +57,18 @@ class RefusalReason(StrEnum):
     FIRST_TRADE_EVIDENCE_NOT_FOUND = "FIRST_TRADE_EVIDENCE_NOT_FOUND"
     FIRST_TRADE_ACCOUNT_MISMATCH = "FIRST_TRADE_ACCOUNT_MISMATCH"
     FIRST_TRADE_EVIDENCE_TAMPERED = "FIRST_TRADE_EVIDENCE_TAMPERED"
+    CIP_EVIDENCE_NOT_FOUND = "CIP_EVIDENCE_NOT_FOUND"
+    CIP_ACCOUNT_MISMATCH = "CIP_ACCOUNT_MISMATCH"
+    CIP_PERSON_MISMATCH = "CIP_PERSON_MISMATCH"
+    CIP_PENDING = "CIP_PENDING"
+    CIP_UNABLE_TO_VERIFY = "CIP_UNABLE_TO_VERIFY"
+    CIP_LIST_MATCH_ESCALATE = "CIP_LIST_MATCH_ESCALATE"
+    PROFILE_EVIDENCE_NOT_FOUND = "PROFILE_EVIDENCE_NOT_FOUND"
+    PROFILE_ACCOUNT_MISMATCH = "PROFILE_ACCOUNT_MISMATCH"
+    PROFILE_PERSON_MISMATCH = "PROFILE_PERSON_MISMATCH"
+    PROFILE_INCOMPLETE = "PROFILE_INCOMPLETE"
+    PRINCIPAL_ACCEPTANCE_NOT_FOUND = "PRINCIPAL_ACCEPTANCE_NOT_FOUND"
+    PRINCIPAL_ACCEPTANCE_MISMATCH = "PRINCIPAL_ACCEPTANCE_MISMATCH"
     REASON_REQUIRED = "REASON_REQUIRED"
     CHAIN_INVALID = "CHAIN_INVALID"
 
@@ -115,6 +133,18 @@ class AttestedFirstPermittedTradeRecord(BaseModel):
     payload: str = Field(min_length=1)
 
 
+class AccountType(StrEnum):
+    INSTITUTIONAL = "INSTITUTIONAL"
+    NATURAL_PERSON = "NATURAL_PERSON"
+
+
+class AccountApplication(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+    account_id: str = Field(min_length=1)
+    account_type: AccountType
+    person_id: str | None = None
+
+
 class EvidenceResolver(Protocol):
     """Resolve references only across authoritative producer boundaries."""
 
@@ -125,6 +155,12 @@ class EvidenceResolver(Protocol):
     def resolve_transfer_in(self, record_id: str) -> TransferInRecord: ...
 
     def resolve_first_trade(self, record_id: str) -> FirstPermittedTradeRecord: ...
+
+    def resolve_cip(self, record_id: str) -> CIPRecord: ...
+
+    def resolve_profile(self, record_id: str) -> CustomerProfile: ...
+
+    def resolve_principal_acceptance(self, record_id: str) -> PrincipalAcceptanceRecord: ...
 
 
 class AuthoritativeEvidenceResolver:
@@ -138,12 +174,20 @@ class AuthoritativeEvidenceResolver:
         eligibility_records: Mapping[str, EligibilityResultRecord],
         transfer_records: Mapping[str, TransferInRecord],
         first_trade_attestations: Mapping[str, bytes],
+        cip_records: Mapping[str, CIPRecord] | None = None,
+        profile_records: Mapping[str, CustomerProfile] | None = None,
+        principal_acceptance_records: Mapping[str, PrincipalAcceptanceRecord] | None = None,
     ) -> None:
         self._kyc_dsor_records = kyc_dsor_records
         self._kyc_chain_reports = kyc_chain_reports
         self._eligibility_records = eligibility_records
         self._transfer_records = transfer_records
         self._first_trade_attestations = first_trade_attestations
+        self._cip_records = {} if cip_records is None else cip_records
+        self._profile_records = {} if profile_records is None else profile_records
+        self._principal_acceptance_records = (
+            {} if principal_acceptance_records is None else principal_acceptance_records
+        )
 
     def resolve_kyc(self, record_id: str) -> KYCDecisionRecord:
         record = self._kyc_dsor_records.get(record_id)
@@ -187,6 +231,24 @@ class AuthoritativeEvidenceResolver:
             ) from exc
         if record.record_id != record_id:
             raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED)
+        return record
+
+    def resolve_cip(self, record_id: str) -> CIPRecord:
+        record = self._cip_records.get(record_id)
+        if record is None:
+            raise AccountTransitionRefusedError(RefusalReason.CIP_EVIDENCE_NOT_FOUND)
+        return record
+
+    def resolve_profile(self, record_id: str) -> CustomerProfile:
+        record = self._profile_records.get(record_id)
+        if record is None:
+            raise AccountTransitionRefusedError(RefusalReason.PROFILE_EVIDENCE_NOT_FOUND)
+        return record
+
+    def resolve_principal_acceptance(self, record_id: str) -> PrincipalAcceptanceRecord:
+        record = self._principal_acceptance_records.get(record_id)
+        if record is None:
+            raise AccountTransitionRefusedError(RefusalReason.PRINCIPAL_ACCEPTANCE_NOT_FOUND)
         return record
 
 
@@ -305,12 +367,28 @@ class AccountLifecycleStore:
         self._events: list[EventEnvelope[AccountEvent]] = []
         self._lifecycle_ids: dict[str, LifecycleId] = {}
         self._checkpoints: dict[str, JournalCheckpoint] = {}
+        self._applications: dict[str, AccountApplication] = {}
 
     @property
     def events(self) -> tuple[EventEnvelope[AccountEvent], ...]:
         return tuple(self._events)
 
-    def apply(self, account_id: str) -> None:
+    def apply(
+        self,
+        account_id: str,
+        *,
+        account_type: AccountType = AccountType.INSTITUTIONAL,
+        person_id: str | None = None,
+    ) -> None:
+        if account_type is AccountType.NATURAL_PERSON and person_id is None:
+            raise ValueError("natural-person application requires a synthetic person ID")
+        application = AccountApplication(
+            account_id=account_id, account_type=account_type, person_id=person_id
+        )
+        existing = self._applications.get(account_id)
+        if existing is not None and existing != application:
+            raise ValueError("account application identity cannot change")
+        self._applications.setdefault(account_id, application)
         self._lifecycle_ids.setdefault(
             account_id, LifecycleId(f"lif_{len(self._lifecycle_ids) + 1:026d}")
         )
@@ -357,7 +435,7 @@ class AccountLifecycleStore:
         if evidence.path_id != "KYC_ELIGIBLE_CLEAR":
             raise AccountTransitionRefusedError(RefusalReason.KYC_MISSING)
 
-    def transition(
+    def transition(  # noqa: PLR0915 - ordered fail-closed evidence ladder
         self,
         account_id: str,
         target: AccountStatus,
@@ -371,12 +449,22 @@ class AccountLifecycleStore:
         human_approval_ref: str | None = None,
         transfer_record_id: str | None = None,
         first_trade_record_id: str | None = None,
+        cip_record_id: str | None = None,
+        profile_record_id: str | None = None,
+        principal_acceptance_record_id: str | None = None,
     ) -> EventEnvelope[AccountEvent]:
         prior = self.status(account_id)
         rule = TRANSITION_RULES.get((prior, target))
         if rule is None:
             raise AccountTransitionRefusedError(RefusalReason.ILLEGAL_TRANSITION)
         requirements = set(rule.requirements)
+        application = self._applications.get(
+            account_id,
+            AccountApplication(
+                account_id=account_id,
+                account_type=AccountType.INSTITUTIONAL,
+            ),
+        )
         if Requirement.REASON in requirements and not reason.strip():
             raise AccountTransitionRefusedError(RefusalReason.REASON_REQUIRED)
         if Requirement.AUTHENTICATED_ACTOR in requirements and not actor.authenticated:
@@ -414,11 +502,65 @@ class AccountLifecycleStore:
                 )
             if not eligibility.result.all_passed:
                 raise AccountTransitionRefusedError(RefusalReason.ATREIDES_ELIGIBILITY_FAILED)
+        cip_evidence: CIPRecord | None = None
+        profile_evidence: CustomerProfile | None = None
+        if (
+            target is AccountStatus.APPROVED
+            and application.account_type is AccountType.NATURAL_PERSON
+        ):
+            if cip_record_id is None:
+                raise AccountTransitionRefusedError(RefusalReason.CIP_EVIDENCE_NOT_FOUND)
+            cip_evidence = self._evidence_resolver.resolve_cip(cip_record_id)
+            if cip_evidence.account_id != account_id:
+                raise AccountTransitionRefusedError(RefusalReason.CIP_ACCOUNT_MISMATCH)
+            if cip_evidence.identity.person_id != application.person_id:
+                raise AccountTransitionRefusedError(RefusalReason.CIP_PERSON_MISMATCH)
+            cip_refusals = {
+                CIPOutcome.PENDING: RefusalReason.CIP_PENDING,
+                CIPOutcome.UNABLE_TO_VERIFY: RefusalReason.CIP_UNABLE_TO_VERIFY,
+                CIPOutcome.LIST_MATCH_ESCALATE: RefusalReason.CIP_LIST_MATCH_ESCALATE,
+            }
+            if cip_evidence.outcome in cip_refusals:
+                raise AccountTransitionRefusedError(cip_refusals[cip_evidence.outcome])
+            if profile_record_id is None:
+                raise AccountTransitionRefusedError(RefusalReason.PROFILE_EVIDENCE_NOT_FOUND)
+            profile_evidence = self._evidence_resolver.resolve_profile(profile_record_id)
+            if profile_evidence.account_id != account_id:
+                raise AccountTransitionRefusedError(RefusalReason.PROFILE_ACCOUNT_MISMATCH)
+            if profile_evidence.person_id != application.person_id:
+                raise AccountTransitionRefusedError(RefusalReason.PROFILE_PERSON_MISMATCH)
+            if not profile_evidence.complete:
+                raise AccountTransitionRefusedError(RefusalReason.PROFILE_INCOMPLETE)
+            if principal_acceptance_record_id is None:
+                raise AccountTransitionRefusedError(
+                    RefusalReason.PRINCIPAL_ACCEPTANCE_NOT_FOUND
+                )
+            principal = self._evidence_resolver.resolve_principal_acceptance(
+                principal_acceptance_record_id
+            )
+            if (
+                principal.account_id != account_id
+                or principal.person_id != application.person_id
+                or principal.profile_record_id != profile_evidence.record_id
+            ):
+                raise AccountTransitionRefusedError(
+                    RefusalReason.PRINCIPAL_ACCEPTANCE_MISMATCH
+                )
+            self._verify_human(principal.actor, principal.approval_ref)
         if Requirement.FRESH_AFTER_RESTRICTION in requirements:
             restriction_time = self._account_events(account_id)[-1].times.processing_time
             if (
                 kyc_evidence.decided_at <= restriction_time
                 or eligibility.verified_at <= restriction_time
+                or (
+                    application.account_type is AccountType.NATURAL_PERSON
+                    and (
+                        cip_evidence is None
+                        or profile_evidence is None
+                        or cip_evidence.verified_at <= restriction_time
+                        or profile_evidence.updated_at <= restriction_time
+                    )
+                )
             ):
                 raise AccountTransitionRefusedError(RefusalReason.EVIDENCE_NOT_FRESH)
         if Requirement.COMPLETED_TRANSFER in requirements:
@@ -450,6 +592,9 @@ class AccountLifecycleStore:
                 eligibility_record_id,
                 transfer_record_id,
                 first_trade_record_id,
+                cip_record_id,
+                profile_record_id,
+                principal_acceptance_record_id,
             )
             if value is not None
         )
@@ -472,7 +617,8 @@ class AccountLifecycleStore:
         reason: str,
         evidence_refs: tuple[str, ...],
     ) -> EventEnvelope[AccountEvent]:
-        self.apply(account_id)
+        if account_id not in self._lifecycle_ids:
+            self.apply(account_id)
         prior_events = self._account_events(account_id)
         prior = prior_events[-1].payload.status if prior_events else AccountStatus.APPLIED
         number = len(self._events) + 1
