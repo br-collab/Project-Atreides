@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -20,7 +20,9 @@ from atreides.account_lifecycle import (
     ActorRegistryApproverVerifier,
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
+    KYBClearResultRecord,
     KYCDecisionRecord,
+    LegalEntityEvidenceRecord,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -31,6 +33,7 @@ from atreides.agents.tier2.eligibility import (
 )
 from atreides.dsor.governance_scenario import GovernanceScenarioEvidence
 from atreides.dsor.store import DSORStore
+from atreides.reference_data import LegalEntityRecord
 
 _NOW = datetime(2026, 11, 7, 17, 0, tzinfo=UTC)
 _EXIT_PLAN_LABEL = "simulated, not a tested exit plan"
@@ -51,6 +54,10 @@ _C2_G3_ACTOR_REGISTRY = {str(_G3_SERVICE_ACTOR.actor_id): _G3_SERVICE_ACTOR}
 class _PermissiveApproverVerifier:
     def is_verified_human(self, actor: ActorRef, approval_ref: str) -> bool:
         del actor, approval_ref
+        return True
+
+    def is_registered(self, actor: ActorRef) -> bool:
+        del actor
         return True
 
 
@@ -91,6 +98,8 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
                 account_type=AccountType.INSTITUTIONAL,
                 person_id=None,
                 applied_at=_NOW,
+                legal_entity_record_id="SIM-1-G3-LEGAL",
+                kyb_result_record_id="SIM-1-G3-KYB",
             )
         },
         kyc_dsor_records={
@@ -102,6 +111,8 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
                 maximum_age_seconds=300,
                 account_type=AccountType.INSTITUTIONAL,
                 person_id=None,
+                legal_entity_record_id="SIM-1-G3-LEGAL",
+                kyb_result_record_id="SIM-1-G3-KYB",
             )
         },
         kyc_chain_reports={
@@ -122,6 +133,27 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
         },
         transfer_records={},
         first_trade_attestations={},
+        legal_entity_records={
+            "SIM-1-G3-LEGAL": LegalEntityEvidenceRecord(
+                record_id="SIM-1-G3-LEGAL",
+                account_id="SYN-G3",
+                legal_entity=LegalEntityRecord(
+                    provenance="synthetic simulator fixture",
+                    effective_date=date(2026, 11, 7),
+                    lei="SYNTHETICLEI00000001",
+                    entity_id="SYN-G3-ENTITY",
+                ),
+            )
+        },
+        kyb_records={
+            "SIM-1-G3-KYB": KYBClearResultRecord(
+                record_id="SIM-1-G3-KYB",
+                account_id="SYN-G3",
+                entity_id="SYN-G3-ENTITY",
+                clear=True,
+                verified_at=_NOW,
+            )
+        },
     )
 
 

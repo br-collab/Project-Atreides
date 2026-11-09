@@ -21,7 +21,9 @@ from atreides.account_lifecycle import (
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
     FirstPermittedTradeRecord,
+    KYBClearResultRecord,
     KYCDecisionRecord,
+    LegalEntityEvidenceRecord,
     TransferInRecord,
     attest_first_permitted_trade,
 )
@@ -45,7 +47,9 @@ from atreides.books.ledger import (
 )
 from atreides.deadlines.acats import AcatsTransfer, assess_acats
 from atreides.deadlines.calendar import Market, MarketCalendar
+from atreides.reference_data import LegalEntityRecord
 from simulator.conversion import STATEMENT, StatementLine, _posting
+from simulator.synthetic_attestation_fixture import LC_KEY_ID, LC_PRIVATE_KEY, LC_PUBLIC_KEYS
 
 TransferVariant = Literal["clean", "reject", "partial-residual", "late"]
 TRANSFER_VARIANTS: tuple[TransferVariant, ...] = (
@@ -112,11 +116,16 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
     eligibility_records: dict[str, EligibilityResultRecord] = {}
     transfer_records: dict[str, TransferInRecord] = {}
     trade_attestations: dict[str, bytes] = {}
+    legal_entity_records: dict[str, LegalEntityEvidenceRecord] = {}
+    kyb_records: dict[str, KYBClearResultRecord] = {}
     for index, line in enumerate(STATEMENT, 1):
         kyc_id = f"SIM-1-KYC-{line.account}"
         application_id = f"SIM-1-APPLICATION-{line.account}"
         transfer_id = f"SYN-ACATS-{index:04d}"
         trade_id = f"SYN-LC-TRADE-{index:04d}"
+        legal_entity_id = f"SIM-1-LEGAL-{index:04d}"
+        kyb_id = f"SIM-1-KYB-{index:04d}"
+        entity_id = f"SYN-ENTITY-{index:04d}"
         kyc_records[kyc_id] = KYCDecisionRecord(
             record_id=kyc_id,
             account_id=line.account,
@@ -125,6 +134,8 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
             maximum_age_seconds=300,
             account_type=LifecycleAccountType.INSTITUTIONAL,
             person_id=None,
+            legal_entity_record_id=legal_entity_id,
+            kyb_result_record_id=kyb_id,
         )
         application_records[application_id] = AccountApplication(
             record_id=application_id,
@@ -132,6 +143,25 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
             account_type=LifecycleAccountType.INSTITUTIONAL,
             person_id=None,
             applied_at=at,
+            legal_entity_record_id=legal_entity_id,
+            kyb_result_record_id=kyb_id,
+        )
+        legal_entity_records[legal_entity_id] = LegalEntityEvidenceRecord(
+            record_id=legal_entity_id,
+            account_id=line.account,
+            legal_entity=LegalEntityRecord(
+                provenance="synthetic simulator fixture",
+                effective_date=at.date(),
+                lei=f"SYNTHETICLEI{index:08d}",
+                entity_id=entity_id,
+            ),
+        )
+        kyb_records[kyb_id] = KYBClearResultRecord(
+            record_id=kyb_id,
+            account_id=line.account,
+            entity_id=entity_id,
+            clear=True,
+            verified_at=at,
         )
         eligibility = _eligibility_result(line.account, at)
         eligibility_records[eligibility.record_id] = eligibility
@@ -147,7 +177,9 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
                 account_id=line.account,
                 permitted=True,
                 traded_at=datetime(2026, 10, 5, 14, minute=14 + index, tzinfo=UTC),
-            )
+            ),
+            key_id=LC_KEY_ID,
+            private_key=LC_PRIVATE_KEY,
         )
     return AuthoritativeEvidenceResolver(
         application_records=application_records,
@@ -164,6 +196,9 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
         eligibility_records=eligibility_records,
         transfer_records=transfer_records,
         first_trade_attestations=trade_attestations,
+        first_trade_key_registry=LC_PUBLIC_KEYS,
+        legal_entity_records=legal_entity_records,
+        kyb_records=kyb_records,
     )
 
 

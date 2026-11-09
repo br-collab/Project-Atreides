@@ -150,24 +150,32 @@ def _store(
     allow_same_person: bool = False,
     same_person: bool = False,
     apply_record: bool = True,
+    cip_list_checked: bool = True,
+    cip_notice_given: bool = True,
+    legal_entity_record_id: str | None = None,
+    kyb_result_record_id: str | None = None,
 ) -> AccountLifecycleStore:
     human = _actor()
     principal = human if same_person else _actor(principal_kind, number="2")
     registry = {str(human.actor_id): human, str(principal.actor_id): principal}
     retail = RetailEvidenceStore()
-    retail.append_cip(
-        build_cip_record(
-            record_id=CIP_ID,
-            account_id=cip_account,
-            identity=_identity(person_id=cip_person),
-            verification_method=VerificationMethod.DOCUMENTARY_SYNTHETIC,
-            outcome=outcome,
-            checked_at=cip_at,
-            exception_owner=(
-                "SYNTHETIC_CIP_OPERATIONS" if outcome is not CIPOutcome.VERIFIED else None
-            ),
-        )
+    cip = build_cip_record(
+        record_id=CIP_ID,
+        account_id=cip_account,
+        identity=_identity(person_id=cip_person),
+        verification_method=VerificationMethod.DOCUMENTARY_SYNTHETIC,
+        outcome=outcome,
+        checked_at=cip_at,
+        exception_owner=(
+            "SYNTHETIC_CIP_OPERATIONS" if outcome is not CIPOutcome.VERIFIED else None
+        ),
+    ).model_copy(
+        update={
+            "government_list_checked": cip_list_checked,
+            "notice_given": cip_notice_given,
+        }
     )
+    retail.append_cip(cip)
     profile = profile or _profile(at=profile_at)
     retail.append_profile(profile)
     retail.append_principal_acceptance(
@@ -191,6 +199,8 @@ def _store(
                 path_id="KYC_ELIGIBLE_CLEAR",
                 decided_at=cip_at,
                 maximum_age_seconds=86400,
+                legal_entity_record_id=legal_entity_record_id,
+                kyb_result_record_id=kyb_result_record_id,
             )
         },
         kyc_chain_reports={
@@ -214,6 +224,8 @@ def _store(
                 account_type=application_type,
                 person_id=(PERSON if application_type is AccountType.NATURAL_PERSON else None),
                 applied_at=NOW,
+                legal_entity_record_id=legal_entity_record_id,
+                kyb_result_record_id=kyb_result_record_id,
             )
         },
     )
@@ -255,6 +267,29 @@ def _approve(lifecycle: AccountLifecycleStore, at: datetime = NOW) -> None:
 def test_non_verified_cip_has_named_refusal(outcome: CIPOutcome, refusal: str) -> None:
     with pytest.raises(AccountTransitionRefusedError, match=refusal):
         _approve(_store(outcome=outcome))
+
+
+@pytest.mark.parametrize(
+    ("list_checked", "notice_given", "refusal"),
+    [
+        (False, True, "CIP_LIST_CHECK_REQUIRED"),
+        (True, False, "CIP_NOTICE_REQUIRED"),
+    ],
+)
+def test_verified_cip_requires_list_check_and_notice(
+    list_checked: bool, notice_given: bool, refusal: str
+) -> None:
+    with pytest.raises(AccountTransitionRefusedError, match=refusal):
+        _approve(_store(cip_list_checked=list_checked, cip_notice_given=notice_given))
+
+
+def test_natural_person_cannot_carry_legal_entity_evidence() -> None:
+    lifecycle = _store(
+        legal_entity_record_id="SYN-LEGAL-FORBIDDEN",
+        kyb_result_record_id="SYN-KYB-FORBIDDEN",
+    )
+    with pytest.raises(AccountTransitionRefusedError, match="LEGAL_ENTITY_FORBIDDEN"):
+        _approve(lifecycle)
 
 
 @pytest.mark.parametrize(
