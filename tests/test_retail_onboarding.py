@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 
 import pytest
 from cannae_kernel.account import AccountStatus
@@ -7,6 +8,7 @@ from cannae_kernel.ids import ActorId
 from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
+    AccountApplication,
     AccountLifecycleStore,
     AccountTransitionRefusedError,
     AccountType,
@@ -24,10 +26,13 @@ from atreides.agents.tier2.eligibility import (
 )
 from atreides.retail_identity import (
     ACCOUNT_RECORD_POLICIES,
+    PRINCIPAL_APPROVER_POLICY,
+    PROFILE_COMPLETENESS_FIELDS,
     REGULATORY_ANCHORS,
     CIPOutcome,
     CustomerProfile,
     PrincipalAcceptanceRecord,
+    PrincipalApproverPolicyRow,
     RetailEvidenceStore,
     SyntheticIdentity,
     VerificationMethod,
@@ -43,6 +48,13 @@ ELIGIBILITY_ID = "SYN-ELIGIBILITY-RETAIL1"
 CIP_ID = "SYN-CIP-RETAIL1"
 PROFILE_ID = "SYN-PROFILE-RETAIL1"
 PRINCIPAL_ID = "SYN-PRINCIPAL-RETAIL1"
+APPLICATION_ID = "SYN-APPLICATION-RETAIL1"
+
+
+def test_profile_completeness_contract_checksum() -> None:
+    assert sha256(",".join(PROFILE_COMPLETENESS_FIELDS).encode()).hexdigest() == (
+        "c51ad6bae415031695470dec96af86bbd6e54f8c2d9b52ec67e150083d580744"
+    )
 
 
 def _actor(kind: ActorKind = ActorKind.HUMAN, *, number: str = "1") -> ActorRef:
@@ -133,9 +145,14 @@ def _store(
     cip_at: datetime = NOW,
     profile_at: datetime = NOW,
     principal_kind: ActorKind = ActorKind.HUMAN,
+    application_type: AccountType = AccountType.NATURAL_PERSON,
+    kyc_type: AccountType = AccountType.NATURAL_PERSON,
+    allow_same_person: bool = False,
+    same_person: bool = False,
+    apply_record: bool = True,
 ) -> AccountLifecycleStore:
     human = _actor()
-    principal = _actor(principal_kind, number="2" if principal_kind is not ActorKind.HUMAN else "1")
+    principal = human if same_person else _actor(principal_kind, number="2")
     registry = {str(human.actor_id): human, str(principal.actor_id): principal}
     retail = RetailEvidenceStore()
     retail.append_cip(
@@ -169,6 +186,8 @@ def _store(
             KYC_ID: KYCDecisionRecord(
                 record_id=KYC_ID,
                 account_id=ACCOUNT,
+                account_type=kyc_type,
+                person_id=PERSON if kyc_type is AccountType.NATURAL_PERSON else None,
                 path_id="KYC_ELIGIBLE_CLEAR",
                 decided_at=cip_at,
                 maximum_age_seconds=86400,
@@ -188,9 +207,23 @@ def _store(
         cip_records=retail.cip_records,
         profile_records=retail.profiles,
         principal_acceptance_records=retail.principal_acceptances,
+        application_records={
+            APPLICATION_ID: AccountApplication(
+                record_id=APPLICATION_ID,
+                account_id=ACCOUNT,
+                account_type=application_type,
+                person_id=(PERSON if application_type is AccountType.NATURAL_PERSON else None),
+                applied_at=NOW,
+            )
+        },
     )
-    lifecycle = AccountLifecycleStore(ActorRegistryApproverVerifier(registry), resolver)
-    lifecycle.apply(ACCOUNT, account_type=AccountType.NATURAL_PERSON, person_id=PERSON)
+    lifecycle = AccountLifecycleStore(
+        ActorRegistryApproverVerifier(registry),
+        resolver,
+        PrincipalApproverPolicyRow(allow_same_person=allow_same_person),
+    )
+    if apply_record:
+        lifecycle.apply(APPLICATION_ID)
     return lifecycle
 
 
@@ -246,6 +279,17 @@ def test_principal_acceptance_by_service_actor_is_refused() -> None:
         _approve(_store(principal_kind=ActorKind.DETERMINISTIC_SERVICE))
 
 
+@pytest.mark.parametrize("allow_same_person", [False, True])
+def test_principal_and_approver_role_policy_is_data(allow_same_person: bool) -> None:
+    lifecycle = _store(allow_same_person=allow_same_person, same_person=True)
+    if allow_same_person:
+        _approve(lifecycle)
+        assert lifecycle.status(ACCOUNT) is AccountStatus.APPROVED
+    else:
+        with pytest.raises(AccountTransitionRefusedError, match="PRINCIPAL_ROLE_CONFLICT"):
+            _approve(lifecycle)
+
+
 def test_natural_person_cannot_use_institutional_path() -> None:
     lifecycle = _store()
     with pytest.raises(AccountTransitionRefusedError, match="CIP_EVIDENCE_NOT_FOUND"):
@@ -260,6 +304,24 @@ def test_natural_person_cannot_use_institutional_path() -> None:
             eligibility_record_id=ELIGIBILITY_ID,
             human_approval_ref="SYN-HUMAN-APPROVAL-RETAIL1",
         )
+
+
+def test_natural_person_applied_as_institutional_is_refused_by_type_origin() -> None:
+    lifecycle = _store(application_type=AccountType.INSTITUTIONAL)
+    with pytest.raises(AccountTransitionRefusedError, match="ACCOUNT_TYPE_MISMATCH"):
+        _approve(lifecycle)
+
+
+def test_account_never_applied_is_refused_by_name() -> None:
+    lifecycle = _store(apply_record=False)
+    with pytest.raises(AccountTransitionRefusedError, match="ACCOUNT_APPLICATION_NOT_FOUND"):
+        _approve(lifecycle)
+
+
+def test_application_and_kyc_type_mismatch_is_refused_by_name() -> None:
+    lifecycle = _store(kyc_type=AccountType.INSTITUTIONAL)
+    with pytest.raises(AccountTransitionRefusedError, match="ACCOUNT_TYPE_MISMATCH"):
+        _approve(lifecycle)
 
 
 def test_reapproval_requires_fresh_cip_and_profile_after_restriction() -> None:
@@ -286,7 +348,7 @@ def test_clean_natural_person_approval_resolves_all_three_retail_records() -> No
 
 
 def test_regulatory_rows_keep_citation_and_unverified_status() -> None:
-    rows = (*REGULATORY_ANCHORS, *ACCOUNT_RECORD_POLICIES)
+    rows = (*REGULATORY_ANCHORS, *ACCOUNT_RECORD_POLICIES, PRINCIPAL_APPROVER_POLICY)
     assert len(REGULATORY_ANCHORS) == 6
     assert all(row.citation for row in rows)
     assert all(row.verification_status == "TO_VERIFY_AGAINST_PRIMARY_TEXT" for row in rows)

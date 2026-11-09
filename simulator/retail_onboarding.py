@@ -12,6 +12,7 @@ from cannae_kernel.journal import ChainReport
 from pydantic import BaseModel, ConfigDict
 
 from atreides.account_lifecycle import (
+    AccountApplication,
     AccountLifecycleStore,
     AccountTransitionRefusedError,
     AccountType,
@@ -61,13 +62,22 @@ def _actor() -> ActorRef:
     )
 
 
+def _principal() -> ActorRef:
+    return ActorRef(
+        actor_id=ActorId("act_" + "2" * 26),
+        actor_kind=ActorKind.HUMAN,
+        role="synthetic-retail-principal",
+        entitlement_refs=("accept-retail-account",),
+        authenticated=True,
+    )
+
+
 def _run_one(
-    scenario: Literal[
-        "CLEAN", "UNABLE_TO_VERIFY", "LIST_MATCH_ESCALATION", "PROFILE_INCOMPLETE"
-    ],
+    scenario: Literal["CLEAN", "UNABLE_TO_VERIFY", "LIST_MATCH_ESCALATION", "PROFILE_INCOMPLETE"],
 ) -> RetailOnboardingResult:
     suffix = scenario.replace("_", "")
     account_id = f"SYN-ACCOUNT-{suffix}"
+    application_id = f"SYN-APPLICATION-{suffix}"
     person_id = f"SYN-PERSON-{suffix}"
     kyc_id = f"SYN-KYC-{suffix}"
     eligibility_id = f"SYN-ELIGIBILITY-{suffix}"
@@ -115,7 +125,7 @@ def _run_one(
         liquidity_needs="SYNTHETIC_LOW",
         investment_experience=("SYNTHETIC_EQUITIES",),
     )
-    principal = _actor()
+    accepting_principal = _actor()
     retail = RetailEvidenceStore()
     retail.append_cip(cip)
     retail.append_profile(profile)
@@ -126,7 +136,7 @@ def _run_one(
             person_id=person_id,
             profile_record_id=profile_id,
             accepted_at=START + timedelta(seconds=25),
-            actor=principal,
+            actor=accepting_principal,
             approval_ref=f"SYN-APPROVAL-{suffix}",
         )
     )
@@ -159,6 +169,15 @@ def _run_one(
         )
     )
     resolver = AuthoritativeEvidenceResolver(
+        application_records={
+            application_id: AccountApplication(
+                record_id=application_id,
+                account_id=account_id,
+                account_type=AccountType.NATURAL_PERSON,
+                person_id=person_id,
+                applied_at=START,
+            )
+        },
         kyc_dsor_records={
             kyc_id: KYCDecisionRecord(
                 record_id=kyc_id,
@@ -166,6 +185,8 @@ def _run_one(
                 path_id="KYC_ELIGIBLE_CLEAR",
                 decided_at=START + timedelta(seconds=10),
                 maximum_age_seconds=3600,
+                account_type=AccountType.NATURAL_PERSON,
+                person_id=person_id,
             )
         },
         kyc_chain_reports={
@@ -190,10 +211,17 @@ def _run_one(
         profile_records=retail.profiles,
         principal_acceptance_records=retail.principal_acceptances,
     )
+    principal = _principal()
     lifecycle = AccountLifecycleStore(
-        ActorRegistryApproverVerifier({str(principal.actor_id): principal}), resolver
+        ActorRegistryApproverVerifier(
+            {
+                str(accepting_principal.actor_id): accepting_principal,
+                str(principal.actor_id): principal,
+            }
+        ),
+        resolver,
     )
-    lifecycle.apply(account_id, account_type=AccountType.NATURAL_PERSON, person_id=person_id)
+    lifecycle.apply(application_id)
     approval_time = START + timedelta(seconds=30)
     approved_at: datetime | None = approval_time
     refusal: str | None = None

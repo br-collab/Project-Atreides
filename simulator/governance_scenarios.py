@@ -13,8 +13,10 @@ from cannae_kernel.ids import ActorId
 from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
+    AccountApplication,
     AccountLifecycleStore,
     AccountTransitionRefusedError,
+    AccountType,
     ActorRegistryApproverVerifier,
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
@@ -82,6 +84,15 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
         )
     )
     return AuthoritativeEvidenceResolver(
+        application_records={
+            "SIM-1-G3-APPLICATION": AccountApplication(
+                record_id="SIM-1-G3-APPLICATION",
+                account_id="SYN-G3",
+                account_type=AccountType.INSTITUTIONAL,
+                person_id=None,
+                applied_at=_NOW,
+            )
+        },
         kyc_dsor_records={
             "SIM-1-G3-KYC": KYCDecisionRecord(
                 record_id="SIM-1-G3-KYC",
@@ -89,6 +100,8 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
                 path_id="KYC_ELIGIBLE_CLEAR",
                 decided_at=_NOW,
                 maximum_age_seconds=300,
+                account_type=AccountType.INSTITUTIONAL,
+                person_id=None,
             )
         },
         kyc_chain_reports={
@@ -243,7 +256,7 @@ def run_unauthorized_core_write(*, control_enabled: bool = True) -> dict[str, ob
         else _PermissiveApproverVerifier()
     )
     lifecycle = AccountLifecycleStore(verifier, _evidence_resolver())
-    lifecycle.apply("SYN-G3")
+    lifecycle.apply("SIM-1-G3-APPLICATION")
     if not control_enabled:
         lifecycle.transition(
             "SYN-G3",

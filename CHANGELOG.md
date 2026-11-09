@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.6 - 9 Nov 2026
+
+Resolve account applications and account type from authoritative evidence, publish account type
+with lifecycle status, and enforce the principal and approver role policy.
+
 ## 0.9.5 - 9 Nov 2026
 
 Add synthetic retail CIP, customer profile, account record, and principal acceptance evidence.

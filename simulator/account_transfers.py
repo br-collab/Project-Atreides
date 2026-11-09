@@ -15,6 +15,7 @@ from cannae_kernel.ids import ActorId
 from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
+    AccountApplication,
     AccountLifecycleStore,
     ActorRegistryApproverVerifier,
     AuthoritativeEvidenceResolver,
@@ -23,6 +24,9 @@ from atreides.account_lifecycle import (
     KYCDecisionRecord,
     TransferInRecord,
     attest_first_permitted_trade,
+)
+from atreides.account_lifecycle import (
+    AccountType as LifecycleAccountType,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -103,12 +107,14 @@ def _eligibility_result(account: str, at: datetime) -> EligibilityResultRecord:
 
 
 def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
+    application_records: dict[str, AccountApplication] = {}
     kyc_records: dict[str, KYCDecisionRecord] = {}
     eligibility_records: dict[str, EligibilityResultRecord] = {}
     transfer_records: dict[str, TransferInRecord] = {}
     trade_attestations: dict[str, bytes] = {}
     for index, line in enumerate(STATEMENT, 1):
         kyc_id = f"SIM-1-KYC-{line.account}"
+        application_id = f"SIM-1-APPLICATION-{line.account}"
         transfer_id = f"SYN-ACATS-{index:04d}"
         trade_id = f"SYN-LC-TRADE-{index:04d}"
         kyc_records[kyc_id] = KYCDecisionRecord(
@@ -117,6 +123,15 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
             path_id="KYC_ELIGIBLE_CLEAR",
             decided_at=at,
             maximum_age_seconds=300,
+            account_type=LifecycleAccountType.INSTITUTIONAL,
+            person_id=None,
+        )
+        application_records[application_id] = AccountApplication(
+            record_id=application_id,
+            account_id=line.account,
+            account_type=LifecycleAccountType.INSTITUTIONAL,
+            person_id=None,
+            applied_at=at,
         )
         eligibility = _eligibility_result(line.account, at)
         eligibility_records[eligibility.record_id] = eligibility
@@ -135,6 +150,7 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
             )
         )
     return AuthoritativeEvidenceResolver(
+        application_records=application_records,
         kyc_dsor_records=kyc_records,
         kyc_chain_reports={
             record_id: ChainReport(
@@ -294,7 +310,7 @@ def run_account_transfers(  # noqa: PLR0915
         transfer_id = f"SYN-ACATS-{index:04d}"
         kyc_id = f"SIM-1-KYC-{line.account}"
         eligibility_id = f"SIM-1-ELIGIBILITY-{line.account}"
-        lifecycle.apply(line.account)
+        lifecycle.apply(f"SIM-1-APPLICATION-{line.account}")
         lifecycle.transition(
             line.account,
             AccountStatus.APPROVED,

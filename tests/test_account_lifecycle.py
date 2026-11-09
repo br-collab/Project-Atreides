@@ -11,8 +11,10 @@ from cannae_kernel.journal import ChainReport
 from atreides.account_lifecycle import (
     ALLOWED_TRANSITIONS,
     TRANSITION_RULES,
+    AccountApplication,
     AccountLifecycleStore,
     AccountTransitionRefusedError,
+    AccountType,
     ActorRegistryApproverVerifier,
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
@@ -43,6 +45,7 @@ ELIGIBILITY_ID = "SYN-ELIGIBILITY-001"
 TRANSFER_ID = "SYN-ACATS-001"
 TRADE_ID = "SYN-ORDER-001"
 APPROVAL_ID = "SYN-HUMAN-001"
+APPLICATION_ID = "SYN-APPLICATION-001"
 
 
 def actor(kind: ActorKind = ActorKind.HUMAN) -> ActorRef:
@@ -101,6 +104,7 @@ def eligibility(*, at: datetime = NOW, passed: bool = True) -> EligibilityVerifi
 def resolver(
     *,
     account: str = ACCOUNT,
+    application_account: str = ACCOUNT,
     kyc_path: str = "KYC_ELIGIBLE_CLEAR",
     kyc_at: datetime = NOW,
     kyc_chain_valid: bool = True,
@@ -122,6 +126,7 @@ def resolver(
             KYC_ID: KYCDecisionRecord(
                 record_id=KYC_ID,
                 account_id=account,
+                account_type=AccountType.INSTITUTIONAL,
                 path_id=kyc_path,
                 decided_at=kyc_at,
                 maximum_age_seconds=300,
@@ -152,9 +157,15 @@ def resolver(
             )
         },
         first_trade_attestations={
-            TRADE_ID: trade_wire
-            if trade_wire is not None
-            else attest_first_permitted_trade(trade)
+            TRADE_ID: trade_wire if trade_wire is not None else attest_first_permitted_trade(trade)
+        },
+        application_records={
+            APPLICATION_ID: AccountApplication(
+                record_id=APPLICATION_ID,
+                account_id=application_account,
+                account_type=AccountType.INSTITUTIONAL,
+                applied_at=NOW,
+            )
         },
     )
 
@@ -166,11 +177,12 @@ def store(
 ) -> AccountLifecycleStore:
     registered = registered or actor()
     verifier = ActorRegistryApproverVerifier({str(registered.actor_id): registered})
-    return AccountLifecycleStore(verifier, evidence or resolver())
+    lifecycle = AccountLifecycleStore(verifier, evidence or resolver())
+    lifecycle.apply(APPLICATION_ID)
+    return lifecycle
 
 
 def approve(store: AccountLifecycleStore, account: str = ACCOUNT) -> None:
-    store.apply(account)
     store.transition(
         account,
         AccountStatus.APPROVED,
@@ -236,7 +248,7 @@ def test_end_to_end_lifecycle_and_append_only_events() -> None:
         AccountStatus.FUNDED,
         AccountStatus.ACTIVE,
     ]
-    assert b"cannae.attested_account_status/1" in lifecycle.publish_status(
+    assert b"atreides.attested_account_type_status/1" in lifecycle.publish_status(
         as_of=NOW, maximum_age_seconds=300
     )
 
@@ -362,9 +374,7 @@ def test_hand_built_eligibility_cannot_enter_transition() -> None:
     assert forged.all_passed
     assert "eligibility" not in signature(AccountLifecycleStore.transition).parameters
     lifecycle = store()
-    with pytest.raises(
-        AccountTransitionRefusedError, match="ELIGIBILITY_EVIDENCE_NOT_FOUND"
-    ):
+    with pytest.raises(AccountTransitionRefusedError, match="ELIGIBILITY_EVIDENCE_NOT_FOUND"):
         lifecycle.transition(
             ACCOUNT,
             AccountStatus.APPROVED,
@@ -400,9 +410,7 @@ def test_first_trade_with_tampered_attestation_is_refused() -> None:
         evidence_refs=(),
         transfer_record_id=TRANSFER_ID,
     )
-    with pytest.raises(
-        AccountTransitionRefusedError, match="FIRST_TRADE_EVIDENCE_TAMPERED"
-    ):
+    with pytest.raises(AccountTransitionRefusedError, match="FIRST_TRADE_EVIDENCE_TAMPERED"):
         lifecycle.transition(
             ACCOUNT,
             AccountStatus.ACTIVE,
