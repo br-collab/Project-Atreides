@@ -8,11 +8,6 @@ from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import digest_bytes
 from cannae_kernel.ids import ActorId
 from cannae_kernel.journal import ChainReport
-from cannae_kernel.signed_attestation import (
-    PublicKeyRecord,
-    PublicKeyRegistry,
-    pinned_public_key_registry,
-)
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from atreides.account_lifecycle import (
@@ -60,9 +55,6 @@ LEGAL_ENTITY_ID = "SYN-LEGAL-001"
 KYB_ID = "SYN-KYB-001"
 SIGNING_KEY_ID = "synthetic-lc-key-1"
 SIGNING_KEY = Ed25519PrivateKey.from_private_bytes(bytes(range(32)))
-SIGNING_KEYS = pinned_public_key_registry(
-    {SIGNING_KEY_ID: PublicKeyRecord("legiones-cannenses", SIGNING_KEY.public_key())}
-)
 
 
 def actor(kind: ActorKind = ActorKind.HUMAN, number: int = 0) -> ActorRef:
@@ -131,7 +123,6 @@ def resolver(
     transfer_id: str = TRANSFER_ID,
     transfer_completed: bool = True,
     trade_wire: bytes | None = None,
-    trade_key_registry: PublicKeyRegistry = SIGNING_KEYS,
     legal_entity_record_id: str | None = LEGAL_ENTITY_ID,
     kyb_result_record_id: str | None = KYB_ID,
     kyb_clear: bool = True,
@@ -185,7 +176,6 @@ def resolver(
             if trade_wire is not None
             else attest_first_permitted_trade(trade, key_id=SIGNING_KEY_ID, private_key=SIGNING_KEY)
         },
-        first_trade_key_registry=trade_key_registry,
         application_records={
             APPLICATION_ID: AccountApplication(
                 record_id=APPLICATION_ID,
@@ -487,21 +477,58 @@ def test_first_trade_with_tampered_attestation_is_refused() -> None:
 
 
 @pytest.mark.parametrize(
-    ("registry", "reason"),
+    ("key_id", "private_key", "producer", "reason"),
     [
-        (pinned_public_key_registry({}), RefusalReason.FIRST_TRADE_SIGNING_KEY_UNKNOWN),
         (
-            pinned_public_key_registry(
-                {SIGNING_KEY_ID: PublicKeyRecord("atreides", SIGNING_KEY.public_key())}
-            ),
+            "synthetic-unpinned-lc-1",
+            Ed25519PrivateKey.from_private_bytes(bytes([3]) * 32),
+            "legiones-cannenses",
+            RefusalReason.FIRST_TRADE_SIGNING_KEY_UNKNOWN,
+        ),
+        (
+            SIGNING_KEY_ID,
+            SIGNING_KEY,
+            "atreides",
             RefusalReason.FIRST_TRADE_PRODUCER_MISMATCH,
+        ),
+        (
+            "synthetic-lc-revoked-1",
+            Ed25519PrivateKey.from_private_bytes(bytes([1]) * 32),
+            "legiones-cannenses",
+            RefusalReason.FIRST_TRADE_SIGNING_KEY_REVOKED,
+        ),
+        (
+            "synthetic-lc-expired-1",
+            Ed25519PrivateKey.from_private_bytes(bytes([2]) * 32),
+            "legiones-cannenses",
+            RefusalReason.FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY,
         ),
     ],
 )
 def test_first_trade_signer_identity_is_pinned(
-    registry: PublicKeyRegistry, reason: RefusalReason
+    key_id: str,
+    private_key: Ed25519PrivateKey,
+    producer: str,
+    reason: RefusalReason,
 ) -> None:
-    lifecycle = store(resolver(trade_key_registry=registry))
+    trade = FirstPermittedTradeRecord(
+        record_id=TRADE_ID,
+        account_id=ACCOUNT,
+        permitted=True,
+        traded_at=NOW,
+    )
+    wire = attest_first_permitted_trade(trade, key_id=key_id, private_key=private_key)
+    if producer != "legiones-cannenses":
+        from cannae_kernel.canonical import canonical_bytes
+        from cannae_kernel.signed_attestation import sign_attestation
+
+        wire = sign_attestation(
+            canonical_bytes(trade),
+            producer=producer,
+            key_id=key_id,
+            private_key=private_key,
+        )
+    lifecycle = store(resolver(trade_wire=wire))
     approve(lifecycle)
     lifecycle.transition(
         ACCOUNT,

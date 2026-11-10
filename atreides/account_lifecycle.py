@@ -19,7 +19,6 @@ from cannae_kernel.provenance import Provenance
 from cannae_kernel.signed_attestation import (
     AttestationRefusal,
     AttestationVerificationError,
-    PublicKeyRegistry,
     SigningKey,
     sign_attestation,
     verify_attestation,
@@ -35,6 +34,12 @@ from atreides.retail_identity import (
     CustomerProfile,
     PrincipalAcceptanceRecord,
     PrincipalApproverPolicyRow,
+)
+from atreides.trust_anchors import (
+    TrustAnchorError,
+    TrustAnchorRefusal,
+    require_anchor_valid_at,
+    resolve_pinned_anchor,
 )
 
 
@@ -64,6 +69,8 @@ class RefusalReason(StrEnum):
     FIRST_TRADE_ACCOUNT_MISMATCH = "FIRST_TRADE_ACCOUNT_MISMATCH"
     FIRST_TRADE_EVIDENCE_TAMPERED = "FIRST_TRADE_EVIDENCE_TAMPERED"
     FIRST_TRADE_SIGNING_KEY_UNKNOWN = "FIRST_TRADE_SIGNING_KEY_UNKNOWN"
+    FIRST_TRADE_SIGNING_KEY_REVOKED = "FIRST_TRADE_SIGNING_KEY_REVOKED"
+    FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY = "FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY"
     FIRST_TRADE_PRODUCER_MISMATCH = "FIRST_TRADE_PRODUCER_MISMATCH"
     FIRST_TRADE_SIGNATURE_INVALID = "FIRST_TRADE_SIGNATURE_INVALID"
     CIP_EVIDENCE_NOT_FOUND = "CIP_EVIDENCE_NOT_FOUND"
@@ -248,7 +255,6 @@ class AuthoritativeEvidenceResolver:
         eligibility_records: Mapping[str, EligibilityResultRecord],
         transfer_records: Mapping[str, TransferInRecord],
         first_trade_attestations: Mapping[str, bytes],
-        first_trade_key_registry: PublicKeyRegistry | None = None,
         cip_records: Mapping[str, CIPRecord] | None = None,
         profile_records: Mapping[str, CustomerProfile] | None = None,
         principal_acceptance_records: Mapping[str, PrincipalAcceptanceRecord] | None = None,
@@ -261,9 +267,6 @@ class AuthoritativeEvidenceResolver:
         self._eligibility_records = eligibility_records
         self._transfer_records = transfer_records
         self._first_trade_attestations = first_trade_attestations
-        self._first_trade_key_registry = (
-            {} if first_trade_key_registry is None else first_trade_key_registry
-        )
         self._cip_records = {} if cip_records is None else cip_records
         self._profile_records = {} if profile_records is None else profile_records
         self._principal_acceptance_records = (
@@ -299,21 +302,41 @@ class AuthoritativeEvidenceResolver:
         if wire is None:
             raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_NOT_FOUND)
         try:
+            anchor, registry = resolve_pinned_anchor(
+                wire,
+                expected_producer="legiones-cannenses",
+            )
             payload = verify_attestation(
                 wire,
                 expected_producer="legiones-cannenses",
-                registry=self._first_trade_key_registry,
+                registry=registry,
             )
+        except TrustAnchorError as exc:
+            trust_refusals = {
+                TrustAnchorRefusal.UNKNOWN_KEY: RefusalReason.FIRST_TRADE_SIGNING_KEY_UNKNOWN,
+                TrustAnchorRefusal.WRONG_PRODUCER: RefusalReason.FIRST_TRADE_PRODUCER_MISMATCH,
+                TrustAnchorRefusal.REVOKED: RefusalReason.FIRST_TRADE_SIGNING_KEY_REVOKED,
+                TrustAnchorRefusal.OUTSIDE_VALIDITY: (
+                    RefusalReason.FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY
+                ),
+                TrustAnchorRefusal.MALFORMED: RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED,
+            }
+            raise AccountTransitionRefusedError(trust_refusals[exc.refusal]) from exc
         except AttestationVerificationError as exc:
-            refusals = {
+            attestation_refusals = {
                 AttestationRefusal.UNKNOWN_KEY: RefusalReason.FIRST_TRADE_SIGNING_KEY_UNKNOWN,
                 AttestationRefusal.WRONG_PRODUCER: RefusalReason.FIRST_TRADE_PRODUCER_MISMATCH,
                 AttestationRefusal.INVALID_SIGNATURE: RefusalReason.FIRST_TRADE_SIGNATURE_INVALID,
                 AttestationRefusal.MALFORMED: RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED,
             }
-            raise AccountTransitionRefusedError(refusals[exc.refusal]) from exc
+            raise AccountTransitionRefusedError(attestation_refusals[exc.refusal]) from exc
         try:
             record = FirstPermittedTradeRecord.model_validate_json(payload)
+            require_anchor_valid_at(anchor, record.traded_at)
+        except TrustAnchorError as exc:
+            raise AccountTransitionRefusedError(
+                RefusalReason.FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY
+            ) from exc
         except ValueError as exc:
             raise AccountTransitionRefusedError(
                 RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED

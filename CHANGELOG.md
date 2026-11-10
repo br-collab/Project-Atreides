@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.8 - 9 Nov 2026
+
+Load synthetic first-trade trust anchors from checksum-pinned package configuration and refuse
+unpinned, revoked, expired, and wrong-producer signatures by name.
+
 ## 0.9.7 - 9 Nov 2026
 
 Verify producer-bound Ed25519 lifecycle evidence, require authoritative legal-entity and KYB
