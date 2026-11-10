@@ -10,7 +10,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-28",
-      "economics_digest": "sha256:b7f7833c30ad43e47bd9abe9610cc462af100eab38d23505e23adad2da4bcf86",
+      "economics_digest": "sha256:7a2fa41c48fa0a2fe3a12f5e43909e56a28679d2e3c19bfc9734478362f98725",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -86,7 +86,7 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999584.5000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
           "reserve_requirement": "900000000.00"
         },
@@ -131,7 +131,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-29",
-      "economics_digest": "sha256:f650788f585eb672cf40e8a997c28acecc4f15557a05800ab212751e45c851a2",
+      "economics_digest": "sha256:1ed0b222c5e74635e642e7931e5bd465a7f38d704a4c92ec5bbc24ff98a7e6c2",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -205,7 +205,7 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999773.5000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
           "reserve_requirement": "900000000.00"
         },
@@ -248,7 +248,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-30",
-      "economics_digest": "sha256:677bc6b5f38193783e43bcbd8132cfab7f2f7b9121b437e4a3d573c8a9e9e7c5",
+      "economics_digest": "sha256:38f99b90a29eced9b4d111674ef1cc43416437bb13b1f08e36b75fbc3dbe9a91",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -322,7 +322,7 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999679.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
           "reserve_requirement": "900000000.00"
         },
@@ -489,7 +489,7 @@
     {
       "breaks": [],
       "business_date": "2027-01-04",
-      "economics_digest": "sha256:5e61858047ffc0f11fb7856d5c4d06a99f38b7ebe19d5bab713dee24f3d6690c",
+      "economics_digest": "sha256:4ebcea85a9fce592e5c39dc785d70fbafbea5a7d755e4759718dd9b0f920e2e2",
       "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL"
@@ -565,7 +565,7 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999790.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
           "reserve_requirement": "50000000.00"
         },
@@ -610,7 +610,7 @@
   ],
   "days": 5,
   "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
-  "economics_digest": "sha256:e1dfac1cd417186a1eb1f2e55bf6b70969a115dd9d530057bb053a616f6609a6",
+  "economics_digest": "sha256:97b8c04649955b97940bbb54c3da0e39afcd404c60094c23058f21e44975f446",
   "filed_credit_history": [
     {
       "customer_total_credits": "50000000",
@@ -709,7 +709,7 @@
   "repository_shas": {
     "Cato-FICC-MCP": "db7e46ed044f655e9138340eeeb1c9ab59221748",
     "L.C.": "117b6436856431715d9a8b6adb702cde6d2032ab",
-    "atreides": "dd14549cd38a60af5deb335dcd3357cc862dabca",
+    "atreides": "34843aa5bc314059b7a8f0e37b7ed4915af3136d",
     "aureon": "4cf4ecc8e70b174d433e9da3a34496157d133c81",
     "cannae-kernel": "d062cebca06bf1c925c38c3514e036abf3b49ab3"
   },
