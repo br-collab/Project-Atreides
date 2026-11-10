@@ -44,14 +44,14 @@ def _value(table: RuleTable, rule_id: str) -> Decimal | None:
 class _BookView:
     customer_cash: dict[str, Decimal]
     customer_positions: dict[str, dict[str, Decimal]]
-    issue_positions: dict[str, Decimal]
+    firm_positions: dict[str, Decimal]
     in_control: dict[str, Decimal]
 
 
 def _read(books: EquitiesBooks) -> _BookView:
     customer_cash: dict[str, Decimal] = {}
     customer_positions: dict[str, dict[str, Decimal]] = {}
-    issue_positions: dict[str, Decimal] = {}
+    firm_positions: dict[str, Decimal] = {}
     control_balances: dict[str, Decimal] = {}
     for entry in books.entries:
         for line in entry.lines:
@@ -63,7 +63,15 @@ def _read(books: EquitiesBooks) -> _BookView:
             if line.issue is None:
                 continue
             if line.record_side is RecordSide.OWNERSHIP:
-                issue_positions[line.issue] = issue_positions.get(line.issue, ZERO) + line.quantity
+                # 17 CFR 240.15c3-1(c)(2)(vi), pinned source sha256
+                # 939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a:
+                # "of the market value of all securities, money market instruments or
+                # options in the proprietary or other accounts of the broker or dealer."
+                # Bill's N2 decision excludes customer positions from that scope.
+                if line.account_type is AccountType.FIRM_PROPRIETARY:
+                    firm_positions[line.issue] = (
+                        firm_positions.get(line.issue, ZERO) + line.quantity
+                    )
                 if customer:
                     held = customer_positions.setdefault(line.account_id, {})
                     held[line.issue] = held.get(line.issue, ZERO) + line.quantity
@@ -74,7 +82,7 @@ def _read(books: EquitiesBooks) -> _BookView:
     return _BookView(
         customer_cash=customer_cash,
         customer_positions=customer_positions,
-        issue_positions=issue_positions,
+        firm_positions=firm_positions,
         # A long street position is recorded as a negative location balance.
         in_control={issue: abs(balance) for issue, balance in control_balances.items()},
     )
@@ -161,7 +169,7 @@ def required_net_capital(
     assert warn_alt is not None and warn_minimum is not None
     view = _read(books)
     haircuts = ZERO
-    for issue, quantity in view.issue_positions.items():
+    for issue, quantity in view.firm_positions.items():
         if not quantity:
             continue
         if issue not in prices:

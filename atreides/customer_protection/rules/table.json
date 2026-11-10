@@ -26,6 +26,22 @@
   ],
   "items": [
     {
+      "id": "15c3-1.c2vi.scope",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "of the market value of all securities, money market instruments or options in the proprietary or other accounts of the broker or dealer."
+    },
+    {
+      "id": "15c3-3a.pab_note_1.apply_exhibit_a",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-3a, PAB Note 1",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "Broker-dealers should use the formula in Exhibit A for the purposes of computing the PAB reserve requirement, except that references to “accounts,” “customer accounts, or “customers” will be treated as references to PAB accounts."
+    },
+    {
       "id": "15c3-3a.item.01",
       "kind": "EXHIBIT_A_CREDIT",
       "citation": "17 CFR 240.15c3-3a, Item 1",
