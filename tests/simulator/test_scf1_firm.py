@@ -26,7 +26,7 @@ from simulator.runner import load_calibration_pack
 
 
 def test_profile_is_declared_synthetic_and_deterministic() -> None:
-    profile = load_firm_profile(load_calibration_pack("firm-synthetic/1"), "small")
+    profile = load_firm_profile(load_calibration_pack("firm-synthetic/2"), "small")
     assert (profile.accounts, profile.issues, profile.executions_per_day) == (200, 20, 1000)
     assert profile.synthetic
     assert draw_executions(profile, date(2027, 1, 4), 7) == draw_executions(
@@ -74,7 +74,7 @@ def test_roll_forward_conserves_shares_and_cents(
 
 
 def test_small_day_drives_real_estate_and_mutations_fail(tmp_path) -> None:
-    profile = load_firm_profile(load_calibration_pack("firm-synthetic/1"), "small")
+    profile = load_firm_profile(load_calibration_pack("firm-synthetic/2"), "small")
     run = run_firm(profile, seed=20261024, days=1)
     assert all(run.days[0].invariants.values())
     attacked = attack_firm_run(run)
@@ -102,7 +102,7 @@ def test_real_reserve_engine_lie_fails_i6(monkeypatch: pytest.MonkeyPatch) -> No
         return result.model_copy(update={"disposition": Disposition.PASS, "breaches": ()})
 
     monkeypatch.setattr(firm, "compute_reserve", lying_reserve)
-    profile = load_firm_profile(load_calibration_pack("firm-synthetic/1"), "small")
+    profile = load_firm_profile(load_calibration_pack("firm-synthetic/2"), "small")
     run = run_firm(
         profile,
         seed=20261024,

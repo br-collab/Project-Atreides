@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.9 - 9 Nov 2026
+
+- Correct protection inputs for proprietary haircuts, PAB free credits, fails to deliver, and stock-loan control facts.
+
 ## 0.9.8 - 9 Nov 2026
 
 Load synthetic first-trade trust anchors from checksum-pinned package configuration and refuse

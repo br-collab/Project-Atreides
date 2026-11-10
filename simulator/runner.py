@@ -995,6 +995,9 @@ def publish_run(run: dict[str, object], output: Path) -> None:
             f"{int(cast(int, profile['issues'])):,} issues, "
             f"{int(cast(int, profile['executions_per_day'])):,} executions per day. "
             f"All close invariants green: `{run['all_invariants_pass']}`.\n\n"
+            "## Publication change reasons\n\n- "
+            + "\n- ".join(cast(list[str], run["publication_change_reasons"]))
+            + "\n\n"
             "## Firm section\n\n"
             f"- Executions: {sum(cast(int, close['executions']) for close in firm_closes):,}\n"
             f"- Fails by age: `{fails}`\n"

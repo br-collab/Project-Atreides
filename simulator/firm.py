@@ -121,6 +121,9 @@ class FirmProfile:
     filed_history_months: int
     filed_history_credit: Decimal
     seed_stream: str
+    calibration_pack_id: str
+    calibration_pack_version: str
+    calibration_manifest_digest: str
     synthetic: bool = True
     #: FIX-11 declared control deficit: (day index, issue index, shares short), or None.
     control_deficit: tuple[int, int, Decimal] | None = None
@@ -169,6 +172,12 @@ class FirmRun:
     elapsed_seconds: float
     executions_per_second: float
     peak_memory_bytes: int | None
+    publication_change_reasons: tuple[str, ...] = (
+        "N2 restricts net capital haircut inputs to firm proprietary positions",
+        "N3 includes PAB free credits in the PAB reserve computation",
+        "N4 removes fails to deliver from the Rule 15c3-3(d)(2) control location",
+        "N5 declares stock-loan holdings as loaned",
+    )
     not_claimed: tuple[str, ...] = NOT_CLAIMED
 
 
@@ -247,6 +256,9 @@ def load_firm_profile(pack: CalibrationPack, tier: TierName) -> FirmProfile:
         filed_history_months=int(cast(int, pack.value("firm_profile", "filed_history_months"))),
         filed_history_credit=Decimal(str(pack.value("firm_profile", "filed_history_credit"))),
         seed_stream=str(pack.value("firm_profile", "seed_stream")),
+        calibration_pack_id=pack.pack_id,
+        calibration_pack_version=pack.version,
+        calibration_manifest_digest=pack.manifest_digest,
         control_deficit=_control_deficit(pack),
     )
 
@@ -1256,6 +1268,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         before = books.digest()
         duplicates_refused = all(not books.post(entry).posted for entry in posted)
         i12 = duplicates_refused and before == books.digest()
+        replay_digest = books.digest()
         observed = {
             issue: sides.get(RecordSide.OWNERSHIP, Decimal())
             for issue, sides in books.quantities().items()
@@ -1290,7 +1303,10 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             and all(
                 item.quantity <= profile.order_size_max for item in executions if not item.refused
             ),
-            "I8_REPLAY_DIGEST": before == books.digest(),
+            # The reserve engines can post authorized same-day deposits after the
+            # duplicate replay check. I8 measures that replay check, not the later
+            # protection movements that become the next day's opening books.
+            "I8_REPLAY_DIGEST": before == replay_digest,
             "I11_POSITION_ROLL_FORWARD": i11,
             "I12_IDEMPOTENT_REPLAY": i12,
         }

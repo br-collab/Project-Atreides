@@ -134,11 +134,12 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     }
     pab_lines = customer_lines.copy()
     customer_cash: dict[str, Decimal] = {}
-    positions: dict[str, Decimal] = {}
+    pab_cash: dict[str, Decimal] = {}
+    firm_positions: dict[str, Decimal] = {}
     # Location lines are journal movements. Aggregate their signed balances before
     # taking the holding magnitude; summing ``abs(line.quantity)`` over history
     # double-counts every movement and can manufacture a control break.
-    location_balances: dict[tuple[str, str], Decimal] = {}
+    location_balances: dict[tuple[str, str, bool | None], Decimal] = {}
     ownership: dict[str, Decimal] = {}
     customer_positions: dict[str, dict[str, Decimal]] = {}
     stock_loaned_market_value = Decimal(0)
@@ -156,9 +157,19 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 customer_cash[line.account_id] = (
                     customer_cash.get(line.account_id, Decimal(0)) + line.money
                 )
+            if line.account_type is AccountType.PAB and line.currency == "USD":
+                pab_cash[line.account_id] = pab_cash.get(line.account_id, Decimal(0)) + line.money
             if line.issue is not None and line.record_side is RecordSide.OWNERSHIP:
                 ownership[line.issue] = ownership.get(line.issue, Decimal(0)) + line.quantity
-                positions[line.issue] = positions.get(line.issue, Decimal(0)) + line.quantity
+                # 17 CFR 240.15c3-1(c)(2)(vi), pinned source sha256
+                # 939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a:
+                # "of the market value of all securities, money market instruments or
+                # options in the proprietary or other accounts of the broker or dealer."
+                # Bill's N2 decision excludes customer positions from that scope.
+                if line.account_type is AccountType.FIRM_PROPRIETARY:
+                    firm_positions[line.issue] = (
+                        firm_positions.get(line.issue, Decimal(0)) + line.quantity
+                    )
                 if line.account_type in {
                     AccountType.CUSTOMER_CASH,
                     AccountType.CUSTOMER_MARGIN,
@@ -166,27 +177,37 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                     by_issue = customer_positions.setdefault(line.account_id, {})
                     by_issue[line.issue] = by_issue.get(line.issue, Decimal(0)) + line.quantity
             if line.issue is not None and line.record_side is RecordSide.LOCATION:
+                # 17 CFR 240.15c3-3(d)(2), pinned source sha256
+                # c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443:
+                # "Securities included on the broker's or dealer's books or records as
+                # failed to receive more than 30 calendar days". A fail to deliver is
+                # not the named non-control location.
+                if line.account_type is AccountType.FAIL_TO_DELIVER:
+                    continue
                 location_rule = {
                     AccountType.DTC: "15c3-3.control.c1",
                     AccountType.BANK_CONTROL: "15c3-3.control.c5",
-                    AccountType.FAIL_TO_DELIVER: "15c3-3.noncontrol.d2",
                     # Rule 15c3-3(d)(2) names securities "failed to receive"; FIX-11.
                     AccountType.FAIL_TO_RECEIVE: "15c3-3.noncontrol.d2",
                     AccountType.STOCK_LOANED: "15c3-3.noncontrol.d1",
                     AccountType.IN_TRANSFER: "15c3-3.noncontrol.d4",
                 }.get(line.account_type, "UNMAPPED_LOCATION")
-                key = (line.issue, location_rule)
+                # 17 CFR 240.15c3-3(d)(1), same pinned source:
+                # "securities loaned to another broker or dealer or a clearing corporation".
+                loaned = True if line.account_type is AccountType.STOCK_LOANED else None
+                key = (line.issue, location_rule, loaned)
                 location_balances[key] = location_balances.get(key, Decimal(0)) + line.quantity
     holdings: dict[str, list[Holding]] = {}
-    for (issue, location), balance in location_balances.items():
+    for (issue, location, loaned), balance in location_balances.items():
         if balance:
             holdings.setdefault(issue, []).append(
-                Holding(location=location, quantity=abs(balance))
+                Holding(location=location, quantity=abs(balance), loaned=loaned)
             )
     customer_debits = sum(
         (max(-balance, Decimal(0)) for balance in customer_cash.values()), Decimal(0)
     )
     free_credits = sum((max(balance, Decimal(0)) for balance in customer_cash.values()), Decimal(0))
+    pab_free_credits = sum((max(balance, Decimal(0)) for balance in pab_cash.values()), Decimal(0))
     exclusions: list[ProjectionExclusion] = []
     special_rule = {
         AccountType.FAIL_TO_RECEIVE: str(mapping["customer_fail_to_receive_rule_id"]),
@@ -254,6 +275,11 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
             if line.account_type is AccountType.STOCK_LOANED and line.issue is not None:
                 stock_loaned_market_value += abs(line.quantity) * prices[line.issue]
     customer_lines[str(mapping["customer_free_credit_rule_id"])] = free_credits
+    # 17 CFR 240.15c3-3a, PAB Note 1, pinned source sha256
+    # 8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd:
+    # "Broker-dealers should use the formula in Exhibit A for the purposes of computing
+    # the PAB reserve requirement" with account references treated as PAB accounts.
+    pab_lines[str(mapping["customer_free_credit_rule_id"])] = pab_free_credits
     customer_lines[str(mapping["customer_margin_debit_rule_id"])] = customer_debits
     derived = tuple(
         sorted(rule_id for rule_id, value in customer_lines.items() if value is not None)
@@ -305,7 +331,7 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
             long_market_value=max(quantity, Decimal(0)) * prices[issue],
             short_market_value=max(-quantity, Decimal(0)) * prices[issue],
         )
-        for issue, quantity in sorted(positions.items())
+        for issue, quantity in sorted(firm_positions.items())
     )
     net_capital = NetCapitalInputs(
         as_of=as_of,

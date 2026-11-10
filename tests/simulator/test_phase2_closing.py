@@ -13,7 +13,7 @@ from simulator.runner import load_calibration_pack
 
 def _one_day() -> firm.FirmRun:
     return run_firm(
-        load_firm_profile(load_calibration_pack("firm-synthetic/1"), "small"),
+        load_firm_profile(load_calibration_pack("firm-synthetic/2"), "small"),
         days=1,
         verify_replay=False,
     )
