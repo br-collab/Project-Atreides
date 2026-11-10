@@ -1,6 +1,6 @@
 [project]
 name = "atreides"
-version = "0.9.7"
+version = "0.9.8"
 description = "Aureon Asset Services — doctrine-native institutional governance framework"
 authors = [{name = "Guillermo Ravelo", email = "gar2163@columbia.edu"}]
 readme = "README.md"
@@ -39,7 +39,7 @@ dev = [
     "pyarrow-stubs>=20",
     # SIM-1B is source-only test infrastructure. It drives the committed L.C.
     # lifecycle/capture/allocation package; production imports still refuse simulator/.
-    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@319b8506be264f1320e63935061800d47bc58377",
+    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@117b6436856431715d9a8b6adb702cde6d2032ab",
 ]
 
 [build-system]
@@ -55,6 +55,7 @@ include = ["atreides*"]
 # Atreides as a package, so an undeclared file is missing there.
 # tests/customer_protection/test_package_data.py keeps this list complete.
 [tool.setuptools.package-data]
+atreides = ["trusted_producer_keys.json"]
 "atreides.customer_protection.rules" = ["table.json", "sources/*"]
 "atreides.deadlines.rules" = ["table.json", "sources/*"]
 "atreides.deadlines.calendars" = ["*.json"]

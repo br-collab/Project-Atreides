@@ -1,0 +1,41 @@
+{
+  "schema_version": "atreides.trusted_producer_keys/1",
+  "keys": [
+    {
+      "key_id": "synthetic-lc-key-1",
+      "producer": "legiones-cannenses",
+      "public_key_b64": "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_to": "2035-12-31T23:59:59Z",
+      "revoked": false,
+      "synthetic": true
+    },
+    {
+      "key_id": "synthetic-lc-simulator-key-1",
+      "producer": "legiones-cannenses",
+      "public_key_b64": "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_to": "2035-12-31T23:59:59Z",
+      "revoked": false,
+      "synthetic": true
+    },
+    {
+      "key_id": "synthetic-lc-revoked-1",
+      "producer": "legiones-cannenses",
+      "public_key_b64": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_to": "2035-12-31T23:59:59Z",
+      "revoked": true,
+      "synthetic": true
+    },
+    {
+      "key_id": "synthetic-lc-expired-1",
+      "producer": "legiones-cannenses",
+      "public_key_b64": "gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+      "valid_from": "2024-01-01T00:00:00Z",
+      "valid_to": "2025-12-31T23:59:59Z",
+      "revoked": false,
+      "synthetic": true
+    }
+  ]
+}
