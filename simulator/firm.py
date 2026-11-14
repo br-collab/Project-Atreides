@@ -84,6 +84,15 @@ from simulator.estate import (
 from simulator.protection_oracle import EXCESS_MARGIN_THRESHOLD, required_net_capital
 from simulator.protection_oracle import required_control as required_possession_or_control
 from simulator.settlement import rule_204_deadline
+from simulator.street import (
+    CalendarRun,
+    DepositoryPosition,
+    StreetBreak,
+    StreetMovement,
+    SyntheticDepository,
+    reconcile,
+    reconciliation_calendar,
+)
 
 TierName = Literal["small", "medium", "large"]
 #: FIX-11 honest stress inputs: a credit that creates a requirement, with a short deposit.
@@ -158,6 +167,8 @@ class FirmDay:
     invariants: dict[str, bool]
     fails_by_age: dict[str, int]
     breaks_by_owner: dict[str, int]
+    street_breaks: tuple[StreetBreak, ...]
+    reconciliation_calendar: tuple[CalendarRun, ...]
     protection_dispositions: dict[str, str]
     protection_required: dict[str, str]
     protection_reasons: dict[str, tuple[str, ...]]
@@ -181,11 +192,18 @@ class FirmRun:
         "N3 includes PAB free credits in the PAB reserve computation",
         "N4 removes fails to deliver from the Rule 15c3-3(d)(2) control location",
         "N5 declares stock-loan holdings as loaned",
+        "MVP-1 replaces the self-comparison with an independent street statement",
+        "MVP-1 reports the declared reconciliation calendar at every close",
+        "MVP-1 nets fail-to-receive and stock-loan lifecycle balances",
     )
     not_claimed: tuple[str, ...] = NOT_CLAIMED
 
 
 MUTATIONS = (
+    "BOOKED_QUANTITY_STREET_LACKS",
+    "STREET_MOVEMENT_BOOKS_MISSED",
+    "WRONG_LOCATION_BOOKING",
+    "DUPLICATE_BOOKING",
     "DROP_FILL_FROM_BOOKS",
     "DOUBLE_POST_NEW_EVENT",
     "OMIT_ISSUE_FROM_CNS",
@@ -622,6 +640,68 @@ def _balances(books: EquitiesBooks) -> tuple[dict[tuple[str, str], Decimal], dic
     return dict(positions), dict(cash)
 
 
+def _location_balances(books: EquitiesBooks) -> dict[tuple[str, str], Decimal]:
+    balances: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
+    for entry in books.entries:
+        for line in entry.lines:
+            if line.record_side is RecordSide.LOCATION and line.issue is not None:
+                balances[(line.issue, line.account_type.value)] += line.quantity
+    return dict(balances)
+
+
+def _opening_street(profile: FirmProfile, days: int) -> tuple[DepositoryPosition, ...]:
+    per_issue = Decimal(profile.executions_per_day * profile.order_size_max * days)
+    total = (
+        per_issue
+        + profile.error_account_shares_per_issue
+        + profile.firm_investment_shares_per_issue
+    )
+    return tuple(
+        DepositoryPosition(
+            issue=f"SYN-SCF1-ISSUE-{index:04d}", location="DTC", quantity=-total
+        )
+        for index in range(profile.issues)
+    )
+
+
+def _post_wrong_location(books: EquitiesBooks, business_date: date, issue: str) -> None:
+    event_id = _id("evt_", 825_000_000)
+    books.post(
+        JournalEntry(
+            entry_id="SCF1-WRONG-LOCATION",
+            source_event_id=event_id,
+            source=PostingSource.CNS_SETTLEMENT,
+            effective_date=business_date,
+            effective_date_basis="SETTLEMENT_DATE",
+            authority="MVP1_ATTACK_WRONG_LOCATION",
+            lines=(
+                LedgerLine(
+                    account_id="DTC",
+                    account_type=AccountType.DTC,
+                    record_side=RecordSide.LOCATION,
+                    issue=issue,
+                    quantity=Decimal(1),
+                ),
+                LedgerLine(
+                    account_id="BANK_CONTROL",
+                    account_type=AccountType.BANK_CONTROL,
+                    record_side=RecordSide.LOCATION,
+                    issue=issue,
+                    quantity=Decimal(-1),
+                ),
+            ),
+            posting=BooksPosting(
+                posted_record_id="SCF1-WRONG-LOCATION",
+                posting_authority=_actor(),
+                effective_time=datetime.combine(business_date, datetime.min.time(), tzinfo=UTC),
+                source_event_id=EventId(event_id),
+                provenance=Provenance.FACT_SYNTHETIC,
+            ),
+            synthetic=True,
+        )
+    )
+
+
 def _seed_inventory(books: EquitiesBooks, profile: FirmProfile, start: date, days: int) -> None:
     """Book customer opening holdings and the declared small proprietary book."""
     per_issue = Decimal(profile.executions_per_day * profile.order_size_max * days)
@@ -742,7 +822,7 @@ def _post_stock_borrows(
                     ),
                     LedgerLine(
                         account_id="SYN-SCF2-BORROW-LENDER",
-                        account_type=AccountType.STOCK_LOANED,
+                        account_type=AccountType.STOCK_BORROW_COUNTERPARTY,
                         record_side=RecordSide.OWNERSHIP,
                         issue=issue,
                         quantity=-borrowed,
@@ -768,6 +848,86 @@ def _post_stock_borrows(
             )
         )
     return dict(activity)
+
+
+def _post_fail_to_receive_movements(
+    books: EquitiesBooks,
+    carried: dict[str, tuple[Decimal, Decimal, date]],
+    closing: dict[str, tuple[Decimal, Decimal, date]],
+    business_date: date,
+    prices: dict[str, Decimal],
+    day_index: int,
+) -> tuple[StreetMovement, ...]:
+    """Post the net opening, partial closing, or full closing of each FTR lifecycle."""
+    movements: list[StreetMovement] = []
+    for offset, issue in enumerate(sorted(set(carried) | set(closing))):
+        ending = max(closing.get(issue, (Decimal(), Decimal(), business_date))[0], Decimal())
+        settlement_date = (carried[issue] if issue in carried else closing[issue])[2]
+        target = ending if settlement_date <= business_date else Decimal()
+        recorded = -sum(
+            (
+                line.quantity
+                for entry in books.entries
+                for line in entry.lines
+                if line.account_type is AccountType.FAIL_TO_RECEIVE and line.issue == issue
+            ),
+            Decimal(),
+        )
+        delta = target - recorded
+        if not delta:
+            continue
+        event_id = _id("evt_", 845_000_000 + day_index * 10_000 + offset)
+        entry_id = f"SCF2-FTR-{day_index}-{offset}"
+        books.post(
+            JournalEntry(
+                entry_id=entry_id,
+                source_event_id=event_id,
+                source=PostingSource.CNS_FAIL,
+                effective_date=business_date,
+                effective_date_basis="SETTLEMENT_DATE",
+                authority="SCF2_SYNTHETIC_FAIL_LIFECYCLE",
+                lines=(
+                    LedgerLine(
+                        account_id="DTC",
+                        account_type=AccountType.DTC,
+                        record_side=RecordSide.LOCATION,
+                        issue=issue,
+                        quantity=delta,
+                    ),
+                    LedgerLine(
+                        account_id="SYN-SCF2-FAIL-TO-RECEIVE",
+                        account_type=AccountType.FAIL_TO_RECEIVE,
+                        record_side=RecordSide.LOCATION,
+                        issue=issue,
+                        quantity=-delta,
+                    ),
+                ),
+                reserve_source_facts=(
+                    ReserveSourceFact(
+                        account_type=AccountType.FAIL_TO_RECEIVE,
+                        issue=issue,
+                        activity=ReserveActivity.CUSTOMER,
+                        settlement_date=settlement_date,
+                        contract_price=prices[issue],
+                    ),
+                ),
+                posting=BooksPosting(
+                    posted_record_id=entry_id,
+                    posting_authority=_actor(),
+                    effective_time=datetime.combine(business_date, datetime.min.time(), tzinfo=UTC),
+                    source_event_id=EventId(event_id),
+                    provenance=Provenance.FACT_SYNTHETIC,
+                ),
+                synthetic=True,
+            )
+        )
+        movements.extend(
+            (
+                StreetMovement(issue, "DTC", delta, "CNS_FAIL_LIFECYCLE"),
+                StreetMovement(issue, "FAIL_TO_RECEIVE", -delta, "CNS_FAIL_LIFECYCLE"),
+            )
+        )
+    return tuple(movements)
 
 
 def _loan_entry(
@@ -814,7 +974,7 @@ def _post_control_deficit(
     business_date: date,
     prices: dict[str, Decimal],
     day_index: int,
-) -> None:
+) -> tuple[StreetMovement, ...]:
     """Post the declared stock loan that leaves one issue short of control, then recall it.
 
     The loan moves firm inventory from DTC (a Rule 15c3-3(c) control location) to stock
@@ -823,7 +983,7 @@ def _post_control_deficit(
     short by exactly the declared number of shares on the declared close.
     """
     if profile.control_deficit is None:
-        return
+        return ()
     deficit_day, issue_index, shortfall = profile.control_deficit
     issue = f"SYN-SCF1-ISSUE-{issue_index:04d}"
     if day_index == deficit_day + 1:
@@ -841,9 +1001,13 @@ def _post_control_deficit(
             books.post(
                 _loan_entry(f"FIX11-RECALL-{day_index}", 850_000_001, issue, -loaned, business_date)
             )
-        return
+            return (
+                StreetMovement(issue, "DTC", -loaned, "DECLARED_STOCK_LOAN_RECALL"),
+                StreetMovement(issue, "STOCK_LOANED", loaned, "DECLARED_STOCK_LOAN_RECALL"),
+            )
+        return ()
     if day_index != deficit_day:
-        return
+        return ()
     requirement = required_possession_or_control(books, prices, load_rule_table())
     if requirement is None:
         raise ValueError("the control deficit needs a derivable control requirement")
@@ -853,6 +1017,10 @@ def _post_control_deficit(
     if loan <= 0 or loan > held:
         raise ValueError(f"declared control deficit cannot be built for {issue}")
     books.post(_loan_entry(f"FIX11-LOAN-{day_index}", 850_000_000, issue, loan, business_date))
+    return (
+        StreetMovement(issue, "DTC", loan, "DECLARED_STOCK_LOAN"),
+        StreetMovement(issue, "STOCK_LOANED", -loan, "DECLARED_STOCK_LOAN"),
+    )
 
 
 def _pab_fail_to_receive(business_date: date, prices: dict[str, Decimal]) -> JournalEntry:
@@ -1123,6 +1291,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         raise ValueError(f"unknown firm mutation: {mutation}")
     books = EquitiesBooks(break_owner="SCF1_SETTLEMENT_CONTROL")
     _seed_inventory(books, profile, start, days)
+    street = SyntheticDepository(_opening_street(profile, days))
+    prior_breaks: tuple[StreetBreak, ...] = ()
     opening_positions, opening_cash = _balances(books)
     if mutation == "WRONG_OPENING_POSITION":
         opening_positions[next(iter(opening_positions))] += 1
@@ -1158,7 +1328,11 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 sequence,
                 profile.margin_account_share,
             )
-            if mutation == "DROP_FILL_FROM_BOOKS" and day_index == 0 and batch_index == 0:
+            if (
+                mutation in {"DROP_FILL_FROM_BOOKS", "STREET_MOVEMENT_BOOKS_MISSED"}
+                and day_index == 0
+                and batch_index == 0
+            ):
                 reversal_event = _id("evt_", 810_000_000)
                 books.post(
                     entry.model_copy(
@@ -1184,7 +1358,11 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 )
             else:
                 posted.append(entry)
-            if mutation == "DOUBLE_POST_NEW_EVENT" and day_index == 0 and batch_index == 0:
+            if (
+                mutation in {"DOUBLE_POST_NEW_EVENT", "DUPLICATE_BOOKING"}
+                and day_index == 0
+                and batch_index == 0
+            ):
                 duplicate_event = _id("evt_", 820_000_000)
                 books.post(
                     entry.model_copy(
@@ -1201,15 +1379,31 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     )
                 )
             sign = Decimal(1) if rows[0].side == "BUY" else Decimal(-1)
+            street_movements: list[StreetMovement] = []
             for account, quantity, consideration in allocations:
                 activity_positions[(account, rows[0].issue)] += sign * quantity
                 activity_cash[account] += -sign * consideration
+                street_movements.append(
+                    StreetMovement(
+                        issue=rows[0].issue,
+                        location="DTC",
+                        quantity=-(sign * quantity),
+                        source=f"CNS-{business_date.isoformat()}-{batch_index}",
+                    )
+                )
+            if not (
+                mutation == "BOOKED_QUANTITY_STREET_LACKS"
+                and day_index == 0
+                and batch_index == 0
+            ):
+                street.apply(tuple(street_movements))
+            if mutation == "WRONG_LOCATION_BOOKING" and day_index == 0 and batch_index == 0:
+                _post_wrong_location(books, business_date, rows[0].issue)
             cns_trades.extend((row.issue, row.signed_quantity) for row in rows)
         prices = {execution.issue: execution.price for execution in executions}
         borrow_activity = _post_stock_borrows(
             books, carried_input, business_date, prices, day_index
         )
-        _post_control_deficit(books, profile, business_date, prices, day_index)
         settlements = []
         profile_cns = MarketProfile(
             market_id="NSCC_SYNTHETIC",
@@ -1269,6 +1463,17 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     result.residual.cash,
                     settlement_date,
                 )
+        street.apply(
+            _post_fail_to_receive_movements(
+                books,
+                carried_input,
+                next_fails,
+                business_date,
+                prices,
+                day_index,
+            )
+        )
+        street.apply(_post_control_deficit(books, profile, business_date, prices, day_index))
         closing_positions, closing_cash = _balances(books)
         full_position_activity = dict(activity_positions)
         for key, quantity in borrow_activity.items():
@@ -1309,11 +1514,9 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         duplicates_refused = all(not books.post(entry).posted for entry in posted)
         i12 = duplicates_refused and before == books.digest()
         replay_digest = books.digest()
-        observed = {
-            issue: sides.get(RecordSide.OWNERSHIP, Decimal())
-            for issue, sides in books.quantities().items()
-        }
-        breaks = books.verify_stock_record(observed_locations=observed)
+        statement = street.statement(business_date)
+        breaks = reconcile(_location_balances(books), statement, prior_breaks)
+        prior_breaks = breaks
         protections, required_outcomes, protection_reasons, protection_figures, i6 = _protections(
             books,
             business_date,
@@ -1371,6 +1574,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                         },
                     )
                 ),
+                street_breaks=breaks,
+                reconciliation_calendar=reconciliation_calendar(business_date),
                 protection_dispositions=protections,
                 protection_required=required_outcomes,
                 protection_reasons=protection_reasons,
