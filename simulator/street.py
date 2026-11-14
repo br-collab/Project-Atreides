@@ -64,9 +64,60 @@ class PositionSource:
     positions: tuple[DepositoryPosition, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class IndependentSourceInputs:
+    """Non-book inputs sufficient to reproduce every street source at a close."""
+
+    as_of: date
+    opening_depository: tuple[DepositoryPosition, ...]
+    settlement_outcomes: tuple[SettlementOutcome, ...]
+    open_fails: tuple[OpenFail, ...]
+    loan_instructions: tuple[LoanInstruction, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ObservedSourceReader:
+    name: str
+    read: Callable[[], PositionSource]
+
+
 def source_reader(source: PositionSource) -> Callable[[], PositionSource]:
     """Return an observed-source reader with an explicit static type."""
     return lambda: source
+
+
+class LoanRegister:
+    """Declared loan events and their own open balance, independent of books."""
+
+    def __init__(self) -> None:
+        self._instructions: list[LoanInstruction] = []
+
+    @property
+    def instructions(self) -> tuple[LoanInstruction, ...]:
+        return tuple(self._instructions)
+
+    def record(self, instruction: LoanInstruction) -> None:
+        self._instructions.append(instruction)
+
+    def open_quantity(self, issue: str, as_of: date) -> Decimal:
+        return sum(
+            (
+                instruction.quantity
+                for instruction in self._instructions
+                if instruction.issue == issue and instruction.effective_date <= as_of
+            ),
+            Decimal(),
+        )
+
+    def declare_recall(
+        self, issue: str, as_of: date, instruction_id: str
+    ) -> LoanInstruction | None:
+        open_quantity = self.open_quantity(issue, as_of)
+        if not open_quantity:
+            return None
+        instruction = LoanInstruction(instruction_id, issue, -open_quantity, as_of)
+        self.record(instruction)
+        return instruction
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,6 +214,21 @@ def loan_register_source(
     )
 
 
+def build_independent_sources(
+    books_guard: object, inputs: IndependentSourceInputs
+) -> tuple[PositionSource, PositionSource, PositionSource]:
+    """Rebuild all street sources without reading any attribute from books_guard."""
+    del books_guard
+    depository = SyntheticDepository(inputs.opening_depository)
+    depository.apply_settlements(inputs.settlement_outcomes)
+    depository.apply_instructions(inputs.loan_instructions)
+    return (
+        depository.source(inputs.as_of),
+        cns_fail_source(inputs.as_of, inputs.open_fails),
+        loan_register_source(inputs.as_of, inputs.loan_instructions),
+    )
+
+
 def reconcile(
     books_positions: dict[tuple[str, str], Decimal],
     sources: tuple[PositionSource, ...],
@@ -170,6 +236,7 @@ def reconcile(
     *,
     as_of: date,
     owner: str = "SCF1_SETTLEMENT_CONTROL",
+    item_id: str = "stock-record-to-street",
 ) -> tuple[tuple[StreetBreak, ...], ReconciliationCompletion]:
     observed: dict[tuple[str, str], Decimal] = {}
     sourced_locations = {source.location for source in sources}
@@ -203,7 +270,7 @@ def reconcile(
             )
     result = tuple(breaks)
     return result, ReconciliationCompletion(
-        item_id="stock-record-to-street",
+        item_id=item_id,
         close_date=as_of,
         sources_read=tuple(source.name for source in sources),
         break_count=len(result),
@@ -213,26 +280,44 @@ def reconcile(
 
 def observed_reconcile(
     books_positions: dict[tuple[str, str], Decimal],
-    source_readers: tuple[Callable[[], PositionSource], ...],
+    source_readers: tuple[ObservedSourceReader, ...],
     prior_breaks: tuple[StreetBreak, ...] = (),
     *,
     as_of: date,
+    item_id: str = "stock-record-to-street",
+    failure_location: str = "DTC",
 ) -> tuple[tuple[StreetBreak, ...], ReconciliationCompletion]:
     """Run source reads and return an observed completion or failure record."""
-    source_names: list[str] = []
+    source_names = ["Atreides equities books", *(reader.name for reader in source_readers)]
     try:
         sources = []
         for reader in source_readers:
-            source = reader()
-            source_names.append(source.name)
+            source = reader.read()
             sources.append(source)
-        return reconcile(books_positions, tuple(sources), prior_breaks, as_of=as_of)
+        return reconcile(
+            books_positions,
+            tuple(sources),
+            prior_breaks,
+            as_of=as_of,
+            item_id=item_id,
+        )
     except Exception as error:
-        return (), ReconciliationCompletion(
-            item_id="stock-record-to-street",
+        failure = StreetBreak(
+            issue="RECONCILIATION",
+            location=failure_location,
+            books_quantity=Decimal(),
+            street_quantity=Decimal(),
+            difference=Decimal(),
+            owner="SCF1_SETTLEMENT_CONTROL",
+            opened_at=as_of,
+            age_calendar_days=0,
+            cause="RECONCILIATION_FAILED",
+        )
+        return (failure,), ReconciliationCompletion(
+            item_id=item_id,
             close_date=as_of,
             sources_read=tuple(source_names),
-            break_count=0,
+            break_count=1,
             status="FAILED",
             error=f"{type(error).__name__}: {error}",
         )

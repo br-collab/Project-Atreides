@@ -26,7 +26,7 @@ LOW_NET_WORTH = Decimal("10000")
 
 
 def _profile() -> firm.FirmProfile:
-    return load_firm_profile(load_calibration_pack("firm-synthetic/3"), "small")
+    return load_firm_profile(load_calibration_pack("firm-synthetic/4"), "small")
 
 
 def _run(**kwargs: Any) -> firm.FirmRun:

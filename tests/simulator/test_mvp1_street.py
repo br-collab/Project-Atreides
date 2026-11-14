@@ -51,7 +51,7 @@ def test_breaks_are_owned_aged_and_start_unclassified() -> None:
 
 
 def test_four_ordered_mutations_make_i3_false_with_owned_breaks() -> None:
-    profile = load_firm_profile(load_calibration_pack("firm-synthetic/3"), "small")
+    profile = load_firm_profile(load_calibration_pack("firm-synthetic/4"), "small")
     assert run_firm(profile, days=1, verify_replay=False).days[0].invariants[
         "I3_STOCK_RECORD_EQUALS_STREET"
     ]
