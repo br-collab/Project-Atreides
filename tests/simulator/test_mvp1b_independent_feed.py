@@ -11,12 +11,9 @@ from simulator.firm import load_firm_profile, run_firm
 from simulator.runner import load_calibration_pack
 from simulator.street import (
     DepositoryPosition,
-    LoanInstruction,
-    OpenFail,
-    SettlementOutcome,
+    ObservedSourceReader,
     SyntheticDepository,
-    cns_fail_source,
-    loan_register_source,
+    build_independent_sources,
     observed_reconcile,
     reconcile,
     reconciliation_calendar,
@@ -36,40 +33,24 @@ def test_source_module_has_no_books_or_firm_import() -> None:
 
 def test_full_day_sources_do_not_read_raising_books() -> None:
     class RaisingBooks:
-        @property
-        def entries(self) -> object:
-            raise AssertionError("source read books.entries")
+        def __getattribute__(self, name: str) -> object:
+            raise AssertionError(f"source read books.{name}")
 
-        def quantities(self) -> object:
-            raise AssertionError("source read books.quantities")
-
-    books = RaisingBooks()
-    opening = (DepositoryPosition("ACME", "DTC", Decimal(-100)),)
-    depository = SyntheticDepository(opening)
-    depository.apply_settlements(
-        (SettlementOutcome("ACME", Decimal(10), Decimal(9), date(2027, 1, 5)),)
-    )
-    fail = OpenFail(
-        "FAIL-1", "ACME", Decimal(1), Decimal(100), date(2027, 1, 5), Decimal(100)
-    )
-    instruction = LoanInstruction("LOAN-1", "ACME", Decimal(5), date(2027, 1, 4))
-    depository.apply_instructions((instruction,))
-    sources = (
-        depository.source(date(2027, 1, 4)),
-        cns_fail_source(date(2027, 1, 5), (fail,)),
-        loan_register_source(date(2027, 1, 4), (instruction,)),
-    )
-    assert books is not None
-    assert {source.location for source in sources} == {
-        "DTC",
-        "FAIL_TO_RECEIVE",
-        "STOCK_LOANED",
-    }
-    assert all(item.location == "DTC" for item in sources[0].positions)
+    profile = load_firm_profile(load_calibration_pack("firm-synthetic/4"), "small")
+    run = run_firm(profile, days=2, verify_replay=False)
+    assert any(day.source_inputs.open_fails for day in run.days)
+    assert any(day.source_inputs.loan_instructions for day in run.days)
+    for day in run.days:
+        sources = build_independent_sources(RaisingBooks(), day.source_inputs)
+        assert {source.location for source in sources} == {
+            "DTC",
+            "FAIL_TO_RECEIVE",
+            "STOCK_LOANED",
+        }
 
 
 def test_upstream_mutations_are_detected_and_owned() -> None:
-    profile = load_firm_profile(load_calibration_pack("firm-synthetic/3"), "small")
+    profile = load_firm_profile(load_calibration_pack("firm-synthetic/4"), "small")
     for mutation, days in (
         ("UPSTREAM_ALLOCATION_QUANTITY", 1),
         ("UPSTREAM_FAIL_QUANTITY", 2),
@@ -102,7 +83,11 @@ def test_calendar_uses_observed_failed_and_missing_completion() -> None:
     def forced_exception():  # type: ignore[no-untyped-def]
         raise RuntimeError("forced source exception")
 
-    _, failed = observed_reconcile({}, (forced_exception,), as_of=as_of)
+    _, failed = observed_reconcile(
+        {},
+        (ObservedSourceReader("forced source", forced_exception),),
+        as_of=as_of,
+    )
     results = reconciliation_calendar(as_of, (failed,))
     stock = next(item for item in results if item.item_id == "stock-record-to-street")
     fails = next(item for item in results if item.item_id == "ftr-to-cns-fail-statement")
