@@ -291,7 +291,6 @@ def _post_scenario(books: EquitiesBooks, at: datetime) -> None:
                 activity=ReserveActivity.CUSTOMER,
                 settlement_date=at.date(),
                 contract_price=Decimal(100),
-                fail_id="SYNTHETIC-ACME-FTR",
             ),
             ReserveSourceFact(
                 account_type=AccountType.FAIL_TO_RECEIVE,
@@ -299,6 +298,7 @@ def _post_scenario(books: EquitiesBooks, at: datetime) -> None:
                 activity=ReserveActivity.CUSTOMER,
                 settlement_date=at.date(),
                 contract_price=Decimal(100),
+                fail_id="SYNTHETIC-ACME-FTR",
             ),
         ),
         6: (
