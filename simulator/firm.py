@@ -120,6 +120,8 @@ class FirmProfile:
     reserve_bank_equity_capital: Decimal
     filed_history_months: int
     filed_history_credit: Decimal
+    error_account_shares_per_issue: Decimal
+    firm_investment_shares_per_issue: Decimal
     seed_stream: str
     calibration_pack_id: str
     calibration_pack_version: str
@@ -173,6 +175,8 @@ class FirmRun:
     executions_per_second: float
     peak_memory_bytes: int | None
     publication_change_reasons: tuple[str, ...] = (
+        "MVP-0 moves opening customer holdings out of the proprietary book",
+        "MVP-0 declares a small synthetic proprietary book in calibration",
         "N2 restricts net capital haircut inputs to firm proprietary positions",
         "N3 includes PAB free credits in the PAB reserve computation",
         "N4 removes fails to deliver from the Rule 15c3-3(d)(2) control location",
@@ -255,6 +259,12 @@ def load_firm_profile(pack: CalibrationPack, tier: TierName) -> FirmProfile:
         ),
         filed_history_months=int(cast(int, pack.value("firm_profile", "filed_history_months"))),
         filed_history_credit=Decimal(str(pack.value("firm_profile", "filed_history_credit"))),
+        error_account_shares_per_issue=Decimal(
+            str(pack.value("firm_profile", "error_account_shares_per_issue"))
+        ),
+        firm_investment_shares_per_issue=Decimal(
+            str(pack.value("firm_profile", "firm_investment_shares_per_issue"))
+        ),
         seed_stream=str(pack.value("firm_profile", "seed_stream")),
         calibration_pack_id=pack.pack_id,
         calibration_pack_version=pack.version,
@@ -613,8 +623,9 @@ def _balances(books: EquitiesBooks) -> tuple[dict[tuple[str, str], Decimal], dic
 
 
 def _seed_inventory(books: EquitiesBooks, profile: FirmProfile, start: date, days: int) -> None:
-    """Declare synthetic opening firm inventory sufficient for generated sells and shorts."""
+    """Book customer opening holdings and the declared small proprietary book."""
     per_issue = Decimal(profile.executions_per_day * profile.order_size_max * days)
+    per_customer = per_issue / profile.accounts
     for index in range(profile.issues):
         issue = f"SYN-SCF1-ISSUE-{index:04d}"
         event_id = _id("evt_", 900_000_000 + index)
@@ -627,19 +638,45 @@ def _seed_inventory(books: EquitiesBooks, profile: FirmProfile, start: date, day
                 effective_date_basis="SETTLEMENT_DATE",
                 authority="SCF1_SYNTHETIC_OPENING_INVENTORY",
                 lines=(
+                    *(
+                        LedgerLine(
+                            account_id=f"SYN-SCF1-ACCOUNT-{account:06d}",
+                            account_type=(
+                                AccountType.CUSTOMER_MARGIN
+                                if Decimal(account % 100) / Decimal(100)
+                                < profile.margin_account_share
+                                else AccountType.CUSTOMER_CASH
+                            ),
+                            record_side=RecordSide.OWNERSHIP,
+                            issue=issue,
+                            quantity=per_customer,
+                        )
+                        for account in range(profile.accounts)
+                    ),
                     LedgerLine(
-                        account_id="SYN-SCF1-FIRM-INVENTORY",
+                        account_id="SYN-SCF1-ERROR-ACCOUNT",
                         account_type=AccountType.FIRM_PROPRIETARY,
                         record_side=RecordSide.OWNERSHIP,
                         issue=issue,
-                        quantity=per_issue,
+                        quantity=profile.error_account_shares_per_issue,
+                    ),
+                    LedgerLine(
+                        account_id="SYN-SCF1-FIRM-INVESTMENTS",
+                        account_type=AccountType.FIRM_PROPRIETARY,
+                        record_side=RecordSide.OWNERSHIP,
+                        issue=issue,
+                        quantity=profile.firm_investment_shares_per_issue,
                     ),
                     LedgerLine(
                         account_id="DTC",
                         account_type=AccountType.DTC,
                         record_side=RecordSide.LOCATION,
                         issue=issue,
-                        quantity=-per_issue,
+                        quantity=-(
+                            per_issue
+                            + profile.error_account_shares_per_issue
+                            + profile.firm_investment_shares_per_issue
+                        ),
                     ),
                 ),
                 posting=BooksPosting(
@@ -686,7 +723,7 @@ def _post_stock_borrows(
         event_id = _id("evt_", 840_000_000 + day_index * 10_000 + offset)
         borrowed = abs(quantity)
         activity[("SYN-SCF2-STOCK-BORROWED", issue)] += borrowed
-        activity[("SYN-SCF1-FIRM-INVENTORY", issue)] -= borrowed
+        activity[("SYN-SCF2-BORROW-LENDER", issue)] -= borrowed
         books.post(
             JournalEntry(
                 entry_id=f"SCF2-BORROW-{day_index}-{offset}",
@@ -704,8 +741,8 @@ def _post_stock_borrows(
                         quantity=borrowed,
                     ),
                     LedgerLine(
-                        account_id="SYN-SCF1-FIRM-INVENTORY",
-                        account_type=AccountType.FIRM_PROPRIETARY,
+                        account_id="SYN-SCF2-BORROW-LENDER",
+                        account_type=AccountType.STOCK_LOANED,
                         record_side=RecordSide.OWNERSHIP,
                         issue=issue,
                         quantity=-borrowed,
@@ -802,9 +839,7 @@ def _post_control_deficit(
         )
         if loaned:
             books.post(
-                _loan_entry(
-                    f"FIX11-RECALL-{day_index}", 850_000_001, issue, -loaned, business_date
-                )
+                _loan_entry(f"FIX11-RECALL-{day_index}", 850_000_001, issue, -loaned, business_date)
             )
         return
     if day_index != deficit_day:
@@ -1023,9 +1058,7 @@ def _protections(
     required = {
         "reserve": "HOLD" if reserve_holds["customer"] else "PASS",
         "pab_reserve": "HOLD" if reserve_holds["pab"] else "PASS",
-        "net_capital": (
-            "UNDERIVABLE" if required_capital is None else required_capital.outcome
-        ),
+        "net_capital": ("UNDERIVABLE" if required_capital is None else required_capital.outcome),
         "possession_or_control": (
             "UNDERIVABLE" if required_control is None else required_control.outcome
         ),
@@ -1048,6 +1081,13 @@ def _protections(
         "net_capital": capital.net_capital,
         "control_shortfall": sum(
             (item.shortfall for item in control.issues if item.shortfall is not None), Decimal()
+        ),
+        "firm_proprietary_market_value": sum(
+            (
+                position.long_market_value - position.short_market_value
+                for position in capital_inputs.positions
+            ),
+            Decimal(),
         ),
     }
     if required_capital is not None:
