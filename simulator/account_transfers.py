@@ -419,7 +419,7 @@ def run_account_transfers(  # noqa: PLR0915
                 evidence_refs=(),
                 transfer_record_id=transfer_id,
             )
-            trade_time = evaluated_at.replace(minute=evaluated_at.minute + index)
+            trade_time = evaluated_at.replace(minute=14 + index)
             lifecycle.transition(
                 line.account,
                 AccountStatus.ACTIVE,
@@ -444,7 +444,7 @@ def run_account_transfers(  # noqa: PLR0915
             lifecycle_status = lifecycle.status(line.account).value
             exception_owner = "ACATS_RESIDUAL_OPERATIONS"
         else:
-            lifecycle_status = "APPROVED"
+            lifecycle_status = lifecycle.status(line.account).value
             exception_owner = "ACATS_TRANSFER_OPERATIONS"
         closes.append(
             TransferClose(

@@ -991,6 +991,7 @@ def publish_run(run: dict[str, object], output: Path) -> None:
         (output / "SUMMARY.md").write_text(
             "# SCF-1 firm at volume\n\n"
             "**SYNTHETIC LOAD LEVEL: no claim about any real firm.**\n\n"
+            "synthetic mode: signatures authenticate within one run only\n\n"
             f"Tier `{profile['tier']}`: {int(cast(int, profile['accounts'])):,} accounts, "
             f"{int(cast(int, profile['issues'])):,} issues, "
             f"{int(cast(int, profile['executions_per_day'])):,} executions per day. "

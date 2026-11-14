@@ -145,6 +145,9 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     stock_loaned_market_value = Decimal(0)
     stock_borrowed_contract_value = Decimal(0)
     for entry in books.entries:
+        entry_source_facts = {
+            (fact.account_type, fact.issue): fact for fact in entry.reserve_source_facts
+        }
         for line in entry.lines:
             if (
                 line.account_type
@@ -184,11 +187,24 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 # not the named non-control location.
                 if line.account_type is AccountType.FAIL_TO_DELIVER:
                     continue
+                if line.account_type is AccountType.FAIL_TO_RECEIVE:
+                    fact = entry_source_facts[(line.account_type, line.issue)]
+                    # 17 CFR 240.15c3-3(d)(2), pinned source sha256
+                    # c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443:
+                    # "Securities included on the broker's or dealer's books or records as
+                    # failed to receive more than 30 calendar days". A newer fail does not
+                    # count against possession or control under this paragraph.
+                    fail_to_receive_rule = (
+                        "15c3-3.noncontrol.d2"
+                        if (as_of - fact.settlement_date).days > 30
+                        else "15c3-3.pending-fail-to-receive"
+                    )
+                else:
+                    fail_to_receive_rule = "15c3-3.noncontrol.d2"
                 location_rule = {
                     AccountType.DTC: "15c3-3.control.c1",
                     AccountType.BANK_CONTROL: "15c3-3.control.c5",
-                    # Rule 15c3-3(d)(2) names securities "failed to receive"; FIX-11.
-                    AccountType.FAIL_TO_RECEIVE: "15c3-3.noncontrol.d2",
+                    AccountType.FAIL_TO_RECEIVE: fail_to_receive_rule,
                     AccountType.STOCK_LOANED: "15c3-3.noncontrol.d1",
                     AccountType.IN_TRANSFER: "15c3-3.noncontrol.d4",
                 }.get(line.account_type, "UNMAPPED_LOCATION")

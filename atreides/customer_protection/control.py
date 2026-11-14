@@ -229,7 +229,7 @@ def _check_issue(
         if getattr(requirement, name) is None:
             found.missing_inputs.append(f"{name}[{issue}]")
 
-    in_control = in_noncontrol = unknown = ZERO
+    in_control = in_noncontrol = pending = unknown = ZERO
     for holding in requirement.holdings:
         if holding.location in control:
             rules.present(holding.location)
@@ -237,6 +237,8 @@ def _check_issue(
         elif holding.location in noncontrol:
             rules.present(holding.location)
             in_noncontrol += holding.quantity
+        elif holding.location == "15c3-3.pending-fail-to-receive":
+            pending += holding.quantity
         else:
             rules.flag(
                 f"location type {holding.location!r} is not a location the loaded "
@@ -244,7 +246,7 @@ def _check_issue(
             )
             unknown += holding.quantity
 
-    total = in_control + in_noncontrol + unknown
+    total = in_control + in_noncontrol + pending + unknown
     conserved = None if requirement.books_total is None else total == requirement.books_total
     if conserved is False:
         found.breaches.append(

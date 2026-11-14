@@ -8,6 +8,7 @@ from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import digest_bytes
 from cannae_kernel.ids import ActorId
 from cannae_kernel.journal import ChainReport
+from cannae_kernel.provenance import Provenance
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from atreides.account_lifecycle import (
@@ -41,6 +42,7 @@ from atreides.agents.tier2.outputs import (
     EligibilityVerification,
 )
 from atreides.reference_data import LegalEntityRecord
+from simulator.synthetic_attestation_fixture import LC_KEY_ID, LC_PRIVATE_KEY
 
 NOW = datetime(2026, 11, 8, 9, tzinfo=UTC)
 ACCOUNT = "SYN-ACCOUNT-001"
@@ -53,8 +55,8 @@ APPROVAL_ID = "SYN-HUMAN-001"
 APPLICATION_ID = "SYN-APPLICATION-001"
 LEGAL_ENTITY_ID = "SYN-LEGAL-001"
 KYB_ID = "SYN-KYB-001"
-SIGNING_KEY_ID = "synthetic-lc-key-1"
-SIGNING_KEY = Ed25519PrivateKey.from_private_bytes(bytes(range(32)))
+SIGNING_KEY_ID = LC_KEY_ID
+SIGNING_KEY = LC_PRIVATE_KEY
 
 
 def actor(kind: ActorKind = ActorKind.HUMAN, number: int = 0) -> ActorRef:
@@ -367,6 +369,8 @@ def test_service_actor_cannot_reopen_restricted_account() -> None:
         reason="risk restriction",
         evidence_refs=("SYN-RESTRICT-001",),
     )
+    assert lifecycle.events[-1].actor.actor_kind is ActorKind.DETERMINISTIC_SERVICE
+    assert lifecycle.events[-1].provenance is Provenance.POLICY_RESULT
     with pytest.raises(AccountTransitionRefusedError, match="HUMAN_APPROVER_REQUIRED"):
         lifecycle.transition(
             "SYN-ACCOUNT-001",
@@ -481,7 +485,7 @@ def test_first_trade_with_tampered_attestation_is_refused() -> None:
     [
         (
             "synthetic-unpinned-lc-1",
-            Ed25519PrivateKey.from_private_bytes(bytes([3]) * 32),
+            Ed25519PrivateKey.generate(),
             "legiones-cannenses",
             RefusalReason.FIRST_TRADE_SIGNING_KEY_UNKNOWN,
         ),
@@ -490,18 +494,6 @@ def test_first_trade_with_tampered_attestation_is_refused() -> None:
             SIGNING_KEY,
             "atreides",
             RefusalReason.FIRST_TRADE_PRODUCER_MISMATCH,
-        ),
-        (
-            "synthetic-lc-revoked-1",
-            Ed25519PrivateKey.from_private_bytes(bytes([1]) * 32),
-            "legiones-cannenses",
-            RefusalReason.FIRST_TRADE_SIGNING_KEY_REVOKED,
-        ),
-        (
-            "synthetic-lc-expired-1",
-            Ed25519PrivateKey.from_private_bytes(bytes([2]) * 32),
-            "legiones-cannenses",
-            RefusalReason.FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY,
         ),
     ],
 )
@@ -545,6 +537,54 @@ def test_first_trade_signer_identity_is_pinned(
             AccountStatus.ACTIVE,
             actor=actor(),
             timestamp=NOW,
+            reason="synthetic activation",
+            evidence_refs=(),
+            first_trade_record_id=TRADE_ID,
+        )
+    assert caught.value.reason is reason
+
+
+@pytest.mark.parametrize(
+    ("traded_at", "evaluated_at", "reason"),
+    [
+        (NOW + timedelta(seconds=1), NOW, RefusalReason.FIRST_TRADE_IN_FUTURE),
+        (NOW, NOW + timedelta(seconds=301), RefusalReason.FIRST_TRADE_STALE),
+        (
+            NOW,
+            datetime(2036, 1, 1, tzinfo=UTC),
+            RefusalReason.FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY,
+        ),
+    ],
+)
+def test_first_trade_time_is_controlled_by_transition(
+    traded_at: datetime, evaluated_at: datetime, reason: RefusalReason
+) -> None:
+    trade = FirstPermittedTradeRecord(
+        record_id=TRADE_ID,
+        account_id=ACCOUNT,
+        permitted=True,
+        traded_at=traded_at,
+    )
+    wire = attest_first_permitted_trade(
+        trade, key_id=SIGNING_KEY_ID, private_key=SIGNING_KEY
+    )
+    lifecycle = store(resolver(trade_wire=wire))
+    approve(lifecycle)
+    lifecycle.transition(
+        ACCOUNT,
+        AccountStatus.FUNDED,
+        actor=actor(),
+        timestamp=NOW,
+        reason="synthetic funding",
+        evidence_refs=(),
+        transfer_record_id=TRANSFER_ID,
+    )
+    with pytest.raises(AccountTransitionRefusedError) as caught:
+        lifecycle.transition(
+            ACCOUNT,
+            AccountStatus.ACTIVE,
+            actor=actor(),
+            timestamp=evaluated_at,
             reason="synthetic activation",
             evidence_refs=(),
             first_trade_record_id=TRADE_ID,

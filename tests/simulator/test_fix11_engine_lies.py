@@ -22,11 +22,11 @@ from simulator.runner import load_calibration_pack
 
 I6 = "I6_DEFAULT_AND_STALE_HOLD"
 DAYS = 2
-LOW_NET_WORTH = Decimal("1000000")
+LOW_NET_WORTH = Decimal("10000")
 
 
 def _profile() -> firm.FirmProfile:
-    return load_firm_profile(load_calibration_pack("firm-synthetic/2"), "small")
+    return load_firm_profile(load_calibration_pack("firm-synthetic/3"), "small")
 
 
 def _run(**kwargs: Any) -> firm.FirmRun:

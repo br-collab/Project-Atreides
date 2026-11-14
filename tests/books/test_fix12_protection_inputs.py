@@ -103,6 +103,31 @@ def test_n4_fail_to_deliver_is_not_a_d2_control_holding() -> None:
     assert all(holding.location != "15c3-3.noncontrol.d2" for holding in holdings)
 
 
+def test_fail_to_receive_counts_against_control_only_after_30_calendar_days() -> None:
+    # 17 CFR 240.15c3-3(d)(2), pinned by RULE_15C3_3_SHA256:
+    # "Securities included on the broker's or dealer's books or records as failed to
+    # receive more than 30 calendar days".
+    assert RULE_15C3_3_SHA256
+    for age, expected in ((30, False), (31, True)):
+        books = EquitiesBooks(break_owner="owner")
+        books.post(entry())
+        books.post(
+            _reserve_entry(
+                event=str(age - 27),
+                account_type=AccountType.FAIL_TO_RECEIVE,
+                activity=ReserveActivity.CUSTOMER,
+                quantity=Decimal(2),
+                contract_price=Decimal(70),
+                settlement_date=date.fromordinal(AS_OF.toordinal() - age),
+            )
+        )
+        holdings = _project(books).control.issues[0].holdings
+        is_noncontrol = any(
+            holding.location == "15c3-3.noncontrol.d2" for holding in holdings
+        )
+        assert is_noncontrol is expected
+
+
 def test_n5_stock_loan_holding_declares_loaned_true() -> None:
     # 17 CFR 240.15c3-3(d)(1), pinned by RULE_15C3_3_SHA256:
     # "Securities subject to a lien securing moneys borrowed by the broker or dealer or

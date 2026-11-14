@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Literal, Protocol
 
 from cannae_kernel.account import AccountStatus
-from cannae_kernel.actor import ActorRef
+from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.domains import Domain
@@ -73,6 +73,8 @@ class RefusalReason(StrEnum):
     FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY = "FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY"
     FIRST_TRADE_PRODUCER_MISMATCH = "FIRST_TRADE_PRODUCER_MISMATCH"
     FIRST_TRADE_SIGNATURE_INVALID = "FIRST_TRADE_SIGNATURE_INVALID"
+    FIRST_TRADE_IN_FUTURE = "FIRST_TRADE_IN_FUTURE"
+    FIRST_TRADE_STALE = "FIRST_TRADE_STALE"
     CIP_EVIDENCE_NOT_FOUND = "CIP_EVIDENCE_NOT_FOUND"
     CIP_ACCOUNT_MISMATCH = "CIP_ACCOUNT_MISMATCH"
     CIP_PERSON_MISMATCH = "CIP_PERSON_MISMATCH"
@@ -169,6 +171,12 @@ class FirstPermittedTradeRecord(BaseModel):
     account_id: str = Field(min_length=1)
     permitted: bool
     traded_at: datetime
+    signature_scope: Literal["synthetic mode: signatures authenticate within one run only"] = (
+        "synthetic mode: signatures authenticate within one run only"
+    )
+
+
+FIRST_TRADE_MAXIMUM_AGE = timedelta(seconds=300)
 
 
 class AccountApplication(BaseModel):
@@ -202,6 +210,9 @@ class AccountTypeStatusDocument(BaseModel):
     as_of: datetime
     maximum_age_seconds: int = Field(gt=0)
     accounts: tuple[AccountTypeStatusEntry, ...]
+    signature_scope: Literal[
+        "synthetic mode: signatures authenticate within one run only"
+    ] = "synthetic mode: signatures authenticate within one run only"
 
 
 class LegalEntityEvidenceRecord(BaseModel):
@@ -229,7 +240,9 @@ class EvidenceResolver(Protocol):
 
     def resolve_transfer_in(self, record_id: str) -> TransferInRecord: ...
 
-    def resolve_first_trade(self, record_id: str) -> FirstPermittedTradeRecord: ...
+    def resolve_first_trade(
+        self, record_id: str, *, evaluated_at: datetime
+    ) -> FirstPermittedTradeRecord: ...
 
     def resolve_cip(self, record_id: str) -> CIPRecord: ...
 
@@ -297,7 +310,9 @@ class AuthoritativeEvidenceResolver:
             raise AccountTransitionRefusedError(RefusalReason.TRANSFER_EVIDENCE_NOT_FOUND)
         return record
 
-    def resolve_first_trade(self, record_id: str) -> FirstPermittedTradeRecord:
+    def resolve_first_trade(
+        self, record_id: str, *, evaluated_at: datetime
+    ) -> FirstPermittedTradeRecord:
         wire = self._first_trade_attestations.get(record_id)
         if wire is None:
             raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_NOT_FOUND)
@@ -332,7 +347,7 @@ class AuthoritativeEvidenceResolver:
             raise AccountTransitionRefusedError(attestation_refusals[exc.refusal]) from exc
         try:
             record = FirstPermittedTradeRecord.model_validate_json(payload)
-            require_anchor_valid_at(anchor, record.traded_at)
+            require_anchor_valid_at(anchor, evaluated_at)
         except TrustAnchorError as exc:
             raise AccountTransitionRefusedError(
                 RefusalReason.FIRST_TRADE_SIGNING_KEY_OUTSIDE_VALIDITY
@@ -343,6 +358,10 @@ class AuthoritativeEvidenceResolver:
             ) from exc
         if record.record_id != record_id:
             raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_TAMPERED)
+        if record.traded_at > evaluated_at:
+            raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_IN_FUTURE)
+        if evaluated_at - record.traded_at > FIRST_TRADE_MAXIMUM_AGE:
+            raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_STALE)
         return record
 
     def resolve_cip(self, record_id: str) -> CIPRecord:
@@ -741,7 +760,9 @@ class AccountLifecycleStore:
         if Requirement.PERMITTED_TRADE in requirements:
             if first_trade_record_id is None:
                 raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_EVIDENCE_NOT_FOUND)
-            first_trade = self._evidence_resolver.resolve_first_trade(first_trade_record_id)
+            first_trade = self._evidence_resolver.resolve_first_trade(
+                first_trade_record_id, evaluated_at=timestamp
+            )
             if first_trade.account_id != account_id:
                 raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_ACCOUNT_MISMATCH)
             if not first_trade.permitted:
@@ -797,7 +818,15 @@ class AccountLifecycleStore:
                 processing_time=timestamp,
                 decision_time=timestamp,
             ),
-            provenance=Provenance.HUMAN_JUDGMENT,
+            provenance={
+                ActorKind.HUMAN: Provenance.HUMAN_JUDGMENT,
+                ActorKind.DETERMINISTIC_SERVICE: Provenance.POLICY_RESULT,
+                ActorKind.AGENT_R: Provenance.POLICY_RESULT,
+                ActorKind.AGENT_J: Provenance.RECOMMENDATION,
+                ActorKind.AGENT_H: Provenance.RECOMMENDATION,
+                ActorKind.EXTERNAL_EMULATOR: Provenance.FACT_SYNTHETIC,
+                ActorKind.SYNTHETIC_MEMBER: Provenance.FACT_SYNTHETIC,
+            }[actor.actor_kind],
             actor=actor,
             idempotency_key=f"account-{account_id}-{number}",
             payload=AccountEvent(
