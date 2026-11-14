@@ -98,6 +98,27 @@ def test_ftr_fact_requires_fail_id_at_posting() -> None:
         )
 
 
+def test_non_ftr_fact_refuses_fail_id() -> None:
+    with pytest.raises(ValueError, match="fail_id is only valid"):
+        ReserveSourceFact(
+            account_type=AccountType.FAIL_TO_DELIVER,
+            issue="ACME",
+            activity=ReserveActivity.CUSTOMER,
+            settlement_date=date(2026, 10, 22),
+            contract_price=Decimal(80),
+            fail_id="NOT-AN-FTR",
+        )
+
+
+def test_ftr_opening_date_cannot_change_for_same_fail_id() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    books.post(entry("1", "base"))
+    books.post(_ftr("2", 5, date(2026, 10, 19), "FAIL-2"))
+    books.post(_ftr("3", -1, date(2026, 10, 20), "FAIL-2"))
+    with pytest.raises(ValueError, match="FAIL_TO_RECEIVE_OPENING_DATE_CHANGED"):
+        _project(books)
+
+
 def test_ftr_missing_fail_id_is_named_projection_refusal() -> None:
     books = EquitiesBooks(break_owner="owner")
     valid = _ftr("7", 1, date(2026, 10, 22), "FAIL-7")

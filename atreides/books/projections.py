@@ -278,14 +278,10 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 raise ValueError("reserve source settlement date cannot be after the computation")
             contract_value = abs(line.quantity) * fact.contract_price
             if line.account_type is AccountType.FAIL_TO_RECEIVE:
-                if fact.fail_id is None:
-                    raise ProjectionSourceFactMissingError(
-                        "FAIL_TO_RECEIVE_FAIL_ID_MISSING: projection refused"
-                    )
-                ftr_key = (fact.fail_id, line.issue, fact.activity)
+                # The control projection above validates fail identity and a stable
+                # opening date before reserve values use the same source facts.
+                ftr_key = (cast(str, fact.fail_id), line.issue, fact.activity)
                 prior_quantity, prior_fact = ftr_reserve.get(ftr_key, (Decimal(), fact))
-                if prior_fact.settlement_date != fact.settlement_date:
-                    raise ValueError("FAIL_TO_RECEIVE_OPENING_DATE_CHANGED: projection refused")
                 ftr_reserve[ftr_key] = (prior_quantity + line.quantity, prior_fact)
                 continue
             if line.account_type is AccountType.STOCK_BORROWED:
