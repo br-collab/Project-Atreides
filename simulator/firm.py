@@ -1114,8 +1114,8 @@ def _post_control_deficit(
 
     The loan moves firm inventory from DTC (a Rule 15c3-3(c) control location) to stock
     loaned (a (d)(1) noncontrol location). Ownership does not change, so the stock record
-    still balances. The loan is sized from the independent requirement, so the issue is
-    short by exactly the declared number of shares on the declared close.
+    still balances. The profile declares the loan instruction quantity for each supported
+    run length, and the register declares the recall from its own open balance.
     """
     if profile.control_deficit is None:
         return ()
