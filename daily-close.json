@@ -358,7 +358,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-31",
-      "economics_digest": "sha256:ff2d344905f3c50c4845cb220560b6a526499451655519ecad970d7de8c89878",
+      "economics_digest": "sha256:1ff045dae0249da7fda76b9ec398f14d71e4aaee080a30f74072b2aef4b48d07",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"

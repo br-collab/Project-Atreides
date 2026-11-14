@@ -365,7 +365,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-31",
-      "economics_digest": "sha256:ff2d344905f3c50c4845cb220560b6a526499451655519ecad970d7de8c89878",
+      "economics_digest": "sha256:1ff045dae0249da7fda76b9ec398f14d71e4aaee080a30f74072b2aef4b48d07",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -610,7 +610,7 @@
   ],
   "days": 5,
   "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
-  "economics_digest": "sha256:97b8c04649955b97940bbb54c3da0e39afcd404c60094c23058f21e44975f446",
+  "economics_digest": "sha256:7ea76b8a9d114861ea648c7a2a39804291ded7237b3865693da781b9a22150e2",
   "filed_credit_history": [
     {
       "customer_total_credits": "50000000",
@@ -709,7 +709,7 @@
   "repository_shas": {
     "Cato-FICC-MCP": "db7e46ed044f655e9138340eeeb1c9ab59221748",
     "L.C.": "50a98e051ebd24390e420fa1290874ba86e558cb",
-    "atreides": "87948fc6449dcd7851ab775c4109f5e81ef373a2",
+    "atreides": "96388c0eb91579df007ccf3222b7f64d5db59fbb",
     "aureon": "3fa2bed34f06c68ffd218c66c6e8fe568198dfec",
     "cannae-kernel": "d062cebca06bf1c925c38c3514e036abf3b49ab3"
   },
