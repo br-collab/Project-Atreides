@@ -6,7 +6,7 @@ from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 
-from simulator import firm
+from simulator import firm, street
 from simulator.calibration import load_calibration_pack
 from simulator.street import (
     LoanInstruction,
@@ -44,7 +44,7 @@ def test_only_cns_source_failure_is_failed_and_closes_i3(
     def failed_cns(*args, **kwargs):  # type: ignore[no-untyped-def]
         raise RuntimeError("forced CNS source failure")
 
-    monkeypatch.setattr(firm, "cns_fail_source", failed_cns)
+    monkeypatch.setattr(street, "cns_fail_source", failed_cns)
     day = firm.run_firm(_profile(), days=1, verify_replay=False).days[0]
     statuses = {item.item_id: item.status for item in day.reconciliation_calendar}
     assert statuses["stock-record-to-street"] == "RAN"
@@ -108,6 +108,27 @@ def test_fail_direction_flip_closes_old_id_and_opens_new_id() -> None:
     assert len(lots) == 1
     assert lots[0].fail_id != old.fail_id
     assert lots[0].quantity == 3
+
+
+def test_oldest_fail_lot_settles_first() -> None:
+    oldest = OpenFail(
+        "OLD", "ACME", Decimal(10), Decimal(1000), date(2027, 1, 5), Decimal(100)
+    )
+    newest = OpenFail(
+        "NEW", "ACME", Decimal(10), Decimal(1000), date(2027, 1, 6), Decimal(100)
+    )
+    lots = firm._roll_fail_lots(
+        "ACME",
+        Decimal(12),
+        Decimal(1200),
+        (oldest, newest),
+        date(2027, 1, 7),
+        Decimal(100),
+    )
+    assert [(item.fail_id, item.quantity) for item in lots] == [
+        ("OLD", Decimal(2)),
+        ("NEW", Decimal(10)),
+    ]
 
 
 def test_five_day_run_never_grows_or_flips_a_fail_id() -> None:
