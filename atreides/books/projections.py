@@ -150,8 +150,7 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     # taking the holding magnitude; summing ``abs(line.quantity)`` over history
     # double-counts every movement and can manufacture a control break.
     location_balances: dict[tuple[str, str, bool | None], Decimal] = {}
-    fail_to_receive_balances: dict[str, Decimal] = {}
-    fail_to_receive_opened: dict[str, date] = {}
+    fail_to_receive_balances: dict[tuple[str, str], tuple[Decimal, ReserveSourceFact]] = {}
     ownership: dict[str, Decimal] = {}
     customer_positions: dict[str, dict[str, Decimal]] = {}
     stock_loaned_market_value = Decimal(0)
@@ -201,18 +200,19 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                     continue
                 if line.account_type is AccountType.FAIL_TO_RECEIVE:
                     fact = entry_source_facts.get((line.account_type, line.issue))
-                    if fact is None:
+                    if fact is None or fact.fail_id is None:
                         raise ProjectionSourceFactMissingError(
-                            "FAIL_TO_RECEIVE_SOURCE_FACT_MISSING: projection refused"
+                            "FAIL_TO_RECEIVE_FAIL_ID_MISSING: projection refused"
                         )
-                    fail_to_receive_balances[line.issue] = (
-                        fail_to_receive_balances.get(line.issue, Decimal()) + line.quantity
+                    fail_key = (fact.fail_id, line.issue)
+                    prior_quantity, prior_fact = fail_to_receive_balances.get(
+                        fail_key, (Decimal(), fact)
                     )
-                    prior = fail_to_receive_opened.get(line.issue)
-                    fail_to_receive_opened[line.issue] = (
-                        fact.settlement_date
-                        if prior is None
-                        else min(prior, fact.settlement_date)
+                    if prior_fact.settlement_date != fact.settlement_date:
+                        raise ValueError("FAIL_TO_RECEIVE_OPENING_DATE_CHANGED: projection refused")
+                    fail_to_receive_balances[fail_key] = (
+                        prior_quantity + line.quantity,
+                        prior_fact,
                     )
                     continue
                 location_rule = {
@@ -226,16 +226,21 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 loaned = True if line.account_type is AccountType.STOCK_LOANED else None
                 key = (line.issue, location_rule, loaned)
                 location_balances[key] = location_balances.get(key, Decimal(0)) + line.quantity
-    for issue, balance in fail_to_receive_balances.items():
+    for (_, issue), (balance, fact) in fail_to_receive_balances.items():
         if not balance:
             continue
-        opened = fail_to_receive_opened[issue]
+        # 17 CFR 240.15c3-3(d)(2), pinned source sha256
+        # c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443:
+        # "Securities included on the broker's or dealer's books or records as
+        # failed to receive more than 30 calendar days".
         rule = (
             "15c3-3.noncontrol.d2"
-            if (as_of - opened).days > 30
+            if (as_of - fact.settlement_date).days > 30
             else "15c3-3.pending-fail-to-receive"
         )
-        location_balances[(issue, rule, None)] = balance
+        location_balances[(issue, rule, None)] = (
+            location_balances.get((issue, rule, None), Decimal()) + balance
+        )
     holdings: dict[str, list[Holding]] = {}
     for (issue, location, loaned), balance in location_balances.items():
         if balance:
@@ -257,7 +262,7 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     def add_line(target: dict[str, Decimal | None], rule_id: str, amount: Decimal) -> None:
         target[rule_id] = (target[rule_id] or Decimal(0)) + amount
 
-    ftr_reserve: dict[tuple[str, ReserveActivity], tuple[Decimal, ReserveSourceFact]] = {}
+    ftr_reserve: dict[tuple[str, str, ReserveActivity], tuple[Decimal, ReserveSourceFact]] = {}
     for entry in books.entries:
         source_facts = {
             (fact.account_type, fact.issue): fact for fact in entry.reserve_source_facts
@@ -273,10 +278,11 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 raise ValueError("reserve source settlement date cannot be after the computation")
             contract_value = abs(line.quantity) * fact.contract_price
             if line.account_type is AccountType.FAIL_TO_RECEIVE:
-                ftr_key = (line.issue, fact.activity)
+                # The control projection above validates fail identity and a stable
+                # opening date before reserve values use the same source facts.
+                ftr_key = (cast(str, fact.fail_id), line.issue, fact.activity)
                 prior_quantity, prior_fact = ftr_reserve.get(ftr_key, (Decimal(), fact))
-                oldest = fact if fact.settlement_date < prior_fact.settlement_date else prior_fact
-                ftr_reserve[ftr_key] = (prior_quantity + line.quantity, oldest)
+                ftr_reserve[ftr_key] = (prior_quantity + line.quantity, prior_fact)
                 continue
             if line.account_type is AccountType.STOCK_BORROWED:
                 stock_borrowed_contract_value += contract_value
@@ -313,13 +319,16 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 )
                 continue
             add_line(target, special_rule[line.account_type], value)
-    for (issue, activity), (quantity, fact) in ftr_reserve.items():
+    for (_, issue, activity), (quantity, fact) in ftr_reserve.items():
         if not quantity:
             continue
         age = (as_of - fact.settlement_date).days
         contract_value = abs(quantity) * fact.contract_price
         value = contract_value
         if age > 30:
+            # 17 CFR 240.15c3-3a Exhibit A item 4, pinned source sha256
+            # 8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd:
+            # "Customers' securities failed to receive (See Note D)"
             market_value = abs(quantity) * prices[issue]
             value += max(market_value - contract_value, Decimal())
         target = (

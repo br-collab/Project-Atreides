@@ -309,6 +309,7 @@ def _reserve_entry(
     quantity: Decimal,
     contract_price: Decimal,
     settlement_date: date,
+    fail_id: str | None = None,
 ) -> JournalEntry:
     return entry(
         event,
@@ -338,6 +339,9 @@ def _reserve_entry(
                 activity=activity,
                 settlement_date=settlement_date,
                 contract_price=contract_price,
+                fail_id=(fail_id or f"FAIL-{event}")
+                if account_type is AccountType.FAIL_TO_RECEIVE
+                else None,
             ),
         ),
     )

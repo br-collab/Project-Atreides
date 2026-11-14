@@ -72,6 +72,7 @@ def _pab_item_4(quantity: Decimal, price: Decimal, activity: ReserveActivity) ->
                     activity=activity,
                     settlement_date=date(2027, 1, 5),
                     contract_price=price,
+                    fail_id="PAB-FTR-1",
                 ),
             ),
             posting=BooksPosting(

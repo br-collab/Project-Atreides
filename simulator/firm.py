@@ -87,11 +87,18 @@ from simulator.settlement import rule_204_deadline
 from simulator.street import (
     CalendarRun,
     DepositoryPosition,
+    LoanInstruction,
+    OpenFail,
+    ReconciliationCompletion,
+    SettlementOutcome,
     StreetBreak,
     StreetMovement,
     SyntheticDepository,
-    reconcile,
+    cns_fail_source,
+    loan_register_source,
+    observed_reconcile,
     reconciliation_calendar,
+    source_reader,
 )
 
 TierName = Literal["small", "medium", "large"]
@@ -168,6 +175,7 @@ class FirmDay:
     fails_by_age: dict[str, int]
     breaks_by_owner: dict[str, int]
     street_breaks: tuple[StreetBreak, ...]
+    reconciliation_completion: ReconciliationCompletion
     reconciliation_calendar: tuple[CalendarRun, ...]
     protection_dispositions: dict[str, str]
     protection_required: dict[str, str]
@@ -195,11 +203,16 @@ class FirmRun:
         "MVP-1 replaces the self-comparison with an independent street statement",
         "MVP-1 reports the declared reconciliation calendar at every close",
         "MVP-1 nets fail-to-receive and stock-loan lifecycle balances",
+        "MVP-1B sources DTC, CNS fails and the stock-loan register independently",
+        "MVP-1B preserves fail identity through posting, projection and aging",
+        "MVP-1B records observed reconciliation completion and source failures",
     )
     not_claimed: tuple[str, ...] = NOT_CLAIMED
 
 
 MUTATIONS = (
+    "UPSTREAM_ALLOCATION_QUANTITY",
+    "UPSTREAM_FAIL_QUANTITY",
     "BOOKED_QUANTITY_STREET_LACKS",
     "STREET_MOVEMENT_BOOKS_MISSED",
     "WRONG_LOCATION_BOOKING",
@@ -788,16 +801,19 @@ def synthetic_filed_history(profile: FirmProfile, start: date) -> tuple[Decimal,
 
 def _post_stock_borrows(
     books: EquitiesBooks,
-    carried_fails: dict[str, tuple[Decimal, Decimal, date]],
+    carried_fails: dict[str, OpenFail],
     business_date: date,
     prices: dict[str, Decimal],
     day_index: int,
 ) -> dict[tuple[str, str], Decimal]:
     """Post declared synthetic borrows that cover open CNS fails through the real books."""
     activity: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
-    for offset, (issue, (quantity, cash, settlement_date)) in enumerate(
-        sorted(carried_fails.items())
-    ):
+    for offset, (issue, fail) in enumerate(sorted(carried_fails.items())):
+        quantity, cash, settlement_date = (
+            fail.quantity,
+            fail.cash,
+            fail.opening_settlement_date,
+        )
         if quantity == 0:
             continue
         event_id = _id("evt_", 840_000_000 + day_index * 10_000 + offset)
@@ -852,30 +868,26 @@ def _post_stock_borrows(
 
 def _post_fail_to_receive_movements(
     books: EquitiesBooks,
-    carried: dict[str, tuple[Decimal, Decimal, date]],
-    closing: dict[str, tuple[Decimal, Decimal, date]],
+    carried: dict[str, OpenFail],
+    closing: dict[str, OpenFail],
     business_date: date,
-    prices: dict[str, Decimal],
     day_index: int,
-) -> tuple[StreetMovement, ...]:
+    mutation: str | None,
+) -> None:
     """Post the net opening, partial closing, or full closing of each FTR lifecycle."""
-    movements: list[StreetMovement] = []
     for offset, issue in enumerate(sorted(set(carried) | set(closing))):
-        ending = max(closing.get(issue, (Decimal(), Decimal(), business_date))[0], Decimal())
-        settlement_date = (carried[issue] if issue in carried else closing[issue])[2]
-        target = ending if settlement_date <= business_date else Decimal()
-        recorded = -sum(
-            (
-                line.quantity
-                for entry in books.entries
-                for line in entry.lines
-                if line.account_type is AccountType.FAIL_TO_RECEIVE and line.issue == issue
-            ),
-            Decimal(),
-        )
-        delta = target - recorded
+        prior = carried.get(issue)
+        current = closing.get(issue)
+        fact = prior or current
+        assert fact is not None
+        delta = _fail_posting_delta(prior, current, business_date)
         if not delta:
             continue
+        booked_delta = (
+            delta + Decimal(1)
+            if mutation == "UPSTREAM_FAIL_QUANTITY" and day_index == 1 and offset == 0
+            else delta
+        )
         event_id = _id("evt_", 845_000_000 + day_index * 10_000 + offset)
         entry_id = f"SCF2-FTR-{day_index}-{offset}"
         books.post(
@@ -892,14 +904,14 @@ def _post_fail_to_receive_movements(
                         account_type=AccountType.DTC,
                         record_side=RecordSide.LOCATION,
                         issue=issue,
-                        quantity=delta,
+                        quantity=booked_delta,
                     ),
                     LedgerLine(
                         account_id="SYN-SCF2-FAIL-TO-RECEIVE",
                         account_type=AccountType.FAIL_TO_RECEIVE,
                         record_side=RecordSide.LOCATION,
                         issue=issue,
-                        quantity=-delta,
+                        quantity=-booked_delta,
                     ),
                 ),
                 reserve_source_facts=(
@@ -907,8 +919,9 @@ def _post_fail_to_receive_movements(
                         account_type=AccountType.FAIL_TO_RECEIVE,
                         issue=issue,
                         activity=ReserveActivity.CUSTOMER,
-                        settlement_date=settlement_date,
-                        contract_price=prices[issue],
+                        settlement_date=fact.opening_settlement_date,
+                        contract_price=fact.contract_price,
+                        fail_id=fact.fail_id,
                     ),
                 ),
                 posting=BooksPosting(
@@ -921,13 +934,23 @@ def _post_fail_to_receive_movements(
                 synthetic=True,
             )
         )
-        movements.extend(
-            (
-                StreetMovement(issue, "DTC", delta, "CNS_FAIL_LIFECYCLE"),
-                StreetMovement(issue, "FAIL_TO_RECEIVE", -delta, "CNS_FAIL_LIFECYCLE"),
-            )
-        )
-    return tuple(movements)
+
+
+def _fail_posting_delta(
+    prior: OpenFail | None, current: OpenFail | None, business_date: date
+) -> Decimal:
+    fact = prior or current
+    if fact is None:
+        return Decimal()
+    ending = Decimal() if current is None else max(current.quantity, Decimal())
+    opening = Decimal() if prior is None else max(prior.quantity, Decimal())
+    target = ending if fact.opening_settlement_date <= business_date else Decimal()
+    recorded = (
+        opening
+        if prior is not None and prior.opening_settlement_date < business_date
+        else Decimal()
+    )
+    return target - recorded
 
 
 def _loan_entry(
@@ -1058,6 +1081,7 @@ def _pab_fail_to_receive(business_date: date, prices: dict[str, Decimal]) -> Jou
                 activity=ReserveActivity.PAB,
                 settlement_date=business_date,
                 contract_price=prices[issue],
+                fail_id="FIX11-PAB-FAIL-TO-RECEIVE",
             ),
         ),
         posting=BooksPosting(
@@ -1297,7 +1321,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
     if mutation == "WRONG_OPENING_POSITION":
         opening_positions[next(iter(opening_positions))] += 1
     closes: list[FirmDay] = []
-    carried_fails: dict[str, tuple[Decimal, Decimal, date]] = {}
+    carried_fails: dict[str, OpenFail] = {}
+    loan_instructions: list[LoanInstruction] = []
     started = time.perf_counter()
     total_executions = 0
     for day_index, business_date in enumerate(_business_dates(start, days)):
@@ -1313,13 +1338,23 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             {} if mutation == "AGE_FAIL_WITHOUT_CARRY" and day_index == 1 else carried_fails
         )
         cns_trades: list[tuple[str, Decimal]] = [
-            (issue, quantity) for issue, (quantity, _, _) in carried_input.items()
+            (issue, fail.quantity) for issue, fail in carried_input.items()
         ]
         posted: list[JournalEntry] = []
         for batch_index, (_, rows_list) in enumerate(sorted(groups.items())):
             rows = tuple(rows_list)
             sequence = day_index * 10_000 + batch_index
             allocations = _lc_allocate_batch(rows, business_date, sequence)
+            if (
+                mutation == "UPSTREAM_ALLOCATION_QUANTITY"
+                and day_index == 0
+                and batch_index == 0
+            ):
+                first = allocations[0]
+                allocations = (
+                    (first[0], first[1] + Decimal(1), first[2]),
+                    *allocations[1:],
+                )
             entry = _post_batch(
                 books,
                 rows,
@@ -1379,24 +1414,9 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     )
                 )
             sign = Decimal(1) if rows[0].side == "BUY" else Decimal(-1)
-            street_movements: list[StreetMovement] = []
             for account, quantity, consideration in allocations:
                 activity_positions[(account, rows[0].issue)] += sign * quantity
                 activity_cash[account] += -sign * consideration
-                street_movements.append(
-                    StreetMovement(
-                        issue=rows[0].issue,
-                        location="DTC",
-                        quantity=-(sign * quantity),
-                        source=f"CNS-{business_date.isoformat()}-{batch_index}",
-                    )
-                )
-            if not (
-                mutation == "BOOKED_QUANTITY_STREET_LACKS"
-                and day_index == 0
-                and batch_index == 0
-            ):
-                street.apply(tuple(street_movements))
             if mutation == "WRONG_LOCATION_BOOKING" and day_index == 0 and batch_index == 0:
                 _post_wrong_location(books, business_date, rows[0].issue)
             cns_trades.extend((row.issue, row.signed_quantity) for row in rows)
@@ -1417,7 +1437,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             tuple(cns_trades), market_id="NSCC_SYNTHETIC", settlement_date_offset_days=1
         )
         omitted_issue = cns_positions[0].security_id if cns_positions else None
-        next_fails: dict[str, tuple[Decimal, Decimal, date]] = {}
+        next_fails: dict[str, OpenFail] = {}
+        settlement_outcomes: list[SettlementOutcome] = []
         for position in cns_positions:
             if (
                 mutation == "OMIT_ISSUE_FROM_CNS"
@@ -1425,9 +1446,9 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 and position.security_id == omitted_issue
             ):
                 continue
-            carried_quantity, carried_cash, _ = carried_input.get(
-                position.security_id, (Decimal(), Decimal(), business_date)
-            )
+            carried = carried_input.get(position.security_id)
+            carried_quantity = Decimal() if carried is None else carried.quantity
+            carried_cash = Decimal() if carried is None else carried.cash
             mark = prices.get(position.security_id)
             if mark is None:
                 mark = abs(carried_cash / carried_quantity)
@@ -1438,14 +1459,13 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             )
             allocated_cash = (cash * (Decimal(1) - profile.fail_rate)).quantize(Decimal("0.01"))
             calendar = MarketCalendar.load(Market.US_EQUITIES)
-            settlement_date = carried_input.get(
-                position.security_id,
-                (
-                    Decimal(),
-                    Decimal(),
-                    calendar.add_business_days(business_date, position.settlement_date_offset_days),
-                ),
-            )[2]
+            settlement_date = (
+                carried.opening_settlement_date
+                if carried is not None
+                else calendar.add_business_days(
+                    business_date, position.settlement_date_offset_days
+                )
+            )
             result = settle_net_position(
                 position,
                 profile_cns,
@@ -1458,22 +1478,60 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             )
             settlements.append(result)
             if result.residual is not None:
-                next_fails[position.security_id] = (
-                    result.residual.quantity,
-                    result.residual.cash,
-                    settlement_date,
+                next_fails[position.security_id] = OpenFail(
+                    fail_id=(
+                        carried.fail_id
+                        if carried is not None
+                        else f"CNS-FTR-{position.security_id}-{settlement_date.isoformat()}"
+                    ),
+                    issue=position.security_id,
+                    quantity=result.residual.quantity,
+                    cash=result.residual.cash,
+                    opening_settlement_date=settlement_date,
+                    contract_price=mark,
                 )
-        street.apply(
-            _post_fail_to_receive_movements(
-                books,
-                carried_input,
-                next_fails,
-                business_date,
-                prices,
-                day_index,
+            current_fail = next_fails.get(position.security_id)
+            new_trade_quantity = position.quantity - carried_quantity
+            fail_delta = _fail_posting_delta(carried, current_fail, business_date)
+            settlement_outcomes.append(
+                SettlementOutcome(
+                    issue=position.security_id,
+                    net_quantity=new_trade_quantity - fail_delta,
+                    allocated_quantity=result.allocated_quantity,
+                    settlement_date=settlement_date,
+                )
             )
+        _post_fail_to_receive_movements(
+            books,
+            carried_input,
+            next_fails,
+            business_date,
+            day_index,
+            mutation,
         )
-        street.apply(_post_control_deficit(books, profile, business_date, prices, day_index))
+        source_outcomes = tuple(settlement_outcomes)
+        if mutation == "BOOKED_QUANTITY_STREET_LACKS" and day_index == 0:
+            source_outcomes = source_outcomes[1:]
+        street.apply_settlements(source_outcomes)
+        loan_movements = _post_control_deficit(
+            books, profile, business_date, prices, day_index
+        )
+        instructions = tuple(
+            LoanInstruction(
+                instruction_id=f"LOAN-{day_index}-{index}",
+                issue=movement.issue,
+                quantity=(
+                    -movement.quantity
+                    if movement.location == "STOCK_LOANED"
+                    else movement.quantity
+                ),
+                effective_date=business_date,
+            )
+            for index, movement in enumerate(loan_movements)
+            if movement.location == "STOCK_LOANED"
+        )
+        loan_instructions.extend(instructions)
+        street.apply_instructions(instructions)
         closing_positions, closing_cash = _balances(books)
         full_position_activity = dict(activity_positions)
         for key, quantity in borrow_activity.items():
@@ -1514,8 +1572,34 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         duplicates_refused = all(not books.post(entry).posted for entry in posted)
         i12 = duplicates_refused and before == books.digest()
         replay_digest = books.digest()
-        statement = street.statement(business_date)
-        breaks = reconcile(_location_balances(books), statement, prior_breaks)
+        sources = (
+            street.source(business_date),
+            cns_fail_source(business_date, tuple(next_fails.values())),
+            loan_register_source(business_date, tuple(loan_instructions)),
+        )
+        breaks, completion = observed_reconcile(
+            _location_balances(books),
+            tuple(source_reader(source) for source in sources),
+            prior_breaks,
+            as_of=business_date,
+        )
+        source_completions = (
+            completion,
+            ReconciliationCompletion(
+                "ftr-to-cns-fail-statement",
+                business_date,
+                ("Atreides equities books", sources[1].name),
+                sum(item.location == "FAIL_TO_RECEIVE" for item in breaks),
+                "COMPLETED",
+            ),
+            ReconciliationCompletion(
+                "stock-loan-to-contract-register",
+                business_date,
+                ("Atreides equities books", sources[2].name),
+                sum(item.location == "STOCK_LOANED" for item in breaks),
+                "COMPLETED",
+            ),
+        )
         prior_breaks = breaks
         protections, required_outcomes, protection_reasons, protection_figures, i6 = _protections(
             books,
@@ -1575,7 +1659,10 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     )
                 ),
                 street_breaks=breaks,
-                reconciliation_calendar=reconciliation_calendar(business_date),
+                reconciliation_completion=completion,
+                reconciliation_calendar=reconciliation_calendar(
+                    business_date, source_completions
+                ),
                 protection_dispositions=protections,
                 protection_required=required_outcomes,
                 protection_reasons=protection_reasons,
@@ -1586,7 +1673,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                         sale_kind="SHORT",
                         calendar=MarketCalendar.load(Market.US_EQUITIES),
                     )
-                    for issue, (_, _, settlement_date) in carried_input.items()
+                    for issue, fail in carried_input.items()
+                    for settlement_date in (fail.opening_settlement_date,)
                 },
                 economics_digest="sha256:"
                 + hashlib.sha256(

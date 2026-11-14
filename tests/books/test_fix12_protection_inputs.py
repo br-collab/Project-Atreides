@@ -166,6 +166,7 @@ def test_ftr_lifecycle_nets_closes_and_ages_from_opening() -> None:
             quantity=Decimal(10),
             contract_price=Decimal(70),
             settlement_date=opened,
+            fail_id="FTR-LIFECYCLE",
         )
     )
     books.post(
@@ -176,6 +177,7 @@ def test_ftr_lifecycle_nets_closes_and_ages_from_opening() -> None:
             quantity=Decimal(-4),
             contract_price=Decimal(70),
             settlement_date=opened,
+            fail_id="FTR-LIFECYCLE",
         )
     )
     projected = _project(books)
@@ -198,6 +200,7 @@ def test_ftr_lifecycle_nets_closes_and_ages_from_opening() -> None:
             quantity=Decimal(-6),
             contract_price=Decimal(70),
             settlement_date=opened,
+            fail_id="FTR-LIFECYCLE",
         )
     )
     closed = _project(books)
@@ -244,6 +247,6 @@ def test_ftr_without_source_fact_uses_named_projection_refusal() -> None:
     ).model_copy(update={"reserve_source_facts": ()})
     books._entries.append(invalid)
     with pytest.raises(
-        ProjectionSourceFactMissingError, match="FAIL_TO_RECEIVE_SOURCE_FACT_MISSING"
+        ProjectionSourceFactMissingError, match="FAIL_TO_RECEIVE_FAIL_ID_MISSING"
     ):
         _project(books)

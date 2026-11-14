@@ -74,6 +74,7 @@ class ReserveSourceFact(_Frozen):
     activity: ReserveActivity
     settlement_date: date
     contract_price: Decimal = Field(gt=0)
+    fail_id: str | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
     def _is_reserve_source(self) -> Self:
@@ -83,6 +84,10 @@ class ReserveSourceFact(_Frozen):
             AccountType.FAIL_TO_DELIVER,
         }:
             raise ValueError("reserve source fact must name a fail or stock borrow account type")
+        if self.account_type is AccountType.FAIL_TO_RECEIVE and self.fail_id is None:
+            raise ValueError("FAIL_TO_RECEIVE_FAIL_ID_MISSING: posting refused")
+        if self.account_type is not AccountType.FAIL_TO_RECEIVE and self.fail_id is not None:
+            raise ValueError("fail_id is only valid for fail-to-receive facts")
         return self
 
 

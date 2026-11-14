@@ -9,6 +9,24 @@
     "rule_anchor": "TO_VERIFY_AGAINST_PRIMARY_TEXT"
   },
   {
+    "id": "ftr-to-cns-fail-statement",
+    "comparison": "fail-to-receive books location to CNS open fail statement",
+    "sources": ["Atreides equities books", "synthetic CNS open fail statement"],
+    "frequency": "daily close",
+    "owner_role": "SCF1_SETTLEMENT_CONTROL",
+    "aging_thresholds_calendar_days": [0, 1, 2, 5, 30],
+    "rule_anchor": "TO_VERIFY_AGAINST_PRIMARY_TEXT"
+  },
+  {
+    "id": "stock-loan-to-contract-register",
+    "comparison": "stock-loaned books location to stock-loan contract register",
+    "sources": ["Atreides equities books", "synthetic stock-loan contract register"],
+    "frequency": "daily close",
+    "owner_role": "SCF1_SETTLEMENT_CONTROL",
+    "aging_thresholds_calendar_days": [0, 1, 2, 5],
+    "rule_anchor": "TO_VERIFY_AGAINST_PRIMARY_TEXT"
+  },
+  {
     "id": "cash-to-bank",
     "comparison": "cash ledger to bank statement",
     "sources": ["cash ledger", "bank statement"],
