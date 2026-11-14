@@ -229,11 +229,7 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     for issue, balance in fail_to_receive_balances.items():
         if not balance:
             continue
-        opened = fail_to_receive_opened.get(issue)
-        if opened is None:
-            raise ProjectionSourceFactMissingError(
-                "FAIL_TO_RECEIVE_OPENING_FACT_MISSING: projection refused"
-            )
+        opened = fail_to_receive_opened[issue]
         rule = (
             "15c3-3.noncontrol.d2"
             if (as_of - opened).days > 30

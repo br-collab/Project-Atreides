@@ -3,6 +3,8 @@
 from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from atreides.books.ledger import (
     AccountType,
     EquitiesBooks,
@@ -11,7 +13,10 @@ from atreides.books.ledger import (
     RecordSide,
     ReserveActivity,
 )
-from atreides.books.projections import project_customer_protection
+from atreides.books.projections import (
+    ProjectionSourceFactMissingError,
+    project_customer_protection,
+)
 from atreides.deadlines.calendar import Market, MarketCalendar
 from tests.books.test_ledger import _margin_results, _reserve_entry, entry
 
@@ -225,3 +230,20 @@ def test_stock_loan_figure_uses_only_net_open_location_balance() -> None:
         )
     )
     assert _project(books).audit.derived_values["stock_loaned_market_value"] == 0
+
+
+def test_ftr_without_source_fact_uses_named_projection_refusal() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    invalid = _reserve_entry(
+        event="7",
+        account_type=AccountType.FAIL_TO_RECEIVE,
+        activity=ReserveActivity.CUSTOMER,
+        quantity=Decimal(1),
+        contract_price=Decimal(70),
+        settlement_date=AS_OF,
+    ).model_copy(update={"reserve_source_facts": ()})
+    books._entries.append(invalid)
+    with pytest.raises(
+        ProjectionSourceFactMissingError, match="FAIL_TO_RECEIVE_SOURCE_FACT_MISSING"
+    ):
+        _project(books)
