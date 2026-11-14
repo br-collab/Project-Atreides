@@ -11,6 +11,7 @@ from simulator.firm import load_firm_profile, run_firm
 from simulator.runner import load_calibration_pack
 from simulator.street import (
     DepositoryPosition,
+    ReconciliationCompletion,
     SyntheticDepository,
     reconcile,
     reconciliation_calendar,
@@ -32,9 +33,16 @@ def test_street_module_does_not_import_books() -> None:
 
 def test_breaks_are_owned_aged_and_start_unclassified() -> None:
     street = SyntheticDepository((DepositoryPosition("ACME", "DTC", Decimal(-10)),))
-    first = reconcile({("ACME", "DTC"): Decimal(-9)}, street.statement(date(2027, 1, 4)))
-    aged = reconcile(
-        {("ACME", "DTC"): Decimal(-9)}, street.statement(date(2027, 1, 6)), first
+    first, _ = reconcile(
+        {("ACME", "DTC"): Decimal(-9)},
+        (street.source(date(2027, 1, 4)),),
+        as_of=date(2027, 1, 4),
+    )
+    aged, _ = reconcile(
+        {("ACME", "DTC"): Decimal(-9)},
+        (street.source(date(2027, 1, 6)),),
+        first,
+        as_of=date(2027, 1, 6),
     )
     assert aged[0].owner == "SCF1_SETTLEMENT_CONTROL"
     assert aged[0].opened_at == date(2027, 1, 4)
@@ -59,11 +67,18 @@ def test_four_ordered_mutations_make_i3_false_with_owned_breaks() -> None:
         assert not day.invariants["I3_STOCK_RECORD_EQUALS_STREET"]
         assert day.invariants["I4_EVERY_DIFFERENCE_OWNED"]
         assert day.street_breaks
-        assert all(item.owner and item.cause == "UNCLASSIFIED" for item in day.street_breaks)
+        assert all(
+            item.owner and item.cause in {"UNCLASSIFIED", "UNSOURCED_LOCATION"}
+            for item in day.street_breaks
+        )
 
 
 def test_calendar_reports_ran_and_not_run() -> None:
-    results = reconciliation_calendar(date(2027, 1, 4))
+    as_of = date(2027, 1, 4)
+    completed = ReconciliationCompletion(
+        "stock-record-to-street", as_of, ("books", "street"), 0, "COMPLETED"
+    )
+    results = reconciliation_calendar(as_of, (completed,))
     assert {item.status for item in results} == {"RAN", "NOT_RUN"}
     ran = next(item for item in results if item.item_id == "stock-record-to-street")
     assert ran.status == "RAN"

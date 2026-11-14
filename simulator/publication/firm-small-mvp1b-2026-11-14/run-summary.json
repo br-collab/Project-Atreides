@@ -1,0 +1,807 @@
+{
+  "all_invariants_pass": true,
+  "closes": [
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-04",
+      "economics_digest": "sha256:f64ea436ef8badfe7f62a706aed40695eae1ca94a4110ee62aab1261f31561c2",
+      "executions": 1000,
+      "fails_by_age": {
+        "0": 20
+      },
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "PASS",
+        "reserve": "PASS"
+      },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "0",
+        "customer_credits": "4958857.35",
+        "customer_debits": "6923940.52",
+        "firm_proprietary_market_value": "193924.50",
+        "independent_control_short_issues": "0",
+        "independent_net_capital": "999970911.3250",
+        "net_capital": "999970911.3250",
+        "pab_reserve_requirement": "1516647.88",
+        "reserve_requirement": "0"
+      },
+      "protection_reasons": {
+        "net_capital": [],
+        "pab_reserve": [],
+        "possession_or_control": [],
+        "reserve": []
+      },
+      "protection_required": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "PASS",
+        "reserve": "PASS"
+      },
+      "reconciliation_calendar": [
+        {
+          "break_count": 0,
+          "close_date": "2027-01-04",
+          "item_id": "stock-record-to-street",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "synthetic DTC position statement",
+            "synthetic CNS open fail statement",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-04",
+          "item_id": "ftr-to-cns-fail-statement",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic CNS open fail statement"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-04",
+          "item_id": "stock-loan-to-contract-register",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-04",
+          "item_id": "cash-to-bank",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-04",
+          "item_id": "reserve-bank-to-books",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-04",
+          "item_id": "securities-count",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        }
+      ],
+      "reconciliation_completion": {
+        "break_count": 0,
+        "close_date": "2027-01-04",
+        "error": null,
+        "item_id": "stock-record-to-street",
+        "sources_read": [
+          "synthetic DTC position statement",
+          "synthetic CNS open fail statement",
+          "synthetic stock-loan contract register"
+        ],
+        "status": "COMPLETED"
+      },
+      "rule_204_close_outs": {},
+      "street_breaks": []
+    },
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-05",
+      "economics_digest": "sha256:8d8c6a059db51d205c5274907e91037a9507aabd1fc9bfe2493ea688103da51c",
+      "executions": 1000,
+      "fails_by_age": {
+        "0": 20
+      },
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "HOLD",
+        "reserve": "PASS"
+      },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "100",
+        "customer_credits": "6318481.80",
+        "customer_debits": "9328183.69",
+        "firm_proprietary_market_value": "202319.70",
+        "independent_control_short_issues": "1",
+        "independent_net_capital": "999969652.0450",
+        "net_capital": "999969652.0450",
+        "pab_reserve_requirement": "2362018.29",
+        "reserve_requirement": "0"
+      },
+      "protection_reasons": {
+        "net_capital": [],
+        "pab_reserve": [],
+        "possession_or_control": [
+          "SYN-SCF1-ISSUE-0000: 100 fully paid or excess margin securities are not in possession or control"
+        ],
+        "reserve": []
+      },
+      "protection_required": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "HOLD",
+        "reserve": "PASS"
+      },
+      "reconciliation_calendar": [
+        {
+          "break_count": 0,
+          "close_date": "2027-01-05",
+          "item_id": "stock-record-to-street",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "synthetic DTC position statement",
+            "synthetic CNS open fail statement",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-05",
+          "item_id": "ftr-to-cns-fail-statement",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic CNS open fail statement"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-05",
+          "item_id": "stock-loan-to-contract-register",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-05",
+          "item_id": "cash-to-bank",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-05",
+          "item_id": "reserve-bank-to-books",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-05",
+          "item_id": "securities-count",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        }
+      ],
+      "reconciliation_completion": {
+        "break_count": 0,
+        "close_date": "2027-01-05",
+        "error": null,
+        "item_id": "stock-record-to-street",
+        "sources_read": [
+          "synthetic DTC position statement",
+          "synthetic CNS open fail statement",
+          "synthetic stock-loan contract register"
+        ],
+        "status": "COMPLETED"
+      },
+      "rule_204_close_outs": {
+        "SYN-SCF1-ISSUE-0000": "2027-01-06",
+        "SYN-SCF1-ISSUE-0001": "2027-01-06",
+        "SYN-SCF1-ISSUE-0002": "2027-01-06",
+        "SYN-SCF1-ISSUE-0003": "2027-01-06",
+        "SYN-SCF1-ISSUE-0004": "2027-01-06",
+        "SYN-SCF1-ISSUE-0005": "2027-01-06",
+        "SYN-SCF1-ISSUE-0006": "2027-01-06",
+        "SYN-SCF1-ISSUE-0007": "2027-01-06",
+        "SYN-SCF1-ISSUE-0008": "2027-01-06",
+        "SYN-SCF1-ISSUE-0009": "2027-01-06",
+        "SYN-SCF1-ISSUE-0010": "2027-01-06",
+        "SYN-SCF1-ISSUE-0011": "2027-01-06",
+        "SYN-SCF1-ISSUE-0012": "2027-01-06",
+        "SYN-SCF1-ISSUE-0013": "2027-01-06",
+        "SYN-SCF1-ISSUE-0014": "2027-01-06",
+        "SYN-SCF1-ISSUE-0015": "2027-01-06",
+        "SYN-SCF1-ISSUE-0016": "2027-01-06",
+        "SYN-SCF1-ISSUE-0017": "2027-01-06",
+        "SYN-SCF1-ISSUE-0018": "2027-01-06",
+        "SYN-SCF1-ISSUE-0019": "2027-01-06"
+      },
+      "street_breaks": []
+    },
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-06",
+      "economics_digest": "sha256:8edec6239f7bc0e41940d59e59a5fcfab08d3fff4857a34c8b765e4e0537b962",
+      "executions": 1000,
+      "fails_by_age": {
+        "1": 20
+      },
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "PASS",
+        "reserve": "PASS"
+      },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "0",
+        "customer_credits": "8040650.89",
+        "customer_debits": "10741137.46",
+        "firm_proprietary_market_value": "273960.50",
+        "independent_control_short_issues": "0",
+        "independent_net_capital": "999958905.9250",
+        "net_capital": "999958905.9250",
+        "pab_reserve_requirement": "3116773.91",
+        "reserve_requirement": "0"
+      },
+      "protection_reasons": {
+        "net_capital": [],
+        "pab_reserve": [],
+        "possession_or_control": [],
+        "reserve": []
+      },
+      "protection_required": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "PASS",
+        "reserve": "PASS"
+      },
+      "reconciliation_calendar": [
+        {
+          "break_count": 0,
+          "close_date": "2027-01-06",
+          "item_id": "stock-record-to-street",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "synthetic DTC position statement",
+            "synthetic CNS open fail statement",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-06",
+          "item_id": "ftr-to-cns-fail-statement",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic CNS open fail statement"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-06",
+          "item_id": "stock-loan-to-contract-register",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-06",
+          "item_id": "cash-to-bank",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-06",
+          "item_id": "reserve-bank-to-books",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-06",
+          "item_id": "securities-count",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        }
+      ],
+      "reconciliation_completion": {
+        "break_count": 0,
+        "close_date": "2027-01-06",
+        "error": null,
+        "item_id": "stock-record-to-street",
+        "sources_read": [
+          "synthetic DTC position statement",
+          "synthetic CNS open fail statement",
+          "synthetic stock-loan contract register"
+        ],
+        "status": "COMPLETED"
+      },
+      "rule_204_close_outs": {
+        "SYN-SCF1-ISSUE-0000": "2027-01-06",
+        "SYN-SCF1-ISSUE-0001": "2027-01-06",
+        "SYN-SCF1-ISSUE-0002": "2027-01-06",
+        "SYN-SCF1-ISSUE-0003": "2027-01-06",
+        "SYN-SCF1-ISSUE-0004": "2027-01-06",
+        "SYN-SCF1-ISSUE-0005": "2027-01-06",
+        "SYN-SCF1-ISSUE-0006": "2027-01-06",
+        "SYN-SCF1-ISSUE-0007": "2027-01-06",
+        "SYN-SCF1-ISSUE-0008": "2027-01-06",
+        "SYN-SCF1-ISSUE-0009": "2027-01-06",
+        "SYN-SCF1-ISSUE-0010": "2027-01-06",
+        "SYN-SCF1-ISSUE-0011": "2027-01-06",
+        "SYN-SCF1-ISSUE-0012": "2027-01-06",
+        "SYN-SCF1-ISSUE-0013": "2027-01-06",
+        "SYN-SCF1-ISSUE-0014": "2027-01-06",
+        "SYN-SCF1-ISSUE-0015": "2027-01-06",
+        "SYN-SCF1-ISSUE-0016": "2027-01-06",
+        "SYN-SCF1-ISSUE-0017": "2027-01-06",
+        "SYN-SCF1-ISSUE-0018": "2027-01-06",
+        "SYN-SCF1-ISSUE-0019": "2027-01-06"
+      },
+      "street_breaks": []
+    },
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-07",
+      "economics_digest": "sha256:201e69872fbaa6a4a6bf6cf5267c0f969be82e2782b5aa05eb7258c13592e5e9",
+      "executions": 1000,
+      "fails_by_age": {
+        "2": 20
+      },
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "PASS",
+        "reserve": "PASS"
+      },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "0",
+        "customer_credits": "10165885.86",
+        "customer_debits": "12171677.79",
+        "firm_proprietary_market_value": "255645.50",
+        "independent_control_short_issues": "0",
+        "independent_net_capital": "999961653.1750",
+        "net_capital": "999961653.1750",
+        "pab_reserve_requirement": "4285995.83",
+        "reserve_requirement": "0"
+      },
+      "protection_reasons": {
+        "net_capital": [],
+        "pab_reserve": [],
+        "possession_or_control": [],
+        "reserve": []
+      },
+      "protection_required": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "PASS",
+        "reserve": "PASS"
+      },
+      "reconciliation_calendar": [
+        {
+          "break_count": 0,
+          "close_date": "2027-01-07",
+          "item_id": "stock-record-to-street",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "synthetic DTC position statement",
+            "synthetic CNS open fail statement",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-07",
+          "item_id": "ftr-to-cns-fail-statement",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic CNS open fail statement"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-07",
+          "item_id": "stock-loan-to-contract-register",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-07",
+          "item_id": "cash-to-bank",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-07",
+          "item_id": "reserve-bank-to-books",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-07",
+          "item_id": "securities-count",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        }
+      ],
+      "reconciliation_completion": {
+        "break_count": 0,
+        "close_date": "2027-01-07",
+        "error": null,
+        "item_id": "stock-record-to-street",
+        "sources_read": [
+          "synthetic DTC position statement",
+          "synthetic CNS open fail statement",
+          "synthetic stock-loan contract register"
+        ],
+        "status": "COMPLETED"
+      },
+      "rule_204_close_outs": {
+        "SYN-SCF1-ISSUE-0000": "2027-01-06",
+        "SYN-SCF1-ISSUE-0001": "2027-01-06",
+        "SYN-SCF1-ISSUE-0002": "2027-01-06",
+        "SYN-SCF1-ISSUE-0003": "2027-01-06",
+        "SYN-SCF1-ISSUE-0004": "2027-01-06",
+        "SYN-SCF1-ISSUE-0005": "2027-01-06",
+        "SYN-SCF1-ISSUE-0006": "2027-01-06",
+        "SYN-SCF1-ISSUE-0007": "2027-01-06",
+        "SYN-SCF1-ISSUE-0008": "2027-01-06",
+        "SYN-SCF1-ISSUE-0009": "2027-01-06",
+        "SYN-SCF1-ISSUE-0010": "2027-01-06",
+        "SYN-SCF1-ISSUE-0011": "2027-01-06",
+        "SYN-SCF1-ISSUE-0012": "2027-01-06",
+        "SYN-SCF1-ISSUE-0013": "2027-01-06",
+        "SYN-SCF1-ISSUE-0014": "2027-01-06",
+        "SYN-SCF1-ISSUE-0015": "2027-01-06",
+        "SYN-SCF1-ISSUE-0016": "2027-01-06",
+        "SYN-SCF1-ISSUE-0017": "2027-01-06",
+        "SYN-SCF1-ISSUE-0018": "2027-01-06",
+        "SYN-SCF1-ISSUE-0019": "2027-01-06"
+      },
+      "street_breaks": []
+    },
+    {
+      "breaks_by_owner": {},
+      "business_date": "2027-01-08",
+      "economics_digest": "sha256:756afadf5f20b48ac7d6196f0a5f75fa1c962fad7666aa28226c4f503124dff1",
+      "executions": 1000,
+      "fails_by_age": {
+        "3": 20
+      },
+      "invariants": {
+        "I11_POSITION_ROLL_FORWARD": true,
+        "I12_IDEMPOTENT_REPLAY": true,
+        "I1_QUANTITY_MONEY_CONSERVE": true,
+        "I2_BOOKED_FROM_REPORTS": true,
+        "I3_STOCK_RECORD_EQUALS_STREET": true,
+        "I4_EVERY_DIFFERENCE_OWNED": true,
+        "I5_RESIDUALS_TWO_SIDED": true,
+        "I6_DEFAULT_AND_STALE_HOLD": true,
+        "I7_MARKET_ACCESS_REFUSES": true,
+        "I8_REPLAY_DIGEST": true
+      },
+      "protection_dispositions": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "PASS",
+        "reserve": "PASS"
+      },
+      "protection_figures": {
+        "average_total_credits": "600000000.00",
+        "control_shortfall": "0",
+        "customer_credits": "12384489.51",
+        "customer_debits": "13250494.92",
+        "firm_proprietary_market_value": "275951.50",
+        "independent_control_short_issues": "0",
+        "independent_net_capital": "999958607.2750",
+        "net_capital": "999958607.2750",
+        "pab_reserve_requirement": "4814585.90",
+        "reserve_requirement": "0"
+      },
+      "protection_reasons": {
+        "net_capital": [],
+        "pab_reserve": [],
+        "possession_or_control": [],
+        "reserve": []
+      },
+      "protection_required": {
+        "net_capital": "PASS",
+        "pab_reserve": "PASS",
+        "possession_or_control": "PASS",
+        "reserve": "PASS"
+      },
+      "reconciliation_calendar": [
+        {
+          "break_count": 0,
+          "close_date": "2027-01-08",
+          "item_id": "stock-record-to-street",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "synthetic DTC position statement",
+            "synthetic CNS open fail statement",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-08",
+          "item_id": "ftr-to-cns-fail-statement",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic CNS open fail statement"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": 0,
+          "close_date": "2027-01-08",
+          "item_id": "stock-loan-to-contract-register",
+          "reason": "reconciliation completed",
+          "sources_read": [
+            "Atreides equities books",
+            "synthetic stock-loan contract register"
+          ],
+          "status": "RAN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-08",
+          "item_id": "cash-to-bank",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-08",
+          "item_id": "reserve-bank-to-books",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        },
+        {
+          "break_count": null,
+          "close_date": "2027-01-08",
+          "item_id": "securities-count",
+          "reason": "no completion record",
+          "sources_read": [],
+          "status": "NOT_RUN"
+        }
+      ],
+      "reconciliation_completion": {
+        "break_count": 0,
+        "close_date": "2027-01-08",
+        "error": null,
+        "item_id": "stock-record-to-street",
+        "sources_read": [
+          "synthetic DTC position statement",
+          "synthetic CNS open fail statement",
+          "synthetic stock-loan contract register"
+        ],
+        "status": "COMPLETED"
+      },
+      "rule_204_close_outs": {
+        "SYN-SCF1-ISSUE-0000": "2027-01-06",
+        "SYN-SCF1-ISSUE-0001": "2027-01-06",
+        "SYN-SCF1-ISSUE-0002": "2027-01-06",
+        "SYN-SCF1-ISSUE-0003": "2027-01-06",
+        "SYN-SCF1-ISSUE-0004": "2027-01-06",
+        "SYN-SCF1-ISSUE-0005": "2027-01-06",
+        "SYN-SCF1-ISSUE-0006": "2027-01-06",
+        "SYN-SCF1-ISSUE-0007": "2027-01-06",
+        "SYN-SCF1-ISSUE-0008": "2027-01-06",
+        "SYN-SCF1-ISSUE-0009": "2027-01-06",
+        "SYN-SCF1-ISSUE-0010": "2027-01-06",
+        "SYN-SCF1-ISSUE-0011": "2027-01-06",
+        "SYN-SCF1-ISSUE-0012": "2027-01-06",
+        "SYN-SCF1-ISSUE-0013": "2027-01-06",
+        "SYN-SCF1-ISSUE-0014": "2027-01-06",
+        "SYN-SCF1-ISSUE-0015": "2027-01-06",
+        "SYN-SCF1-ISSUE-0016": "2027-01-06",
+        "SYN-SCF1-ISSUE-0017": "2027-01-06",
+        "SYN-SCF1-ISSUE-0018": "2027-01-06",
+        "SYN-SCF1-ISSUE-0019": "2027-01-06"
+      },
+      "street_breaks": []
+    }
+  ],
+  "elapsed_seconds": 8.683040898002218,
+  "executions_per_second": 575.8351318085341,
+  "firm_profile": {
+    "accounts": 200,
+    "buy_share": "0.50",
+    "calibration_manifest_digest": "sha256:89c5506908bb7cebed6369a7590ed98249e552f6b1737ced2545303fb45f8222",
+    "calibration_pack_id": "firm-synthetic",
+    "calibration_pack_version": "3",
+    "control_deficit": [
+      1,
+      0,
+      "100"
+    ],
+    "error_account_shares_per_issue": "10",
+    "executions_per_day": 1000,
+    "fail_rate": "0.03",
+    "filed_history_credit": "600000000.00",
+    "filed_history_months": 12,
+    "firm_investment_shares_per_issue": "100",
+    "issues": 20,
+    "margin_account_share": "0.65",
+    "order_size_max": 500,
+    "order_size_min": 1,
+    "pab_activity_share": "0.10",
+    "price_max": "250.00",
+    "price_min": "5.00",
+    "refusal_rate": "0.01",
+    "reserve_bank_equity_capital": "1000000000.00",
+    "reserve_short_fraction": "0.25",
+    "seed_stream": "SCF-1",
+    "sell_share": "0.40",
+    "short_sale_share": "0.10",
+    "synthetic": true,
+    "tier": "small"
+  },
+  "not_claimed": [
+    "regulatory approval",
+    "production readiness",
+    "clearing-agency membership",
+    "real customer assets",
+    "real firm, account or security identifiers"
+  ],
+  "peak_memory_bytes": 127254528,
+  "profile": {
+    "accounts": 200,
+    "buy_share": "0.50",
+    "calibration_manifest_digest": "sha256:89c5506908bb7cebed6369a7590ed98249e552f6b1737ced2545303fb45f8222",
+    "calibration_pack_id": "firm-synthetic",
+    "calibration_pack_version": "3",
+    "control_deficit": [
+      1,
+      0,
+      "100"
+    ],
+    "error_account_shares_per_issue": "10",
+    "executions_per_day": 1000,
+    "fail_rate": "0.03",
+    "filed_history_credit": "600000000.00",
+    "filed_history_months": 12,
+    "firm_investment_shares_per_issue": "100",
+    "issues": 20,
+    "margin_account_share": "0.65",
+    "order_size_max": 500,
+    "order_size_min": 1,
+    "pab_activity_share": "0.10",
+    "price_max": "250.00",
+    "price_min": "5.00",
+    "refusal_rate": "0.01",
+    "reserve_bank_equity_capital": "1000000000.00",
+    "reserve_short_fraction": "0.25",
+    "seed_stream": "SCF-1",
+    "sell_share": "0.40",
+    "short_sale_share": "0.10",
+    "synthetic": true,
+    "tier": "small"
+  },
+  "publication_change_reasons": [
+    "MVP-0 moves opening customer holdings out of the proprietary book",
+    "MVP-0 declares a small synthetic proprietary book in calibration",
+    "N2 restricts net capital haircut inputs to firm proprietary positions",
+    "N3 includes PAB free credits in the PAB reserve computation",
+    "N4 removes fails to deliver from the Rule 15c3-3(d)(2) control location",
+    "N5 declares stock-loan holdings as loaned",
+    "MVP-1 replaces the self-comparison with an independent street statement",
+    "MVP-1 reports the declared reconciliation calendar at every close",
+    "MVP-1 nets fail-to-receive and stock-loan lifecycle balances",
+    "MVP-1B sources DTC, CNS fails and the stock-loan register independently",
+    "MVP-1B preserves fail identity through posting, projection and aging",
+    "MVP-1B records observed reconciliation completion and source failures"
+  ],
+  "seed": 20261024
+}

@@ -684,6 +684,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                         activity=ReserveActivity.PAB,
                         settlement_date=business_date,
                         contract_price=pab_price,
+                        fail_id=f"CLOSE-1-PAB-FTR-{run_number}",
                     ),
                 ),
                 posting=BooksPosting(
