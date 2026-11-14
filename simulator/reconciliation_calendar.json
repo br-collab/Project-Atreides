@@ -1,0 +1,38 @@
+[
+  {
+    "id": "stock-record-to-street",
+    "comparison": "stock record to street-side depository positions",
+    "sources": ["Atreides equities books", "synthetic depository statement"],
+    "frequency": "daily close",
+    "owner_role": "SCF1_SETTLEMENT_CONTROL",
+    "aging_thresholds_calendar_days": [0, 1, 2, 5],
+    "rule_anchor": "TO_VERIFY_AGAINST_PRIMARY_TEXT"
+  },
+  {
+    "id": "cash-to-bank",
+    "comparison": "cash ledger to bank statement",
+    "sources": ["cash ledger", "bank statement"],
+    "frequency": "daily close",
+    "owner_role": "TREASURY_CONTROL",
+    "aging_thresholds_calendar_days": [0, 1, 2],
+    "rule_anchor": "TO_VERIFY_AGAINST_PRIMARY_TEXT"
+  },
+  {
+    "id": "reserve-bank-to-books",
+    "comparison": "reserve bank balance to books",
+    "sources": ["reserve bank statement", "reserve books"],
+    "frequency": "each reserve computation",
+    "owner_role": "CUSTOMER_PROTECTION_CONTROL",
+    "aging_thresholds_calendar_days": [0, 1],
+    "rule_anchor": "TO_VERIFY_AGAINST_PRIMARY_TEXT"
+  },
+  {
+    "id": "securities-count",
+    "comparison": "physical and control-location securities count to books",
+    "sources": ["securities count", "equities books"],
+    "frequency": "periodic",
+    "owner_role": "SECURITIES_COUNT_CONTROL",
+    "aging_thresholds_calendar_days": [0, 7, 30],
+    "rule_anchor": "TO_VERIFY_AGAINST_PRIMARY_TEXT"
+  }
+]

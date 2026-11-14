@@ -10,7 +10,13 @@ from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from atreides.books.ledger import AccountType, EquitiesBooks, RecordSide, ReserveActivity
+from atreides.books.ledger import (
+    AccountType,
+    EquitiesBooks,
+    RecordSide,
+    ReserveActivity,
+    ReserveSourceFact,
+)
 from atreides.customer_protection.control import ControlInputs, Holding, IssueRequirement
 from atreides.customer_protection.net_capital import (
     AssetClass,
@@ -34,6 +40,10 @@ EXCESS_MARGIN_METHOD = (
     "declared method PRO_RATA_ROUNDED_UP: Rule 15c3-3(a)(5) excess value over the pinned "
     "percentage of the debit balance, taken pro rata from every long holding"
 )
+
+
+class ProjectionSourceFactMissingError(ValueError):
+    """A lifecycle-sensitive projection refused an unstated source fact."""
 
 
 class SyntheticFirmProfile(BaseModel):
@@ -140,6 +150,8 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     # taking the holding magnitude; summing ``abs(line.quantity)`` over history
     # double-counts every movement and can manufacture a control break.
     location_balances: dict[tuple[str, str, bool | None], Decimal] = {}
+    fail_to_receive_balances: dict[str, Decimal] = {}
+    fail_to_receive_opened: dict[str, date] = {}
     ownership: dict[str, Decimal] = {}
     customer_positions: dict[str, dict[str, Decimal]] = {}
     stock_loaned_market_value = Decimal(0)
@@ -188,23 +200,24 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 if line.account_type is AccountType.FAIL_TO_DELIVER:
                     continue
                 if line.account_type is AccountType.FAIL_TO_RECEIVE:
-                    fact = entry_source_facts[(line.account_type, line.issue)]
-                    # 17 CFR 240.15c3-3(d)(2), pinned source sha256
-                    # c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443:
-                    # "Securities included on the broker's or dealer's books or records as
-                    # failed to receive more than 30 calendar days". A newer fail does not
-                    # count against possession or control under this paragraph.
-                    fail_to_receive_rule = (
-                        "15c3-3.noncontrol.d2"
-                        if (as_of - fact.settlement_date).days > 30
-                        else "15c3-3.pending-fail-to-receive"
+                    fact = entry_source_facts.get((line.account_type, line.issue))
+                    if fact is None:
+                        raise ProjectionSourceFactMissingError(
+                            "FAIL_TO_RECEIVE_SOURCE_FACT_MISSING: projection refused"
+                        )
+                    fail_to_receive_balances[line.issue] = (
+                        fail_to_receive_balances.get(line.issue, Decimal()) + line.quantity
                     )
-                else:
-                    fail_to_receive_rule = "15c3-3.noncontrol.d2"
+                    prior = fail_to_receive_opened.get(line.issue)
+                    fail_to_receive_opened[line.issue] = (
+                        fact.settlement_date
+                        if prior is None
+                        else min(prior, fact.settlement_date)
+                    )
+                    continue
                 location_rule = {
                     AccountType.DTC: "15c3-3.control.c1",
                     AccountType.BANK_CONTROL: "15c3-3.control.c5",
-                    AccountType.FAIL_TO_RECEIVE: fail_to_receive_rule,
                     AccountType.STOCK_LOANED: "15c3-3.noncontrol.d1",
                     AccountType.IN_TRANSFER: "15c3-3.noncontrol.d4",
                 }.get(line.account_type, "UNMAPPED_LOCATION")
@@ -213,6 +226,20 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 loaned = True if line.account_type is AccountType.STOCK_LOANED else None
                 key = (line.issue, location_rule, loaned)
                 location_balances[key] = location_balances.get(key, Decimal(0)) + line.quantity
+    for issue, balance in fail_to_receive_balances.items():
+        if not balance:
+            continue
+        opened = fail_to_receive_opened.get(issue)
+        if opened is None:
+            raise ProjectionSourceFactMissingError(
+                "FAIL_TO_RECEIVE_OPENING_FACT_MISSING: projection refused"
+            )
+        rule = (
+            "15c3-3.noncontrol.d2"
+            if (as_of - opened).days > 30
+            else "15c3-3.pending-fail-to-receive"
+        )
+        location_balances[(issue, rule, None)] = balance
     holdings: dict[str, list[Holding]] = {}
     for (issue, location, loaned), balance in location_balances.items():
         if balance:
@@ -234,6 +261,7 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
     def add_line(target: dict[str, Decimal | None], rule_id: str, amount: Decimal) -> None:
         target[rule_id] = (target[rule_id] or Decimal(0)) + amount
 
+    ftr_reserve: dict[tuple[str, ReserveActivity], tuple[Decimal, ReserveSourceFact]] = {}
     for entry in books.entries:
         source_facts = {
             (fact.account_type, fact.issue): fact for fact in entry.reserve_source_facts
@@ -248,6 +276,12 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
             if age < 0:
                 raise ValueError("reserve source settlement date cannot be after the computation")
             contract_value = abs(line.quantity) * fact.contract_price
+            if line.account_type is AccountType.FAIL_TO_RECEIVE:
+                ftr_key = (line.issue, fact.activity)
+                prior_quantity, prior_fact = ftr_reserve.get(ftr_key, (Decimal(), fact))
+                oldest = fact if fact.settlement_date < prior_fact.settlement_date else prior_fact
+                ftr_reserve[ftr_key] = (prior_quantity + line.quantity, oldest)
+                continue
             if line.account_type is AccountType.STOCK_BORROWED:
                 stock_borrowed_contract_value += contract_value
             if line.account_type is AccountType.FAIL_TO_DELIVER and age > 30:
@@ -263,9 +297,6 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 )
                 continue
             value = contract_value
-            if line.account_type is AccountType.FAIL_TO_RECEIVE and age > 30:
-                market_value = abs(line.quantity) * prices[line.issue]
-                value += max(market_value - contract_value, Decimal(0))
             target = (
                 customer_lines
                 if fact.activity is ReserveActivity.CUSTOMER
@@ -286,10 +317,40 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
                 )
                 continue
             add_line(target, special_rule[line.account_type], value)
+    for (issue, activity), (quantity, fact) in ftr_reserve.items():
+        if not quantity:
+            continue
+        age = (as_of - fact.settlement_date).days
+        contract_value = abs(quantity) * fact.contract_price
+        value = contract_value
+        if age > 30:
+            market_value = abs(quantity) * prices[issue]
+            value += max(market_value - contract_value, Decimal())
+        target = (
+            customer_lines
+            if activity is ReserveActivity.CUSTOMER
+            else pab_lines
+            if activity is ReserveActivity.PAB
+            else None
+        )
+        if target is None:
+            continue
+        add_line(target, special_rule[AccountType.FAIL_TO_RECEIVE], value)
+    stock_loan_balances: dict[str, Decimal] = {}
     for entry in books.entries:
         for line in entry.lines:
-            if line.account_type is AccountType.STOCK_LOANED and line.issue is not None:
-                stock_loaned_market_value += abs(line.quantity) * prices[line.issue]
+            if (
+                line.account_type is AccountType.STOCK_LOANED
+                and line.record_side is RecordSide.LOCATION
+                and line.issue is not None
+            ):
+                stock_loan_balances[line.issue] = (
+                    stock_loan_balances.get(line.issue, Decimal()) + line.quantity
+                )
+    stock_loaned_market_value = sum(
+        (abs(quantity) * prices[issue] for issue, quantity in stock_loan_balances.items()),
+        Decimal(),
+    )
     customer_lines[str(mapping["customer_free_credit_rule_id"])] = free_credits
     # 17 CFR 240.15c3-3a, PAB Note 1, pinned source sha256
     # 8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd:

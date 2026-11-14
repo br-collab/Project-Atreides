@@ -147,3 +147,81 @@ def test_n5_stock_loan_holding_declares_loaned_true() -> None:
         if holding.location == "15c3-3.noncontrol.d1"
     )
     assert holding.loaned is True
+
+
+def test_ftr_lifecycle_nets_closes_and_ages_from_opening() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    books.post(entry("5", "ftr-base"))
+    opened = date(2026, 9, 21)
+    books.post(
+        _reserve_entry(
+            event="6",
+            account_type=AccountType.FAIL_TO_RECEIVE,
+            activity=ReserveActivity.CUSTOMER,
+            quantity=Decimal(10),
+            contract_price=Decimal(70),
+            settlement_date=opened,
+        )
+    )
+    books.post(
+        _reserve_entry(
+            event="7",
+            account_type=AccountType.FAIL_TO_RECEIVE,
+            activity=ReserveActivity.CUSTOMER,
+            quantity=Decimal(-4),
+            contract_price=Decimal(70),
+            settlement_date=opened,
+        )
+    )
+    projected = _project(books)
+    holding = next(
+        item
+        for item in projected.control.issues[0].holdings
+        if item.location == "15c3-3.noncontrol.d2"
+    )
+    assert holding.quantity == 6
+    item_4 = next(
+        line.amount for line in projected.reserve.lines if line.rule_id == "15c3-3a.item.04"
+    )
+    assert item_4 == 600
+
+    books.post(
+        _reserve_entry(
+                event="4",
+            account_type=AccountType.FAIL_TO_RECEIVE,
+            activity=ReserveActivity.CUSTOMER,
+            quantity=Decimal(-6),
+            contract_price=Decimal(70),
+            settlement_date=opened,
+        )
+    )
+    closed = _project(books)
+    assert all(
+        item.location not in {"15c3-3.noncontrol.d2", "15c3-3.pending-fail-to-receive"}
+        for item in closed.control.issues[0].holdings
+    )
+    assert next(
+        line.amount for line in closed.reserve.lines if line.rule_id == "15c3-3a.item.04"
+    ) in {None, Decimal()}
+
+
+def test_stock_loan_figure_uses_only_net_open_location_balance() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    loan_lines = tuple(
+        line.model_copy(update={"account_type": AccountType.STOCK_LOANED})
+        if line.account_type is AccountType.DTC
+        else line
+        for line in entry().lines
+    )
+    books.post(entry("5", "loan-open", source=PostingSource.STOCK_LOAN, lines=loan_lines))
+    books.post(
+        entry(
+            "6",
+            "loan-close",
+            source=PostingSource.STOCK_LOAN,
+            lines=tuple(
+                line.model_copy(update={"quantity": -line.quantity}) for line in loan_lines
+            ),
+        )
+    )
+    assert _project(books).audit.derived_values["stock_loaned_market_value"] == 0
