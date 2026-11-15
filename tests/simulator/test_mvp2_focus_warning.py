@@ -119,7 +119,7 @@ def test_fired_warning_always_creates_owned_unfiled_draft() -> None:
 @pytest.mark.parametrize(
     "mutation", ["EARLY_WARNING_MISSING_DRAFT", "EARLY_WARNING_MISSING_OWNER"]
 )
-def test_missing_or_unowned_warning_draft_turns_i14_false(mutation: str) -> None:
+def test_missing_or_unowned_warning_draft_turns_i16_false(mutation: str) -> None:
     day = run_firm(
         _profile(),
         days=1,
