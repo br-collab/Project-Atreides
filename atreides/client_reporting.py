@@ -10,6 +10,8 @@ from typing import Literal
 
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.canonical import canonical_bytes_of, digest_bytes
+from cannae_kernel.envelopes import ExecutionEvent
+from emulators.venue import VenueExecutionReport  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict
 
 from atreides.books.ledger import EquitiesBooks, JournalEntry, RecordSide
@@ -129,26 +131,31 @@ def _rule_provenance(rule_id: str, source_record_id: str) -> ReportingProvenance
 def generate_trade_confirmation(
     *,
     account_id: str,
-    trade_id: str,
     book_entry: JournalEntry,
-    executed_at: datetime,
-    issue: str,
-    side: str,
-    quantity: Decimal,
-    price: Decimal,
+    execution_event: ExecutionEvent,
+    execution_report: VenueExecutionReport,
     replaces: TradeConfirmation | None = None,
     correction_kind: Literal["ORIGINAL", "CORRECTION", "CANCELLATION"] = "ORIGINAL",
     correction_reason: str | None = None,
 ) -> TradeConfirmation:
     """Build a confirmation from the execution and its posted books entry."""
-    if not any(
-        line.account_id == account_id
-        and line.record_side is RecordSide.OWNERSHIP
-        and line.issue == issue
-        and line.quantity == quantity
+    ownership = tuple(
+        line
         for line in book_entry.lines
-    ):
+        if line.account_id == account_id and line.record_side is RecordSide.OWNERSHIP
+    )
+    if len(ownership) != 1 or abs(ownership[0].quantity) != execution_report.quantity:
         raise ValueError("trade confirmation does not match the posted customer position")
+    if execution_event.payload_digest != digest_bytes(canonical_bytes_of(execution_report)):
+        raise ValueError("execution event does not attest the supplied execution report")
+    issue = ownership[0].issue
+    if issue is None:
+        raise ValueError("posted customer position does not identify its security")
+    side = "BUY" if ownership[0].quantity > 0 else "SELL"
+    trade_id = execution_report.execution_id
+    executed_at = execution_event.times.event_time
+    quantity = execution_report.quantity
+    price = execution_report.price
     if correction_kind == "ORIGINAL" and replaces is not None:
         raise ValueError("an original confirmation cannot replace another confirmation")
     if correction_kind != "ORIGINAL" and replaces is None:

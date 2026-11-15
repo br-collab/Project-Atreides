@@ -54,6 +54,8 @@ def test_correction_and_cancellation_reference_immutable_original() -> None:
     result = run_golden_path()
     original = result.confirmation
     assert original is not None
+    assert result.venue_execution_event is not None
+    assert result.venue_execution_report is not None
     book_entry = next(
         item for item in result.books_entries if item.entry_id == original.book_entry_id
     )
@@ -61,26 +63,18 @@ def test_correction_and_cancellation_reference_immutable_original() -> None:
 
     correction = generate_trade_confirmation(
         account_id=ACCOUNT,
-        trade_id=original.trade_id,
         book_entry=book_entry,
-        executed_at=START + timedelta(seconds=30),
-        issue=ISSUE,
-        side="BUY",
-        quantity=Decimal(10),
-        price=Decimal("100"),
+        execution_event=result.venue_execution_event,
+        execution_report=result.venue_execution_report,
         replaces=original,
         correction_kind="CORRECTION",
         correction_reason="synthetic display correction",
     )
     cancellation = generate_trade_confirmation(
         account_id=ACCOUNT,
-        trade_id=original.trade_id,
         book_entry=book_entry,
-        executed_at=START + timedelta(seconds=30),
-        issue=ISSUE,
-        side="BUY",
-        quantity=Decimal(10),
-        price=Decimal("100"),
+        execution_event=result.venue_execution_event,
+        execution_report=result.venue_execution_report,
         replaces=original,
         correction_kind="CANCELLATION",
         correction_reason="synthetic cancellation",
