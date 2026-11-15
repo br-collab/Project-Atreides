@@ -51,6 +51,9 @@ jobs:
       - name: pytest
         run: pytest -q
 
+      - name: MVP-3 one-customer golden path
+        run: pytest -q tests/test_golden_path.py
+
       # Measured under the floor profile: one derandomized example per
       # property test, so the coverage floors are met by example tests alone
       # and a branch only random examples reach fails here on every run, not

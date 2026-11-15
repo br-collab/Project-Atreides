@@ -51,6 +51,7 @@ from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import (
     EXHIBIT_A_CREDITS,
+    EXHIBIT_A_DEBITS,
     BankCashDeposit,
     ComputationMode,
     LineBalance,
@@ -138,7 +139,10 @@ class EstateResult:
     settled_quantity: Decimal
     settlement_residual_two_sided: bool
     customer_total_credits: Decimal
+    customer_total_debits: Decimal
     pab_total_credits: Decimal
+    pab_total_debits: Decimal
+    control_shortfall_by_issue: tuple[tuple[str, Decimal | None], ...]
 
 
 def _complete_reserve_inputs(
@@ -318,6 +322,8 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     pab_fail_to_receive: tuple[Decimal, Decimal] | None = None,
     reserve_bank_opening: tuple[Decimal, Decimal] = (Decimal(0), Decimal(0)),
     deposit_policy: DepositPolicy | None = None,
+    account_ids: tuple[str, ...] | None = None,
+    books: EquitiesBooks | None = None,
 ) -> EstateResult:
     """Drive L.C. then Atreides; checks elsewhere only compare their outputs.
 
@@ -333,6 +339,11 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         bounds_digest="sha256:" + "1" * 64,
         enabled=True,
     )
+    allocation_accounts = account_ids or tuple(
+        f"ACCOUNT-{i + 1}" for i in range(len(account_weights))
+    )
+    if len(allocation_accounts) != len(account_weights):
+        raise ValueError("account_ids and account_weights must have equal length")
     payload = ApprovedIntentPayload(
         intent_id=IntentId(_identifier("int_", 10_000 + run_number)),
         instrument_id=issue,
@@ -344,7 +355,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             policy_manifest_digest=digest(policy),
             authorized=True,
         ),
-        allocation_accounts=tuple(f"ACCOUNT-{i + 1}" for i in range(len(account_weights))),
+        allocation_accounts=allocation_accounts,
     )
     wire = _wire(payload)
     lifecycle_id = LifecycleId(_identifier("lif_", 20_000 + run_number))
@@ -390,7 +401,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 quantity=total_quantity,
                 event=_event(40_003 + run_number * 20, base),
                 terms=OrderTerms(
-                    account_id="SIM-1B-ESTATE",
+                    account_id=allocation_accounts[0],
                     strategy_id="SIM-1B",
                     issue=issue,
                     side=payload.side.value,
@@ -458,7 +469,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     )
     targets = tuple(
         AllocationTarget(
-            account=f"ACCOUNT-{index + 1}",
+            account=allocation_accounts[index],
             target_quantity=Decimal(weight) * total_quantity,
         )
         for index, weight in enumerate(account_weights)
@@ -476,7 +487,8 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             rounding_method="LARGEST_REMAINDER",
         ),
     )
-    books = EquitiesBooks(break_owner="SIM_SETTLEMENT_OPS")
+    if books is None:
+        books = EquitiesBooks(break_owner="SIM_SETTLEMENT_OPS")
     calendar = MarketCalendar.load(Market.US_EQUITIES)
     net_position = net_positions(
         ((issue, total_quantity),),
@@ -573,41 +585,42 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             ),
         )
     )
-    credit_event_id = _identifier("evt_", 70_000 + run_number)
-    books.post(
-        JournalEntry(
-            entry_id=f"SIM-1D-CREDIT-{run_number}",
-            source_event_id=credit_event_id,
-            source=PostingSource.CASH_MOVEMENT,
-            effective_date=business_date,
-            effective_date_basis="VALUE_DATE",
-            authority="SIM-1D_SYNTHETIC_CUSTOMER_ACTIVITY",
-            lines=(
-                LedgerLine(
-                    account_id="CUSTOMER-GENERATED-CREDIT",
-                    account_type=AccountType.CUSTOMER_CASH,
-                    record_side=RecordSide.MONEY,
-                    currency="USD",
-                    money=customer_credit_balance,
+    if customer_credit_balance:
+        credit_event_id = _identifier("evt_", 70_000 + run_number)
+        books.post(
+            JournalEntry(
+                entry_id=f"SIM-1D-CREDIT-{run_number}",
+                source_event_id=credit_event_id,
+                source=PostingSource.CASH_MOVEMENT,
+                effective_date=business_date,
+                effective_date_basis="VALUE_DATE",
+                authority="SIM-1D_SYNTHETIC_CUSTOMER_ACTIVITY",
+                lines=(
+                    LedgerLine(
+                        account_id="CUSTOMER-GENERATED-CREDIT",
+                        account_type=AccountType.CUSTOMER_CASH,
+                        record_side=RecordSide.MONEY,
+                        currency="USD",
+                        money=customer_credit_balance,
+                    ),
+                    LedgerLine(
+                        account_id="SYNTHETIC_CUSTOMER_CREDIT_FUNDING",
+                        account_type=AccountType.CASH,
+                        record_side=RecordSide.MONEY,
+                        currency="USD",
+                        money=-customer_credit_balance,
+                    ),
                 ),
-                LedgerLine(
-                    account_id="SYNTHETIC_CUSTOMER_CREDIT_FUNDING",
-                    account_type=AccountType.CASH,
-                    record_side=RecordSide.MONEY,
-                    currency="USD",
-                    money=-customer_credit_balance,
+                posting=BooksPosting(
+                    posted_record_id=f"SIM-1D-CREDIT-{run_number}",
+                    posting_authority=actor,
+                    effective_time=base,
+                    source_event_id=EventId(credit_event_id),
+                    provenance=Provenance.FACT_SYNTHETIC,
                 ),
-            ),
-            posting=BooksPosting(
-                posted_record_id=f"SIM-1D-CREDIT-{run_number}",
-                posting_authority=actor,
-                effective_time=base,
-                source_event_id=EventId(credit_event_id),
-                provenance=Provenance.FACT_SYNTHETIC,
-            ),
-            synthetic=True,
+                synthetic=True,
+            )
         )
-    )
     if financing_charge not in {None, Decimal()} and post_financing:
         financing_event_id = _identifier("evt_", 80_000 + run_number)
         books.post(
@@ -765,8 +778,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         control_inputs = control_inputs.model_copy(
             update={
                 "issues": tuple(
-                    item.model_copy(update={"fully_paid": None})
-                    for item in control_inputs.issues
+                    item.model_copy(update={"fully_paid": None}) for item in control_inputs.issues
                 )
             }
         )
@@ -835,6 +847,22 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         ),
         Decimal(),
     )
+    customer_total_debits = sum(
+        (
+            line.amount or Decimal()
+            for line in projected.reserve.lines
+            if line.rule_id in EXHIBIT_A_DEBITS
+        ),
+        Decimal(),
+    )
+    pab_total_debits = sum(
+        (
+            line.amount or Decimal()
+            for line in projected.pab_reserve.lines
+            if line.rule_id in EXHIBIT_A_DEBITS
+        ),
+        Decimal(),
+    )
     return EstateResult(
         captured_quantity=captured.quantity,
         captured_money=captured.quantity * captured.price,
@@ -862,13 +890,13 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         settled_quantity=settlement.allocated_quantity,
         settlement_residual_two_sided=(
             settlement.residual is None
-            or (
-                settlement.residual.quantity is not None
-                and settlement.residual.cash is not None
-            )
+            or (settlement.residual.quantity is not None and settlement.residual.cash is not None)
         ),
         customer_total_credits=customer_total_credits,
+        customer_total_debits=customer_total_debits,
         pab_total_credits=pab_total_credits,
+        pab_total_debits=pab_total_debits,
+        control_shortfall_by_issue=tuple((item.issue, item.shortfall) for item in control.issues),
     )
 
 
@@ -1023,9 +1051,7 @@ def _post_reserve_deposits(
                     actor=actor,
                 )
             )
-        plans.append(
-            (name, balance, requirement, needed, drawn, outcome, amount, deposit_date)
-        )
+        plans.append((name, balance, requirement, needed, drawn, outcome, amount, deposit_date))
     at_deadline = reserve_bank_balances(books, through=deadline)
     closing = reserve_bank_balances(books, through=date.max)
     equity = None if policy is None else policy.bank_equity_capital

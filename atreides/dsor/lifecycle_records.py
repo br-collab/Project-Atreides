@@ -29,6 +29,7 @@ from atreides.messaging.readback import SettlementStatus
 from atreides.messaging.receipt import ExternalActionReceipt
 
 __all__ = [
+    "ApprovedIntentDecisionRecord",
     "ExternalActionReceiptRecord",
     "FinalityAssertedRecord",
     "HaltRecord",
@@ -45,6 +46,16 @@ class _LifecycleRecord(BaseModel):
     #: The record's own id; the DSOR store's record subject.
     operation_id: UUID
     lifecycle_id: LifecycleId | None
+
+
+class ApprovedIntentDecisionRecord(_LifecycleRecord):
+    """Aureon's decided approved intent, preserved before L.C. consumes it."""
+
+    kind: Literal["approved_intent_decision"] = "approved_intent_decision"
+    intent_id: str = Field(min_length=1)
+    intent_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
+    decision: Literal["APPROVED"] = "APPROVED"
+    decided_at: datetime
 
 
 class HaltRecord(_LifecycleRecord):
