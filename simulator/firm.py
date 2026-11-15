@@ -60,8 +60,10 @@ from atreides.books.projections import (
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import (
+    DAILY_REDUCTION,
     EXHIBIT_A_CREDITS,
     EXHIBIT_A_DEBITS,
+    WEEKLY_REDUCTION,
     ComputationMode,
     compute_reserve,
     with_customer_excess_debits,
@@ -72,6 +74,11 @@ from atreides.dsor.books import BooksPosting
 from atreides.margin.engine import compute_margin
 from atreides.rails.cns import CloseOutRegime, MarketProfile, net_positions, settle_net_position
 from simulator.calibration import CalibrationPack
+from simulator.early_warning import (
+    EarlyWarningNotice,
+    draft_notices,
+    warning_workflow_held,
+)
 from simulator.estate import (
     DEPOSIT_BREACH_OUTCOMES,
     DepositDraw,
@@ -81,6 +88,7 @@ from simulator.estate import (
     _wire,
     simulated_filed_credit_total,
 )
+from simulator.focus import FirmFocusLines, FirmFocusTieOut, tie_out_firm_close
 from simulator.protection_oracle import EXCESS_MARGIN_THRESHOLD, required_net_capital
 from simulator.protection_oracle import required_control as required_possession_or_control
 from simulator.settlement import rule_204_deadline
@@ -186,6 +194,8 @@ class FirmDay:
     protection_required: dict[str, str]
     protection_reasons: dict[str, tuple[str, ...]]
     protection_figures: dict[str, Decimal | None]
+    focus_tie_out: FirmFocusTieOut
+    early_warning_notices: tuple[EarlyWarningNotice, ...]
     rule_204_close_outs: dict[str, date]
     economics_digest: str
 
@@ -216,6 +226,8 @@ class FirmRun:
         "MVP-1C sizes recall from the independent loan register",
         "MVP-2 settles the oldest carried fail lot before newer lots",
         "MVP-2 reconciles the production run through independent source readers",
+        "MVP-2 ties regulatory-report figures to every firm-at-volume close",
+        "MVP-2 creates owned synthetic drafts for fired early-warning indicators",
     )
     not_claimed: tuple[str, ...] = NOT_CLAIMED
 
@@ -233,6 +245,12 @@ MUTATIONS = (
     "WRONG_OPENING_POSITION",
     "FORCE_RESERVE_PASS_ON_SHORT_DAY",
     "AGE_FAIL_WITHOUT_CARRY",
+    "FOCUS_WRONG_NET_CAPITAL",
+    "FOCUS_WRONG_RESERVE_CREDIT",
+    "FOCUS_WRONG_CONTROL_QUANTITY",
+    "FOCUS_DROP_CUSTOMER_ACCOUNT",
+    "EARLY_WARNING_MISSING_DRAFT",
+    "EARLY_WARNING_MISSING_OWNER",
 )
 
 
@@ -277,6 +295,7 @@ def attack_firm_run(run: FirmRun) -> dict[str, tuple[str, ...]]:
             start=run.days[0].business_date,
             mutation=mutation,
             verify_replay=False,
+            early_warning_stress=mutation.startswith("EARLY_WARNING_"),
         )
         attacked[mutation] = tuple(
             sorted(
@@ -1221,6 +1240,150 @@ def _pab_fail_to_receive(business_date: date, prices: dict[str, Decimal]) -> Jou
     )
 
 
+def _pab_requirement_from_book_lines(
+    customer_credits: Decimal,
+    customer_debits: Decimal,
+    pab_credits: Decimal,
+    pab_debits: Decimal,
+    customer_debit_reduction_rate: Decimal,
+) -> Decimal:
+    """Conserve the PAB requirement through customer excess-debit application."""
+    customer_excess_debits = max(
+        customer_debits
+        - customer_debit_reduction_rate * customer_debits
+        - customer_credits,
+        Decimal(),
+    )
+    raw_pab_requirement = max(pab_credits - pab_debits, Decimal())
+    return raw_pab_requirement - min(raw_pab_requirement, customer_excess_debits)
+
+
+def _focus_tie_out(
+    *,
+    books: EquitiesBooks,
+    business_date: date,
+    rules: Any,
+    customer_inputs: Any,
+    pab_inputs: Any,
+    customer: Any,
+    pab: Any,
+    capital: Any,
+    control: Any,
+    required_capital: Any,
+    required_control: Any,
+    expected_customer_accounts: set[str],
+    mutation: str | None,
+) -> FirmFocusTieOut:
+    """Tie independently read journal lines to each engine result at the real firm close."""
+
+    def total(lines: tuple[Any, ...], rule_ids: tuple[str, ...]) -> Decimal | None:
+        selected = [line.amount for line in lines if line.rule_id in rule_ids]
+        return (
+            None
+            if any(value is None for value in selected)
+            else sum((cast(Decimal, value) for value in selected), Decimal())
+        )
+
+    customer_credits = total(customer_inputs.lines, EXHIBIT_A_CREDITS)
+    customer_debits = total(customer_inputs.lines, EXHIBIT_A_DEBITS)
+    pab_credits = total(pab_inputs.lines, EXHIBIT_A_CREDITS)
+    pab_debits = total(pab_inputs.lines, EXHIBIT_A_DEBITS)
+    reduction_rule = (
+        DAILY_REDUCTION if customer_inputs.mode is ComputationMode.DAILY else WEEKLY_REDUCTION
+    )
+    reduction_item = rules.get(reduction_rule)
+    reduction_rate = None if reduction_item is None else reduction_item.value
+    pab_requirement = (
+        None
+        if None
+        in (customer_credits, customer_debits, pab_credits, pab_debits, reduction_rate)
+        else _pab_requirement_from_book_lines(
+            cast(Decimal, customer_credits),
+            cast(Decimal, customer_debits),
+            cast(Decimal, pab_credits),
+            cast(Decimal, pab_debits),
+            cast(Decimal, reduction_rate),
+        )
+    )
+    book_control = (
+        ()
+        if required_control is None
+        else tuple(
+            (issue, max(quantity - required_control.in_control.get(issue, Decimal()), Decimal()))
+            for issue, quantity in sorted(required_control.required.items())
+        )
+    )
+    engine_control = tuple(
+        (item.issue, item.shortfall) for item in sorted(control.issues, key=lambda item: item.issue)
+    )
+    observed_accounts = {
+        line.account_id
+        for entry in books.entries
+        for line in entry.lines
+        if line.account_type in {AccountType.CUSTOMER_CASH, AccountType.CUSTOMER_MARGIN}
+    }
+    book_shape = {
+        "journal_entries": len(books.entries),
+        "customer_accounts": len(observed_accounts),
+        "ownership_lines": sum(
+            line.record_side is RecordSide.OWNERSHIP
+            for entry in books.entries
+            for line in entry.lines
+        ),
+        "fail_lines": sum(
+            line.account_type in {AccountType.FAIL_TO_RECEIVE, AccountType.FAIL_TO_DELIVER}
+            for entry in books.entries
+            for line in entry.lines
+        ),
+        "stock_loan_lines": sum(
+            line.account_type is AccountType.STOCK_LOANED
+            for entry in books.entries
+            for line in entry.lines
+        ),
+    }
+    book_lines = FirmFocusLines(
+        net_capital=(None if required_capital is None else required_capital.net_capital),
+        reserve_total_credits=customer_credits,
+        reserve_total_debits=customer_debits,
+        pab_reserve_requirement=pab_requirement,
+        control_shortfall_by_issue=book_control,
+    )
+    engine_lines = FirmFocusLines(
+        net_capital=capital.net_capital,
+        reserve_total_credits=customer.total_credits,
+        reserve_total_debits=customer.total_debits,
+        pab_reserve_requirement=pab.requirement_after_customer_excess_debits,
+        control_shortfall_by_issue=engine_control,
+    )
+    if mutation == "FOCUS_WRONG_NET_CAPITAL" and engine_lines.net_capital is not None:
+        engine_lines = replace(engine_lines, net_capital=engine_lines.net_capital + Decimal("0.01"))
+    if (
+        mutation == "FOCUS_WRONG_RESERVE_CREDIT"
+        and engine_lines.reserve_total_credits is not None
+    ):
+        engine_lines = replace(
+            engine_lines,
+            reserve_total_credits=engine_lines.reserve_total_credits + Decimal("0.01"),
+        )
+    if mutation == "FOCUS_WRONG_CONTROL_QUANTITY" and engine_lines.control_shortfall_by_issue:
+        first, *rest = engine_lines.control_shortfall_by_issue
+        issue, quantity = first
+        engine_lines = replace(
+            engine_lines,
+            control_shortfall_by_issue=((issue, None if quantity is None else quantity + 1), *rest),
+        )
+    if mutation == "FOCUS_DROP_CUSTOMER_ACCOUNT" and observed_accounts:
+        observed_accounts.remove(sorted(observed_accounts)[0])
+    return tie_out_firm_close(
+        close_date=business_date,
+        books=book_lines,
+        engines=engine_lines,
+        expected_customer_accounts=tuple(sorted(expected_customer_accounts)),
+        observed_customer_accounts=tuple(sorted(observed_accounts)),
+        book_shape=book_shape,
+    )
+
+
 def _protections(
     books: EquitiesBooks,
     business_date: date,
@@ -1228,6 +1391,7 @@ def _protections(
     profile: FirmProfile,
     run_number: int,
     mutation: str | None,
+    expected_customer_accounts: set[str],
     *,
     net_worth: Decimal = Decimal("1000000000"),
     reserve_stress: ReserveStress | None = None,
@@ -1236,6 +1400,9 @@ def _protections(
     dict[str, str],
     dict[str, tuple[str, ...]],
     dict[str, Decimal | None],
+    FirmFocusTieOut,
+    tuple[EarlyWarningNotice, ...],
+    bool,
     bool,
 ]:
     calendar = MarketCalendar.load(Market.US_EQUITIES)
@@ -1412,11 +1579,34 @@ def _protections(
         figures["independent_net_capital"] = required_capital.net_capital
     if required_control is not None:
         figures["independent_control_short_issues"] = Decimal(len(required_control.short_issues))
+    focus_tie_out = _focus_tie_out(
+        books=books,
+        business_date=business_date,
+        rules=rules,
+        customer_inputs=customer_inputs,
+        pab_inputs=pab_inputs,
+        customer=customer,
+        pab=pab,
+        capital=capital,
+        control=control,
+        required_capital=required_capital,
+        required_control=required_control,
+        expected_customer_accounts=expected_customer_accounts,
+        mutation=mutation,
+    )
+    notices = draft_notices(capital.early_warnings, business_date)
+    if mutation == "EARLY_WARNING_MISSING_DRAFT" and notices:
+        notices = notices[1:]
+    if mutation == "EARLY_WARNING_MISSING_OWNER" and notices:
+        notices = (replace(notices[0], owner_role=None), *notices[1:])
     return (
         dispositions,
         required,
         reasons,
         figures,
+        focus_tie_out,
+        notices,
+        warning_workflow_held(capital.early_warnings, notices),
         all(dispositions[name] == expected for name, expected in required.items()),
     )
 
@@ -1436,6 +1626,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
     verify_replay: bool = True,
     net_worth: Decimal = Decimal("1000000000"),
     reserve_stress: ReserveStress | None = None,
+    early_warning_stress: bool = False,
 ) -> FirmRun:
     if mutation is not None and mutation not in MUTATIONS:
         raise ValueError(f"unknown firm mutation: {mutation}")
@@ -1453,10 +1644,19 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
     all_settlement_outcomes: list[SettlementOutcome] = []
     started = time.perf_counter()
     total_executions = 0
+    expected_customer_accounts = {
+        line.account_id
+        for entry in books.entries
+        for line in entry.lines
+        if line.account_type in {AccountType.CUSTOMER_CASH, AccountType.CUSTOMER_MARGIN}
+    }
     for day_index, business_date in enumerate(_business_dates(start, days)):
         executions = draw_executions(profile, business_date, seed)
         total_executions += len(executions)
         accepted = tuple(execution for execution in executions if not execution.refused)
+        expected_customer_accounts.update(
+            execution.account for execution in accepted if not execution.pab
+        )
         groups: dict[tuple[str, str], list[FirmExecution]] = defaultdict(list)
         for execution in accepted:
             groups[(execution.issue, execution.side)].append(execution)
@@ -1751,14 +1951,24 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         )
         completion = source_completions[0]
         prior_breaks = breaks
-        protections, required_outcomes, protection_reasons, protection_figures, i6 = _protections(
+        (
+            protections,
+            required_outcomes,
+            protection_reasons,
+            protection_figures,
+            focus_tie_out,
+            early_warning_notices,
+            i14,
+            i6,
+        ) = _protections(
             books,
             business_date,
             prices,
             profile,
             day_index,
             mutation,
-            net_worth=net_worth,
+            expected_customer_accounts,
+            net_worth=(Decimal("10000") if early_warning_stress else net_worth),
             reserve_stress=reserve_stress,
         )
         carry_complete = set(carried_fails) <= set(carried_input)
@@ -1790,6 +2000,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             "I8_REPLAY_DIGEST": before == replay_digest,
             "I11_POSITION_ROLL_FORWARD": i11,
             "I12_IDEMPOTENT_REPLAY": i12,
+            "I13_FOCUS_TIE_OUT": focus_tie_out.held,
+            "I16_EARLY_WARNING_DRAFT_OWNED": i14,
         }
         fails_by_age: dict[str, int] = defaultdict(int)
         for settlement in settlements:
@@ -1823,6 +2035,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 protection_required=required_outcomes,
                 protection_reasons=protection_reasons,
                 protection_figures=protection_figures,
+                focus_tie_out=focus_tie_out,
+                early_warning_notices=early_warning_notices,
                 rule_204_close_outs={
                     issue: rule_204_deadline(
                         settlement_date=settlement_date,
@@ -1870,6 +2084,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             verify_replay=False,
             net_worth=net_worth,
             reserve_stress=reserve_stress,
+            early_warning_stress=early_warning_stress,
         )
         firm_run = replace(
             firm_run,
