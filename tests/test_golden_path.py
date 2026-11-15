@@ -19,6 +19,14 @@ def test_clean_golden_path_closes_with_every_invariant_true() -> None:
     assert all(result.invariants.values())
 
 
+def test_first_trade_activates_only_after_cns_books_posting() -> None:
+    stages = run_golden_path().stages
+
+    assert stages.index("Atreides: CNS settlement posted to books") < stages.index(
+        "Atreides: L.C. signed first-trade evidence moved account to ACTIVE"
+    ) < stages.index("Atreides: daily close completed")
+
+
 def test_evidence_pack_is_linked_and_replays_to_same_digest() -> None:
     result = run_golden_path()
 
