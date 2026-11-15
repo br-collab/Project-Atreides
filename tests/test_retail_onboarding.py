@@ -233,6 +233,8 @@ def _store(
         ActorRegistryApproverVerifier(registry),
         resolver,
         PrincipalApproverPolicyRow(allow_same_person=allow_same_person),
+        clock=lambda: NOW,
+        kyc_maximum_age_seconds=300,
     )
     if apply_record:
         lifecycle.apply(APPLICATION_ID)

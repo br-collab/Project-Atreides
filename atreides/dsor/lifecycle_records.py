@@ -56,6 +56,7 @@ class ApprovedIntentDecisionRecord(_LifecycleRecord):
     intent_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     decision: Literal["APPROVED"] = "APPROVED"
     decided_at: datetime
+    source_event_id: str | None = Field(default=None, min_length=1)
 
 
 class HaltRecord(_LifecycleRecord):

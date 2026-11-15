@@ -220,6 +220,8 @@ def _run_one(
             }
         ),
         resolver,
+        clock=lambda: approval_time,
+        kyc_maximum_age_seconds=300,
     )
     lifecycle.apply(application_id)
     approval_time = START + timedelta(seconds=30)
