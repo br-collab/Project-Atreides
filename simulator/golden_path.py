@@ -495,23 +495,6 @@ def run_golden_path(variant: Variant = Variant.CLEAN) -> GoldenPathResult:  # no
         recommended=True,
         customer_profile_record_id=profile_id,
     )
-    # A signed permitted-trade fact activates the account before L.C. releases the order.
-    trades[trade_id] = attest_first_permitted_trade(
-        FirstPermittedTradeRecord(
-            record_id=trade_id, account_id=ACCOUNT, permitted=True, traded_at=clock()
-        ),
-        key_id=LC_KEY_ID,
-        private_key=LC_PRIVATE_KEY,
-    )
-    lifecycle.transition(
-        ACCOUNT,
-        AccountStatus.ACTIVE,
-        actor=principal,
-        timestamp=START,
-        reason="L.C. signed first permitted trade",
-        evidence_refs=(trade_id,),
-        first_trade_record_id=trade_id,
-    )
     status_wire = lifecycle.publish_status(
         as_of=clock(),
         maximum_age_seconds=PROFILE_MAXIMUM_AGE_SECONDS,
@@ -739,11 +722,28 @@ def run_golden_path(variant: Variant = Variant.CLEAN) -> GoldenPathResult:  # no
             bank_equity_capital=Decimal("1000000"),
         ),
     )
+    trades[trade_id] = attest_first_permitted_trade(
+        FirstPermittedTradeRecord(
+            record_id=trade_id, account_id=ACCOUNT, permitted=True, traded_at=clock()
+        ),
+        key_id=LC_KEY_ID,
+        private_key=LC_PRIVATE_KEY,
+    )
+    lifecycle.transition(
+        ACCOUNT,
+        AccountStatus.ACTIVE,
+        actor=principal,
+        timestamp=START,
+        reason="L.C. signed first permitted trade after books posting",
+        evidence_refs=(trade_id,),
+        first_trade_record_id=trade_id,
+    )
     stages.extend(
         (
             "Venue: execution emulator produced a fill",
             "L.C.: execution captured and allocated",
             "Atreides: CNS settlement posted to books",
+            "Atreides: L.C. signed first-trade evidence moved account to ACTIVE",
             "Atreides: daily close completed",
         )
     )
