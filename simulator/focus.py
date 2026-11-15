@@ -15,8 +15,8 @@ from atreides.books.ledger import (
     PostingSource,
     RecordSide,
 )
-from atreides.books.projections import ProtectionInputs, project_customer_protection
-from atreides.customer_protection.control import check_possession_or_control
+from atreides.books.projections import project_customer_protection
+from atreides.customer_protection.control import ControlInputs, check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import (
     EXHIBIT_A_CREDITS,
@@ -37,6 +37,66 @@ class FocusLines:
     reserve_total_credits: Decimal | None
     reserve_total_debits: Decimal | None
     possession_or_control_shortfall: Decimal | None
+
+
+@dataclass(frozen=True, slots=True)
+class FirmFocusLines:
+    """One independently derived synthetic FOCUS row from the firm books or engines."""
+
+    net_capital: Decimal | None
+    reserve_total_credits: Decimal | None
+    reserve_total_debits: Decimal | None
+    pab_reserve_requirement: Decimal | None
+    control_shortfall_by_issue: tuple[tuple[str, Decimal | None], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class FirmFocusTieOut:
+    close_date: date
+    books: FirmFocusLines
+    engines: FirmFocusLines
+    expected_customer_accounts: tuple[str, ...]
+    observed_customer_accounts: tuple[str, ...]
+    differences: tuple[str, ...]
+    book_shape: dict[str, int]
+
+    @property
+    def held(self) -> bool:
+        return not self.differences
+
+
+def tie_out_firm_close(
+    *,
+    close_date: date,
+    books: FirmFocusLines,
+    engines: FirmFocusLines,
+    expected_customer_accounts: tuple[str, ...],
+    observed_customer_accounts: tuple[str, ...],
+    book_shape: dict[str, int],
+) -> FirmFocusTieOut:
+    """Compare independently assembled book lines, engine results, and account roster."""
+    differences = tuple(
+        name
+        for name in (
+            "net_capital",
+            "reserve_total_credits",
+            "reserve_total_debits",
+            "pab_reserve_requirement",
+            "control_shortfall_by_issue",
+        )
+        if getattr(books, name) != getattr(engines, name)
+    )
+    if expected_customer_accounts != observed_customer_accounts:
+        differences += ("customer_accounts",)
+    return FirmFocusTieOut(
+        close_date=close_date,
+        books=books,
+        engines=engines,
+        expected_customer_accounts=expected_customer_accounts,
+        observed_customer_accounts=observed_customer_accounts,
+        differences=differences,
+        book_shape=book_shape,
+    )
 
 
 def _capital_books(day: date, capital: Decimal) -> EquitiesBooks:
@@ -93,14 +153,17 @@ def _books_net_capital(books: EquitiesBooks) -> Decimal:
     )
 
 
-def _books_control_shortfall(projected: ProtectionInputs) -> Decimal | None:
-    control = projected.control
+def _books_control_shortfall(control: ControlInputs) -> Decimal | None:
     shortfalls: list[Decimal] = []
     for issue in control.issues:
         if issue.fully_paid is None or issue.excess_margin is None:
             return None
         controlled = sum(
-            (holding.quantity for holding in issue.holdings if holding.location in {"DTC", "BANK"}),
+            (
+                holding.quantity
+                for holding in issue.holdings
+                if holding.location.startswith("15c3-3.control.")
+            ),
             Decimal(),
         )
         shortfalls.append(max(issue.fully_paid + issue.excess_margin - controlled, Decimal()))
@@ -157,7 +220,7 @@ def run_focus(
             net_capital=book_capital,
             reserve_total_credits=_sum_lines(reserve_inputs.lines, EXHIBIT_A_CREDITS),
             reserve_total_debits=_sum_lines(reserve_inputs.lines, EXHIBIT_A_DEBITS),
-            possession_or_control_shortfall=_books_control_shortfall(projected),
+            possession_or_control_shortfall=_books_control_shortfall(projected.control),
         )
         engine_lines = FocusLines(
             net_capital=engine_capital,
