@@ -216,16 +216,26 @@ def loan_register_source(
 
 def build_independent_sources(
     books_guard: object, inputs: IndependentSourceInputs
-) -> tuple[PositionSource, PositionSource, PositionSource]:
-    """Rebuild all street sources without reading any attribute from books_guard."""
+) -> tuple[ObservedSourceReader, ObservedSourceReader, ObservedSourceReader]:
+    """Build independent lazy readers without accessing any attribute of books_guard."""
     del books_guard
-    depository = SyntheticDepository(inputs.opening_depository)
-    depository.apply_settlements(inputs.settlement_outcomes)
-    depository.apply_instructions(inputs.loan_instructions)
+
+    def read_depository() -> PositionSource:
+        depository = SyntheticDepository(inputs.opening_depository)
+        depository.apply_settlements(inputs.settlement_outcomes)
+        depository.apply_instructions(inputs.loan_instructions)
+        return depository.source(inputs.as_of)
+
     return (
-        depository.source(inputs.as_of),
-        cns_fail_source(inputs.as_of, inputs.open_fails),
-        loan_register_source(inputs.as_of, inputs.loan_instructions),
+        ObservedSourceReader("synthetic DTC position statement", read_depository),
+        ObservedSourceReader(
+            "synthetic CNS open fail statement",
+            lambda: cns_fail_source(inputs.as_of, inputs.open_fails),
+        ),
+        ObservedSourceReader(
+            "synthetic stock-loan contract register",
+            lambda: loan_register_source(inputs.as_of, inputs.loan_instructions),
+        ),
     )
 
 

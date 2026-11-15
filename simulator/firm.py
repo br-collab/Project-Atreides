@@ -15,7 +15,6 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from functools import partial
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -91,14 +90,13 @@ from simulator.street import (
     IndependentSourceInputs,
     LoanInstruction,
     LoanRegister,
-    ObservedSourceReader,
     OpenFail,
+    PositionSource,
     ReconciliationCompletion,
     SettlementOutcome,
     StreetBreak,
     SyntheticDepository,
-    cns_fail_source,
-    loan_register_source,
+    build_independent_sources,
     observed_reconcile,
     reconciliation_calendar,
 )
@@ -149,7 +147,7 @@ class FirmProfile:
     control_deficit: tuple[
         int, int, Decimal, tuple[tuple[int, Decimal], ...]
     ] | None = None
-    fail_lot_order: Literal["OLDEST_FIRST"] = "OLDEST_FIRST"
+    fail_lot_settlement_order: Literal["OLDEST_SETTLES_FIRST"] = "OLDEST_SETTLES_FIRST"
 
 
 @dataclass(frozen=True, slots=True)
@@ -183,6 +181,7 @@ class FirmDay:
     reconciliation_completion: ReconciliationCompletion
     reconciliation_calendar: tuple[CalendarRun, ...]
     source_inputs: IndependentSourceInputs
+    reconciled_sources: tuple[PositionSource, ...]
     protection_dispositions: dict[str, str]
     protection_required: dict[str, str]
     protection_reasons: dict[str, tuple[str, ...]]
@@ -215,6 +214,8 @@ class FirmRun:
         "MVP-1C fails I3 closed on failed or missing observed reconciliation",
         "MVP-1C carries CNS residuals as non-growing fail lots",
         "MVP-1C sizes recall from the independent loan register",
+        "MVP-2 settles the oldest carried fail lot before newer lots",
+        "MVP-2 reconciles the production run through independent source readers",
     )
     not_claimed: tuple[str, ...] = NOT_CLAIMED
 
@@ -322,7 +323,7 @@ def load_firm_profile(pack: CalibrationPack, tier: TierName) -> FirmProfile:
         calibration_pack_version=pack.version,
         calibration_manifest_digest=pack.manifest_digest,
         control_deficit=_control_deficit(pack),
-        fail_lot_order=_fail_lot_order(pack),
+        fail_lot_settlement_order=_fail_lot_settlement_order(pack),
     )
 
 
@@ -349,16 +350,18 @@ def _control_deficit(
     )
 
 
-def _fail_lot_order(pack: CalibrationPack) -> Literal["OLDEST_FIRST"]:
+def _fail_lot_settlement_order(
+    pack: CalibrationPack,
+) -> Literal["OLDEST_SETTLES_FIRST"]:
     try:
         declared = cast(dict[str, object], pack.value("firm_profile", "fail_lot_policy"))
     except (KeyError, ValueError):
-        return "OLDEST_FIRST"
+        return "OLDEST_SETTLES_FIRST"
     if declared.get("rule_anchor") != "TO_VERIFY_AGAINST_PRIMARY_TEXT":
         raise ValueError("fail-lot policy requires a TO_VERIFY_AGAINST_PRIMARY_TEXT anchor")
-    if declared.get("order") != "OLDEST_FIRST":
+    if declared.get("order") not in {"OLDEST_FIRST", "OLDEST_SETTLES_FIRST"}:
         raise ValueError("unsupported fail-lot order")
-    return "OLDEST_FIRST"
+    return "OLDEST_SETTLES_FIRST"
 
 
 def _id(prefix: str, number: int) -> str:
@@ -1022,7 +1025,7 @@ def _roll_fail_lots(
     opening_settlement_date: date,
     contract_price: Decimal,
 ) -> tuple[OpenFail, ...]:
-    """Apply a net CNS residual oldest first without growing or flipping a fail ID.
+    """Settle the oldest carried lot first without growing or flipping a fail ID.
 
     Oldest first is a declared firm policy pending confirmation against primary text.
     It is not represented as a regulatory rule.
@@ -1032,7 +1035,13 @@ def _roll_fail_lots(
     remaining = abs(residual_quantity)
     direction = Decimal(1) if residual_quantity > 0 else Decimal(-1)
     result: list[OpenFail] = []
-    for prior in sorted(carried, key=lambda item: (item.opening_settlement_date, item.fail_id)):
+    # The residual is what remains open. Retain newest lots first so reductions
+    # consume the oldest open lot before a newer one.
+    for prior in sorted(
+        carried,
+        key=lambda item: (item.opening_settlement_date, item.fail_id),
+        reverse=True,
+    ):
         if not _same_direction(prior.quantity, residual_quantity) or not remaining:
             continue
         retained = min(abs(prior.quantity), remaining)
@@ -1060,7 +1069,7 @@ def _roll_fail_lots(
                 contract_price=contract_price,
             )
         )
-    return tuple(result)
+    return tuple(sorted(result, key=lambda item: (item.opening_settlement_date, item.fail_id)))
 
 
 def _loan_entry(
@@ -1697,35 +1706,23 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             open_fails=open_fails,
             loan_instructions=loan_register.instructions,
         )
+        independent_readers = build_independent_sources(books, source_inputs)
         location_balances = _location_balances(books)
         reconciliation_specs = (
             (
                 "stock-record-to-street",
                 "DTC",
-                ObservedSourceReader(
-                    "synthetic DTC position statement",
-                    partial(street.source, business_date),
-                ),
+                independent_readers[0],
             ),
             (
                 "ftr-to-cns-fail-statement",
                 "FAIL_TO_RECEIVE",
-                ObservedSourceReader(
-                    "synthetic CNS open fail statement",
-                    partial(cns_fail_source, business_date, open_fails),
-                ),
+                independent_readers[1],
             ),
             (
                 "stock-loan-to-contract-register",
                 "STOCK_LOANED",
-                ObservedSourceReader(
-                    "synthetic stock-loan contract register",
-                    partial(
-                        loan_register_source,
-                        business_date,
-                        loan_register.instructions,
-                    ),
-                ),
+                independent_readers[2],
             ),
         )
         observed_results = tuple(
@@ -1745,6 +1742,13 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         )
         breaks = tuple(item for item_breaks, _ in observed_results for item in item_breaks)
         source_completions = tuple(completion for _, completion in observed_results)
+        reconciled_sources = tuple(
+            reader.read()
+            for (_, _, reader), completion in zip(
+                reconciliation_specs, source_completions, strict=True
+            )
+            if completion.status == "COMPLETED"
+        )
         completion = source_completions[0]
         prior_breaks = breaks
         protections, required_outcomes, protection_reasons, protection_figures, i6 = _protections(
@@ -1814,6 +1818,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     business_date, source_completions
                 ),
                 source_inputs=source_inputs,
+                reconciled_sources=reconciled_sources,
                 protection_dispositions=protections,
                 protection_required=required_outcomes,
                 protection_reasons=protection_reasons,

@@ -36,12 +36,14 @@ def test_full_day_sources_do_not_read_raising_books() -> None:
         def __getattribute__(self, name: str) -> object:
             raise AssertionError(f"source read books.{name}")
 
-    profile = load_firm_profile(load_calibration_pack("firm-synthetic/4"), "small")
+    profile = load_firm_profile(load_calibration_pack("firm-synthetic/5"), "small")
     run = run_firm(profile, days=2, verify_replay=False)
     assert any(day.source_inputs.open_fails for day in run.days)
     assert any(day.source_inputs.loan_instructions for day in run.days)
     for day in run.days:
-        sources = build_independent_sources(RaisingBooks(), day.source_inputs)
+        readers = build_independent_sources(RaisingBooks(), day.source_inputs)
+        sources = tuple(reader.read() for reader in readers)
+        assert sources == day.reconciled_sources
         assert {source.location for source in sources} == {
             "DTC",
             "FAIL_TO_RECEIVE",
