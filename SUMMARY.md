@@ -11,7 +11,7 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 - Final SOFR: `None` percent
 - Final financing need: `$None`
 - Final financing charge: `$None`
-- Source commit: `41b2066365f03b3cb8c5fb02c1a6c1dd4a62091e`
+- Source commit: `87e264e9723ef5aeafbc5285b5813e31f5c47629`
 - Provenance: locally generated from the locked Mac pack; this folder contains run outputs only, not the pack or its data.
 
 ## Reserve protection

@@ -3,7 +3,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-28",
-      "economics_digest": "sha256:8792673507317f8c817225860c74c445a23c59e763adef8fe960d24fa46d3797",
+      "economics_digest": "sha256:faef4736092b5c08bac51a02edfd8c600fdcd9f7dc2fe9e2d5608d6e9a206252",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -124,7 +124,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-29",
-      "economics_digest": "sha256:74e46d73137119a556c2c69dceba9f01dd50cbab07864808c82c9d1a9cdb3bd9",
+      "economics_digest": "sha256:90aadec51bf0fbe299657406dc1f38974274bfebc4ffe2032f3b2ef4a4d4e72c",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -241,7 +241,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-30",
-      "economics_digest": "sha256:7f94c6aa4c390cb2a7d1cfbb27e87ca673e3539d9a973b1bddc7c5474e3a07ce",
+      "economics_digest": "sha256:68e0cb9f0ddee6e8ae8ec25701acd730b12718462f25b7e92d7359437790847c",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -358,7 +358,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-31",
-      "economics_digest": "sha256:041ee5a38e2001deff29bb05dff484ffb6276c69532b371ac4e5cf514ac3cac7",
+      "economics_digest": "sha256:b42b4782340144b5796f492b986e7b1bfd5962a2893d15bf0b2c46cb598916a8",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -482,7 +482,7 @@
     {
       "breaks": [],
       "business_date": "2027-01-04",
-      "economics_digest": "sha256:2672974079985cd1004b61ed475b7706e9ce988c18ff8c2e98bead5da6543f2f",
+      "economics_digest": "sha256:6b5a1d2832a9ca2dc947e09c2a1d11f6a64b73e0165ec4a3621ba50d683f5b2f",
       "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL"
