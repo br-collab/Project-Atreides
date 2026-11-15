@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
@@ -70,6 +70,7 @@ from atreides.dsor.lifecycle_records import ApprovedIntentDecisionRecord
 from atreides.dsor.store import DSORStore
 from atreides.equities.documents import project_capacity
 from atreides.margin.engine import compute_margin
+from atreides.rails.cns import CloseOutRegime, MarketProfile, net_positions, settle_net_position
 from atreides.retail_identity import (
     CIPOutcome,
     CustomerProfile,
@@ -80,7 +81,15 @@ from atreides.retail_identity import (
 )
 from simulator.account_transfers import _post_transfer
 from simulator.conversion import StatementLine
-from simulator.estate import DepositDraw, DepositPolicy, _event, _identifier, _wire, drive_estate
+from simulator.estate import (
+    DepositDraw,
+    DepositPolicy,
+    EstateResult,
+    _event,
+    _identifier,
+    _wire,
+    drive_estate,
+)
 from simulator.estate import _actor as estate_actor
 from simulator.focus import FirmFocusLines, tie_out_firm_close
 from simulator.model import Print
@@ -91,6 +100,7 @@ from simulator.protection_oracle import (
 )
 from simulator.street import (
     IndependentSourceInputs,
+    OpenFail,
     SettlementOutcome,
     build_independent_sources,
     reconcile,
@@ -141,6 +151,23 @@ class EvidenceEvent(BaseModel):
     artifact_digest: str
 
 
+class StateSnapshot(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+    books_digest: str
+    dsor_records: int
+    lc_register_length: int
+
+
+class GoldenCloseResult(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+    close_id: str
+    report: str
+    fail_age_business_days: int
+    i3_stock_record_to_street: bool
+    reserve_requirement: Decimal
+    focus_tie_out_held: bool
+
+
 class GoldenPathResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
     variant: Variant
@@ -161,6 +188,9 @@ class GoldenPathResult(BaseModel):
     customer_position: Decimal | None
     fail_id: str | None
     i3_computed: bool | None
+    stored_artifacts: dict[str, str]
+    refusal_state_before: StateSnapshot | None
+    refusal_state_after: StateSnapshot | None
 
 
 @dataclass(frozen=True)
@@ -222,22 +252,6 @@ def _human(number: str, role: str) -> ActorRef:
     )
 
 
-def _event_pack(stages: list[str]) -> tuple[EvidenceEvent, ...]:
-    events: list[EvidenceEvent] = []
-    for index, stage in enumerate(stages, 1):
-        events.append(
-            EvidenceEvent(
-                event_id=f"MVP3-{index:03d}",
-                producer=stage.split(":", 1)[0],
-                signature_status=("VERIFIED" if stage.startswith(("Atreides", "L.C.")) else "N/A"),
-                cause_event_id=None if index == 1 else f"MVP3-{index - 1:03d}",
-                summary=stage.split(":", 1)[-1].strip(),
-                artifact_digest=digest_bytes(stage.encode()),
-            )
-        )
-    return tuple(events)
-
-
 def _artifact_bytes(artifact: BaseModel | bytes) -> bytes:
     if isinstance(artifact, bytes):
         return artifact
@@ -263,15 +277,50 @@ def _evidence_event(
     )
 
 
-def verify_evidence_artifacts(
-    result: GoldenPathResult, artifacts: dict[str, BaseModel | bytes]
-) -> bool:
-    """Recompute every supplied stored-artifact digest against the published pack."""
+def verify_evidence_artifacts(result: GoldenPathResult) -> bool:
+    """Recompute every event digest from the artifacts carried by the result."""
     by_id = {item.event_id: item for item in result.evidence}
-    return all(
-        event_id in by_id
-        and by_id[event_id].artifact_digest == digest_bytes(_artifact_bytes(artifact))
-        for event_id, artifact in artifacts.items()
+    return set(by_id) == set(result.stored_artifacts) and all(
+        by_id[event_id].artifact_digest == digest_bytes(bytes.fromhex(artifact_hex))
+        for event_id, artifact_hex in result.stored_artifacts.items()
+    )
+
+
+def _append_evidence(
+    events: list[EvidenceEvent],
+    artifacts: dict[str, str],
+    *,
+    event_id: str,
+    producer: str,
+    signature_status: str,
+    cause_event_id: str | None,
+    summary: str,
+    artifact: BaseModel | bytes,
+) -> None:
+    event = _evidence_event(
+        event_id=event_id,
+        producer=producer,
+        signature_status=signature_status,
+        cause_event_id=cause_event_id,
+        summary=summary,
+        artifact=artifact,
+    )
+    events.append(event)
+    artifacts[event_id] = _artifact_bytes(artifact).hex()
+
+
+def _append_refusal(
+    events: list[EvidenceEvent], artifacts: dict[str, str], *, reason: str, producer: str
+) -> None:
+    _append_evidence(
+        events,
+        artifacts,
+        event_id=f"REFUSAL:{reason}",
+        producer=producer,
+        signature_status="NOT_SIGNED",
+        cause_event_id=events[-1].event_id if events else None,
+        summary=reason,
+        artifact=reason.encode(),
     )
 
 
@@ -293,9 +342,11 @@ def _result(
     customer_position: Decimal | None = None,
     fail_id: str | None = None,
     i3_computed: bool | None = None,
-    evidence: tuple[EvidenceEvent, ...] | None = None,
+    evidence: tuple[EvidenceEvent, ...],
+    stored_artifacts: dict[str, str],
+    refusal_state_before: StateSnapshot | None = None,
+    refusal_state_after: StateSnapshot | None = None,
 ) -> GoldenPathResult:
-    resolved_evidence = _event_pack(stages) if evidence is None else evidence
     return GoldenPathResult(
         variant=variant,
         disposition=disposition,
@@ -304,9 +355,9 @@ def _result(
         exception_owner=owner,
         exception_age_seconds=age,
         stages=tuple(stages),
-        evidence=resolved_evidence,
+        evidence=evidence,
         evidence_digest=digest_bytes(
-            canonical_bytes_of([item.model_dump(mode="json") for item in resolved_evidence])
+            canonical_bytes_of([item.model_dump(mode="json") for item in evidence])
         ),
         dsor_records=dsor_records,
         books_digest=books_digest,
@@ -317,6 +368,9 @@ def _result(
         customer_position=customer_position,
         fail_id=fail_id,
         i3_computed=i3_computed,
+        stored_artifacts=stored_artifacts,
+        refusal_state_before=refusal_state_before,
+        refusal_state_after=refusal_state_after,
     )
 
 
@@ -345,6 +399,124 @@ def _capacity_from_books(
         firm_participant_id="MVP3-FIRM",
     )
     return CapacityDocument.model_validate(projected.model_dump())
+
+
+def _run_fail_close(
+    *,
+    books: EquitiesBooks,
+    estate: EstateResult,
+    as_of: datetime,
+    fail_id: str,
+    quantity: Decimal,
+    price: Decimal,
+    opened_on: date,
+) -> GoldenCloseResult:
+    rules = load_rule_table()
+    reduction_row = rules.get(DAILY_REDUCTION)
+    if reduction_row is None or reduction_row.value is None:
+        raise ValueError("daily reserve reduction rate is missing")
+    reserve = required_reserve(
+        books,
+        as_of=as_of.date(),
+        prices={ISSUE: price},
+        customer_debit_reduction_rate=reduction_row.value,
+    )
+    capital = required_net_capital(books, {ISSUE: price}, Decimal("1000000"), rules)
+    control = required_control(books, {ISSUE: price}, rules)
+    location_balances: dict[tuple[str, str], Decimal] = {}
+    observed_accounts: set[str] = set()
+    for entry in books.entries:
+        for line in entry.lines:
+            if line.record_side is RecordSide.LOCATION and line.issue is not None:
+                key = (line.issue, line.account_type.value)
+                location_balances[key] = location_balances.get(key, Decimal()) + line.quantity
+            if line.account_type.value in {"CUSTOMER_CASH", "CUSTOMER_MARGIN"}:
+                observed_accounts.add(line.account_id)
+    readers = build_independent_sources(
+        books,
+        IndependentSourceInputs(
+            as_of=as_of.date(),
+            opening_depository=(),
+            settlement_outcomes=(),
+            open_fails=(
+                OpenFail(
+                    fail_id=fail_id,
+                    issue=ISSUE,
+                    quantity=quantity,
+                    cash=quantity * price,
+                    opening_settlement_date=opened_on,
+                    contract_price=price,
+                ),
+            ),
+            loan_instructions=(),
+        ),
+    )
+    street_breaks, street_completion = reconcile(
+        location_balances,
+        tuple(reader.read() for reader in readers),
+        as_of=as_of.date(),
+    )
+    control_lines = (
+        ()
+        if control is None
+        else tuple(
+            (issue, max(required - control.in_control.get(issue, Decimal()), Decimal()))
+            for issue, required in sorted(control.required.items())
+        )
+    )
+    focus = tie_out_firm_close(
+        close_date=as_of.date(),
+        books=FirmFocusLines(
+            net_capital=None if capital is None else capital.net_capital,
+            reserve_total_credits=reserve.customer_credits,
+            reserve_total_debits=reserve.customer_debits,
+            pab_reserve_requirement=reserve.pab_requirement,
+            control_shortfall_by_issue=control_lines,
+        ),
+        engines=FirmFocusLines(
+            net_capital=estate.net_capital_figure,
+            reserve_total_credits=estate.customer_total_credits,
+            reserve_total_debits=estate.customer_total_debits,
+            pab_reserve_requirement=estate.pab_reserve_figure,
+            control_shortfall_by_issue=estate.control_shortfall_by_issue,
+        ),
+        expected_customer_accounts=(ACCOUNT,),
+        observed_customer_accounts=tuple(sorted(observed_accounts)),
+        book_shape={"journal_entries": len(books.entries), "customer_accounts": 1},
+    )
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    net_position = net_positions(
+        ((ISSUE, quantity),), market_id="NSCC_SYNTHETIC", settlement_date_offset_days=1
+    )[0]
+    settlement = settle_net_position(
+        net_position,
+        MarketProfile(
+            market_id="NSCC_SYNTHETIC",
+            settlement_cycle_days=1,
+            close_out_regime=CloseOutRegime.MANDATORY_DEADLINE,
+            close_out_deadline_days=3,
+            allocation_rule_published=True,
+            provenance="MVP-4 synthetic close",
+        ),
+        allocated_quantity=Decimal(),
+        signed_cash=quantity * price,
+        allocated_cash=Decimal(),
+        settlement_date=opened_on,
+        as_of_date=as_of.date(),
+        calendar=calendar,
+    )
+    if settlement.residual is None:
+        raise ValueError("fail close did not produce an aged residual")
+    age = settlement.residual.aged_business_days
+    i3 = not street_breaks and street_completion.status == "COMPLETED"
+    return GoldenCloseResult(
+        close_id=f"MVP4-CLOSE-{as_of.date().isoformat()}",
+        report=f"FAIL_AGED_{age}_BUSINESS_DAY",
+        fail_age_business_days=age,
+        i3_stock_record_to_street=i3,
+        reserve_requirement=reserve.customer_requirement,
+        focus_tie_out_held=focus.held,
+    )
 
 
 def run_golden_path(  # noqa: PLR0915
@@ -498,9 +670,24 @@ def run_golden_path(  # noqa: PLR0915
         kyc_maximum_age_seconds=KYC_MAXIMUM_AGE_SECONDS,
     )
     lifecycle.apply(application_id)
+    evidence_items: list[EvidenceEvent] = []
+    stored_artifacts: dict[str, str] = {}
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=application_id,
+        producer="Atreides",
+        signature_status="NOT_SIGNED",
+        cause_event_id=None,
+        summary="natural-person application",
+        artifact=resolver.resolve_application(application_id),
+    )
     stages = ["Atreides: natural-person application recorded"]
     if variant is Variant.STALE_CALLER_TIME:
         clock.advance(timedelta(seconds=KYC_MAXIMUM_AGE_SECONDS + 1))
+    onboarding_before = StateSnapshot(
+        books_digest=books.digest(), dsor_records=0, lc_register_length=0
+    )
     try:
         approved_event = lifecycle.transition(
             ACCOUNT,
@@ -517,6 +704,15 @@ def run_golden_path(  # noqa: PLR0915
             principal_acceptance_record_id=principal_id,
         )
     except AccountTransitionRefusedError as exc:
+        _append_refusal(
+            evidence_items,
+            stored_artifacts,
+            reason=exc.reason.value,
+            producer="Atreides account lifecycle",
+        )
+        onboarding_after = StateSnapshot(
+            books_digest=books.digest(), dsor_records=0, lc_register_length=0
+        )
         return _result(
             variant,
             stages,
@@ -526,7 +722,21 @@ def run_golden_path(  # noqa: PLR0915
             owner="CIP_OPERATIONS" if variant is Variant.CIP_UNABLE else "KYC_OPERATIONS",
             age=cip.exception_age_seconds(clock()),
             books_digest=books.digest(),
+            evidence=tuple(evidence_items),
+            stored_artifacts=stored_artifacts,
+            refusal_state_before=onboarding_before,
+            refusal_state_after=onboarding_after,
         )
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=str(approved_event.event_id),
+        producer="Atreides",
+        signature_status="VERIFIED" if lifecycle.chain_report(ACCOUNT).ok else "FAILED",
+        cause_event_id=application_id,
+        summary="account approved",
+        artifact=approved_event,
+    )
     stages.append("Atreides: CIP, profile, eligibility, principal, and human approval passed")
     _post_transfer(
         books,
@@ -547,6 +757,16 @@ def run_golden_path(  # noqa: PLR0915
         reason="completed synthetic ACATS transfer",
         evidence_refs=(str(approved_event.event_id), transfer_id),
         transfer_record_id=transfer_id,
+    )
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=str(funded_event.event_id),
+        producer="Atreides",
+        signature_status="VERIFIED" if lifecycle.chain_report(ACCOUNT).ok else "FAILED",
+        cause_event_id=str(approved_event.event_id),
+        summary="account funded",
+        artifact=funded_event,
     )
     stages.extend(
         ("Atreides: completed transfer posted to books", "Atreides: account moved to FUNDED")
@@ -582,6 +802,26 @@ def run_golden_path(  # noqa: PLR0915
             dtg=clock(),
         )
         dsor_count = len(dsor.records())
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=str(payload.intent_id),
+        producer="Aureon",
+        signature_status="NOT_SIGNED",
+        cause_event_id=payload.source_event_id,
+        summary="approved intent",
+        artifact=payload,
+    )
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=str(dsor_record.operation_id),
+        producer="Atreides Decision System of Record",
+        signature_status="NOT_SIGNED",
+        cause_event_id=dsor_record.intent_id,
+        summary="approved intent decision",
+        artifact=dsor_record,
+    )
     stages.extend(
         (
             "Aureon: recommended equity BUY intent approved",
@@ -644,21 +884,38 @@ def run_golden_path(  # noqa: PLR0915
         maximum_age_seconds=999999,
         source="SYNTHETIC_MVP3",
     )
+    recommendation_before = StateSnapshot(
+        books_digest=books.digest(), dsor_records=dsor_count, lc_register_length=0
+    )
     try:
         GoldenRecommendationGate(clock, PROFILE_MAXIMUM_AGE_SECONDS).evaluate(
             terms, lc_profile, status_wire
         )
     except ValueError as exc:
+        reason = str(exc)
+        _append_refusal(
+            evidence_items,
+            stored_artifacts,
+            reason=reason,
+            producer="L.C. recommendation gate",
+        )
+        recommendation_after = StateSnapshot(
+            books_digest=books.digest(), dsor_records=dsor_count, lc_register_length=0
+        )
         return _result(
             variant,
             stages,
             disposition="HOLD",
             status=lifecycle.status(ACCOUNT),
-            refusal=str(exc),
+            refusal=reason,
             owner="RETAIL_SUPERVISION",
             age=0,
             dsor_records=dsor_count,
             books_digest=books.digest(),
+            evidence=tuple(evidence_items),
+            stored_artifacts=stored_artifacts,
+            refusal_state_before=recommendation_before,
+            refusal_state_after=recommendation_after,
         )
     stages.append("L.C.: recommendation profile and signed account status passed")
 
@@ -722,9 +979,25 @@ def run_golden_path(  # noqa: PLR0915
         account_status_input=status_wire,
         profile_maximum_age_seconds=PROFILE_MAXIMUM_AGE_SECONDS,
     ).journal
+    for item in register.events:
+        _append_evidence(
+            evidence_items,
+            stored_artifacts,
+            event_id=str(item.event_id),
+            producer="L.C.",
+            signature_status="VERIFIED" if verify_event(item) else "FAILED",
+            cause_event_id=str(item.parent_ids[0]) if item.parent_ids else str(payload.intent_id),
+            summary=item.payload.state.value,
+            artifact=item,
+        )
     order_event = register.events[-1]
     capacity = _capacity_from_books(books, clock=clock)
     capacity_bytes = canonical_bytes(capacity)
+    market_access_before = StateSnapshot(
+        books_digest=books.digest(),
+        dsor_records=dsor_count,
+        lc_register_length=len(register.events),
+    )
     decision = MarketAccessGate().evaluate(
         ChildRelease(
             order_event=order_event,
@@ -750,6 +1023,17 @@ def run_golden_path(  # noqa: PLR0915
     )
     if decision.terminal:
         reason = next(item.reason for item in decision.checks if not item.passed)
+        _append_refusal(
+            evidence_items,
+            stored_artifacts,
+            reason=reason,
+            producer="L.C. market access gate",
+        )
+        market_access_after = StateSnapshot(
+            books_digest=books.digest(),
+            dsor_records=dsor_count,
+            lc_register_length=len(register.events),
+        )
         return _result(
             variant,
             stages,
@@ -761,6 +1045,10 @@ def run_golden_path(  # noqa: PLR0915
             dsor_records=dsor_count,
             books_digest=books.digest(),
             lc_register_length=len(register.events),
+            evidence=tuple(evidence_items),
+            stored_artifacts=stored_artifacts,
+            refusal_state_before=market_access_before,
+            refusal_state_after=market_access_after,
         )
     stages.extend(("L.C.: firm market access passed", "L.C.: order sealed for synthetic venue"))
     venue_result = VenueEmulator(seed=30003).execute(
@@ -779,6 +1067,16 @@ def run_golden_path(  # noqa: PLR0915
     )
     venue_report = venue_result.report.value
     venue_event = venue_result.event.value
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=str(venue_event.event_id),
+        producer="VenueEmulator",
+        signature_status="NOT_SIGNED",
+        cause_event_id=str(order_event.event_id),
+        summary="venue fill",
+        artifact=venue_event,
+    )
     report = Print(
         print_id=venue_report.execution_id,
         order_id=str(child.order_id),
@@ -826,24 +1124,105 @@ def run_golden_path(  # noqa: PLR0915
             bank_equity_capital=Decimal("1000000"),
         ),
     )
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=str(estate.approved_intent.intent_id),
+        producer="L.C. estate adapter",
+        signature_status="NOT_SIGNED",
+        cause_event_id=estate.approved_intent.source_event_id,
+        summary="estate approved intent",
+        artifact=estate.approved_intent,
+    )
+    for item in estate.lifecycle_events:
+        _append_evidence(
+            evidence_items,
+            stored_artifacts,
+            event_id=str(item.event_id),
+            producer="L.C.",
+            signature_status="VERIFIED" if verify_event(item) else "FAILED",
+            cause_event_id=(
+                str(item.parent_ids[0])
+                if item.parent_ids
+                else str(estate.approved_intent.intent_id)
+            ),
+            summary=item.payload.state.value,
+            artifact=item,
+        )
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=estate.capture_record.trade_id,
+        producer="L.C.",
+        signature_status="NOT_SIGNED",
+        cause_event_id=str(estate.lifecycle_events[-2].event_id),
+        summary="trade capture",
+        artifact=estate.capture_record,
+    )
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=str(estate.allocation_record.allocation_id),
+        producer="L.C.",
+        signature_status="NOT_SIGNED",
+        cause_event_id=estate.allocation_record.trade_ids[0],
+        summary="allocation",
+        artifact=estate.allocation_record,
+    )
+    settlement_entry = next(item for item in estate.journal_entries if item.entry_id == "SIM-1B-1")
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=settlement_entry.entry_id,
+        producer="Atreides books",
+        signature_status="NOT_SIGNED",
+        cause_event_id=settlement_entry.source_event_id,
+        summary="customer buy journal entry",
+        artifact=settlement_entry,
+    )
     if variant is Variant.SETTLEMENT_FAIL:
+        if fail_id is None:
+            raise ValueError("settlement fail response did not carry a fail identifier")
         fail_opened = clock().date()
         calendar = MarketCalendar.load(Market.US_EQUITIES)
         next_close = calendar.add_business_days(fail_opened, 1)
         clock.advance(timedelta(days=(next_close - fail_opened).days))
-        rules = load_rule_table()
-        reduction_row = rules.get(DAILY_REDUCTION)
-        if reduction_row is None or reduction_row.value is None:
-            raise ValueError("daily reserve reduction rate is missing")
-        computed_close = required_reserve(
-            books,
-            as_of=clock().date(),
-            prices={ISSUE: venue_report.price},
-            customer_debit_reduction_rate=reduction_row.value,
+        close = _run_fail_close(
+            books=books,
+            estate=estate,
+            as_of=clock(),
+            fail_id=fail_id,
+            quantity=venue_report.quantity,
+            price=venue_report.price,
+            opened_on=fail_opened,
         )
-        business_age = calendar.business_days_after(fail_opened, clock().date())
-        i3 = computed_close.customer_credits >= venue_report.quantity * venue_report.price
-        stages.append("Atreides: CNS fail posted to books and aged by daily close")
+        _append_evidence(
+            evidence_items,
+            stored_artifacts,
+            event_id=close.close_id,
+            producer="Atreides daily close",
+            signature_status="NOT_SIGNED",
+            cause_event_id=settlement_entry.entry_id,
+            summary=close.report,
+            artifact=close,
+        )
+        _append_refusal(
+            evidence_items,
+            stored_artifacts,
+            reason="CNS_SETTLEMENT_FAIL",
+            producer="Atreides settlement operations",
+        )
+        fail_state = StateSnapshot(
+            books_digest=books.digest(),
+            dsor_records=dsor_count,
+            lc_register_length=len(register.events),
+        )
+        stages.extend(
+            (
+                "Atreides: CNS fail posted to books and aged by daily close",
+                "Atreides: daily close completed",
+            )
+        )
         return _result(
             variant,
             stages,
@@ -851,16 +1230,19 @@ def run_golden_path(  # noqa: PLR0915
             status=lifecycle.status(ACCOUNT),
             refusal="CNS_SETTLEMENT_FAIL",
             owner="MVP3_SETTLEMENT_OPERATIONS",
-            age=business_age * 86400,
+            age=close.fail_age_business_days * 86400,
             dsor_records=dsor_count,
             books_digest=books.digest(),
-            close_report=f"FAIL_AGED_{business_age}_BUSINESS_DAY",
+            close_report=close.report,
             lc_register_length=len(register.events),
             fill_quantity=venue_report.quantity,
             fail_id=fail_id,
-            i3_computed=i3,
+            i3_computed=close.i3_stock_record_to_street,
+            evidence=tuple(evidence_items),
+            stored_artifacts=stored_artifacts,
+            refusal_state_before=fail_state,
+            refusal_state_after=fail_state,
         )
-    settlement_entry = next(item for item in estate.journal_entries if item.entry_id == "SIM-1B-1")
     first_trade_record = FirstPermittedTradeRecord(
         record_id=trade_id,
         account_id=ACCOUNT,
@@ -966,139 +1348,28 @@ def run_golden_path(  # noqa: PLR0915
         book_shape={"journal_entries": len(books.entries), "customer_accounts": 1},
     )
     account_chain_verified = lifecycle.chain_report(ACCOUNT).ok
-    evidence_items: list[EvidenceEvent] = [
-        _evidence_event(
-            event_id=application_id,
-            producer="Atreides",
-            signature_status="NOT_SIGNED",
-            cause_event_id=None,
-            summary="natural-person application",
-            artifact=resolver.resolve_application(application_id),
+    verified_first_trade = resolver.resolve_first_trade(trade_id, evaluated_at=clock())
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=trade_id,
+        producer="L.C.",
+        signature_status=(
+            "VERIFIED" if verified_first_trade.record_id == trade_id else "FAILED"
         ),
-        _evidence_event(
-            event_id=str(approved_event.event_id),
-            producer="Atreides",
-            signature_status="VERIFIED" if account_chain_verified else "FAILED",
-            cause_event_id=application_id,
-            summary="account approved",
-            artifact=approved_event,
-        ),
-        _evidence_event(
-            event_id=str(funded_event.event_id),
-            producer="Atreides",
-            signature_status="VERIFIED" if account_chain_verified else "FAILED",
-            cause_event_id=str(approved_event.event_id),
-            summary="account funded",
-            artifact=funded_event,
-        ),
-        _evidence_event(
-            event_id=str(payload.intent_id),
-            producer="Aureon",
-            signature_status="NOT_SIGNED",
-            cause_event_id=payload.source_event_id,
-            summary="approved intent",
-            artifact=payload,
-        ),
-        _evidence_event(
-            event_id=str(dsor_record.operation_id),
-            producer="Atreides DSOR",
-            signature_status="NOT_SIGNED",
-            cause_event_id=dsor_record.intent_id,
-            summary="approved intent decision",
-            artifact=dsor_record,
-        ),
-    ]
-    for item in register.events:
-        evidence_items.append(
-            _evidence_event(
-                event_id=str(item.event_id),
-                producer="L.C.",
-                signature_status="VERIFIED" if verify_event(item) else "FAILED",
-                cause_event_id=(
-                    str(item.parent_ids[0]) if item.parent_ids else str(payload.intent_id)
-                ),
-                summary=item.payload.state.value,
-                artifact=item,
-            )
-        )
-    evidence_items.append(
-        _evidence_event(
-            event_id=str(venue_event.event_id),
-            producer="VenueEmulator",
-            signature_status="NOT_SIGNED",
-            cause_event_id=str(order_event.event_id),
-            summary="venue fill",
-            artifact=venue_event,
-        )
+        cause_event_id=first_trade_record.source_event_id,
+        summary="first permitted trade",
+        artifact=trades[trade_id],
     )
-    evidence_items.append(
-        _evidence_event(
-            event_id=str(estate.approved_intent.intent_id),
-            producer="L.C. estate adapter",
-            signature_status="NOT_SIGNED",
-            cause_event_id=estate.approved_intent.source_event_id,
-            summary="estate approved intent",
-            artifact=estate.approved_intent,
-        )
-    )
-    for item in estate.lifecycle_events:
-        evidence_items.append(
-            _evidence_event(
-                event_id=str(item.event_id),
-                producer="L.C.",
-                signature_status="VERIFIED" if verify_event(item) else "FAILED",
-                cause_event_id=(
-                    str(item.parent_ids[0])
-                    if item.parent_ids
-                    else str(estate.approved_intent.intent_id)
-                ),
-                summary=item.payload.state.value,
-                artifact=item,
-            )
-        )
-    evidence_items.extend(
-        (
-            _evidence_event(
-                event_id=estate.capture_record.trade_id,
-                producer="L.C.",
-                signature_status="NOT_SIGNED",
-                cause_event_id=str(estate.lifecycle_events[-2].event_id),
-                summary="trade capture",
-                artifact=estate.capture_record,
-            ),
-            _evidence_event(
-                event_id=str(estate.allocation_record.allocation_id),
-                producer="L.C.",
-                signature_status="NOT_SIGNED",
-                cause_event_id=estate.allocation_record.trade_ids[0],
-                summary="allocation",
-                artifact=estate.allocation_record,
-            ),
-            _evidence_event(
-                event_id=settlement_entry.entry_id,
-                producer="Atreides books",
-                signature_status="NOT_SIGNED",
-                cause_event_id=settlement_entry.source_event_id,
-                summary="customer buy journal entry",
-                artifact=settlement_entry,
-            ),
-            _evidence_event(
-                event_id=trade_id,
-                producer="L.C.",
-                signature_status="VERIFIED",
-                cause_event_id=first_trade_record.source_event_id,
-                summary="first permitted trade",
-                artifact=trades[trade_id],
-            ),
-            _evidence_event(
-                event_id=str(active_event.event_id),
-                producer="Atreides",
-                signature_status="VERIFIED" if account_chain_verified else "FAILED",
-                cause_event_id=trade_id,
-                summary="account active",
-                artifact=active_event,
-            ),
-        )
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=str(active_event.event_id),
+        producer="Atreides",
+        signature_status="VERIFIED" if account_chain_verified else "FAILED",
+        cause_event_id=trade_id,
+        summary="account active",
+        artifact=active_event,
     )
     evidence = tuple(evidence_items)
     evidence_ids = {item.event_id for item in evidence}
@@ -1148,6 +1419,7 @@ def run_golden_path(  # noqa: PLR0915
         fill_quantity=venue_report.quantity,
         customer_position=customer_position,
         evidence=evidence,
+        stored_artifacts=stored_artifacts,
     )
 
 

@@ -63,13 +63,26 @@ def test_evidence_pack_is_linked_and_replays_to_same_digest() -> None:
         walked.append(cursor.event_id)
     assert walked[-1] == "MVP3-APPLICATION"
     assert replay_evidence_digest(result) == result.evidence_digest
+    assert verify_evidence_artifacts(result)
 
 
 def test_tampered_stored_artifact_fails_evidence_check() -> None:
     result = run_golden_path()
+    tampered = dict(result.stored_artifacts)
+    tampered["00000000-0000-0000-0000-000000000301"] = b"tampered DSOR payload".hex()
 
     assert not verify_evidence_artifacts(
-        result, {"00000000-0000-0000-0000-000000000301": b"tampered DSOR payload"}
+        result.model_copy(update={"stored_artifacts": tampered})
+    )
+
+
+def test_empty_or_partial_artifact_store_fails_evidence_check() -> None:
+    result = run_golden_path()
+
+    assert not verify_evidence_artifacts(result.model_copy(update={"stored_artifacts": {}}))
+    first = next(iter(result.stored_artifacts.items()))
+    assert not verify_evidence_artifacts(
+        result.model_copy(update={"stored_artifacts": {first[0]: first[1]}})
     )
 
 
@@ -87,12 +100,10 @@ def test_fail_closed_variants_have_owned_exceptions_and_no_close() -> None:
         assert result.refusal == refusal
         assert result.exception_owner
         assert "Atreides: daily close completed" not in result.stages
-        repeated = run_golden_path(variant)
-        assert (result.books_digest, result.dsor_records, result.lc_register_length) == (
-            repeated.books_digest,
-            repeated.dsor_records,
-            repeated.lc_register_length,
-        )
+        assert result.refusal_state_before == result.refusal_state_after
+        assert result.evidence[-1].event_id == f"REFUSAL:{refusal}"
+        assert not any(item.event_id.startswith("MVP3-0") for item in result.evidence)
+        assert verify_evidence_artifacts(result)
 
 
 def test_settlement_fail_ages_and_close_reports_it() -> None:
@@ -104,7 +115,10 @@ def test_settlement_fail_ages_and_close_reports_it() -> None:
     assert result.close_report == "FAIL_AGED_1_BUSINESS_DAY"
     assert result.fail_id
     assert result.i3_computed is True
-    assert "Atreides: daily close completed" not in result.stages
+    assert "Atreides: daily close completed" in result.stages
+    assert result.refusal_state_before == result.refusal_state_after
+    assert result.evidence[-1].event_id == "REFUSAL:CNS_SETTLEMENT_FAIL"
+    assert verify_evidence_artifacts(result)
 
 
 def test_stale_caller_time_cannot_make_kyc_fresh() -> None:
