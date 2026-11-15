@@ -55,7 +55,7 @@ include = ["atreides*"]
 # Atreides as a package, so an undeclared file is missing there.
 # tests/customer_protection/test_package_data.py keeps this list complete.
 [tool.setuptools.package-data]
-atreides = ["trusted_producer_keys.json"]
+atreides = ["trusted_producer_keys.json", "client_reporting_requirements.json"]
 "atreides.customer_protection.rules" = ["table.json", "sources/*"]
 "atreides.deadlines.rules" = ["table.json", "sources/*"]
 "atreides.deadlines.calendars" = ["*.json"]
