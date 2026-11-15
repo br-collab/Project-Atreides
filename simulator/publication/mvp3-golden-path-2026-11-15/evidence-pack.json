@@ -18,7 +18,6 @@
     "Venue: execution emulator produced a fill",
     "L.C.: execution captured and allocated",
     "Atreides: CNS settlement posted to books",
-    "Atreides: L.C. signed first-trade evidence moved account to ACTIVE",
     "Atreides: daily close completed"
   ],
   "evidence": [
@@ -111,17 +110,10 @@
       "producer": "Atreides",
       "signature_status": "VERIFIED",
       "cause_event_id": "MVP3-012",
-      "summary": "L.C. signed first-trade evidence moved account to ACTIVE"
-    },
-    {
-      "event_id": "MVP3-014",
-      "producer": "Atreides",
-      "signature_status": "VERIFIED",
-      "cause_event_id": "MVP3-013",
       "summary": "daily close completed"
     }
   ],
-  "evidence_digest": "sha256:65aab9195aeae3729be18bca3a642a5d87a8141538866777922fd02e03e8f350",
+  "evidence_digest": "sha256:194fa15ca909bb890a3cc5b60a183850b0f6a828d271d9b1f0a0ef1f010da78f",
   "dsor_records": 1,
   "books_digest": "sha256:7837380ceccb2d9ae0d31c9cd1e18f36de2f308f8980ecb4105c715534561c31",
   "invariants": {
