@@ -1,11 +1,15 @@
 """Independent, non-submitting synthetic FICC/ISO inbound emitter."""
 
+import os
 from datetime import datetime
 from decimal import Decimal
 
 from cannae_kernel.provenance import Provenance
 
 from atreides.closed_trade import InboundStatus, InboundStreetFact, TreasuryDvpInstruction
+
+if os.getenv("ATREIDES_PROFILE", "research").lower() == "production":
+    raise ImportError("synthetic FICC emulator is unavailable in the production profile")
 
 
 def emit_inbound(

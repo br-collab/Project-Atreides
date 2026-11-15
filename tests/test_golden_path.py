@@ -1,9 +1,13 @@
 import json
+from decimal import Decimal
+
+import emulators.venue
 
 from simulator.golden_path import (
     Variant,
     replay_evidence_digest,
     run_golden_path,
+    verify_evidence_artifacts,
     write_golden_path_publication,
 )
 
@@ -19,6 +23,27 @@ def test_clean_golden_path_closes_with_every_invariant_true() -> None:
     assert all(result.invariants.values())
 
 
+def test_lc_venue_is_importable_in_atreides_environment() -> None:
+    assert emulators.venue.VenueEmulator.__module__ == "emulators.venue"
+
+
+def test_sealed_quantity_changes_venue_fill_and_books() -> None:
+    ten = run_golden_path(order_quantity=Decimal(10))
+    twenty = run_golden_path(order_quantity=Decimal(20))
+
+    assert (ten.fill_quantity, ten.customer_position) == (Decimal(10), Decimal(10))
+    assert (twenty.fill_quantity, twenty.customer_position) == (Decimal(20), Decimal(20))
+    assert ten.books_digest != twenty.books_digest
+
+
+def test_books_projected_capacity_refuses_underfunded_order() -> None:
+    result = run_golden_path(funding_cash=Decimal(400))
+
+    assert result.disposition == "HOLD"
+    assert result.refusal == "ACCOUNT_CREDIT_LIMIT"
+    assert result.fill_quantity is None
+
+
 def test_first_trade_activates_only_after_cns_books_posting() -> None:
     stages = run_golden_path().stages
 
@@ -30,12 +55,22 @@ def test_first_trade_activates_only_after_cns_books_posting() -> None:
 def test_evidence_pack_is_linked_and_replays_to_same_digest() -> None:
     result = run_golden_path()
 
-    assert result.evidence[0].cause_event_id is None
-    assert all(
-        event.cause_event_id == result.evidence[index - 1].event_id
-        for index, event in enumerate(result.evidence[1:], 1)
-    )
+    by_id = {event.event_id: event for event in result.evidence}
+    cursor = by_id["SIM-1B-1"]
+    walked = [cursor.event_id]
+    while cursor.cause_event_id is not None:
+        cursor = by_id[cursor.cause_event_id]
+        walked.append(cursor.event_id)
+    assert walked[-1] == "MVP3-APPLICATION"
     assert replay_evidence_digest(result) == result.evidence_digest
+
+
+def test_tampered_stored_artifact_fails_evidence_check() -> None:
+    result = run_golden_path()
+
+    assert not verify_evidence_artifacts(
+        result, {"00000000-0000-0000-0000-000000000301": b"tampered DSOR payload"}
+    )
 
 
 def test_fail_closed_variants_have_owned_exceptions_and_no_close() -> None:
@@ -52,6 +87,12 @@ def test_fail_closed_variants_have_owned_exceptions_and_no_close() -> None:
         assert result.refusal == refusal
         assert result.exception_owner
         assert "Atreides: daily close completed" not in result.stages
+        repeated = run_golden_path(variant)
+        assert (result.books_digest, result.dsor_records, result.lc_register_length) == (
+            repeated.books_digest,
+            repeated.dsor_records,
+            repeated.lc_register_length,
+        )
 
 
 def test_settlement_fail_ages_and_close_reports_it() -> None:
@@ -60,7 +101,9 @@ def test_settlement_fail_ages_and_close_reports_it() -> None:
     assert result.refusal == "CNS_SETTLEMENT_FAIL"
     assert result.exception_owner == "MVP3_SETTLEMENT_OPERATIONS"
     assert result.exception_age_seconds == 86400
-    assert result.close_report == "FAIL_AGED_1_DAY"
+    assert result.close_report == "FAIL_AGED_1_BUSINESS_DAY"
+    assert result.fail_id
+    assert result.i3_computed is True
     assert "Atreides: daily close completed" not in result.stages
 
 

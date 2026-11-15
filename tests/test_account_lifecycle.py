@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from inspect import signature
 
@@ -216,15 +217,28 @@ def store(
     evidence: AuthoritativeEvidenceResolver | None = None,
     *,
     registered: ActorRef | None = None,
+    now: datetime = NOW,
+    clock: Callable[[], datetime] | None = None,
 ) -> AccountLifecycleStore:
     registered = registered or actor()
     human = actor()
     verifier = ActorRegistryApproverVerifier(
         {str(human.actor_id): human, str(registered.actor_id): registered}
     )
-    lifecycle = AccountLifecycleStore(verifier, evidence or resolver())
+    lifecycle = AccountLifecycleStore(
+        verifier,
+        evidence or resolver(),
+        clock=(lambda: now) if clock is None else clock,
+        kyc_maximum_age_seconds=300,
+    )
     lifecycle.apply(APPLICATION_ID)
     return lifecycle
+
+
+def test_store_requires_consumer_clock_and_kyc_age() -> None:
+    verifier = ActorRegistryApproverVerifier({str(actor().actor_id): actor()})
+    with pytest.raises(TypeError, match="clock"):
+        AccountLifecycleStore(verifier, resolver())  # type: ignore[call-arg]
 
 
 def approve(store: AccountLifecycleStore, account: str = ACCOUNT) -> None:
@@ -568,7 +582,8 @@ def test_first_trade_time_is_controlled_by_transition(
     wire = attest_first_permitted_trade(
         trade, key_id=SIGNING_KEY_ID, private_key=SIGNING_KEY
     )
-    lifecycle = store(resolver(trade_wire=wire))
+    current = [NOW]
+    lifecycle = store(resolver(trade_wire=wire), clock=lambda: current[0])
     approve(lifecycle)
     lifecycle.transition(
         ACCOUNT,
@@ -579,6 +594,7 @@ def test_first_trade_time_is_controlled_by_transition(
         evidence_refs=(),
         transfer_record_id=TRANSFER_ID,
     )
+    current[0] = evaluated_at
     with pytest.raises(AccountTransitionRefusedError) as caught:
         lifecycle.transition(
             ACCOUNT,

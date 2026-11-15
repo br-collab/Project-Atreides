@@ -287,7 +287,9 @@ def run_unauthorized_core_write(*, control_enabled: bool = True) -> dict[str, ob
         if control_enabled
         else _PermissiveApproverVerifier()
     )
-    lifecycle = AccountLifecycleStore(verifier, _evidence_resolver())
+    lifecycle = AccountLifecycleStore(
+        verifier, _evidence_resolver(), clock=lambda: _NOW, kyc_maximum_age_seconds=300
+    )
     lifecycle.apply("SIM-1-G3-APPLICATION")
     if not control_enabled:
         lifecycle.transition(

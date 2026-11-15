@@ -171,6 +171,7 @@ class FirstPermittedTradeRecord(BaseModel):
     account_id: str = Field(min_length=1)
     permitted: bool
     traded_at: datetime
+    source_event_id: str | None = Field(default=None, min_length=1)
     signature_scope: Literal["synthetic mode: signatures authenticate within one run only"] = (
         "synthetic mode: signatures authenticate within one run only"
     )
@@ -523,8 +524,8 @@ class AccountLifecycleStore:
         evidence_resolver: EvidenceResolver,
         principal_policy: PrincipalApproverPolicyRow = PRINCIPAL_APPROVER_POLICY,
         *,
-        clock: Callable[[], datetime] | None = None,
-        kyc_maximum_age_seconds: int | None = None,
+        clock: Callable[[], datetime],
+        kyc_maximum_age_seconds: int,
     ) -> None:
         self._approver_verifier = approver_verifier
         self._evidence_resolver = evidence_resolver
@@ -579,12 +580,7 @@ class AccountLifecycleStore:
     ) -> None:
         if evidence.account_id != account_id:
             raise AccountTransitionRefusedError(RefusalReason.KYC_ACCOUNT_MISMATCH)
-        maximum_age = (
-            evidence.maximum_age_seconds
-            if self._kyc_maximum_age_seconds is None
-            else self._kyc_maximum_age_seconds
-        )
-        if (timestamp - evidence.decided_at).total_seconds() > maximum_age:
+        if (timestamp - evidence.decided_at).total_seconds() > self._kyc_maximum_age_seconds:
             raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_STALE)
         refusals = {
             "KYC_MISSING_HALT": RefusalReason.KYC_MISSING,
@@ -616,10 +612,9 @@ class AccountLifecycleStore:
         profile_record_id: str | None = None,
         principal_acceptance_record_id: str | None = None,
     ) -> EventEnvelope[AccountEvent]:
-        # An injected run clock is authoritative. In production-style compositions a
-        # caller cannot make stale evidence look fresh by selecting an earlier time.
-        if self._clock is not None:
-            timestamp = self._clock()
+        # The injected clock is authoritative. The retained timestamp argument is
+        # compatibility-only and cannot make stale evidence look fresh.
+        timestamp = self._clock()
         prior = self.status(account_id)
         rule = TRANSITION_RULES.get((prior, target))
         if rule is None:

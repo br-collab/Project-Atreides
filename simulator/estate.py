@@ -14,7 +14,7 @@ from cannae_kernel.envelopes import ApprovedIntentEnvelope, ExecutionEvent
 from cannae_kernel.ids import ActorId, AllocationId, EventId, IntentId, LifecycleId, OrderId
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
-from lc.events import LifecycleState, OrderTerms, OrderType, TimeInForce
+from lc.events import LifecycleState, OrderEvent, OrderTerms, OrderType, TimeInForce
 from lc.lifecycle import (
     ApprovedIntentPayload,
     AuthorityManifest,
@@ -29,7 +29,15 @@ from lc.lifecycle import (
     transition,
 )
 from lc.policy import ExecutionReport, apply_execution
-from lc.trade import AllocationPlan, AllocationRule, AllocationTarget, allocate, capture
+from lc.trade import (
+    AllocationPlan,
+    AllocationRecord,
+    AllocationRule,
+    AllocationTarget,
+    CaptureRecord,
+    allocate,
+    capture,
+)
 
 from atreides.books.ledger import (
     AccountType,
@@ -118,6 +126,15 @@ class ReserveDeposit:
 
 @dataclass(frozen=True, slots=True)
 class EstateResult:
+    approved_intent: ApprovedIntentPayload
+    lifecycle_events: tuple[OrderEvent, ...]
+    capture_record: CaptureRecord
+    allocation_record: AllocationRecord
+    journal_entries: tuple[JournalEntry, ...]
+    lifecycle_event_ids: tuple[str, ...]
+    capture_id: str
+    allocation_id: str
+    journal_entry_ids: tuple[str, ...]
     captured_quantity: Decimal
     captured_money: Decimal
     allocated_quantity: Decimal
@@ -324,6 +341,8 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     deposit_policy: DepositPolicy | None = None,
     account_ids: tuple[str, ...] | None = None,
     books: EquitiesBooks | None = None,
+    source_event_id: str | None = None,
+    settlement_fail_id: str | None = None,
 ) -> EstateResult:
     """Drive L.C. then Atreides; checks elsewhere only compare their outputs.
 
@@ -356,6 +375,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             authorized=True,
         ),
         allocation_accounts=allocation_accounts,
+        source_event_id=source_event_id,
     )
     wire = _wire(payload)
     lifecycle_id = LifecycleId(_identifier("lif_", 20_000 + run_number))
@@ -474,7 +494,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         )
         for index, weight in enumerate(account_weights)
     )
-    _, allocation = allocate(
+    register, allocation = allocate(
         register,
         captured,
         payload,
@@ -548,11 +568,15 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 ),
             )
         )
+    location_account_type = (
+        AccountType.FAIL_TO_RECEIVE if settlement_fail_id is not None else AccountType.DTC
+    )
+    location_account_id = "NSCC_FAIL_TO_RECEIVE" if settlement_fail_id is not None else "DTC"
     lines.extend(
         (
             LedgerLine(
-                account_id="DTC",
-                account_type=AccountType.DTC,
+                account_id=location_account_id,
+                account_type=location_account_type,
                 record_side=RecordSide.LOCATION,
                 issue=issue,
                 quantity=-allocation.executed_quantity,
@@ -566,21 +590,38 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             ),
         )
     )
-    source_event_id = _identifier("evt_", 60_000 + run_number)
+    settlement_source_event_id = str(register.events[-1].event_id)
+    reserve_source_facts: tuple[ReserveSourceFact, ...] = ()
+    if settlement_fail_id is not None:
+        reserve_source_facts = (
+            ReserveSourceFact(
+                account_type=AccountType.FAIL_TO_RECEIVE,
+                issue=issue,
+                activity=ReserveActivity.CUSTOMER,
+                settlement_date=business_date,
+                contract_price=prior_close,
+                fail_id=settlement_fail_id,
+            ),
+        )
     books.post(
         JournalEntry(
             entry_id=f"SIM-1B-{run_number}",
-            source_event_id=source_event_id,
-            source=PostingSource.CNS_SETTLEMENT,
+            source_event_id=settlement_source_event_id,
+            source=(
+                PostingSource.CNS_FAIL
+                if settlement_fail_id is not None
+                else PostingSource.CNS_SETTLEMENT
+            ),
             effective_date=business_date,
             effective_date_basis="SETTLEMENT_DATE",
             authority="NSCC_SYNTHETIC",
             lines=tuple(lines),
+            reserve_source_facts=reserve_source_facts,
             posting=BooksPosting(
                 posted_record_id=f"SIM-1B-{run_number}",
                 posting_authority=actor,
                 effective_time=base,
-                source_event_id=EventId(source_event_id),
+                source_event_id=EventId(settlement_source_event_id),
                 provenance=Provenance.FACT_SYNTHETIC,
             ),
         )
@@ -864,6 +905,15 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         Decimal(),
     )
     return EstateResult(
+        approved_intent=payload,
+        lifecycle_events=register.events,
+        capture_record=captured,
+        allocation_record=allocation,
+        journal_entries=books.entries,
+        lifecycle_event_ids=tuple(str(item.event_id) for item in register.events),
+        capture_id=captured.trade_id,
+        allocation_id=str(allocation.allocation_id),
+        journal_entry_ids=tuple(item.entry_id for item in books.entries),
         captured_quantity=captured.quantity,
         captured_money=captured.quantity * captured.price,
         allocated_quantity=sum((item.quantity for item in allocation.entries), Decimal()),

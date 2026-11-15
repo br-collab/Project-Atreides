@@ -1,0 +1,240 @@
+{
+  "variant": "CLEAN",
+  "disposition": "PASS",
+  "account_status": "ACTIVE",
+  "refusal": null,
+  "exception_owner": null,
+  "exception_age_seconds": null,
+  "stages": [
+    "Atreides: natural-person application recorded",
+    "Atreides: CIP, profile, eligibility, principal, and human approval passed",
+    "Atreides: completed transfer posted to books",
+    "Atreides: account moved to FUNDED",
+    "Aureon: recommended equity BUY intent approved",
+    "Atreides: intent decision appended to DSOR",
+    "L.C.: recommendation profile and signed account status passed",
+    "L.C.: firm market access passed",
+    "L.C.: order sealed for synthetic venue",
+    "Venue: execution emulator produced a fill",
+    "L.C.: execution captured and allocated",
+    "Atreides: CNS settlement posted to books",
+    "Atreides: L.C. signed first-trade evidence moved account to ACTIVE",
+    "Atreides: daily close completed"
+  ],
+  "evidence": [
+    {
+      "event_id": "MVP3-APPLICATION",
+      "producer": "Atreides",
+      "signature_status": "NOT_SIGNED",
+      "cause_event_id": null,
+      "summary": "natural-person application",
+      "artifact_digest": "sha256:1814eba864c65b4d38f133fa9c02b1210d4e2cc95da8ec07befebc84299fb811"
+    },
+    {
+      "event_id": "evt_00000000000000000000000001",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-APPLICATION",
+      "summary": "account approved",
+      "artifact_digest": "sha256:c73bf4c4626de9c8c4ff9d8533a32ef41091bf263dee49a99ff60867c91d59df"
+    },
+    {
+      "event_id": "evt_00000000000000000000000002",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000000001",
+      "summary": "account funded",
+      "artifact_digest": "sha256:b3ad753dbfdcb01915841358a286a7d95a95e495f7c31254d60342b265862600"
+    },
+    {
+      "event_id": "int_00000000000000000000011001",
+      "producer": "Aureon",
+      "signature_status": "NOT_SIGNED",
+      "cause_event_id": "evt_00000000000000000000000002",
+      "summary": "approved intent",
+      "artifact_digest": "sha256:a430855ea513c9d8cb9f066e36e59a4c369cd06db819bc6ada3e6eec6ee37a88"
+    },
+    {
+      "event_id": "00000000-0000-0000-0000-000000000301",
+      "producer": "Atreides DSOR",
+      "signature_status": "NOT_SIGNED",
+      "cause_event_id": "int_00000000000000000000011001",
+      "summary": "approved intent decision",
+      "artifact_digest": "sha256:d95057c2b93ca6b7203ef9d3415520497e979a4eb95fff3c0442df86942d27af"
+    },
+    {
+      "event_id": "evt_00000000000000000000040001",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "int_00000000000000000000011001",
+      "summary": "INTENT_ACCEPTED",
+      "artifact_digest": "sha256:8b3078567f13d19aaf17ca954d57baad1695634e86be7aa1138809f554ea264e"
+    },
+    {
+      "event_id": "evt_00000000000000000000040002",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040001",
+      "summary": "STRATEGY_AUTHORIZED",
+      "artifact_digest": "sha256:d0a4651aaa7f939a493baa7f2f39ebfbd45f0ec626af1df84b854eedffa73cf6"
+    },
+    {
+      "event_id": "evt_00000000000000000000040003",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040002",
+      "summary": "PARENT_ACTIVE",
+      "artifact_digest": "sha256:40b800781667a233899dc6e15eae5e72ba67ca49756f143d919c5332a75f1dae"
+    },
+    {
+      "event_id": "evt_00000000000000000000040004",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040003",
+      "summary": "PARENT_ACTIVE",
+      "artifact_digest": "sha256:1a2acc3a683639cffe6b6ace62f00951f4901ff8e9b3ebdd0a917a1755604f12"
+    },
+    {
+      "event_id": "evt_7S41ZF8XP7E06NS5A4ZFKGCXCH",
+      "producer": "VenueEmulator",
+      "signature_status": "NOT_SIGNED",
+      "cause_event_id": "evt_00000000000000000000040004",
+      "summary": "venue fill",
+      "artifact_digest": "sha256:e1b39d643d6ca33a1b87efd32c84ac1977e4710d890e620cbae1de87822025eb"
+    },
+    {
+      "event_id": "int_00000000000000000000010001",
+      "producer": "L.C. estate adapter",
+      "signature_status": "NOT_SIGNED",
+      "cause_event_id": "evt_00000000000000000000040004",
+      "summary": "estate approved intent",
+      "artifact_digest": "sha256:f0c827054441fbc59731a31b9969df1193d99d4e6fddc6ee0b669b725185336c"
+    },
+    {
+      "event_id": "evt_00000000000000000000040020",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "int_00000000000000000000010001",
+      "summary": "INTENT_ACCEPTED",
+      "artifact_digest": "sha256:a0e6f2af57f984ffe9a9e1a9b646142d2b0585f9e7652626fea18b30bc64905e"
+    },
+    {
+      "event_id": "evt_00000000000000000000040021",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040020",
+      "summary": "STRATEGY_AUTHORIZED",
+      "artifact_digest": "sha256:fb85ce36e4afb08fbe278dcb5ab8be247fad2f8f6cc7e8c7dc4784aed23c2ca0"
+    },
+    {
+      "event_id": "evt_00000000000000000000040022",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040021",
+      "summary": "PARENT_ACTIVE",
+      "artifact_digest": "sha256:1c3472fe1275e77850cabe43651f83668493b441832199db75e3414f695fb435"
+    },
+    {
+      "event_id": "evt_00000000000000000000040023",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040022",
+      "summary": "PARENT_ACTIVE",
+      "artifact_digest": "sha256:7af975f1e54bf7f4f405fd9f080de5468b4a73235746a8d434e813159bb51aa8"
+    },
+    {
+      "event_id": "evt_00000000000000000000040024",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040023",
+      "summary": "MARKET_ACCESS_PASSED",
+      "artifact_digest": "sha256:8d3ba13ee224efe1b49317954a1eac0f63e71fdea7cef91244e7d523de37190e"
+    },
+    {
+      "event_id": "evt_00000000000000000000040025",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040024",
+      "summary": "EXECUTED",
+      "artifact_digest": "sha256:1349f7064f2b1b145bc3a190a3f8140ebf4cdc8ab904c207be9e73e66b9d3608"
+    },
+    {
+      "event_id": "evt_00000000000000000000040032",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040025",
+      "summary": "TRADE_CAPTURED",
+      "artifact_digest": "sha256:da6255426db14d8743176b066c740145e2925d2269896f1b74aef3d3af0a7e22"
+    },
+    {
+      "event_id": "evt_00000000000000000000040033",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "evt_00000000000000000000040032",
+      "summary": "ALLOCATED",
+      "artifact_digest": "sha256:c936d6e1c239b7fc4d750f9990b25e19e34036ceb40e25c9fc1b74b9a6cab357"
+    },
+    {
+      "event_id": "trade-1-0-synthetic-30003-156655",
+      "producer": "L.C.",
+      "signature_status": "NOT_SIGNED",
+      "cause_event_id": "evt_00000000000000000000040032",
+      "summary": "trade capture",
+      "artifact_digest": "sha256:d46d4969a942d60a936662d9e067c4720610276efed545f2a8c0805cea74a2e7"
+    },
+    {
+      "event_id": "alc_00000000000000000000050001",
+      "producer": "L.C.",
+      "signature_status": "NOT_SIGNED",
+      "cause_event_id": "trade-1-0-synthetic-30003-156655",
+      "summary": "allocation",
+      "artifact_digest": "sha256:36eedde2c0fff3152f2d265912e9483257230d9b37dd57bde3a8eed0ae821932"
+    },
+    {
+      "event_id": "SIM-1B-1",
+      "producer": "Atreides books",
+      "signature_status": "NOT_SIGNED",
+      "cause_event_id": "evt_00000000000000000000040033",
+      "summary": "customer buy journal entry",
+      "artifact_digest": "sha256:7fc60fc332779d19ff3dcec680b3cd2a32446b9787c93c1e72005c87e3b0f6e1"
+    },
+    {
+      "event_id": "MVP3-FIRST-TRADE",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "SIM-1B-1",
+      "summary": "first permitted trade",
+      "artifact_digest": "sha256:2186f24ea1c1c152683e3d29a58891a78155af9d2d2821dabf9cc88023474835"
+    },
+    {
+      "event_id": "evt_00000000000000000000000003",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-FIRST-TRADE",
+      "summary": "account active",
+      "artifact_digest": "sha256:dafc6adcdee7aceae4f71902aee21fa8523aef2c690045216235a63523e3f272"
+    }
+  ],
+  "evidence_digest": "sha256:f74f90e130fa7e5b92da14c6a926df47ec71f4ef0ef83d7626b0cfb5e5eef1f3",
+  "dsor_records": 1,
+  "books_digest": "sha256:3c9b87ca1d7bc05782155da43ae69e224a56ed46b0f905767e4af1e5f537cb3d",
+  "invariants": {
+    "stock_record": true,
+    "reserve": true,
+    "pab_reserve": true,
+    "net_capital": true,
+    "possession_or_control": true,
+    "settlement_two_sided": true,
+    "evidence_chain": true,
+    "independent_oracle": true,
+    "street_reconciliation": true,
+    "focus_tie_out": true,
+    "customer_in_books": true
+  },
+  "close_report": "NORMAL_CLOSE",
+  "lc_register_length": 4,
+  "fill_quantity": "10",
+  "customer_position": "10",
+  "fail_id": null,
+  "i3_computed": null
+}
