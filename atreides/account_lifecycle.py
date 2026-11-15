@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Literal, Protocol
@@ -210,9 +210,9 @@ class AccountTypeStatusDocument(BaseModel):
     as_of: datetime
     maximum_age_seconds: int = Field(gt=0)
     accounts: tuple[AccountTypeStatusEntry, ...]
-    signature_scope: Literal[
+    signature_scope: Literal["synthetic mode: signatures authenticate within one run only"] = (
         "synthetic mode: signatures authenticate within one run only"
-    ] = "synthetic mode: signatures authenticate within one run only"
+    )
 
 
 class LegalEntityEvidenceRecord(BaseModel):
@@ -522,10 +522,15 @@ class AccountLifecycleStore:
         approver_verifier: ApproverVerifier,
         evidence_resolver: EvidenceResolver,
         principal_policy: PrincipalApproverPolicyRow = PRINCIPAL_APPROVER_POLICY,
+        *,
+        clock: Callable[[], datetime] | None = None,
+        kyc_maximum_age_seconds: int | None = None,
     ) -> None:
         self._approver_verifier = approver_verifier
         self._evidence_resolver = evidence_resolver
         self._principal_policy = principal_policy
+        self._clock = clock
+        self._kyc_maximum_age_seconds = kyc_maximum_age_seconds
         self._events: list[EventEnvelope[AccountEvent]] = []
         self._lifecycle_ids: dict[str, LifecycleId] = {}
         self._checkpoints: dict[str, JournalCheckpoint] = {}
@@ -569,11 +574,17 @@ class AccountLifecycleStore:
         if not self._approver_verifier.is_verified_human(actor, approval_ref):
             raise AccountTransitionRefusedError(RefusalReason.HUMAN_APPROVER_REQUIRED)
 
-    @staticmethod
-    def _verify_kyc(evidence: KYCDecisionRecord, account_id: str, timestamp: datetime) -> None:
+    def _verify_kyc(
+        self, evidence: KYCDecisionRecord, account_id: str, timestamp: datetime
+    ) -> None:
         if evidence.account_id != account_id:
             raise AccountTransitionRefusedError(RefusalReason.KYC_ACCOUNT_MISMATCH)
-        if (timestamp - evidence.decided_at).total_seconds() > evidence.maximum_age_seconds:
+        maximum_age = (
+            evidence.maximum_age_seconds
+            if self._kyc_maximum_age_seconds is None
+            else self._kyc_maximum_age_seconds
+        )
+        if (timestamp - evidence.decided_at).total_seconds() > maximum_age:
             raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_STALE)
         refusals = {
             "KYC_MISSING_HALT": RefusalReason.KYC_MISSING,
@@ -605,6 +616,10 @@ class AccountLifecycleStore:
         profile_record_id: str | None = None,
         principal_acceptance_record_id: str | None = None,
     ) -> EventEnvelope[AccountEvent]:
+        # An injected run clock is authoritative. In production-style compositions a
+        # caller cannot make stale evidence look fresh by selecting an earlier time.
+        if self._clock is not None:
+            timestamp = self._clock()
         prior = self.status(account_id)
         rule = TRANSITION_RULES.get((prior, target))
         if rule is None:

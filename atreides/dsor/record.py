@@ -42,6 +42,7 @@ from atreides.dsor.books import BooksPostingRecord
 from atreides.dsor.client_output import ClientOutputRecord
 from atreides.dsor.governance_scenario import GovernanceScenarioEvidence
 from atreides.dsor.lifecycle_records import (
+    ApprovedIntentDecisionRecord,
     ExternalActionReceiptRecord,
     FinalityAssertedRecord,
     HaltRecord,
@@ -52,17 +53,27 @@ from atreides.dsor.lifecycle_records import (
 from atreides.rails.cato_cash_record import CatoCashDecisionRecord
 
 SettlementDomainOutput = (
-    RoutingDecision | EscalationRequired | QuorumAuthorityRequired
-    | SettlementTelemetry | SettlementEscalation
-    | EvidenceTimeline | InvestigationEscalation
-    | CatoCashDecisionRecord | ObligationAcceptanceRecord | HaltRecord
-    | InstructionPreparedRecord | RailStatusObservedRecord
-    | FinalityAssertedRecord | ReconciliationResultRecord
-    | CustomerProtectionComputationRecord | CorporateActionEventRecord
+    RoutingDecision
+    | EscalationRequired
+    | QuorumAuthorityRequired
+    | SettlementTelemetry
+    | SettlementEscalation
+    | EvidenceTimeline
+    | InvestigationEscalation
+    | CatoCashDecisionRecord
+    | ObligationAcceptanceRecord
+    | HaltRecord
+    | InstructionPreparedRecord
+    | RailStatusObservedRecord
+    | FinalityAssertedRecord
+    | ReconciliationResultRecord
+    | CustomerProtectionComputationRecord
+    | CorporateActionEventRecord
     | ExternalActionReceiptRecord
     | ClientOutputRecord
     | BooksPostingRecord
     | GovernanceScenarioEvidence
+    | ApprovedIntentDecisionRecord
 )
 
 #: Deprecated until Wave 3: use ``SettlementDomainOutput``.
@@ -89,6 +100,7 @@ RecordKind = Literal[
     "client_output",
     "books_posting",
     "governance_scenario",
+    "approved_intent_decision",
 ]
 
 
