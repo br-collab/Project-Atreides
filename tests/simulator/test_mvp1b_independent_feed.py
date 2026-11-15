@@ -52,7 +52,7 @@ def test_full_day_sources_do_not_read_raising_books() -> None:
 
 
 def test_upstream_mutations_are_detected_and_owned() -> None:
-    profile = load_firm_profile(load_calibration_pack("firm-synthetic/4"), "small")
+    profile = load_firm_profile(load_calibration_pack("firm-synthetic/6"), "small")
     for mutation, days in (
         ("UPSTREAM_ALLOCATION_QUANTITY", 1),
         ("UPSTREAM_FAIL_QUANTITY", 2),

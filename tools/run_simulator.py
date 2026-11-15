@@ -31,7 +31,7 @@ if args.phase_2:
 elif args.firm:
     publish_firm(
         run_firm(
-            load_firm_profile(load_calibration_pack("firm-synthetic/3"), args.firm),
+            load_firm_profile(load_calibration_pack("firm-synthetic/6"), args.firm),
             seed=args.seed or 20261024,
             days=args.days or 5,
             start=args.start or date(2027, 1, 4),

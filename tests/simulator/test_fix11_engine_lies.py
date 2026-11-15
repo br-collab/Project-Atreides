@@ -26,7 +26,7 @@ LOW_NET_WORTH = Decimal("10000")
 
 
 def _profile() -> firm.FirmProfile:
-    return load_firm_profile(load_calibration_pack("firm-synthetic/4"), "small")
+    return load_firm_profile(load_calibration_pack("firm-synthetic/6"), "small")
 
 
 def _run(**kwargs: Any) -> firm.FirmRun:
@@ -125,7 +125,7 @@ def test_control_leg_computes_and_holds_only_on_the_declared_deficit() -> None:
     control = [day.protection_dispositions["possession_or_control"] for day in run.days]
     assert control == ["PASS", "HOLD", "PASS"]
     reasons = run.days[1].protection_reasons["possession_or_control"]
-    assert any("SYN-SCF1-ISSUE-0000: 100 " in reason for reason in reasons)
+    assert any("SYN-SCF1-ISSUE-0000: 89 " in reason for reason in reasons)
     assert not any(
         reason.startswith("excess_margin[")
         for day in run.days

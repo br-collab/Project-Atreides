@@ -18,7 +18,7 @@ from simulator.street import (
 
 
 def _profile() -> firm.FirmProfile:
-    return firm.load_firm_profile(load_calibration_pack("firm-synthetic/4"), "small")
+    return firm.load_firm_profile(load_calibration_pack("firm-synthetic/6"), "small")
 
 
 def test_failed_reconciliation_makes_i3_false(monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -168,7 +168,7 @@ def test_recall_quantity_comes_from_register_without_reading_books() -> None:
         register,
         replace(
             _profile(),
-            control_deficit=(0, 0, Decimal(100), ((2, Decimal(17)),)),
+            control_deficit=(0, 0, Decimal(17)),
         ),
         date(2027, 1, 6),
         {},
