@@ -60,9 +60,19 @@ from atreides.agents.tier2.eligibility import (
 )
 from atreides.books.ledger import (
     EquitiesBooks,
+    JournalEntry,
     RecordSide,
 )
 from atreides.books.projections import classify_accounts, project_margin_accounts
+from atreides.client_reporting import (
+    AccountStatement,
+    FurnishedEvent,
+    TradeConfirmation,
+    build_statement_draft,
+    generate_trade_confirmation,
+    issue_statement,
+    record_furnished,
+)
 from atreides.customer_protection.reserve import DAILY_REDUCTION, ComputationMode
 from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
@@ -191,6 +201,10 @@ class GoldenPathResult(BaseModel):
     stored_artifacts: dict[str, str]
     refusal_state_before: StateSnapshot | None
     refusal_state_after: StateSnapshot | None
+    books_entries: tuple[JournalEntry, ...] = ()
+    confirmation: TradeConfirmation | None = None
+    confirmation_furnished: FurnishedEvent | None = None
+    statement: AccountStatement | None = None
 
 
 @dataclass(frozen=True)
@@ -346,6 +360,10 @@ def _result(
     stored_artifacts: dict[str, str],
     refusal_state_before: StateSnapshot | None = None,
     refusal_state_after: StateSnapshot | None = None,
+    books_entries: tuple[JournalEntry, ...] = (),
+    confirmation: TradeConfirmation | None = None,
+    confirmation_furnished: FurnishedEvent | None = None,
+    statement: AccountStatement | None = None,
 ) -> GoldenPathResult:
     return GoldenPathResult(
         variant=variant,
@@ -371,6 +389,10 @@ def _result(
         stored_artifacts=stored_artifacts,
         refusal_state_before=refusal_state_before,
         refusal_state_after=refusal_state_after,
+        books_entries=books_entries,
+        confirmation=confirmation,
+        confirmation_furnished=confirmation_furnished,
+        statement=statement,
     )
 
 
@@ -1371,6 +1393,59 @@ def run_golden_path(  # noqa: PLR0915
         summary="account active",
         artifact=active_event,
     )
+    confirmation = generate_trade_confirmation(
+        account_id=ACCOUNT,
+        trade_id=venue_report.execution_id,
+        book_entry=settlement_entry,
+        executed_at=venue_event.times.event_time,
+        issue=ISSUE,
+        side=payload.side.value,
+        quantity=venue_report.quantity,
+        price=venue_report.price,
+    )
+    furnished = record_furnished(
+        confirmation,
+        furnished_at=clock(),
+        recipient_id=PERSON,
+    )
+    statement_draft = build_statement_draft(
+        books,
+        account_id=ACCOUNT,
+        account_status=lifecycle.status(ACCOUNT),
+        period_start=START.date(),
+        period_end=clock().date(),
+    )
+    statement = issue_statement(statement_draft, books, issued_at=clock())
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=confirmation.confirmation_id,
+        producer="Atreides client reporting",
+        signature_status="NOT_SIGNED",
+        cause_event_id=settlement_entry.entry_id,
+        summary="trade confirmation",
+        artifact=confirmation,
+    )
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=furnished.furnished_event_id,
+        producer="Atreides client reporting",
+        signature_status="NOT_SIGNED",
+        cause_event_id=confirmation.confirmation_id,
+        summary="synthetic confirmation furnished",
+        artifact=furnished,
+    )
+    _append_evidence(
+        evidence_items,
+        stored_artifacts,
+        event_id=statement.statement_id,
+        producer="Atreides client reporting",
+        signature_status="NOT_SIGNED",
+        cause_event_id=confirmation.confirmation_id,
+        summary="account statement",
+        artifact=statement,
+    )
     evidence = tuple(evidence_items)
     evidence_ids = {item.event_id for item in evidence}
     invariants = {
@@ -1420,6 +1495,10 @@ def run_golden_path(  # noqa: PLR0915
         customer_position=customer_position,
         evidence=evidence,
         stored_artifacts=stored_artifacts,
+        books_entries=books.entries,
+        confirmation=confirmation,
+        confirmation_furnished=furnished,
+        statement=statement,
     )
 
 
@@ -1437,7 +1516,7 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
     summary_path = output / "SUMMARY.md"
     evidence_path.write_text(result.model_dump_json(indent=2) + "\n")
     summary_path.write_text(
-        "# MVP-3B synthetic golden path with real components\n\n"
+        "# MVP-4 synthetic golden path with client reporting\n\n"
         "This pack contains one declared-synthetic natural-person account and one "
         "declared-synthetic United States equity. It records the ordered cause chain "
         "from application through the daily close. No event was submitted to a venue, "
@@ -1445,10 +1524,9 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
         f"Evidence digest: `{result.evidence_digest}`\n\n"
         "| Pack | Status | Reason |\n"
         "| --- | --- | --- |\n"
-        "| `mvp3-golden-path-2026-11-15-v2` | Prior | Preserved as published |\n"
-        "| `mvp3b-golden-path-2026-11-15` | Current | Uses the real L.C. venue and "
-        "settlement emulators, consumer clocks, books capacity, and stored-artifact "
-        "verification |\n\n"
+        "| `mvp3b-golden-path-2026-11-15` | Prior | Preserved as published |\n"
+        "| `mvp4-client-reporting-2026-11-15` | Current | Adds a synthetic trade "
+        "confirmation, furnished record, and books-tied account statement |\n\n"
         "Every clean-run invariant in `evidence-pack.json` is true.\n"
     )
     return evidence_path, summary_path
