@@ -12,6 +12,7 @@ from uuid import UUID
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes, canonical_bytes_of, digest, digest_bytes
+from cannae_kernel.envelopes import ExecutionEvent
 from cannae_kernel.events import verify as verify_event
 from cannae_kernel.ids import ActorId, IntentId, LifecycleId, OrderId
 from cannae_kernel.journal import ChainReport
@@ -21,7 +22,12 @@ from emulators.settlement import (  # type: ignore[import-untyped]
     SyntheticEntitledMember,
     SyntheticRail,
 )
-from emulators.venue import VenueEmulator, VenueOrder, VenueOutcome  # type: ignore[import-untyped]
+from emulators.venue import (  # type: ignore[import-untyped]
+    VenueEmulator,
+    VenueExecutionReport,
+    VenueOrder,
+    VenueOutcome,
+)
 from lc.events import OrderTerms, OrderType, TimeInForce
 from lc.lifecycle import ApprovedIntentPayload, AuthorityManifest, OrderSide, PolicyManifest
 from lc.market_access import (
@@ -205,6 +211,8 @@ class GoldenPathResult(BaseModel):
     confirmation: TradeConfirmation | None = None
     confirmation_furnished: FurnishedEvent | None = None
     statement: AccountStatement | None = None
+    venue_execution_event: ExecutionEvent | None = None
+    venue_execution_report: VenueExecutionReport | None = None
 
 
 @dataclass(frozen=True)
@@ -364,6 +372,8 @@ def _result(
     confirmation: TradeConfirmation | None = None,
     confirmation_furnished: FurnishedEvent | None = None,
     statement: AccountStatement | None = None,
+    venue_execution_event: ExecutionEvent | None = None,
+    venue_execution_report: VenueExecutionReport | None = None,
 ) -> GoldenPathResult:
     return GoldenPathResult(
         variant=variant,
@@ -393,6 +403,8 @@ def _result(
         confirmation=confirmation,
         confirmation_furnished=confirmation_furnished,
         statement=statement,
+        venue_execution_event=venue_execution_event,
+        venue_execution_report=venue_execution_report,
     )
 
 
@@ -1395,13 +1407,9 @@ def run_golden_path(  # noqa: PLR0915
     )
     confirmation = generate_trade_confirmation(
         account_id=ACCOUNT,
-        trade_id=venue_report.execution_id,
         book_entry=settlement_entry,
-        executed_at=venue_event.times.event_time,
-        issue=ISSUE,
-        side=payload.side.value,
-        quantity=venue_report.quantity,
-        price=venue_report.price,
+        execution_event=venue_event,
+        execution_report=venue_report,
     )
     furnished = record_furnished(
         confirmation,
@@ -1499,6 +1507,8 @@ def run_golden_path(  # noqa: PLR0915
         confirmation=confirmation,
         confirmation_furnished=furnished,
         statement=statement,
+        venue_execution_event=venue_event,
+        venue_execution_report=venue_report,
     )
 
 
@@ -1524,9 +1534,9 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
         f"Evidence digest: `{result.evidence_digest}`\n\n"
         "| Pack | Status | Reason |\n"
         "| --- | --- | --- |\n"
-        "| `mvp3b-golden-path-2026-11-15` | Prior | Preserved as published |\n"
-        "| `mvp4-client-reporting-2026-11-15` | Current | Adds a synthetic trade "
-        "confirmation, furnished record, and books-tied account statement |\n\n"
+        "| `mvp4-client-reporting-2026-11-15` | Prior | Preserved as published |\n"
+        "| `mvp4-client-reporting-2026-11-15-v2` | Current | Makes the confirmation "
+        "consume producer execution artifacts instead of caller-supplied trade facts |\n\n"
         "Every clean-run invariant in `evidence-pack.json` is true.\n"
     )
     return evidence_path, summary_path
