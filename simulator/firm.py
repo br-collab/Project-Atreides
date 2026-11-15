@@ -89,7 +89,12 @@ from simulator.estate import (
     simulated_filed_credit_total,
 )
 from simulator.focus import FirmFocusLines, FirmFocusTieOut, tie_out_firm_close
-from simulator.protection_oracle import EXCESS_MARGIN_THRESHOLD, required_net_capital
+from simulator.protection_oracle import (
+    EXCESS_MARGIN_THRESHOLD,
+    ReserveRequirement,
+    required_net_capital,
+    required_reserve,
+)
 from simulator.protection_oracle import required_control as required_possession_or_control
 from simulator.settlement import rule_204_deadline
 from simulator.street import (
@@ -151,10 +156,8 @@ class FirmProfile:
     calibration_pack_version: str
     calibration_manifest_digest: str
     synthetic: bool = True
-    #: Declared control deficit: day, issue, shares short, and loan instruction quantity.
-    control_deficit: tuple[
-        int, int, Decimal, tuple[tuple[int, Decimal], ...]
-    ] | None = None
+    #: Declared control loan: day, issue, and one quantity or a legacy day map.
+    control_deficit: tuple[int, int, Decimal | dict[int, Decimal]] | None = None
     fail_lot_settlement_order: Literal["OLDEST_SETTLES_FIRST"] = "OLDEST_SETTLES_FIRST"
 
 
@@ -228,6 +231,8 @@ class FirmRun:
         "MVP-2 reconciles the production run through independent source readers",
         "MVP-2 ties regulatory-report figures to every firm-at-volume close",
         "MVP-2 creates owned synthetic drafts for fired early-warning indicators",
+        "MVP-2B derives reserve and PAB checks independently from journal lines",
+        "MVP-2B uses one declared stock-loan input for every run length",
     )
     not_claimed: tuple[str, ...] = NOT_CLAIMED
 
@@ -249,6 +254,8 @@ MUTATIONS = (
     "FOCUS_WRONG_RESERVE_CREDIT",
     "FOCUS_WRONG_CONTROL_QUANTITY",
     "FOCUS_DROP_CUSTOMER_ACCOUNT",
+    "PROJECTION_CUT_RESERVE_CREDIT",
+    "UNSOURCED_BANK_CONTROL",
     "EARLY_WARNING_MISSING_DRAFT",
     "EARLY_WARNING_MISSING_OWNER",
 )
@@ -348,24 +355,22 @@ def load_firm_profile(pack: CalibrationPack, tier: TierName) -> FirmProfile:
 
 def _control_deficit(
     pack: CalibrationPack,
-) -> tuple[int, int, Decimal, tuple[tuple[int, Decimal], ...]] | None:
+) -> tuple[int, int, Decimal | dict[int, Decimal]] | None:
     try:
         declared = cast(dict[str, object], pack.value("firm_profile", "control_deficit"))
     except (KeyError, ValueError):
         return None
-    if "loan_shares_by_run_days" not in declared:
+    if "loan_shares" in declared:
+        loan: Decimal | dict[int, Decimal] = Decimal(str(declared["loan_shares"]))
+    elif "loan_shares_by_run_days" in declared:
+        loan_shares = cast(dict[str, object], declared["loan_shares_by_run_days"])
+        loan = {int(days): Decimal(str(quantity)) for days, quantity in loan_shares.items()}
+    else:
         return None
-    loan_shares = cast(dict[str, object], declared["loan_shares_by_run_days"])
     return (
         int(cast(int, declared["day_index"])),
         int(cast(int, declared["issue_index"])),
-        Decimal(str(declared["shortfall_shares"])),
-        tuple(
-            sorted(
-                (int(days), Decimal(str(quantity)))
-                for days, quantity in loan_shares.items()
-            )
-        ),
+        loan,
     )
 
 
@@ -378,7 +383,11 @@ def _fail_lot_settlement_order(
         return "OLDEST_SETTLES_FIRST"
     if declared.get("rule_anchor") != "TO_VERIFY_AGAINST_PRIMARY_TEXT":
         raise ValueError("fail-lot policy requires a TO_VERIFY_AGAINST_PRIMARY_TEXT anchor")
-    if declared.get("order") not in {"OLDEST_FIRST", "OLDEST_SETTLES_FIRST"}:
+    if declared.get("order") == "OLDEST_FIRST":
+        raise ValueError(
+            "FAIL_LOT_ORDER_OLDEST_FIRST_AMBIGUOUS: use firm-synthetic/5 or later"
+        )
+    if declared.get("order") != "OLDEST_SETTLES_FIRST":
         raise ValueError("unsupported fail-lot order")
     return "OLDEST_SETTLES_FIRST"
 
@@ -782,6 +791,46 @@ def _post_wrong_location(books: EquitiesBooks, business_date: date, issue: str) 
     )
 
 
+def _post_unsourced_bank_control(
+    books: EquitiesBooks, business_date: date, issue: str
+) -> None:
+    event_id = _id("evt_", 825_000_001)
+    books.post(
+        JournalEntry(
+            entry_id="SCF1-UNSOURCED-BANK-CONTROL",
+            source_event_id=event_id,
+            source=PostingSource.CNS_SETTLEMENT,
+            effective_date=business_date,
+            effective_date_basis="SETTLEMENT_DATE",
+            authority="MVP2B_ATTACK_UNSOURCED_LOCATION",
+            lines=(
+                LedgerLine(
+                    account_id="BANK_CONTROL",
+                    account_type=AccountType.BANK_CONTROL,
+                    record_side=RecordSide.LOCATION,
+                    issue=issue,
+                    quantity=Decimal(5),
+                ),
+                LedgerLine(
+                    account_id="SYN-FIRM-PROPRIETARY",
+                    account_type=AccountType.FIRM_PROPRIETARY,
+                    record_side=RecordSide.OWNERSHIP,
+                    issue=issue,
+                    quantity=Decimal(-5),
+                ),
+            ),
+            posting=BooksPosting(
+                posted_record_id="SCF1-UNSOURCED-BANK-CONTROL",
+                posting_authority=_actor(),
+                effective_time=datetime.combine(business_date, datetime.min.time(), tzinfo=UTC),
+                source_event_id=EventId(event_id),
+                provenance=Provenance.FACT_SYNTHETIC,
+            ),
+            synthetic=True,
+        )
+    )
+
+
 def _seed_inventory(books: EquitiesBooks, profile: FirmProfile, start: date, days: int) -> None:
     """Book customer opening holdings and the declared small proprietary book."""
     per_issue = Decimal(profile.executions_per_day * profile.order_size_max * days)
@@ -1147,7 +1196,7 @@ def _post_control_deficit(
     """
     if profile.control_deficit is None:
         return ()
-    deficit_day, issue_index, shortfall, declared_loans = profile.control_deficit
+    deficit_day, issue_index, declared_loan = profile.control_deficit
     issue = f"SYN-SCF1-ISSUE-{issue_index:04d}"
     if day_index == deficit_day + 1:
         instruction = loan_register.declare_recall(
@@ -1169,8 +1218,8 @@ def _post_control_deficit(
         return ()
     if day_index != deficit_day:
         return ()
-    del prices, shortfall
-    loan = dict(declared_loans).get(run_days)
+    del prices
+    loan = declared_loan.get(run_days) if isinstance(declared_loan, dict) else declared_loan
     if loan is None:
         raise ValueError(f"no declared control loan for {run_days} run days")
     if loan <= 0:
@@ -1262,49 +1311,20 @@ def _focus_tie_out(
     *,
     books: EquitiesBooks,
     business_date: date,
-    rules: Any,
-    customer_inputs: Any,
-    pab_inputs: Any,
     customer: Any,
     pab: Any,
     capital: Any,
     control: Any,
     required_capital: Any,
     required_control: Any,
+    reserve_oracle: ReserveRequirement,
     expected_customer_accounts: set[str],
     mutation: str | None,
 ) -> FirmFocusTieOut:
     """Tie independently read journal lines to each engine result at the real firm close."""
 
-    def total(lines: tuple[Any, ...], rule_ids: tuple[str, ...]) -> Decimal | None:
-        selected = [line.amount for line in lines if line.rule_id in rule_ids]
-        return (
-            None
-            if any(value is None for value in selected)
-            else sum((cast(Decimal, value) for value in selected), Decimal())
-        )
-
-    customer_credits = total(customer_inputs.lines, EXHIBIT_A_CREDITS)
-    customer_debits = total(customer_inputs.lines, EXHIBIT_A_DEBITS)
-    pab_credits = total(pab_inputs.lines, EXHIBIT_A_CREDITS)
-    pab_debits = total(pab_inputs.lines, EXHIBIT_A_DEBITS)
-    reduction_rule = (
-        DAILY_REDUCTION if customer_inputs.mode is ComputationMode.DAILY else WEEKLY_REDUCTION
-    )
-    reduction_item = rules.get(reduction_rule)
-    reduction_rate = None if reduction_item is None else reduction_item.value
-    pab_requirement = (
-        None
-        if None
-        in (customer_credits, customer_debits, pab_credits, pab_debits, reduction_rate)
-        else _pab_requirement_from_book_lines(
-            cast(Decimal, customer_credits),
-            cast(Decimal, customer_debits),
-            cast(Decimal, pab_credits),
-            cast(Decimal, pab_debits),
-            cast(Decimal, reduction_rate),
-        )
-    )
+    customer_credits = reserve_oracle.customer_credits
+    customer_debits = reserve_oracle.customer_debits
     book_control = (
         ()
         if required_control is None
@@ -1345,7 +1365,7 @@ def _focus_tie_out(
         net_capital=(None if required_capital is None else required_capital.net_capital),
         reserve_total_credits=customer_credits,
         reserve_total_debits=customer_debits,
-        pab_reserve_requirement=pab_requirement,
+        pab_reserve_requirement=reserve_oracle.pab_requirement,
         control_shortfall_by_issue=book_control,
     )
     engine_lines = FirmFocusLines(
@@ -1384,7 +1404,7 @@ def _focus_tie_out(
     )
 
 
-def _protections(
+def _protections(  # noqa: PLR0915 - one control close keeps gate inputs visible
     books: EquitiesBooks,
     business_date: date,
     prices: dict[str, Decimal],
@@ -1477,6 +1497,17 @@ def _protections(
         previously_daily_required=False,
         daily_exit_notice_date=None,
     )
+    if mutation == "PROJECTION_CUT_RESERVE_CREDIT":
+        customer_inputs = customer_inputs.model_copy(
+            update={
+                "lines": tuple(
+                    line.model_copy(update={"amount": line.amount - Decimal("1000.00")})
+                    if line.rule_id == "15c3-3a.item.01" and line.amount is not None
+                    else line
+                    for line in customer_inputs.lines
+                )
+            }
+        )
     pab_inputs = _complete_reserve_inputs(
         projected.pab_reserve,
         average_total_credits=average_credits,
@@ -1487,6 +1518,18 @@ def _protections(
     )
     customer = compute_reserve(customer_inputs, rules)
     pab = compute_reserve(with_customer_excess_debits(pab_inputs, customer), rules)
+    reduction_rule = (
+        DAILY_REDUCTION if customer_inputs.mode is ComputationMode.DAILY else WEEKLY_REDUCTION
+    )
+    reduction_item = rules.get(reduction_rule)
+    if reduction_item is None or reduction_item.value is None:
+        raise ValueError("RESERVE_ORACLE_REDUCTION_RATE_MISSING")
+    reserve_oracle = required_reserve(
+        books,
+        as_of=business_date,
+        prices=prices,
+        customer_debit_reduction_rate=reduction_item.value,
+    )
     opening_balances = reserve_bank_balances(books, through=date.max)
     deposit_outcome = "SHORT" if stressed == "customer" else "ON_TIME"
     customer, pab, deposits = _post_reserve_deposits(
@@ -1540,14 +1583,6 @@ def _protections(
     reserve_holds = {item.computation: item.outcome in DEPOSIT_BREACH_OUTCOMES for item in deposits}
     required_capital = required_net_capital(books, prices, net_worth, rules)
     required_control = required_possession_or_control(books, prices, rules)
-    required = {
-        "reserve": "HOLD" if reserve_holds["customer"] else "PASS",
-        "pab_reserve": "HOLD" if reserve_holds["pab"] else "PASS",
-        "net_capital": ("UNDERIVABLE" if required_capital is None else required_capital.outcome),
-        "possession_or_control": (
-            "UNDERIVABLE" if required_control is None else required_control.outcome
-        ),
-    }
 
     def total(lines: tuple[Any, ...], rule_ids: tuple[str, ...]) -> Decimal | None:
         selected = [line.amount for line in lines if line.rule_id in rule_ids]
@@ -1556,6 +1591,29 @@ def _protections(
             if any(value is None for value in selected)
             else sum((cast(Decimal, value) for value in selected), Decimal())
         )
+
+    projected_customer_credits = total(customer_inputs.lines, EXHIBIT_A_CREDITS)
+    projected_customer_debits = total(customer_inputs.lines, EXHIBIT_A_DEBITS)
+    projected_pab_credits = total(pab_inputs.lines, EXHIBIT_A_CREDITS)
+    projected_pab_debits = total(pab_inputs.lines, EXHIBIT_A_DEBITS)
+    required = {
+        "reserve": "HOLD"
+        if reserve_holds["customer"]
+        or customer.requirement != reserve_oracle.customer_requirement
+        or projected_customer_credits != reserve_oracle.customer_credits
+        or projected_customer_debits != reserve_oracle.customer_debits
+        else "PASS",
+        "pab_reserve": "HOLD"
+        if reserve_holds["pab"]
+        or pab.requirement_after_customer_excess_debits != reserve_oracle.pab_requirement
+        or projected_pab_credits != reserve_oracle.pab_credits
+        or projected_pab_debits != reserve_oracle.pab_debits
+        else "PASS",
+        "net_capital": ("UNDERIVABLE" if required_capital is None else required_capital.outcome),
+        "possession_or_control": (
+            "UNDERIVABLE" if required_control is None else required_control.outcome
+        ),
+    }
 
     figures = {
         "customer_credits": total(customer_inputs.lines, EXHIBIT_A_CREDITS),
@@ -1582,15 +1640,13 @@ def _protections(
     focus_tie_out = _focus_tie_out(
         books=books,
         business_date=business_date,
-        rules=rules,
-        customer_inputs=customer_inputs,
-        pab_inputs=pab_inputs,
         customer=customer,
         pab=pab,
         capital=capital,
         control=control,
         required_capital=required_capital,
         required_control=required_control,
+        reserve_oracle=reserve_oracle,
         expected_customer_accounts=expected_customer_accounts,
         mutation=mutation,
     )
@@ -1907,7 +1963,12 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             loan_instructions=loan_register.instructions,
         )
         independent_readers = build_independent_sources(books, source_inputs)
+        if mutation == "UNSOURCED_BANK_CONTROL" and day_index == 0:
+            _post_unsourced_bank_control(
+                books, business_date, f"SYN-SCF1-ISSUE-{0:04d}"
+            )
         location_balances = _location_balances(books)
+        sourced_locations = {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
         reconciliation_specs = (
             (
                 "stock-record-to-street",
@@ -1931,6 +1992,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     key: quantity
                     for key, quantity in location_balances.items()
                     if key[1] == location
+                    or (location == "DTC" and key[1] not in sourced_locations)
                 },
                 (reader,),
                 tuple(item for item in prior_breaks if item.location == location),

@@ -252,7 +252,7 @@ def run_focus(
                     for key, value in asdict(engine_lines).items()
                 },
                 "break_owners": differences,
-                "invariants": {"I13_FOCUS_TIE_OUT": not differences},
+                "invariants": {"CONV4_REPORT_TIE_OUT": not differences},
                 "17a_3_records": {
                     "produced": [
                         "daily cash blotter",
@@ -287,7 +287,7 @@ def attack_focus() -> dict[str, bool]:
         "net-capital-engine-lie": all(
             isinstance(close, dict)
             and isinstance(close.get("invariants"), dict)
-            and close["invariants"].get("I13_FOCUS_TIE_OUT") is False
+            and close["invariants"].get("CONV4_REPORT_TIE_OUT") is False
             for close in closes
         )
     }

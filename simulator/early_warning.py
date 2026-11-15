@@ -103,8 +103,9 @@ def draft_notices(
 def warning_workflow_held(
     warnings: tuple[EarlyWarning, ...], notices: tuple[EarlyWarningNotice, ...]
 ) -> bool:
-    triggered = [warning for warning in warnings if warning.triggered is True]
-    return len(triggered) == len(notices) and all(
+    triggered = {warning.paragraph for warning in warnings if warning.triggered is True}
+    noticed = {notice.paragraph for notice in notices}
+    return triggered == noticed and len(triggered) == len(notices) and all(
         notice.owner_role == "FINOP"
         and notice.label == "synthetic draft, not filed"
         and notice.transmitted is False
@@ -137,6 +138,8 @@ class EarlyWarningQueue:
         if actor.role != "FINOP" or not self._verifier.is_verified_human(actor, approval_ref):
             raise PermissionError("EARLY_WARNING_DECISION_REQUIRES_VERIFIED_HUMAN")
         current = self._notices[notice_id]
+        if current.status != "PENDING":
+            raise ValueError("EARLY_WARNING_DRAFT_ALREADY_DECIDED")
         updated = replace(
             current,
             status=(

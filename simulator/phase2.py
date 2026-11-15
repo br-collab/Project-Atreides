@@ -49,11 +49,11 @@ def build_phase2_summary() -> dict[str, object]:
     focus_closes = cast(list[dict[str, object]], focus["closes"])
     focus_counts = {
         "PASS": sum(
-            cast(dict[str, bool], close["invariants"])["I13_FOCUS_TIE_OUT"]
+            cast(dict[str, bool], close["invariants"])["CONV4_REPORT_TIE_OUT"]
             for close in focus_closes
         ),
         "HOLD": sum(
-            not cast(dict[str, bool], close["invariants"])["I13_FOCUS_TIE_OUT"]
+            not cast(dict[str, bool], close["invariants"])["CONV4_REPORT_TIE_OUT"]
             for close in focus_closes
         ),
         "reasons": [],

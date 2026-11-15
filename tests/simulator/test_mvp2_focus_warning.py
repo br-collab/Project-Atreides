@@ -172,3 +172,11 @@ def test_only_verified_human_can_decide_warning_draft() -> None:
     assert decided.decision_actor_id == str(human.actor_id)
     assert decided.decision_time == decided_at
     assert decided.transmitted is False
+    with pytest.raises(ValueError, match="ALREADY_DECIDED"):
+        queue.decide(
+            notice.notice_id,
+            "CORRECT_COMPUTATION",
+            actor=human,
+            approval_ref="SYN-HUMAN-SECOND-DECISION",
+            decided_at=decided_at,
+        )

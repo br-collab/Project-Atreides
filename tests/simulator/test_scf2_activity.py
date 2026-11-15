@@ -12,7 +12,7 @@ from simulator.runner import load_calibration_pack
 
 def _profile() -> FirmProfile:
     return replace(
-        load_firm_profile(load_calibration_pack("firm-synthetic/4"), "small"),
+        load_firm_profile(load_calibration_pack("firm-synthetic/6"), "small"),
         executions_per_day=100,
     )
 

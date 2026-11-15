@@ -15,9 +15,11 @@ Anything outside those shapes returns ``None`` so the caller can refuse instead 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import ROUND_CEILING, Decimal
+from typing import Any
 
-from atreides.books.ledger import AccountType, EquitiesBooks, RecordSide
+from atreides.books.ledger import AccountType, EquitiesBooks, RecordSide, ReserveActivity
 from atreides.customer_protection.rules.model import RuleTable
 
 ZERO = Decimal(0)
@@ -33,6 +35,103 @@ ALT_PERCENT = "15c3-1.a1ii.alternative_debit_percent"
 CARRYING_MINIMUM = "15c3-1.a2i.minimum.carrying"
 WARN_ALT = "17a-11.b2.alternative_warning"
 WARN_MINIMUM = "17a-11.b3.minimum_warning"
+
+
+@dataclass(frozen=True, slots=True)
+class ReserveRequirement:
+    customer_credits: Decimal
+    customer_debits: Decimal
+    pab_credits: Decimal
+    pab_debits: Decimal
+    customer_requirement: Decimal
+    pab_requirement: Decimal
+
+
+def required_reserve(
+    books: EquitiesBooks,
+    *,
+    as_of: date,
+    prices: dict[str, Decimal],
+    customer_debit_reduction_rate: Decimal,
+) -> ReserveRequirement:
+    """Read Exhibit A reserve values directly from journal lines.
+
+    17 CFR 240.15c3-3a Exhibit A item 1, pinned source sha256
+    8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd:
+    "Free credit balances and other credit balances in customers' security accounts."
+    """
+    customer_cash: dict[str, Decimal] = {}
+    pab_cash: dict[str, Decimal] = {}
+    customer_special = {"credit": ZERO, "debit": ZERO}
+    pab_special = {"credit": ZERO, "debit": ZERO}
+    fail_balances: dict[tuple[str, str, ReserveActivity], tuple[Decimal, Any]] = {}
+    special = {
+        AccountType.FAIL_TO_RECEIVE: "credit",
+        AccountType.STOCK_BORROWED: "debit",
+        AccountType.FAIL_TO_DELIVER: "debit",
+    }
+    for entry in books.entries:
+        facts = {(fact.account_type, fact.issue): fact for fact in entry.reserve_source_facts}
+        for line in entry.lines:
+            if line.currency == "USD" and line.account_type in CUSTOMER_TYPES:
+                customer_cash[line.account_id] = (
+                    customer_cash.get(line.account_id, ZERO) + line.money
+                )
+            if line.currency == "USD" and line.account_type is AccountType.PAB:
+                pab_cash[line.account_id] = pab_cash.get(line.account_id, ZERO) + line.money
+            if line.issue is None or line.account_type not in special:
+                continue
+            fact = facts[(line.account_type, line.issue)]
+            if line.account_type is AccountType.FAIL_TO_RECEIVE:
+                key = (str(fact.fail_id), line.issue, fact.activity)
+                prior, _ = fail_balances.get(key, (ZERO, fact))
+                fail_balances[key] = (prior + line.quantity, fact)
+                continue
+            if (
+                line.account_type is AccountType.FAIL_TO_DELIVER
+                and (as_of - fact.settlement_date).days > 30
+            ):
+                continue
+            target = customer_special if fact.activity is ReserveActivity.CUSTOMER else pab_special
+            target[special[line.account_type]] += abs(line.quantity) * fact.contract_price
+    for (_, issue, activity), (quantity, fact) in fail_balances.items():
+        if not quantity:
+            continue
+        value = abs(quantity) * fact.contract_price
+        if (as_of - fact.settlement_date).days > 30:
+            value += max(abs(quantity) * prices[issue] - value, ZERO)
+        target = customer_special if activity is ReserveActivity.CUSTOMER else pab_special
+        target["credit"] += value
+    customer_credits = (
+        sum((max(value, ZERO) for value in customer_cash.values()), ZERO)
+        + customer_special["credit"]
+    )
+    customer_debits = (
+        sum((max(-value, ZERO) for value in customer_cash.values()), ZERO)
+        + customer_special["debit"]
+    )
+    pab_credits = (
+        sum((max(value, ZERO) for value in pab_cash.values()), ZERO)
+        + pab_special["credit"]
+    )
+    pab_debits = pab_special["debit"]
+    customer_requirement = max(
+        customer_credits - customer_debits + customer_debit_reduction_rate * customer_debits,
+        ZERO,
+    )
+    customer_excess_debits = max(
+        customer_debits - customer_debit_reduction_rate * customer_debits - customer_credits,
+        ZERO,
+    )
+    raw_pab = max(pab_credits - pab_debits, ZERO)
+    return ReserveRequirement(
+        customer_credits,
+        customer_debits,
+        pab_credits,
+        pab_debits,
+        customer_requirement,
+        raw_pab - min(raw_pab, customer_excess_debits),
+    )
 
 
 def _value(table: RuleTable, rule_id: str) -> Decimal | None:
