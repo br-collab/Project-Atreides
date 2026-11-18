@@ -708,9 +708,9 @@
   "ny_fed_notices": [],
   "repository_shas": {
     "Cato-FICC-MCP": "db7e46ed044f655e9138340eeeb1c9ab59221748",
-    "L.C.": "614bd7dbf3421cf841385a6ed92ca15b9ba76a8f",
-    "atreides": "dd5da18874714440137c5bd07b2cd17a673e5503",
-    "aureon": "eefdb96f8827660499ae6a9836729f424e69fbf8",
+    "L.C.": "8ed361540636b227219145ca95e8d6ef6335bc39",
+    "atreides": "06283fb488b2f14c40ddc9f109018e131a15b758",
+    "aureon": "f9c910390a5b7eabd73d96f108d9fc8d1284f02a",
     "cannae-kernel": "5e68a52331650a719b30c5d95318039044c5e3cc"
   },
   "scenario_counts": {
