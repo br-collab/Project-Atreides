@@ -2037,17 +2037,25 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             as_of=business_date,
             sources_read=("synthetic-reserve-bank-statements", "reserve-bank-books"),
         )
-        count_confirmations = tuple(
-            SecuritiesConfirmation(
-                f"{reader.name}:{position.issue}:{position.location}",
-                business_date,
-                position.issue,
-                position.location,
-                position.quantity,
+        count_confirmation_rows: list[SecuritiesConfirmation] = []
+        count_source_failed = False
+        for reader in independent_readers:
+            try:
+                source = reader.read()
+            except Exception:
+                count_source_failed = True
+                continue
+            count_confirmation_rows.extend(
+                SecuritiesConfirmation(
+                    f"{reader.name}:{position.issue}:{position.location}",
+                    business_date,
+                    position.issue,
+                    position.location,
+                    position.quantity,
+                )
+                for position in source.positions
             )
-            for reader in independent_readers
-            for position in reader.read().positions
-        )
+        count_confirmations = tuple(count_confirmation_rows)
         securities_count = build_securities_count(count_confirmations, business_date)
         securities_result = reconcile_values(
             item_id="securities-count",
@@ -2060,14 +2068,25 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             as_of=business_date,
             sources_read=("depository-and-other-confirmations", "dated-equities-books"),
         )
+        if count_source_failed:
+            securities_result = securities_result.__class__(
+                securities_result.item_id,
+                "FAILED",
+                securities_result.breaks,
+                securities_result.sources_read,
+            )
         source_completions += tuple(
             ReconciliationCompletion(
                 result.item_id,
                 business_date,
                 result.sources_read,
                 len(result.breaks),
-                "FAILED" if result.breaks else "COMPLETED",
-                "reconciliation differences detected" if result.breaks else None,
+                "FAILED" if result.status == "FAILED" or result.breaks else "COMPLETED",
+                (
+                    "source failure or reconciliation differences detected"
+                    if result.status == "FAILED" or result.breaks
+                    else None
+                ),
             )
             for result in (cash_result, reserve_result, securities_result)
         )

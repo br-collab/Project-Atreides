@@ -1056,7 +1056,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     )
     projected = project_customer_protection(
         books,
-        as_of=business_date,
+        as_of=settlement_date,
         prices={issue: prior_close},
         net_worth=Decimal("1000000"),
         calendar=calendar,
@@ -1148,7 +1148,8 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             line.money
             for item in books.entries
             for line in item.lines
-            if item.source in {PostingSource.CNS_SETTLEMENT, PostingSource.CNS_FAIL}
+            if item.source
+            in {PostingSource.ALLOCATION, PostingSource.CNS_SETTLEMENT, PostingSource.CNS_FAIL}
             and line.account_type is AccountType.CUSTOMER_CASH
             and line.currency == "USD"
         ),
