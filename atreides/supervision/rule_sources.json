@@ -1,0 +1,40 @@
+{
+  "checked_on": "2026-11-18",
+  "reproduction_basis": {
+    "terms_url": "https://www.finra.org/terms-of-use",
+    "conclusion": "INDETERMINATE",
+    "treatment": "Checksum and cite official bytes; do not add copied FINRA text."
+  },
+  "sources": [
+    {
+      "citation": "FINRA Rule 3110",
+      "url": "https://www.finra.org/rules-guidance/rulebooks/finra-rules/3110",
+      "sha256": "76b02500b92a5d550e6fcbbae0bed8f6ea11a7125cb23891c3bac9bea43a9958"
+    },
+    {
+      "citation": "FINRA Rule 3120",
+      "url": "https://www.finra.org/rules-guidance/rulebooks/finra-rules/3120",
+      "sha256": "3373039526bb3e85d2553dbc5c514915f3ff58d0ee345d37c7032cb6d7bc8d52"
+    },
+    {
+      "citation": "FINRA Rule 3130",
+      "url": "https://www.finra.org/rules-guidance/rulebooks/finra-rules/3130",
+      "sha256": "69c74e4fb453b3247221a681ab6c6bf12e637650c1ddad608274e86d0df5221d"
+    },
+    {
+      "citation": "FINRA Rule 3310",
+      "url": "https://www.finra.org/rules-guidance/rulebooks/finra-rules/3310",
+      "sha256": "ef63338dd5ffcb75c831ead17e0cb0bf23d57966f2c7ac3b96e477b03c1f8b71"
+    },
+    {
+      "citation": "FINRA Rule 5210",
+      "url": "https://www.finra.org/rules-guidance/rulebooks/finra-rules/5210",
+      "sha256": "5b48a0ac8f28bd181c91d6a060ec68b54c7516fda69a9668f2232eb95c9d7bb3"
+    },
+    {
+      "citation": "31 CFR 1023.210 and 31 CFR 1023.320",
+      "url": "https://www.ecfr.gov/current/title-31/subtitle-B/chapter-X/part-1023",
+      "sha256": "310297d014f839529807f497e5bfd755cb476dbe70bb74720dcad4d79c1d248a"
+    }
+  ]
+}

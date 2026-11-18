@@ -191,6 +191,7 @@ class ControlBreak:
     owner: str
     opened_at: date
     age_calendar_days: int
+    cause: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,6 +230,16 @@ def _compare(
         if difference:
             previous = prior.get(key)
             opened_at = previous.opened_at if previous else as_of
+            missing_instruction = not sources_read
+            cause = (
+                "TIMING"
+                if previous is not None and previous.opened_at < as_of
+                else "MISSING_INSTRUCTION"
+                if missing_instruction
+                else "QUANTITY_DIFFERENCE"
+                if difference != 0
+                else "UNKNOWN"
+            )
             breaks.append(
                 ControlBreak(
                     item_id,
@@ -239,6 +250,7 @@ def _compare(
                     owner,
                     opened_at,
                     (as_of - opened_at).days,
+                    cause,
                 )
             )
     return ControlResult(item_id, "FAILED" if breaks else "COMPLETED", tuple(breaks), sources_read)
