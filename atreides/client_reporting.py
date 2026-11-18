@@ -115,8 +115,6 @@ class AccountStatement(StatementDraft):
     finra_requirements: tuple[dict[str, str], ...]
     not_claimed: tuple[str, ...] = (
         "FINRA Rule 2231 compliance",
-        "cost basis",
-        "tax lots",
         "tax forms",
         "fee billing beyond posted books lines",
         "delivery to a real person",
@@ -329,6 +327,7 @@ def build_statement_draft(
     period_start: date,
     period_end: date,
     replaces: AccountStatement | None = None,
+    market_prices: dict[str, Decimal] | None = None,
 ) -> StatementDraft:
     if period_end < period_start:
         raise ValueError("statement period end precedes its start")
@@ -390,7 +389,12 @@ def build_statement_draft(
         opening_positions=opening_positions,
         closing_positions=closing_positions,
         cost_basis=cost_basis,
-        unrealized_gain_loss={issue: None for issue in closing_positions},
+        unrealized_gain_loss={
+            issue: None
+            if market_prices is None or issue not in market_prices
+            else closing_positions[issue] * market_prices[issue] - cost_basis[issue]
+            for issue in closing_positions
+        },
         settlement_status={
             issue: "UNSETTLED" if pending_by_issue.get(issue) else "SETTLED"
             for issue in closing_positions

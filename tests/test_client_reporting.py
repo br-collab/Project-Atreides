@@ -96,6 +96,11 @@ def test_statement_ties_to_books_for_cash_positions_and_activity() -> None:
     assert statement is not None
     assert statement.closing_cash == Decimal("9000.00")
     assert statement.closing_margin == Decimal("0")
+    assert statement.cost_basis == {ISSUE: Decimal("1000.00")}
+    assert statement.unrealized_gain_loss == {ISSUE: Decimal()}
+    assert statement.tax_disclaimer == "Synthetic illustration only; not tax advice"
+    assert "cost basis" not in statement.not_claimed
+    assert "tax lots" not in statement.not_claimed
     activity_cash = sum(
         (item.money for item in statement.activity if item.account_type == "CUSTOMER_CASH"),
         Decimal(),

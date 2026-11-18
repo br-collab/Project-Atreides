@@ -1479,6 +1479,7 @@ def run_golden_path(  # noqa: PLR0915
         account_status=lifecycle.status(ACCOUNT),
         period_start=START.date(),
         period_end=clock().date(),
+        market_prices={ISSUE: venue_report.price},
     )
     trade_date_statement = issue_statement(
         trade_date_statement_draft,
@@ -1498,6 +1499,7 @@ def run_golden_path(  # noqa: PLR0915
         account_status=lifecycle.status(ACCOUNT),
         period_start=START.date(),
         period_end=clock().date(),
+        market_prices={ISSUE: venue_report.price},
     )
     statement = issue_statement(
         statement_draft,
