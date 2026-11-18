@@ -57,6 +57,14 @@ from atreides.books.projections import (
     project_margin_accounts,
     reserve_bank_balances,
 )
+from atreides.books.ps1 import (
+    SecuritiesConfirmation,
+    book_location_balances,
+    book_money_balances,
+    build_money_statement,
+    build_securities_count,
+    reconcile_values,
+)
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
 from atreides.customer_protection.reserve import (
@@ -735,7 +743,7 @@ def _location_balances(books: EquitiesBooks) -> dict[tuple[str, str], Decimal]:
         for line in entry.lines:
             if line.record_side is RecordSide.LOCATION and line.issue is not None:
                 balances[(line.issue, line.account_type.value)] += line.quantity
-    return dict(balances)
+    return {key: value for key, value in balances.items() if value}
 
 
 def _opening_street(profile: FirmProfile, days: int) -> tuple[DepositoryPosition, ...]:
@@ -2004,10 +2012,90 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         )
         breaks = tuple(item for item_breaks, _ in observed_results for item in item_breaks)
         source_completions = tuple(completion for _, completion in observed_results)
+        cash_statement = build_money_statement("synthetic-firm-bank", (), business_date)
+        cash_result = reconcile_values(
+            item_id="cash-to-bank",
+            books_values=book_money_balances(
+                books, business_date, frozenset({AccountType.CASH, AccountType.BANK_CONTROL})
+            ),
+            outside_values=cash_statement.balances,
+            owner="TREASURY_CONTROL",
+            as_of=business_date,
+            sources_read=("synthetic-firm-bank", "dated-equities-books"),
+        )
+        reserve_statement = build_money_statement("synthetic-reserve-banks", (), business_date)
+        reserve_result = reconcile_values(
+            item_id="reserve-bank-to-books",
+            books_values={
+                account_type.value: value
+                for account_type, value in reserve_bank_balances(
+                    books, through=business_date
+                ).items()
+            },
+            outside_values=reserve_statement.balances,
+            owner="CUSTOMER_PROTECTION_CONTROL",
+            as_of=business_date,
+            sources_read=("synthetic-reserve-bank-statements", "reserve-bank-books"),
+        )
+        count_confirmation_rows: list[SecuritiesConfirmation] = []
+        count_source_failed = False
+        for reader in independent_readers:
+            try:
+                source = reader.read()
+            except Exception:
+                count_source_failed = True
+                continue
+            count_confirmation_rows.extend(
+                SecuritiesConfirmation(
+                    f"{reader.name}:{position.issue}:{position.location}",
+                    business_date,
+                    position.issue,
+                    position.location,
+                    position.quantity,
+                )
+                for position in source.positions
+            )
+        count_confirmations = tuple(count_confirmation_rows)
+        securities_count = build_securities_count(count_confirmations, business_date)
+        securities_result = reconcile_values(
+            item_id="securities-count",
+            books_values=book_location_balances(books, business_date),
+            outside_values={
+                f"{issue}@{location}": quantity
+                for (issue, location), quantity in securities_count.positions.items()
+            },
+            owner="SECURITIES_COUNT_CONTROL",
+            as_of=business_date,
+            sources_read=("depository-and-other-confirmations", "dated-equities-books"),
+        )
+        if count_source_failed:
+            securities_result = securities_result.__class__(
+                securities_result.item_id,
+                "FAILED",
+                securities_result.breaks,
+                securities_result.sources_read,
+            )
+        source_completions += tuple(
+            ReconciliationCompletion(
+                result.item_id,
+                business_date,
+                result.sources_read,
+                len(result.breaks),
+                "FAILED" if result.status == "FAILED" or result.breaks else "COMPLETED",
+                (
+                    "source failure or reconciliation differences detected"
+                    if result.status == "FAILED" or result.breaks
+                    else None
+                ),
+            )
+            for result in (cash_result, reserve_result, securities_result)
+        )
         reconciled_sources = tuple(
             reader.read()
             for (_, _, reader), completion in zip(
-                reconciliation_specs, source_completions, strict=True
+                reconciliation_specs,
+                source_completions[: len(reconciliation_specs)],
+                strict=True,
             )
             if completion.status == "COMPLETED"
         )

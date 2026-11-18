@@ -803,6 +803,9 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     )[0]
     signed_cash = (total_quantity * prior_close).quantize(Decimal("0.01"))
     allocated_cash = (street_quantity * prior_close).quantize(Decimal("0.01"))
+    settlement_date = calendar.add_business_days(
+        business_date, net_position.settlement_date_offset_days
+    )
     settlement = settle_net_position(
         net_position,
         MarketProfile(
@@ -816,13 +819,13 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         allocated_quantity=street_quantity,
         signed_cash=signed_cash,
         allocated_cash=allocated_cash,
-        settlement_date=business_date,
+        settlement_date=settlement_date,
         as_of_date=business_date,
         calendar=calendar,
     )
-    lines: list[LedgerLine] = []
+    trade_lines: list[LedgerLine] = []
     for entry in allocation.entries:
-        lines.extend(
+        trade_lines.extend(
             cash_account_purchase_lines(
                 account_id=entry.account,
                 issue=issue,
@@ -830,11 +833,45 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 consideration=entry.consideration,
             )
         )
+    trade_lines.extend(
+        (
+            LedgerLine(
+                account_id="PENDING_SETTLEMENT",
+                account_type=AccountType.PENDING_SETTLEMENT,
+                record_side=RecordSide.LOCATION,
+                issue=issue,
+                quantity=-allocation.executed_quantity,
+            ),
+            LedgerLine(
+                account_id="CLEARING_PAYABLE",
+                account_type=AccountType.CLEARING_PAYABLE,
+                record_side=RecordSide.MONEY,
+                currency="USD",
+                money=allocation.executed_consideration,
+            ),
+        )
+    )
     location_account_type = (
         AccountType.FAIL_TO_RECEIVE if settlement_fail_id is not None else AccountType.DTC
     )
     location_account_id = "NSCC_FAIL_TO_RECEIVE" if settlement_fail_id is not None else "DTC"
-    lines.extend(
+    settlement_lines = [
+        LedgerLine(
+            account_id="PENDING_SETTLEMENT",
+            account_type=AccountType.PENDING_SETTLEMENT,
+            record_side=RecordSide.LOCATION,
+            issue=issue,
+            quantity=allocation.executed_quantity,
+        ),
+        LedgerLine(
+            account_id="CLEARING_PAYABLE",
+            account_type=AccountType.CLEARING_PAYABLE,
+            record_side=RecordSide.MONEY,
+            currency="USD",
+            money=-allocation.executed_consideration,
+        ),
+    ]
+    settlement_lines.extend(
         (
             LedgerLine(
                 account_id=location_account_id,
@@ -860,7 +897,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 account_type=AccountType.FAIL_TO_RECEIVE,
                 issue=issue,
                 activity=ReserveActivity.CUSTOMER,
-                settlement_date=business_date,
+                settlement_date=settlement_date,
                 contract_price=prior_close,
                 fail_id=settlement_fail_id,
             ),
@@ -869,21 +906,40 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         JournalEntry(
             entry_id=f"SIM-1B-{run_number}",
             source_event_id=settlement_source_event_id,
-            source=(
-                PostingSource.CNS_FAIL
-                if settlement_fail_id is not None
-                else PostingSource.CNS_SETTLEMENT
-            ),
+            source=PostingSource.ALLOCATION,
             effective_date=business_date,
-            effective_date_basis="SETTLEMENT_DATE",
+            effective_date_basis="TRADE_DATE",
             authority="NSCC_SYNTHETIC",
-            lines=tuple(lines),
-            reserve_source_facts=reserve_source_facts,
+            lines=tuple(trade_lines),
             posting=BooksPosting(
                 posted_record_id=f"SIM-1B-{run_number}",
                 posting_authority=actor,
                 effective_time=base,
                 source_event_id=EventId(settlement_source_event_id),
+                provenance=Provenance.FACT_SYNTHETIC,
+            ),
+        )
+    )
+    settlement_event_id = _identifier("evt_", 90_000_000 + run_number)
+    books.post(
+        JournalEntry(
+            entry_id=f"SIM-1B-SETTLEMENT-{run_number}",
+            source_event_id=settlement_event_id,
+            source=(
+                PostingSource.CNS_FAIL
+                if settlement_fail_id is not None
+                else PostingSource.CNS_SETTLEMENT
+            ),
+            effective_date=settlement_date,
+            effective_date_basis="SETTLEMENT_DATE",
+            authority="NSCC_SYNTHETIC",
+            lines=tuple(settlement_lines),
+            reserve_source_facts=reserve_source_facts,
+            posting=BooksPosting(
+                posted_record_id=f"SIM-1B-SETTLEMENT-{run_number}",
+                posting_authority=actor,
+                effective_time=datetime.combine(settlement_date, datetime.min.time(), tzinfo=UTC),
+                source_event_id=EventId(settlement_event_id),
                 provenance=Provenance.FACT_SYNTHETIC,
             ),
         )
@@ -1092,7 +1148,8 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             line.money
             for item in books.entries
             for line in item.lines
-            if item.source in {PostingSource.CNS_SETTLEMENT, PostingSource.CNS_FAIL}
+            if item.source
+            in {PostingSource.ALLOCATION, PostingSource.CNS_SETTLEMENT, PostingSource.CNS_FAIL}
             and line.account_type is AccountType.CUSTOMER_CASH
             and line.currency == "USD"
         ),

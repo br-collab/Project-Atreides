@@ -7,6 +7,7 @@ from cannae_kernel.canonical import canonical_bytes_of, digest_bytes
 
 from atreides.books.ledger import EquitiesBooks
 from atreides.client_reporting import (
+    CustomerSideFacts,
     StatementTieOutError,
     build_statement_draft,
     generate_trade_confirmation,
@@ -95,6 +96,11 @@ def test_statement_ties_to_books_for_cash_positions_and_activity() -> None:
     assert statement is not None
     assert statement.closing_cash == Decimal("9000.00")
     assert statement.closing_margin == Decimal("0")
+    assert statement.cost_basis == {ISSUE: Decimal("1000.00")}
+    assert statement.unrealized_gain_loss == {ISSUE: Decimal()}
+    assert statement.tax_disclaimer == "Synthetic illustration only; not tax advice"
+    assert "cost basis" not in statement.not_claimed
+    assert "tax lots" not in statement.not_claimed
     activity_cash = sum(
         (item.money for item in statement.activity if item.account_type == "CUSTOMER_CASH"),
         Decimal(),
@@ -136,6 +142,30 @@ def test_statement_that_does_not_tie_is_refused() -> None:
 
     with pytest.raises(StatementTieOutError, match="does not tie"):
         issue_statement(broken, books, issued_at=datetime(2026, 11, 15, tzinfo=UTC))
+
+
+def test_customer_side_oracle_refuses_eleven_booked_shares_against_ten_share_fill() -> None:
+    books, _ = _replayed_books()
+    draft = build_statement_draft(
+        books,
+        account_id=ACCOUNT,
+        account_status=AccountStatus.ACTIVE,
+        period_start=START.date(),
+        period_end=START.date(),
+    )
+    facts = CustomerSideFacts(
+        deposit_instructions=(Decimal("10000"),),
+        venue_fills=((ISSUE, Decimal(10), Decimal(100)),),
+        confirmations=((ISSUE, Decimal(10)),),
+    )
+    broken = draft.model_copy(update={"closing_positions": {ISSUE: Decimal(11)}})
+    with pytest.raises(StatementTieOutError, match="does not tie"):
+        issue_statement(
+            broken,
+            books,
+            issued_at=datetime(2026, 11, 15, tzinfo=UTC),
+            customer_side_facts=facts,
+        )
 
 
 def test_confirmation_refuses_fill_price_that_disagrees_with_books() -> None:
