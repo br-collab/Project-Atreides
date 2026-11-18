@@ -12,7 +12,6 @@ from typing import Literal
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.ids import ActorId
-from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
     AccountApplication,
@@ -26,6 +25,7 @@ from atreides.account_lifecycle import (
     LegalEntityEvidenceRecord,
     TransferInRecord,
     attest_first_permitted_trade,
+    kyc_chain_report,
 )
 from atreides.account_lifecycle import (
     AccountType as LifecycleAccountType,
@@ -185,13 +185,7 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
         application_records=application_records,
         kyc_dsor_records=kyc_records,
         kyc_chain_reports={
-            record_id: ChainReport(
-                ok=True,
-                event_count=1,
-                head_digest="sha256:" + "11" * 32,
-                issues=(),
-            )
-            for record_id in kyc_records
+            record_id: kyc_chain_report(record) for record_id, record in kyc_records.items()
         },
         eligibility_records=eligibility_records,
         transfer_records=transfer_records,

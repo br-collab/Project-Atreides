@@ -6,27 +6,39 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 
+from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
-from cannae_kernel.canonical import canonical_bytes_of, digest, digest_bytes
+from cannae_kernel.canonical import canonical_bytes, canonical_bytes_of, digest, digest_bytes
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.effects import OperationEffects
 from cannae_kernel.envelopes import ApprovedIntentEnvelope, ExecutionEvent
 from cannae_kernel.ids import ActorId, AllocationId, EventId, IntentId, LifecycleId, OrderId
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
-from lc.events import LifecycleState, OrderEvent, OrderTerms, OrderType, TimeInForce
+from cannae_kernel.signed_attestation import sign_attestation
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from lc.events import OrderEvent, OrderTerms, OrderType, TimeInForce
 from lc.lifecycle import (
     ApprovedIntentPayload,
     AuthorityManifest,
     ChildOrder,
     EventInput,
+    LifecycleRegister,
     OrderSide,
     PolicyManifest,
     accept_intent,
     activate_parent,
     authorize_strategy,
     split_parent,
-    transition,
+)
+from lc.market_access import (
+    AttestedInput,
+    CapacityAccount,
+    CapacityDocument,
+    ChildRelease,
+    LimitsManifest,
+    MarketAccessGate,
+    record_decision,
 )
 from lc.policy import ExecutionReport, apply_execution
 from lc.trade import (
@@ -38,7 +50,16 @@ from lc.trade import (
     allocate,
     capture,
 )
+from lc.trust_anchors import TrustAnchor as LCTrustAnchor
+from lc.trust_anchors import install_runtime_trust_anchor as install_lc_anchor
 
+from atreides.account_lifecycle import (
+    AccountType as LifecycleAccountType,
+)
+from atreides.account_lifecycle import (
+    AccountTypeStatusDocument,
+    AccountTypeStatusEntry,
+)
 from atreides.books.ledger import (
     AccountType,
     EquitiesBooks,
@@ -83,6 +104,10 @@ from simulator.model import Print
 
 #: SIM-1G deposit outcomes that leave the computation short at its deadline.
 DEPOSIT_BREACH_OUTCOMES = frozenset({"SHORT", "LATE", "NOT_DECLARED_IN_PACK"})
+
+_SIMULATOR_STATUS_KEY = Ed25519PrivateKey.generate()
+_SIMULATOR_STATUS_KEY_ID = "sim-1b-atreides-status-key"
+_STATUS_TRUST_INSTALLED = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -318,6 +343,210 @@ def _wire(payload: ApprovedIntentPayload) -> bytes:
     )
 
 
+def cash_account_purchase_lines(
+    *, account_id: str, issue: str, quantity: Decimal, consideration: Decimal
+) -> tuple[LedgerLine, LedgerLine]:
+    """Post a cash-account buy: securities in and free cash down by consideration."""
+    return (
+        LedgerLine(
+            account_id=account_id,
+            account_type=AccountType.CUSTOMER_CASH,
+            record_side=RecordSide.OWNERSHIP,
+            issue=issue,
+            quantity=quantity,
+        ),
+        LedgerLine(
+            account_id=account_id,
+            account_type=AccountType.CUSTOMER_CASH,
+            record_side=RecordSide.MONEY,
+            currency="USD",
+            money=-consideration,
+        ),
+    )
+
+
+def exercise_simulator_market_access(
+    *,
+    run_number: int,
+    business_date: date,
+    issue: str,
+    reports: tuple[Print, ...],
+    account_weights: tuple[int, ...],
+    prior_close: Decimal,
+    customer_buying_power: Decimal,
+) -> tuple[ApprovedIntentPayload, LifecycleRegister]:
+    """Build the SIM-1B register and record its real market-access decision."""
+    global _STATUS_TRUST_INSTALLED  # noqa: PLW0603 - process-local composition root
+    actor = _actor()
+    base = datetime.combine(business_date, datetime.min.time(), tzinfo=UTC)
+    total_quantity = sum((Decimal(item.quantity) for item in reports), Decimal())
+    accounts = tuple(f"ACCOUNT-{index + 1}" for index in range(len(account_weights)))
+    policy = PolicyManifest(
+        policy_id="sim-1b-generated-day",
+        version="1",
+        bounds_digest="sha256:" + "1" * 64,
+        enabled=True,
+    )
+    payload = ApprovedIntentPayload(
+        intent_id=IntentId(_identifier("int_", 10_000 + run_number)),
+        instrument_id=issue,
+        side=OrderSide.BUY,
+        quantity=total_quantity,
+        policy_manifest=policy,
+        authority_manifest=AuthorityManifest(
+            authority_id=actor.actor_id,
+            policy_manifest_digest=digest(policy),
+            authorized=True,
+        ),
+        allocation_accounts=accounts,
+    )
+    envelope = ApprovedIntentEnvelope(
+        envelope_id=payload.intent_id,
+        lifecycle_id=LifecycleId(_identifier("lif_", 20_000 + run_number)),
+        revision=1,
+        prior_digest=None,
+        session=SessionContext(
+            session=MarketSession.REGULAR,
+            business_date=BusinessDate(
+                value=business_date,
+                calendar="SIFMA-US",
+                established_by="SIM-1B generated day",
+            ),
+        ),
+        approved_by=actor,
+        provenance=Provenance.HUMAN_JUDGMENT,
+        effects=OperationEffects(
+            operation="simulate approved intent",
+            effects=(),
+            note="synthetic input only; no submission capability",
+        ),
+        payload_digest=digest_bytes(_wire(payload)),
+    )
+    parent_id = OrderId(_identifier("ord_", 30_000 + run_number * 2))
+    child_id = OrderId(_identifier("ord_", 30_001 + run_number * 2))
+    outcome = accept_intent(
+        envelope,
+        _wire(payload),
+        parent_order_id=parent_id,
+        actor=actor,
+        event=_event(40_000 + run_number * 20, base),
+    )
+    outcome = authorize_strategy(outcome, actor=actor, event=_event(40_001 + run_number * 20, base))
+    outcome = activate_parent(outcome, actor=actor, event=_event(40_002 + run_number * 20, base))
+    register = split_parent(
+        outcome,
+        actor=actor,
+        children=(
+            ChildOrder(
+                order_id=child_id,
+                quantity=total_quantity,
+                event=_event(40_003 + run_number * 20, base),
+                terms=OrderTerms(
+                    account_id=accounts[0],
+                    strategy_id="SIM-1B",
+                    issue=issue,
+                    side=payload.side.value,
+                    order_type=OrderType.MARKET,
+                    time_in_force=TimeInForce.DAY,
+                    control_price=prior_close,
+                    approved_intent_digest=digest(payload),
+                    policy_expires_at=base + timedelta(days=1),
+                    recommended=False,
+                ),
+            ),
+        ),
+    ).journal
+    if not _STATUS_TRUST_INSTALLED:
+        install_lc_anchor(
+            LCTrustAnchor(
+                key_id=_SIMULATOR_STATUS_KEY_ID,
+                producer="atreides",
+                public_key=_SIMULATOR_STATUS_KEY.public_key(),
+                valid_from=datetime(2000, 1, 1, tzinfo=UTC),
+                valid_to=datetime(2035, 1, 1, tzinfo=UTC),
+                revoked=False,
+            )
+        )
+        _STATUS_TRUST_INSTALLED = True
+    status = AccountTypeStatusDocument(
+        as_of=base,
+        maximum_age_seconds=300,
+        accounts=tuple(
+            AccountTypeStatusEntry(
+                account_id=account,
+                account_type=LifecycleAccountType.NATURAL_PERSON,
+                status=AccountStatus.ACTIVE,
+                last_event_id=str(register.events[-1].event_id),
+            )
+            for account in accounts
+        ),
+    )
+    status_wire = sign_attestation(
+        canonical_bytes(status),
+        producer="atreides",
+        key_id=_SIMULATOR_STATUS_KEY_ID,
+        private_key=_SIMULATOR_STATUS_KEY,
+    )
+    capacity = CapacityDocument(
+        schema_version="atreides.equities_account_capacity/3",
+        as_of=base,
+        maximum_age_seconds=300,
+        synthetic=True,
+        journal_digest="sha256:" + "0" * 64,
+        firm_participant_id="SIM-1B-FIRM",
+        accounts=tuple(
+            CapacityAccount(
+                account_id=account,
+                capacity="CUSTOMER",
+                buying_power=max(
+                    customer_buying_power, total_quantity * prior_close, Decimal(1)
+                ),
+                margin_excess=max(
+                    customer_buying_power, total_quantity * prior_close, Decimal(1)
+                ),
+                margin_result_digest="sha256:" + "0" * 64,
+                positions=(),
+            )
+            for account in accounts
+        ),
+    )
+    capacity_wire = canonical_bytes(capacity)
+    gate_capacity = max(customer_buying_power, total_quantity * prior_close, Decimal(1))
+    decision = MarketAccessGate().evaluate(
+        ChildRelease(
+            order_event=register.events[-1],
+            lifecycle_register=register,
+            reference_price=prior_close,
+            submitted_at=base,
+        ),
+        limits=LimitsManifest(
+            version="SIM-1B-1",
+            authority="SIM-1B-RISK",
+            account_credit_limits={account: gate_capacity for account in accounts},
+            firm_aggregate_threshold=gate_capacity,
+            price_collar_percent=Decimal("0.10"),
+            maximum_quantity=max(total_quantity, Decimal(1)),
+            maximum_notional=gate_capacity,
+            duplicate_window_seconds=60,
+        ),
+        capacity_input=AttestedInput(
+            payload=capacity_wire,
+            payload_digest=digest_bytes(capacity_wire),
+        ),
+        locates_input=None,
+        account_status_input=status_wire,
+    )
+    if decision.terminal:
+        reason = next(item.reason for item in decision.checks if not item.passed)
+        raise ValueError(f"SIM-1B market access refused: {reason}")
+    return payload, record_decision(
+        register,
+        decision,
+        actor=actor,
+        event=_event(40_004 + run_number * 20, base),
+    )
+
+
 def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate path
     *,
     run_number: int,
@@ -343,6 +572,9 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     books: EquitiesBooks | None = None,
     source_event_id: str | None = None,
     settlement_fail_id: str | None = None,
+    approved_payload: ApprovedIntentPayload | None = None,
+    approved_register: LifecycleRegister | None = None,
+    source_execution_event_id: str | None = None,
 ) -> EstateResult:
     """Drive L.C. then Atreides; checks elsewhere only compare their outputs.
 
@@ -363,7 +595,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     )
     if len(allocation_accounts) != len(account_weights):
         raise ValueError("account_ids and account_weights must have equal length")
-    payload = ApprovedIntentPayload(
+    payload = approved_payload or ApprovedIntentPayload(
         intent_id=IntentId(_identifier("int_", 10_000 + run_number)),
         instrument_id=issue,
         side=OrderSide.BUY,
@@ -401,48 +633,10 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         ),
         payload_digest=digest_bytes(wire),
     )
-    parent_id = OrderId(_identifier("ord_", 30_000 + run_number * 2))
+    if approved_register is None:
+        raise ValueError("customer booking requires the register accepted by MarketAccessGate")
+    register = approved_register
     child_id = OrderId(_identifier("ord_", 30_001 + run_number * 2))
-    outcome = accept_intent(
-        envelope,
-        wire,
-        parent_order_id=parent_id,
-        actor=actor,
-        event=_event(40_000 + run_number * 20, base),
-    )
-    outcome = authorize_strategy(outcome, actor=actor, event=_event(40_001 + run_number * 20, base))
-    outcome = activate_parent(outcome, actor=actor, event=_event(40_002 + run_number * 20, base))
-    register = split_parent(
-        outcome,
-        actor=actor,
-        children=(
-            ChildOrder(
-                order_id=child_id,
-                quantity=total_quantity,
-                event=_event(40_003 + run_number * 20, base),
-                terms=OrderTerms(
-                    account_id=allocation_accounts[0],
-                    strategy_id="SIM-1B",
-                    issue=issue,
-                    side=payload.side.value,
-                    order_type=OrderType.MARKET,
-                    time_in_force=TimeInForce.DAY,
-                    control_price=prior_close,
-                    approved_intent_digest=digest(payload),
-                    policy_expires_at=base + timedelta(days=1),
-                    recommended=False,
-                ),
-            ),
-        ),
-    ).journal
-    register = transition(
-        register,
-        order_id=child_id,
-        target=LifecycleState.MARKET_ACCESS_PASSED,
-        reason="SIM-1B generated release passed its exercised controls",
-        actor=actor,
-        event=_event(40_004 + run_number * 20, base),
-    )
     lc_reports = tuple(
         ExecutionReport(
             execution_id=f"{run_number}-{index}-{item.print_id}",
@@ -537,35 +731,11 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     lines: list[LedgerLine] = []
     for entry in allocation.entries:
         lines.extend(
-            (
-                LedgerLine(
-                    account_id=entry.account,
-                    account_type=AccountType.CUSTOMER_MARGIN,
-                    record_side=RecordSide.OWNERSHIP,
-                    issue=issue,
-                    quantity=entry.quantity,
-                ),
-                LedgerLine(
-                    account_id=entry.account,
-                    account_type=AccountType.CUSTOMER_MARGIN,
-                    record_side=RecordSide.MONEY,
-                    currency="USD",
-                    money=-entry.consideration,
-                ),
-                LedgerLine(
-                    account_id=entry.account,
-                    account_type=AccountType.CUSTOMER_CASH,
-                    record_side=RecordSide.MONEY,
-                    currency="USD",
-                    money=entry.consideration,
-                ),
-                LedgerLine(
-                    account_id="SYNTHETIC_FUNDING",
-                    account_type=AccountType.CASH,
-                    record_side=RecordSide.MONEY,
-                    currency="USD",
-                    money=-entry.consideration,
-                ),
+            cash_account_purchase_lines(
+                account_id=entry.account,
+                issue=issue,
+                quantity=entry.quantity,
+                consideration=entry.consideration,
             )
         )
     location_account_type = (
@@ -590,7 +760,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             ),
         )
     )
-    settlement_source_event_id = str(register.events[-1].event_id)
+    settlement_source_event_id = source_execution_event_id or str(register.events[-1].event_id)
     reserve_source_facts: tuple[ReserveSourceFact, ...] = ()
     if settlement_fail_id is not None:
         reserve_source_facts = (
@@ -628,6 +798,17 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     )
     if customer_credit_balance:
         credit_event_id = _identifier("evt_", 70_000 + run_number)
+        total_weight = sum(account_weights)
+        customer_credit_lines = tuple(
+            LedgerLine(
+                account_id=account,
+                account_type=AccountType.CUSTOMER_CASH,
+                record_side=RecordSide.MONEY,
+                currency="USD",
+                money=(customer_credit_balance * Decimal(weight) / Decimal(total_weight)),
+            )
+            for account, weight in zip(allocation_accounts, account_weights, strict=True)
+        )
         books.post(
             JournalEntry(
                 entry_id=f"SIM-1D-CREDIT-{run_number}",
@@ -637,13 +818,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 effective_date_basis="VALUE_DATE",
                 authority="SIM-1D_SYNTHETIC_CUSTOMER_ACTIVITY",
                 lines=(
-                    LedgerLine(
-                        account_id="CUSTOMER-GENERATED-CREDIT",
-                        account_type=AccountType.CUSTOMER_CASH,
-                        record_side=RecordSide.MONEY,
-                        currency="USD",
-                        money=customer_credit_balance,
-                    ),
+                    *customer_credit_lines,
                     LedgerLine(
                         account_id="SYNTHETIC_CUSTOMER_CREDIT_FUNDING",
                         account_type=AccountType.CASH,
@@ -858,7 +1033,9 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             line.money
             for item in books.entries
             for line in item.lines
-            if line.account_type is AccountType.CUSTOMER_MARGIN and line.currency == "USD"
+            if item.source in {PostingSource.CNS_SETTLEMENT, PostingSource.CNS_FAIL}
+            and line.account_type is AccountType.CUSTOMER_CASH
+            and line.currency == "USD"
         ),
         Decimal(),
     )

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 - 17 Nov 2026
+
+Close the declared-synthetic retail minimum viable product from MVP-0 through MVP-5B: hardened
+books and customer-protection controls, independent reconciliation, governed onboarding and first
+trade, one golden-path daily close, client reporting, and the Review B closure. Cash-account buys
+now reduce free cash, the booking register carries the real market-access decision, confirmation
+consideration ties to linked books, KYC heads are recomputed, evidence packs are externally
+anchored, and control tests prove their own failure modes.
+
 ## 0.9.9 - 9 Nov 2026
 
 - Correct protection inputs for proprietary haircuts, PAB free credits, fails to deliver, and stock-loan control facts.

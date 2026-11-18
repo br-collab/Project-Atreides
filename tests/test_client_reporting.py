@@ -3,6 +3,7 @@ from decimal import Decimal
 
 import pytest
 from cannae_kernel.account import AccountStatus
+from cannae_kernel.canonical import canonical_bytes_of, digest_bytes
 
 from atreides.books.ledger import EquitiesBooks
 from atreides.client_reporting import (
@@ -48,6 +49,7 @@ def test_confirmation_fields_cite_pinned_rule_and_source_record() -> None:
     assert all(item.provenance.source_sha256 for item in confirmation.fields)
     assert result.confirmation_furnished is not None
     assert result.confirmation_furnished.channel == "SYNTHETIC_PORTAL"
+    assert "Rule 10b-10(a)(2) capacity and remuneration" in confirmation.not_claimed
 
 
 def test_correction_and_cancellation_reference_immutable_original() -> None:
@@ -91,7 +93,12 @@ def test_statement_ties_to_books_for_cash_positions_and_activity() -> None:
     statement = result.statement
 
     assert statement is not None
-    activity_cash = sum((item.money for item in statement.activity), Decimal())
+    assert statement.closing_cash == Decimal("9000.00")
+    assert statement.closing_margin == Decimal("0")
+    activity_cash = sum(
+        (item.money for item in statement.activity if item.account_type == "CUSTOMER_CASH"),
+        Decimal(),
+    )
     assert statement.opening_cash + activity_cash == statement.closing_cash
     for issue in set(statement.opening_positions) | set(statement.closing_positions):
         activity = sum(
@@ -129,6 +136,52 @@ def test_statement_that_does_not_tie_is_refused() -> None:
 
     with pytest.raises(StatementTieOutError, match="does not tie"):
         issue_statement(broken, books, issued_at=datetime(2026, 11, 15, tzinfo=UTC))
+
+
+def test_confirmation_refuses_fill_price_that_disagrees_with_books() -> None:
+    result = run_golden_path()
+    assert result.confirmation is not None
+    assert result.venue_execution_report is not None
+    assert result.venue_execution_event is not None
+    report = result.venue_execution_report.model_copy(update={"price": Decimal("101")})
+    event = result.venue_execution_event.model_copy(
+        update={"payload_digest": digest_bytes(canonical_bytes_of(report))}
+    )
+    entry = next(
+        item for item in result.books_entries if item.entry_id == result.confirmation.book_entry_id
+    )
+
+    with pytest.raises(ValueError, match="consideration does not match"):
+        generate_trade_confirmation(
+            account_id=ACCOUNT,
+            book_entry=entry,
+            execution_event=event,
+            execution_report=report,
+        )
+
+
+def test_statement_issuance_refuses_a_defect_in_draft_balance_projection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import atreides.client_reporting as reporting
+
+    books, _ = _replayed_books()
+    original = reporting._balances
+
+    def defective(*args: object, **kwargs: object):  # type: ignore[no-untyped-def]
+        cash, margin, positions = original(*args, **kwargs)  # type: ignore[arg-type]
+        return cash + Decimal("1.00"), margin, positions
+
+    monkeypatch.setattr(reporting, "_balances", defective)
+    draft = build_statement_draft(
+        books,
+        account_id=ACCOUNT,
+        account_status=AccountStatus.ACTIVE,
+        period_start=START.date(),
+        period_end=START.date(),
+    )
+    with pytest.raises(StatementTieOutError, match="does not tie"):
+        issue_statement(draft, books, issued_at=datetime(2026, 11, 15, tzinfo=UTC))
 
 
 def test_late_activity_produces_corrected_statement_without_editing_original() -> None:

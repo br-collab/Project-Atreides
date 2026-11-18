@@ -11,10 +11,10 @@ from typing import Literal
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.canonical import canonical_bytes_of, digest_bytes
 from cannae_kernel.envelopes import ExecutionEvent
-from emulators.venue import VenueExecutionReport  # type: ignore[import-untyped]
+from emulators.venue import VenueExecutionReport
 from pydantic import BaseModel, ConfigDict
 
-from atreides.books.ledger import EquitiesBooks, JournalEntry, RecordSide
+from atreides.books.ledger import AccountType, EquitiesBooks, JournalEntry, RecordSide
 from atreides.customer_protection.rules import load_rule_table
 
 _REQUIREMENTS_PATH = Path(__file__).with_name("client_reporting_requirements.json")
@@ -54,6 +54,7 @@ class TradeConfirmation(BaseModel):
     correction_kind: Literal["ORIGINAL", "CORRECTION", "CANCELLATION"] = "ORIGINAL"
     correction_reason: str | None = None
     not_claimed: tuple[str, ...] = (
+        "Rule 10b-10(a)(2) capacity and remuneration",
         "cost basis",
         "tax lots",
         "tax forms",
@@ -79,6 +80,7 @@ class StatementActivity(BaseModel):
     source_event_id: str
     effective_date: date
     source: str
+    account_type: str
     record_side: str
     issue: str | None
     currency: str | None
@@ -94,6 +96,8 @@ class StatementDraft(BaseModel):
     period_end: date
     opening_cash: Decimal
     closing_cash: Decimal
+    opening_margin: Decimal
+    closing_margin: Decimal
     opening_positions: dict[str, Decimal]
     closing_positions: dict[str, Decimal]
     activity: tuple[StatementActivity, ...]
@@ -148,6 +152,19 @@ def generate_trade_confirmation(
         raise ValueError("trade confirmation does not match the posted customer position")
     if execution_event.payload_digest != digest_bytes(canonical_bytes_of(execution_report)):
         raise ValueError("execution event does not attest the supplied execution report")
+    book_money = sum(
+        (
+            line.money
+            for line in book_entry.lines
+            if line.account_id == account_id and line.record_side is RecordSide.MONEY
+        ),
+        Decimal(),
+    )
+    reported_consideration = (execution_report.quantity * execution_report.price).quantize(
+        Decimal("0.01")
+    )
+    if abs(book_money) != reported_consideration:
+        raise ValueError("trade confirmation consideration does not match the posted books money")
     issue = ownership[0].issue
     if issue is None:
         raise ValueError("posted customer position does not identify its security")
@@ -201,6 +218,20 @@ def generate_trade_confirmation(
     )
 
 
+def find_book_entry_for_execution(
+    books: EquitiesBooks, execution_event: ExecutionEvent
+) -> JournalEntry:
+    """Resolve the posting by the execution identifier recorded on the books."""
+    matches = tuple(
+        entry
+        for entry in books.entries
+        if entry.source_event_id == str(execution_event.event_id)
+    )
+    if len(matches) != 1:
+        raise ValueError("execution does not link to exactly one posted books entry")
+    return matches[0]
+
+
 def record_furnished(
     confirmation: TradeConfirmation,
     *,
@@ -231,8 +262,9 @@ def record_furnished(
 
 def _balances(
     entries: tuple[JournalEntry, ...], account_id: str, through: date
-) -> tuple[Decimal, dict[str, Decimal]]:
+) -> tuple[Decimal, Decimal, dict[str, Decimal]]:
     cash = Decimal()
+    margin = Decimal()
     positions: dict[str, Decimal] = {}
     for entry in entries:
         if entry.effective_date > through:
@@ -241,10 +273,38 @@ def _balances(
             if line.account_id != account_id:
                 continue
             if line.record_side is RecordSide.MONEY:
-                cash += line.money
+                if line.account_type is AccountType.CUSTOMER_CASH:
+                    cash += line.money
+                elif line.account_type is AccountType.CUSTOMER_MARGIN:
+                    margin += line.money
             elif line.record_side is RecordSide.OWNERSHIP and line.issue is not None:
                 positions[line.issue] = positions.get(line.issue, Decimal()) + line.quantity
-    return cash, {issue: quantity for issue, quantity in positions.items() if quantity}
+    return cash, margin, {
+        issue: quantity for issue, quantity in positions.items() if quantity
+    }
+
+
+def _journal_oracle_balances(
+    entries: tuple[JournalEntry, ...], account_id: str, through: date
+) -> tuple[Decimal, Decimal, dict[str, Decimal]]:
+    """Independently total raw journal lines for statement issuance."""
+    money = {AccountType.CUSTOMER_CASH: Decimal(), AccountType.CUSTOMER_MARGIN: Decimal()}
+    positions: dict[str, Decimal] = {}
+    for entry in entries:
+        if entry.effective_date > through:
+            continue
+        for line in entry.lines:
+            if line.account_id != account_id:
+                continue
+            if line.record_side is RecordSide.MONEY and line.account_type in money:
+                money[line.account_type] += line.money
+            if line.record_side is RecordSide.OWNERSHIP and line.issue is not None:
+                positions[line.issue] = positions.get(line.issue, Decimal()) + line.quantity
+    return (
+        money[AccountType.CUSTOMER_CASH],
+        money[AccountType.CUSTOMER_MARGIN],
+        {issue: quantity for issue, quantity in positions.items() if quantity},
+    )
 
 
 def build_statement_draft(
@@ -259,10 +319,12 @@ def build_statement_draft(
     if period_end < period_start:
         raise ValueError("statement period end precedes its start")
     entries = books.entries
-    opening_cash, opening_positions = _balances(
+    opening_cash, opening_margin, opening_positions = _balances(
         entries, account_id, period_start.fromordinal(period_start.toordinal() - 1)
     )
-    closing_cash, closing_positions = _balances(entries, account_id, period_end)
+    closing_cash, closing_margin, closing_positions = _balances(
+        entries, account_id, period_end
+    )
     activity: list[StatementActivity] = []
     for entry in entries:
         if not period_start <= entry.effective_date <= period_end:
@@ -277,6 +339,7 @@ def build_statement_draft(
                     source_event_id=entry.source_event_id,
                     effective_date=entry.effective_date,
                     source=entry.source.value,
+                    account_type=line.account_type.value,
                     record_side=line.record_side.value,
                     issue=line.issue,
                     currency=line.currency,
@@ -291,6 +354,8 @@ def build_statement_draft(
         period_end=period_end,
         opening_cash=opening_cash,
         closing_cash=closing_cash,
+        opening_margin=opening_margin,
+        closing_margin=closing_margin,
         opening_positions=opening_positions,
         closing_positions=closing_positions,
         activity=tuple(activity),
@@ -302,10 +367,25 @@ def issue_statement(
     draft: StatementDraft, books: EquitiesBooks, *, issued_at: datetime
 ) -> AccountStatement:
     entries = books.entries
-    expected_cash, expected_positions = _balances(
+    expected_cash, expected_margin, expected_positions = _journal_oracle_balances(
         entries, draft.account_id, draft.period_end
     )
-    activity_cash = sum((item.money for item in draft.activity), Decimal())
+    activity_cash = sum(
+        (
+            item.money
+            for item in draft.activity
+            if item.account_type == AccountType.CUSTOMER_CASH.value
+        ),
+        Decimal(),
+    )
+    activity_margin = sum(
+        (
+            item.money
+            for item in draft.activity
+            if item.account_type == AccountType.CUSTOMER_MARGIN.value
+        ),
+        Decimal(),
+    )
     activity_positions: dict[str, Decimal] = {}
     for item in draft.activity:
         if item.issue is not None and item.record_side == RecordSide.OWNERSHIP.value:
@@ -321,8 +401,10 @@ def issue_statement(
     )
     if (
         draft.opening_cash + activity_cash != draft.closing_cash
+        or draft.opening_margin + activity_margin != draft.closing_margin
         or not positions_tie
         or draft.closing_cash != expected_cash
+        or draft.closing_margin != expected_margin
         or draft.closing_positions != expected_positions
     ):
         raise StatementTieOutError("statement refused because it does not tie to the books")
@@ -345,6 +427,7 @@ __all__ = [
     "StatementTieOutError",
     "TradeConfirmation",
     "build_statement_draft",
+    "find_book_entry_for_execution",
     "generate_trade_confirmation",
     "issue_statement",
     "record_furnished",

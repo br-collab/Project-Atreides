@@ -25,6 +25,7 @@ from simulator.estate import (
     DepositPolicy,
     ReserveDeposit,
     drive_estate,
+    exercise_simulator_market_access,
     simulated_filed_credit_total,
 )
 from simulator.invariants import InvariantEvidence, evaluate_invariants
@@ -488,6 +489,15 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
     carried = reserve_history.get("reserve_bank", (Decimal(0), Decimal(0)))
     assert isinstance(carried, tuple)
     opening_balances = (Decimal(carried[0]), Decimal(carried[1]))
+    market_payload, market_register = exercise_simulator_market_access(
+        run_number=index,
+        business_date=business_date,
+        issue=issue,
+        reports=reports,
+        account_weights=account_weights,
+        prior_close=prior_close,
+        customer_buying_power=customer_credit,
+    )
     estate = drive_estate(
         run_number=index,
         business_date=business_date,
@@ -508,6 +518,8 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         pab_fail_to_receive=pab_fail_to_receive,
         reserve_bank_opening=opening_balances,
         deposit_policy=deposit_policy,
+        approved_payload=market_payload,
+        approved_register=market_register,
     )
     reserve_history["reserve_bank"] = tuple(
         deposit.closing_balance for deposit in estate.reserve_deposits

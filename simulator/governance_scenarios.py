@@ -10,7 +10,6 @@ from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.governance import ActionClass, AutonomyLevel
 from cannae_kernel.ids import ActorId
-from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
     AccountApplication,
@@ -23,6 +22,7 @@ from atreides.account_lifecycle import (
     KYBClearResultRecord,
     KYCDecisionRecord,
     LegalEntityEvidenceRecord,
+    kyc_chain_report,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -90,6 +90,17 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
             ),
         )
     )
+    kyc_record = KYCDecisionRecord(
+        record_id="SIM-1-G3-KYC",
+        account_id="SYN-G3",
+        path_id="KYC_ELIGIBLE_CLEAR",
+        decided_at=_NOW,
+        maximum_age_seconds=300,
+        account_type=AccountType.INSTITUTIONAL,
+        person_id=None,
+        legal_entity_record_id="SIM-1-G3-LEGAL",
+        kyb_result_record_id="SIM-1-G3-KYB",
+    )
     return AuthoritativeEvidenceResolver(
         application_records={
             "SIM-1-G3-APPLICATION": AccountApplication(
@@ -102,27 +113,8 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
                 kyb_result_record_id="SIM-1-G3-KYB",
             )
         },
-        kyc_dsor_records={
-            "SIM-1-G3-KYC": KYCDecisionRecord(
-                record_id="SIM-1-G3-KYC",
-                account_id="SYN-G3",
-                path_id="KYC_ELIGIBLE_CLEAR",
-                decided_at=_NOW,
-                maximum_age_seconds=300,
-                account_type=AccountType.INSTITUTIONAL,
-                person_id=None,
-                legal_entity_record_id="SIM-1-G3-LEGAL",
-                kyb_result_record_id="SIM-1-G3-KYB",
-            )
-        },
-        kyc_chain_reports={
-            "SIM-1-G3-KYC": ChainReport(
-                ok=True,
-                event_count=1,
-                head_digest="sha256:" + "11" * 32,
-                issues=(),
-            )
-        },
+        kyc_dsor_records={"SIM-1-G3-KYC": kyc_record},
+        kyc_chain_reports={"SIM-1-G3-KYC": kyc_chain_report(kyc_record)},
         eligibility_records={
             "SIM-1-G3-ELIGIBILITY": EligibilityResultRecord(
                 record_id="SIM-1-G3-ELIGIBILITY",

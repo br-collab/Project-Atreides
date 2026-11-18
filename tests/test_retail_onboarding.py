@@ -5,7 +5,6 @@ import pytest
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.ids import ActorId
-from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
     AccountApplication,
@@ -16,6 +15,7 @@ from atreides.account_lifecycle import (
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
     KYCDecisionRecord,
+    kyc_chain_report,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -189,28 +189,20 @@ def _store(
             approval_ref="SYN-PRINCIPAL-APPROVAL-RETAIL1",
         )
     )
+    kyc_record = KYCDecisionRecord(
+        record_id=KYC_ID,
+        account_id=ACCOUNT,
+        account_type=kyc_type,
+        person_id=PERSON if kyc_type is AccountType.NATURAL_PERSON else None,
+        path_id="KYC_ELIGIBLE_CLEAR",
+        decided_at=cip_at,
+        maximum_age_seconds=86400,
+        legal_entity_record_id=legal_entity_record_id,
+        kyb_result_record_id=kyb_result_record_id,
+    )
     resolver = AuthoritativeEvidenceResolver(
-        kyc_dsor_records={
-            KYC_ID: KYCDecisionRecord(
-                record_id=KYC_ID,
-                account_id=ACCOUNT,
-                account_type=kyc_type,
-                person_id=PERSON if kyc_type is AccountType.NATURAL_PERSON else None,
-                path_id="KYC_ELIGIBLE_CLEAR",
-                decided_at=cip_at,
-                maximum_age_seconds=86400,
-                legal_entity_record_id=legal_entity_record_id,
-                kyb_result_record_id=kyb_result_record_id,
-            )
-        },
-        kyc_chain_reports={
-            KYC_ID: ChainReport(
-                ok=True,
-                event_count=1,
-                head_digest="sha256:" + "11" * 32,
-                issues=(),
-            )
-        },
+        kyc_dsor_records={KYC_ID: kyc_record},
+        kyc_chain_reports={KYC_ID: kyc_chain_report(kyc_record)},
         eligibility_records={ELIGIBILITY_ID: _eligibility(profile_at)},
         transfer_records={},
         first_trade_attestations={},
