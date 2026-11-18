@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 - 18 Nov 2026
+
+Split equities trades into trade-date obligations and calendar-derived settlement-date street
+movements. Add independent cash, reserve-bank and securities-count controls, journal-replayed tax
+lots and statement basis, real KYC chain replay, and a customer-fact statement oracle. Wash-sale
+adjustment remains `TO_VERIFY` pending a deterministic implementation of pinned 26 CFR 1.1091-1.
+
 ## 1.0.1 - 18 Nov 2026
 
 Align approval provenance with the approving actor, make golden-path evidence identifiers unique,

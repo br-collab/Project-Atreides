@@ -6,7 +6,7 @@ from inspect import signature
 import pytest
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
-from cannae_kernel.canonical import digest, digest_bytes
+from cannae_kernel.canonical import digest_bytes
 from cannae_kernel.ids import ActorId
 from cannae_kernel.journal import ChainReport
 from cannae_kernel.provenance import Provenance
@@ -29,6 +29,8 @@ from atreides.account_lifecycle import (
     RefusalReason,
     TransferInRecord,
     attest_first_permitted_trade,
+    kyc_chain_report,
+    kyc_event_chain,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -159,7 +161,7 @@ def resolver(
                 head_digest=(
                     "sha256:" + "11" * 32
                     if kyc_chain_wrong_head or not kyc_chain_valid
-                    else digest(kyc_record)
+                    else kyc_chain_report(kyc_record).head_digest
                 ),
                 issues=(),
             )
@@ -217,6 +219,24 @@ def resolver(
             )
         },
     )
+
+
+def test_kyc_chain_refuses_a_removed_event() -> None:
+    record = KYCDecisionRecord(
+        record_id=KYC_ID,
+        account_id=ACCOUNT,
+        account_type=AccountType.INSTITUTIONAL,
+        path_id="KYC_ELIGIBLE_CLEAR",
+        decided_at=NOW,
+        maximum_age_seconds=300,
+        legal_entity_record_id=LEGAL_ENTITY_ID,
+        kyb_result_record_id=KYB_ID,
+    )
+    from cannae_kernel.journal import verify_chain
+
+    report = verify_chain(kyc_event_chain(record)[:-1])
+    assert not report.ok
+    assert report.issues[0].code == "EMPTY_CHAIN"
 
 
 def store(

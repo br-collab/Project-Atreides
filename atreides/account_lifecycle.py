@@ -9,11 +9,11 @@ from typing import Literal, Protocol
 
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
-from cannae_kernel.canonical import canonical_bytes, digest
+from cannae_kernel.canonical import canonical_bytes
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.domains import Domain
 from cannae_kernel.events import EventEnvelope, seal
-from cannae_kernel.ids import CheckpointId, EventId, LifecycleId
+from cannae_kernel.ids import ActorId, CheckpointId, EventId, LifecycleId
 from cannae_kernel.journal import ChainReport, JournalCheckpoint, verify_chain
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.signed_attestation import (
@@ -147,9 +147,41 @@ class KYCDecisionRecord(BaseModel):
         return self
 
 
+def kyc_event_chain(record: KYCDecisionRecord) -> tuple[EventEnvelope[KYCDecisionRecord], ...]:
+    """Replay the sealed Decision System of Record event for a KYC decision."""
+    actor = ActorRef(
+        actor_id=ActorId("act_00000000000000000000000001"),
+        actor_kind=ActorKind.DETERMINISTIC_SERVICE,
+        role="kyc-decision-record-replay",
+        entitlement_refs=("KYC_DSOR_REPLAY",),
+        authenticated=True,
+    )
+    event = seal(
+        event_id=EventId("evt_00000000000000000000000001"),
+        lifecycle_id=LifecycleId("lif_00000000000000000000000001"),
+        parent_ids=(),
+        producer_domain=Domain.ATREIDES,
+        event_type="KYCDecisionRecorded",
+        schema_version="atreides.kyc_decision_recorded/1",
+        rule_version="kyc-dsor/1",
+        times=EventTimes(
+            event_time=record.decided_at,
+            observation_time=record.decided_at,
+            processing_time=record.decided_at,
+            decision_time=record.decided_at,
+        ),
+        provenance=Provenance.POLICY_RESULT,
+        actor=actor,
+        idempotency_key=f"kyc:{record.record_id}",
+        payload=record,
+        prior_event_digest=None,
+    )
+    return (event,)
+
+
 def kyc_chain_report(record: KYCDecisionRecord) -> ChainReport:
-    """Record the one-event KYC Decision System of Record chain head."""
-    return ChainReport(ok=True, event_count=1, head_digest=digest(record), issues=())
+    """Verify the replayed KYC Decision System of Record event chain."""
+    return verify_chain(kyc_event_chain(record))
 
 
 class EligibilityResultRecord(BaseModel):
@@ -304,7 +336,7 @@ class AuthoritativeEvidenceResolver:
             report is None
             or not report.ok
             or report.event_count != 1
-            or report.head_digest != digest(record)
+            or report.head_digest != kyc_chain_report(record).head_digest
         ):
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
         return record

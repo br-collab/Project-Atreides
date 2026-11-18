@@ -41,6 +41,12 @@ def test_clean_golden_path_closes_with_every_invariant_true() -> None:
     assert result.close_report == "NORMAL_CLOSE"
     assert result.invariants
     assert all(result.invariants.values())
+    assert result.trade_date_statement is not None
+    assert result.statement is not None
+    assert result.trade_date_statement.period_end.isoformat() == "2026-11-13"
+    assert set(result.trade_date_statement.settlement_status.values()) == {"UNSETTLED"}
+    assert result.statement.period_end.isoformat() == "2026-11-16"
+    assert set(result.statement.settlement_status.values()) == {"SETTLED"}
 
 
 def test_service_approver_cannot_claim_human_judgment() -> None:

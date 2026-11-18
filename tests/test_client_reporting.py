@@ -7,6 +7,7 @@ from cannae_kernel.canonical import canonical_bytes_of, digest_bytes
 
 from atreides.books.ledger import EquitiesBooks
 from atreides.client_reporting import (
+    CustomerSideFacts,
     StatementTieOutError,
     build_statement_draft,
     generate_trade_confirmation,
@@ -136,6 +137,30 @@ def test_statement_that_does_not_tie_is_refused() -> None:
 
     with pytest.raises(StatementTieOutError, match="does not tie"):
         issue_statement(broken, books, issued_at=datetime(2026, 11, 15, tzinfo=UTC))
+
+
+def test_customer_side_oracle_refuses_eleven_booked_shares_against_ten_share_fill() -> None:
+    books, _ = _replayed_books()
+    draft = build_statement_draft(
+        books,
+        account_id=ACCOUNT,
+        account_status=AccountStatus.ACTIVE,
+        period_start=START.date(),
+        period_end=START.date(),
+    )
+    facts = CustomerSideFacts(
+        deposit_instructions=(Decimal("10000"),),
+        venue_fills=((ISSUE, Decimal(10), Decimal(100)),),
+        confirmations=((ISSUE, Decimal(10)),),
+    )
+    broken = draft.model_copy(update={"closing_positions": {ISSUE: Decimal(11)}})
+    with pytest.raises(StatementTieOutError, match="does not tie"):
+        issue_statement(
+            broken,
+            books,
+            issued_at=datetime(2026, 11, 15, tzinfo=UTC),
+            customer_side_facts=facts,
+        )
 
 
 def test_confirmation_refuses_fill_price_that_disagrees_with_books() -> None:

@@ -17,7 +17,6 @@ from cannae_kernel.canonical import canonical_bytes, canonical_bytes_of, digest,
 from cannae_kernel.envelopes import ExecutionEvent
 from cannae_kernel.events import verify as verify_event
 from cannae_kernel.ids import ActorId, IntentId, LifecycleId, OrderId
-from cannae_kernel.journal import ChainReport
 from emulators.settlement import (  # type: ignore[import-untyped]
     RailOutcome,
     SyntheticEntitledMember,
@@ -58,6 +57,7 @@ from atreides.account_lifecycle import (
     KYCDecisionRecord,
     TransferInRecord,
     attest_first_permitted_trade,
+    kyc_chain_report,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -69,11 +69,13 @@ from atreides.agents.tier2.eligibility import (
 from atreides.books.ledger import (
     EquitiesBooks,
     JournalEntry,
+    PostingSource,
     RecordSide,
 )
 from atreides.books.projections import classify_accounts, project_margin_accounts
 from atreides.client_reporting import (
     AccountStatement,
+    CustomerSideFacts,
     FurnishedEvent,
     TradeConfirmation,
     build_statement_draft,
@@ -236,6 +238,7 @@ class GoldenPathResult(BaseModel):
     confirmation: TradeConfirmation | None = None
     confirmation_furnished: FurnishedEvent | None = None
     statement: AccountStatement | None = None
+    trade_date_statement: AccountStatement | None = None
     venue_execution_event: ExecutionEvent | None = None
     venue_execution_report: VenueExecutionReport | None = None
     engine_dispositions: dict[str, str] = Field(default_factory=dict)
@@ -405,6 +408,7 @@ def _result(
     confirmation: TradeConfirmation | None = None,
     confirmation_furnished: FurnishedEvent | None = None,
     statement: AccountStatement | None = None,
+    trade_date_statement: AccountStatement | None = None,
     venue_execution_event: ExecutionEvent | None = None,
     venue_execution_report: VenueExecutionReport | None = None,
     engine_dispositions: dict[str, str] | None = None,
@@ -438,6 +442,7 @@ def _result(
         confirmation=confirmation,
         confirmation_furnished=confirmation_furnished,
         statement=statement,
+        trade_date_statement=trade_date_statement,
         venue_execution_event=venue_execution_event,
         venue_execution_report=venue_execution_report,
         engine_dispositions={} if engine_dispositions is None else engine_dispositions,
@@ -498,15 +503,23 @@ def _run_daily_close(
     location_balances: dict[tuple[str, str], Decimal] = {}
     observed_accounts: set[str] = set()
     for entry in books.entries:
+        if entry.effective_date > as_of.date():
+            continue
         for line in entry.lines:
             if line.record_side is RecordSide.LOCATION and line.issue is not None:
                 key = (line.issue, line.account_type.value)
                 location_balances[key] = location_balances.get(key, Decimal()) + line.quantity
             if line.account_type.value in {"CUSTOMER_CASH", "CUSTOMER_MARGIN"}:
                 observed_accounts.add(line.account_id)
+    location_balances = {
+        key: value
+        for key, value in location_balances.items()
+        if value and key[1] in {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
+    }
     if depository_quantity_delta:
         key = (ISSUE, "DTC")
         location_balances[key] = location_balances.get(key, Decimal()) + depository_quantity_delta
+    location_balances = {key: value for key, value in location_balances.items() if value}
     readers = build_independent_sources(
         books,
         IndependentSourceInputs(
@@ -702,11 +715,7 @@ def run_golden_path(  # noqa: PLR0915
         kyc_dsor_records={
             kyc_id: kyc_record
         },
-        kyc_chain_reports={
-            kyc_id: ChainReport(
-                ok=True, event_count=1, head_digest=digest(kyc_record), issues=()
-            )
-        },
+        kyc_chain_reports={kyc_id: kyc_chain_report(kyc_record)},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
                 record_id=eligibility_id,
@@ -1365,6 +1374,8 @@ def run_golden_path(  # noqa: PLR0915
     location_balances: dict[tuple[str, str], Decimal] = {}
     observed_accounts: set[str] = set()
     for entry in books.entries:
+        if entry.effective_date > clock().date():
+            continue
         for line in entry.lines:
             if line.record_side.value == "LOCATION" and line.issue is not None:
                 location = line.account_type.value
@@ -1373,19 +1384,17 @@ def run_golden_path(  # noqa: PLR0915
                 )
             if line.account_type.value in {"CUSTOMER_CASH", "CUSTOMER_MARGIN"}:
                 observed_accounts.add(line.account_id)
+    location_balances = {
+        key: value
+        for key, value in location_balances.items()
+        if value and key[1] in {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
+    }
     street_readers = build_independent_sources(
         books,
         IndependentSourceInputs(
             as_of=clock().date(),
             opening_depository=(),
-            settlement_outcomes=(
-                SettlementOutcome(
-                    issue=ISSUE,
-                    net_quantity=venue_report.quantity,
-                    allocated_quantity=venue_report.quantity,
-                    settlement_date=clock().date(),
-                ),
-            ),
+            settlement_outcomes=(),
             open_fails=(),
             loan_instructions=(),
         ),
@@ -1456,6 +1465,30 @@ def run_golden_path(  # noqa: PLR0915
         furnished_at=clock(),
         recipient_id=PERSON,
     )
+    customer_side_facts = CustomerSideFacts(
+        deposit_instructions=(funded_cash,),
+        venue_fills=((ISSUE, venue_report.quantity, venue_report.price),),
+        confirmations=((ISSUE, venue_report.quantity),),
+    )
+    trade_date_statement_draft = build_statement_draft(
+        books,
+        account_id=ACCOUNT,
+        account_status=lifecycle.status(ACCOUNT),
+        period_start=START.date(),
+        period_end=clock().date(),
+    )
+    trade_date_statement = issue_statement(
+        trade_date_statement_draft,
+        books,
+        issued_at=clock(),
+        customer_side_facts=customer_side_facts,
+    )
+    settlement_date = max(
+        entry.effective_date
+        for entry in books.entries
+        if entry.source in {PostingSource.CNS_SETTLEMENT, PostingSource.CNS_FAIL}
+    )
+    clock.advance(timedelta(days=(settlement_date - clock().date()).days))
     statement_draft = build_statement_draft(
         books,
         account_id=ACCOUNT,
@@ -1463,7 +1496,12 @@ def run_golden_path(  # noqa: PLR0915
         period_start=START.date(),
         period_end=clock().date(),
     )
-    statement = issue_statement(statement_draft, books, issued_at=clock())
+    statement = issue_statement(
+        statement_draft,
+        books,
+        issued_at=clock(),
+        customer_side_facts=customer_side_facts,
+    )
     clean_close = _run_daily_close(
         books=books,
         estate=estate,
@@ -1567,6 +1605,7 @@ def run_golden_path(  # noqa: PLR0915
         confirmation=confirmation,
         confirmation_furnished=furnished,
         statement=statement,
+        trade_date_statement=trade_date_statement,
         venue_execution_event=venue_event,
         venue_execution_report=venue_report,
         engine_dispositions={
