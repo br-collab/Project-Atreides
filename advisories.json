@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "synthetic": true,
-  "taken_at": "2026-11-18T16:51:30.958204Z",
+  "taken_at": "2026-11-18T18:16:37.155750Z",
   "scenarios": [
     {
       "scenario_id": "sc2-control-pass",
