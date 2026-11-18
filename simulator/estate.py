@@ -1056,7 +1056,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     )
     projected = project_customer_protection(
         books,
-        as_of=settlement_date,
+        as_of=business_date,
         prices={issue: prior_close},
         net_worth=Decimal("1000000"),
         calendar=calendar,

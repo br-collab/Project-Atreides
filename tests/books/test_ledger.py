@@ -452,7 +452,6 @@ def test_fail_or_borrow_line_without_source_fact_is_refused() -> None:
     ("settlement_date", "reason"),
     [
         (date(2026, 10, 18), "loaded business day"),
-        (date(2026, 10, 23), "cannot be after"),
     ],
 )
 def test_reserve_source_date_must_be_a_past_business_day(
@@ -478,6 +477,29 @@ def test_reserve_source_date_must_be_a_past_business_day(
             calendar=MarketCalendar.load(Market.US_EQUITIES),
             margin_results=(),
         )
+
+
+def test_future_effective_reserve_source_is_not_read_early() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    books.post(
+        _reserve_entry(
+            event="7",
+            account_type=AccountType.FAIL_TO_RECEIVE,
+            activity=ReserveActivity.CUSTOMER,
+            quantity=Decimal(1),
+            contract_price=Decimal(100),
+            settlement_date=date(2026, 10, 23),
+        )
+    )
+    projected = project_customer_protection(
+        books,
+        as_of=date(2026, 10, 22),
+        prices={"ACME": Decimal(100)},
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=(),
+    )
+    assert all(line.amount in {None, Decimal()} for line in projected.reserve.lines)
 
 
 def test_inst1_accounts_are_classified_from_their_books_type_and_never_two() -> None:
