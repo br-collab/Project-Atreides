@@ -7,9 +7,27 @@
 > *experimental*, *validated* and *production-qualified*; all five repositories are at
 > the first, and this label changes only when evidence changes it.
 
-**Last updated:** 26 Oct 2026. INST-1 release candidate, package version 0.7.0. The `v0.7.0`
-tag is reserved for Bill after this branch merges; this statement does not claim the tag exists.
+**Last updated:** 18 Nov 2026. Release `v1.0.1` (minimum viable product closed, orders MVP-0 to MVP-5C).
 
+> **What CFMA is (18 November 2026).** CFMA (Cannae Financial Markets Architecture) is a
+> synthetic simulator of a self-clearing US broker-dealer with agentic AI built in, across five
+> public repositories. One synthetic retail customer runs from account opening to account statement
+> through real components: onboarding and identity checks, a recommended order through market access
+> controls, a venue fill, Continuous Net Settlement, the firm's double-entry books, a trade
+> confirmation and a statement. The daily close computes customer reserve, net capital and
+> possession or control from those books, checks them against an independent oracle, reconciles the
+> stock record against an independent street side, and drafts Rule 17a-11 notices for a human
+> Financial and Operations Principal. Agents advise; a verified human approves every consequential
+> decision. It is research code on synthetic data: not production, not a compliance claim, and
+> connected to no real venue, depository or bank. Release `v1.0.1`. Live view: the public Common
+> Operating Picture, https://cannae-cop-public-production.up.railway.app/section/controls
+>
+> In that simulator, **Atreides is the post-trade layer**: account lifecycle, settlement, the firm's
+> books, customer protection and capital computations, reconciliation, client reporting, and the
+> golden path run.
+
+> The description below predates 18 November 2026 and is kept as design history; the current
+> identity is stated above.
 
 Atreides is a **governance layer for multi-asset settlement**. It sits above the
 systems that actually move securities and money, governs the decision behind each
