@@ -123,6 +123,7 @@ def resolver(
     kyc_chain_wrong_head: bool = False,
     kyc_chain_missing: bool = False,
     kyc_chain_tampered: bool = False,
+    kyc_chain_broken_digest: bool = False,
     eligibility_id: str = ELIGIBILITY_ID,
     eligibility_at: datetime = NOW,
     eligible: bool = True,
@@ -162,6 +163,10 @@ def resolver(
             stored_chain[0].model_copy(
                 update={"payload": kyc_record.model_copy(update={"path_id": "CHANGED"})}
             ),
+        )
+    elif kyc_chain_broken_digest:
+        stored_chain = (
+            stored_chain[0].model_copy(update={"envelope_digest": "sha256:" + "0" * 64}),
         )
     return AuthoritativeEvidenceResolver(
         kyc_dsor_records={
@@ -460,6 +465,18 @@ def test_kyc_report_with_ok_true_and_wrong_head_is_refused() -> None:
     lifecycle = store(resolver(kyc_chain_wrong_head=True))
     with pytest.raises(AccountTransitionRefusedError, match="KYC_CHAIN_INVALID"):
         approve(lifecycle)
+
+
+def test_kyc_resealed_different_record_fails_payload_check_only() -> None:
+    evidence = resolver(kyc_chain_wrong_head=True)
+    with pytest.raises(AccountTransitionRefusedError, match="KYC_CHAIN_INVALID"):
+        evidence.resolve_kyc(KYC_ID)
+
+
+def test_kyc_broken_digest_with_same_payload_fails_chain_check_only() -> None:
+    evidence = resolver(kyc_chain_broken_digest=True)
+    with pytest.raises(AccountTransitionRefusedError, match="KYC_CHAIN_INVALID"):
+        evidence.resolve_kyc(KYC_ID)
 
 
 def test_kyc_record_with_invalid_chain_is_refused() -> None:

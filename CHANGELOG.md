@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0 - 18 Nov 2026
+
+Add the versioned written supervisory procedure register, self-review refusal, Rule 3120
+testing report and unsigned Rule 3130 certification draft. Add deterministic ongoing anti-money
+laundering monitoring over books and instruction-log events, with named-human case decisions,
+an unfiled SAR draft, filing-clock exceptions and public-artifact confidentiality. Classify
+reconciliation breaks from their own facts and independently test both KYC integrity checks.
+
 ## 1.1.1 - 18 Nov 2026
 
 Close the PS-1 verification findings: statements now come from an append-only instruction log,

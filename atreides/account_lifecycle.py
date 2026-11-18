@@ -337,11 +337,9 @@ class AuthoritativeEvidenceResolver:
         if chain is None:
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
         report = kyc_chain_report(chain)
-        if (
-            not report.ok
-            or report.event_count != 1
-            or chain[-1].payload != record
-        ):
+        if not report.ok or report.event_count != 1:
+            raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
+        if chain[-1].payload != record:
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
         return record
 

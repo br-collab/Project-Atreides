@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "rule_basis": {
+    "FINRA-3110": "Pinned reproduction basis, FINRA Rule 3110",
+    "FINRA-3120": "Pinned reproduction basis, FINRA Rule 3120",
+    "FINRA-3130": "Pinned reproduction basis, FINRA Rule 3130"
+  },
+  "rows": [
+    {"gate":"account opening","rule":"FINRA-3110","control":"principal approval","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_ONBOARDING","review_frequency":"each decision","evidence":"account lifecycle event","escalation_path":"SENIOR_REGISTERED_PRINCIPAL","test":"test_account_opening_gate"},
+    {"gate":"KYC","rule":"FINRA-3110","control":"KYC evidence replay","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_KYC","review_frequency":"each decision","evidence":"KYC decision chain","escalation_path":"AML_OFFICER","test":"test_kyc_gate"},
+    {"gate":"customer profile","rule":"FINRA-3110","control":"profile completeness","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_PROFILE","review_frequency":"each change","evidence":"profile record","escalation_path":"COMPLIANCE_PRINCIPAL","test":"test_customer_profile_gate"},
+    {"gate":"recommendation","rule":"FINRA-3110","control":"recommendation evidence","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_SUITABILITY","review_frequency":"each recommendation","evidence":"recommendation record","escalation_path":"COMPLIANCE_PRINCIPAL","test":"test_recommendation_gate"},
+    {"gate":"market access","rule":"FINRA-3110","control":"market access decision","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_MARKET_ACCESS","review_frequency":"each order","evidence":"market access record","escalation_path":"MARKET_ACCESS_PRINCIPAL","test":"test_market_access_gate"},
+    {"gate":"approved intent","rule":"FINRA-3110","control":"approved intent lineage","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_INTENT","review_frequency":"each order","evidence":"approved intent envelope","escalation_path":"TRADING_PRINCIPAL","test":"test_approved_intent_gate"},
+    {"gate":"fill booking","rule":"FINRA-3110","control":"venue fill booking","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_BOOKS","review_frequency":"each fill","evidence":"books entry","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_fill_booking_gate"},
+    {"gate":"confirmation","rule":"FINRA-3110","control":"confirmation tie-out","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_REPORTING","review_frequency":"each confirmation","evidence":"furnished confirmation","escalation_path":"REPORTING_PRINCIPAL","test":"test_confirmation_gate"},
+    {"gate":"statement","rule":"FINRA-3110","control":"statement tie-out","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_REPORTING","review_frequency":"each statement","evidence":"issued statement","escalation_path":"REPORTING_PRINCIPAL","test":"test_statement_gate"},
+    {"gate":"stock record to street","rule":"FINRA-3110","control":"daily reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_SETTLEMENT","review_frequency":"daily","evidence":"reconciliation result","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_stock_record_reconciliation_gate"},
+    {"gate":"fail to receive to CNS","rule":"FINRA-3110","control":"daily reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_SETTLEMENT","review_frequency":"daily","evidence":"reconciliation result","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_fail_reconciliation_gate"},
+    {"gate":"stock loan to register","rule":"FINRA-3110","control":"daily reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_SETTLEMENT","review_frequency":"daily","evidence":"reconciliation result","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_stock_loan_reconciliation_gate"},
+    {"gate":"cash to bank","rule":"FINRA-3110","control":"daily reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_TREASURY","review_frequency":"daily","evidence":"reconciliation result","escalation_path":"FINANCIAL_OPERATIONS_PRINCIPAL","test":"test_cash_reconciliation_gate"},
+    {"gate":"reserve bank to books","rule":"FINRA-3110","control":"reserve reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_PROTECTION","review_frequency":"each computation","evidence":"reconciliation result","escalation_path":"FINANCIAL_OPERATIONS_PRINCIPAL","test":"test_reserve_reconciliation_gate"},
+    {"gate":"securities count","rule":"FINRA-3110","control":"securities count reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_COUNT","review_frequency":"periodic","evidence":"reconciliation result","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_securities_count_gate"},
+    {"gate":"reserve","rule":"FINRA-3110","control":"customer reserve computation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_PROTECTION","review_frequency":"daily","evidence":"reserve result","escalation_path":"FINANCIAL_OPERATIONS_PRINCIPAL","test":"test_reserve_gate"},
+    {"gate":"net capital","rule":"FINRA-3110","control":"net capital computation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_FINOP","review_frequency":"daily","evidence":"net capital result","escalation_path":"CHIEF_FINANCIAL_OFFICER","test":"test_net_capital_gate"},
+    {"gate":"early warning","rule":"FINRA-3110","control":"early warning threshold","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_FINOP","review_frequency":"daily","evidence":"early warning result","escalation_path":"CHIEF_FINANCIAL_OFFICER","test":"test_early_warning_gate"}
+  ]
+}
