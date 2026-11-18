@@ -47,6 +47,8 @@ def test_clean_golden_path_closes_with_every_invariant_true() -> None:
     assert set(result.trade_date_statement.settlement_status.values()) == {"UNSETTLED"}
     assert result.statement.period_end.isoformat() == "2026-11-16"
     assert set(result.statement.settlement_status.values()) == {"SETTLED"}
+    assert len(result.reconciliation_calendar) == 6
+    assert {str(row["status"]) for row in result.reconciliation_calendar} == {"RAN"}
 
 
 def test_service_approver_cannot_claim_human_judgment() -> None:

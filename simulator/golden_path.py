@@ -243,6 +243,7 @@ class GoldenPathResult(BaseModel):
     venue_execution_report: VenueExecutionReport | None = None
     engine_dispositions: dict[str, str] = Field(default_factory=dict)
     early_warning_notices: tuple[dict[str, str], ...] = ()
+    reconciliation_calendar: tuple[dict[str, object], ...] = ()
 
 
 class PackDigestDSORRecord(BaseModel):
@@ -413,6 +414,7 @@ def _result(
     venue_execution_report: VenueExecutionReport | None = None,
     engine_dispositions: dict[str, str] | None = None,
     early_warning_notices: tuple[dict[str, str], ...] = (),
+    reconciliation_calendar: tuple[dict[str, object], ...] = (),
 ) -> GoldenPathResult:
     return GoldenPathResult(
         variant=variant,
@@ -447,6 +449,7 @@ def _result(
         venue_execution_report=venue_execution_report,
         engine_dispositions={} if engine_dispositions is None else engine_dispositions,
         early_warning_notices=early_warning_notices,
+        reconciliation_calendar=reconciliation_calendar,
     )
 
 
@@ -1618,6 +1621,22 @@ def run_golden_path(  # noqa: PLR0915
             ),
         },
         early_warning_notices=(),
+        reconciliation_calendar=tuple(
+            {
+                "item_id": item_id,
+                "status": "RAN",
+                "break_count": 0,
+                "close_date": clock().date().isoformat(),
+            }
+            for item_id in (
+                "stock-record-to-street",
+                "ftr-to-cns-fail-statement",
+                "stock-loan-to-contract-register",
+                "cash-to-bank",
+                "reserve-bank-to-books",
+                "securities-count",
+            )
+        ),
     )
 
 
