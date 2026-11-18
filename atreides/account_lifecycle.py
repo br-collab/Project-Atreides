@@ -9,7 +9,7 @@ from typing import Literal, Protocol
 
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
-from cannae_kernel.canonical import canonical_bytes
+from cannae_kernel.canonical import canonical_bytes, digest
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.domains import Domain
 from cannae_kernel.events import EventEnvelope, seal
@@ -145,6 +145,11 @@ class KYCDecisionRecord(BaseModel):
         if (self.account_type is AccountType.NATURAL_PERSON) != (self.person_id is not None):
             raise ValueError("natural-person KYC requires one person binding")
         return self
+
+
+def kyc_chain_report(record: KYCDecisionRecord) -> ChainReport:
+    """Record the one-event KYC Decision System of Record chain head."""
+    return ChainReport(ok=True, event_count=1, head_digest=digest(record), issues=())
 
 
 class EligibilityResultRecord(BaseModel):
@@ -295,7 +300,12 @@ class AuthoritativeEvidenceResolver:
         if record is None:
             raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_NOT_FOUND)
         report = self._kyc_chain_reports.get(record_id)
-        if report is None or not report.ok:
+        if (
+            report is None
+            or not report.ok
+            or report.event_count != 1
+            or report.head_digest != digest(record)
+        ):
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
         return record
 

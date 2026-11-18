@@ -1,13 +1,17 @@
 import json
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import emulators.venue
 
+from atreides.account_lifecycle import AccountTransitionRefusedError, RefusalReason
 from simulator.golden_path import (
     Variant,
     replay_evidence_digest,
     run_golden_path,
     verify_evidence_artifacts,
+    verify_first_trade_record,
+    verify_published_pack,
     write_golden_path_publication,
 )
 
@@ -42,14 +46,17 @@ def test_books_projected_capacity_refuses_underfunded_order() -> None:
     assert result.disposition == "HOLD"
     assert result.refusal == "ACCOUNT_CREDIT_LIMIT"
     assert result.fill_quantity is None
+    assert result.refusal_state_before is not None
+    assert result.refusal_state_before == result.refusal_state_after
 
 
 def test_first_trade_activates_only_after_cns_books_posting() -> None:
-    stages = run_golden_path().stages
+    result = run_golden_path()
+    books = next(item for item in result.evidence if item.event_id == "SIM-1B-1")
+    active = next(item for item in result.evidence if item.summary == "account active")
+    close = next(item for item in result.evidence if item.summary == "NORMAL_CLOSE")
 
-    assert stages.index("Atreides: CNS settlement posted to books") < stages.index(
-        "Atreides: L.C. signed first-trade evidence moved account to ACTIVE"
-    ) < stages.index("Atreides: daily close completed")
+    assert books.recorded_at < active.recorded_at < close.recorded_at
 
 
 def test_evidence_pack_is_linked_and_replays_to_same_digest() -> None:
@@ -64,16 +71,40 @@ def test_evidence_pack_is_linked_and_replays_to_same_digest() -> None:
     assert walked[-1] == "MVP3-APPLICATION"
     assert replay_evidence_digest(result) == result.evidence_digest
     assert verify_evidence_artifacts(result)
+    assert result.evidence[0].cause_event_id is None
+    assert all(item.cause_event_id is not None for item in result.evidence[1:])
 
 
 def test_tampered_stored_artifact_fails_evidence_check() -> None:
     result = run_golden_path()
     tampered = dict(result.stored_artifacts)
+    assert "00000000-0000-0000-0000-000000000301" in tampered
     tampered["00000000-0000-0000-0000-000000000301"] = b"tampered DSOR payload".hex()
 
-    assert not verify_evidence_artifacts(
-        result.model_copy(update={"stored_artifacts": tampered})
+    assert not verify_evidence_artifacts(result.model_copy(update={"stored_artifacts": tampered}))
+    unchanged = {
+        event_id: artifact
+        for event_id, artifact in tampered.items()
+        if event_id != "00000000-0000-0000-0000-000000000301"
+    }
+    assert unchanged == {
+        event_id: artifact
+        for event_id, artifact in result.stored_artifacts.items()
+        if event_id != "00000000-0000-0000-0000-000000000301"
+    }
+
+
+def test_first_trade_verifier_can_report_failed_status() -> None:
+    class RefusingResolver:
+        def resolve_first_trade(self, record_id: str, *, evaluated_at: datetime) -> None:
+            del record_id, evaluated_at
+            raise AccountTransitionRefusedError(RefusalReason.FIRST_TRADE_SIGNATURE_INVALID)
+
+    result = verify_first_trade_record(  # type: ignore[arg-type]
+        RefusingResolver(), "SYN-TAMPERED", evaluated_at=datetime(2026, 11, 17, tzinfo=UTC)
     )
+    assert result.status == "FAILED"
+    assert result.reason == "FIRST_TRADE_SIGNATURE_INVALID"
 
 
 def test_empty_or_partial_artifact_store_fails_evidence_check() -> None:
@@ -121,6 +152,11 @@ def test_settlement_fail_ages_and_close_reports_it() -> None:
     assert verify_evidence_artifacts(result)
 
 
+def test_daily_close_i3_fails_when_only_depository_side_moves() -> None:
+    result = run_golden_path(depository_quantity_delta=Decimal(1))
+    assert result.i3_computed is False
+
+
 def test_stale_caller_time_cannot_make_kyc_fresh() -> None:
     result = run_golden_path(Variant.STALE_CALLER_TIME)
 
@@ -135,3 +171,7 @@ def test_publication_writes_a_new_linked_pack(tmp_path) -> None:
     document = json.loads(evidence.read_text())
     assert all(document["invariants"].values())
     assert "declared-synthetic" in summary.read_text()
+    anchor = evidence.parent / "pack-digest-dsor.json"
+    assert verify_published_pack(evidence, anchor)
+    evidence.write_text(evidence.read_text() + " ", encoding="utf-8")
+    assert not verify_published_pack(evidence, anchor)

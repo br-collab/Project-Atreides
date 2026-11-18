@@ -6,7 +6,7 @@ from inspect import signature
 import pytest
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
-from cannae_kernel.canonical import digest_bytes
+from cannae_kernel.canonical import digest, digest_bytes
 from cannae_kernel.ids import ActorId
 from cannae_kernel.journal import ChainReport
 from cannae_kernel.provenance import Provenance
@@ -120,6 +120,7 @@ def resolver(
     kyc_path: str = "KYC_ELIGIBLE_CLEAR",
     kyc_at: datetime = NOW,
     kyc_chain_valid: bool = True,
+    kyc_chain_wrong_head: bool = False,
     eligibility_id: str = ELIGIBILITY_ID,
     eligibility_at: datetime = NOW,
     eligible: bool = True,
@@ -137,24 +138,29 @@ def resolver(
         permitted=True,
         traded_at=NOW,
     )
+    kyc_record = KYCDecisionRecord(
+        record_id=KYC_ID,
+        account_id=account,
+        account_type=AccountType.INSTITUTIONAL,
+        path_id=kyc_path,
+        decided_at=kyc_at,
+        maximum_age_seconds=300,
+        legal_entity_record_id=legal_entity_record_id,
+        kyb_result_record_id=kyb_result_record_id,
+    )
     return AuthoritativeEvidenceResolver(
         kyc_dsor_records={
-            KYC_ID: KYCDecisionRecord(
-                record_id=KYC_ID,
-                account_id=account,
-                account_type=AccountType.INSTITUTIONAL,
-                path_id=kyc_path,
-                decided_at=kyc_at,
-                maximum_age_seconds=300,
-                legal_entity_record_id=legal_entity_record_id,
-                kyb_result_record_id=kyb_result_record_id,
-            )
+            KYC_ID: kyc_record
         },
         kyc_chain_reports={
             KYC_ID: ChainReport(
                 ok=kyc_chain_valid,
                 event_count=1,
-                head_digest="sha256:" + "11" * 32,
+                head_digest=(
+                    "sha256:" + "11" * 32
+                    if kyc_chain_wrong_head or not kyc_chain_valid
+                    else digest(kyc_record)
+                ),
                 issues=(),
             )
         },
@@ -425,6 +431,12 @@ def test_hand_built_kyc_with_self_computed_digest_is_not_authoritative() -> None
 def test_kyc_record_for_another_account_is_refused() -> None:
     lifecycle = store(resolver(account=OTHER_ACCOUNT))
     with pytest.raises(AccountTransitionRefusedError, match="KYC_ACCOUNT_MISMATCH"):
+        approve(lifecycle)
+
+
+def test_kyc_report_with_ok_true_and_wrong_head_is_refused() -> None:
+    lifecycle = store(resolver(kyc_chain_wrong_head=True))
+    with pytest.raises(AccountTransitionRefusedError, match="KYC_CHAIN_INVALID"):
         approve(lifecycle)
 
 
