@@ -252,6 +252,12 @@ def test_fifo_specific_identification_and_late_election() -> None:
         )
 
 
+def test_trade_date_entry_cannot_claim_to_settle_another_entry() -> None:
+    entry = _entry("NOT-A-SETTLEMENT", date(2026, 11, 18), Decimal(1), Decimal(-10))
+    with pytest.raises(ValueError, match="only a settlement-date entry"):
+        JournalEntry(**(entry.model_dump() | {"settles_entry_id": "SALE-1"}))
+
+
 @seed(20261118)
 @given(
     q1=st.integers(min_value=1, max_value=1000),
