@@ -15,7 +15,7 @@ from atreides.account_lifecycle import (
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
     KYCDecisionRecord,
-    kyc_chain_report,
+    kyc_event_chain,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -202,7 +202,7 @@ def _store(
     )
     resolver = AuthoritativeEvidenceResolver(
         kyc_dsor_records={KYC_ID: kyc_record},
-        kyc_chain_reports={KYC_ID: kyc_chain_report(kyc_record)},
+        kyc_event_chains={KYC_ID: kyc_event_chain(kyc_record)},
         eligibility_records={ELIGIBILITY_ID: _eligibility(profile_at)},
         transfer_records={},
         first_trade_attestations={},

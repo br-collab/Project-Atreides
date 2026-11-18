@@ -57,7 +57,7 @@ from atreides.account_lifecycle import (
     KYCDecisionRecord,
     TransferInRecord,
     attest_first_permitted_trade,
-    kyc_chain_report,
+    kyc_event_chain,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -67,9 +67,6 @@ from atreides.agents.tier2.eligibility import (
     verify_eligibility,
 )
 from atreides.books.ledger import (
-    AccountType as BookAccountType,
-)
-from atreides.books.ledger import (
     EquitiesBooks,
     JournalEntry,
     PostingSource,
@@ -77,22 +74,24 @@ from atreides.books.ledger import (
 )
 from atreides.books.projections import classify_accounts, project_margin_accounts
 from atreides.books.ps1 import (
+    ACCOUNT_TREATMENT_ROWS,
+    TAX_LOT_RULES,
     ControlResult,
     InstructionKind,
+    InstructionLog,
     MoneyInstruction,
     SecuritiesConfirmation,
-    book_location_balances,
-    book_money_balances,
-    build_money_statement,
     build_securities_count,
-    reconcile_values,
+)
+from atreides.books.ps1 import (
+    reconcile as reconcile_ps1,
 )
 from atreides.client_reporting import (
     AccountStatement,
-    CustomerSideFacts,
     FurnishedEvent,
     TradeConfirmation,
     build_statement_draft,
+    customer_side_facts_from_furnished_confirmations,
     find_book_entry_for_execution,
     generate_trade_confirmation,
     issue_statement,
@@ -263,6 +262,8 @@ class GoldenPathResult(BaseModel):
     engine_dispositions: dict[str, str] = Field(default_factory=dict)
     early_warning_notices: tuple[dict[str, str], ...] = ()
     reconciliation_calendar: tuple[dict[str, object], ...] = ()
+    tax_lot_rules: tuple[dict[str, str], ...] = ()
+    account_treatment: tuple[dict[str, str], ...] = ()
 
 
 class PackDigestDSORRecord(BaseModel):
@@ -434,6 +435,8 @@ def _result(
     engine_dispositions: dict[str, str] | None = None,
     early_warning_notices: tuple[dict[str, str], ...] = (),
     reconciliation_calendar: tuple[dict[str, object], ...] = (),
+    tax_lot_rules: tuple[dict[str, str], ...] = (),
+    account_treatment: tuple[dict[str, str], ...] = (),
 ) -> GoldenPathResult:
     return GoldenPathResult(
         variant=variant,
@@ -469,6 +472,8 @@ def _result(
         engine_dispositions={} if engine_dispositions is None else engine_dispositions,
         early_warning_notices=early_warning_notices,
         reconciliation_calendar=reconciliation_calendar,
+        tax_lot_rules=tax_lot_rules,
+        account_treatment=account_treatment,
     )
 
 
@@ -738,7 +743,7 @@ def run_golden_path(  # noqa: PLR0915
         kyc_dsor_records={
             kyc_id: kyc_record
         },
-        kyc_chain_reports={kyc_id: kyc_chain_report(kyc_record)},
+        kyc_event_chains={kyc_id: kyc_event_chain(kyc_record)},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
                 record_id=eligibility_id,
@@ -1462,10 +1467,10 @@ def run_golden_path(  # noqa: PLR0915
         furnished_at=clock(),
         recipient_id=PERSON,
     )
-    customer_side_facts = CustomerSideFacts(
+    customer_side_facts = customer_side_facts_from_furnished_confirmations(
         deposit_instructions=(funded_cash,),
         venue_fills=((ISSUE, venue_report.quantity, venue_report.price),),
-        confirmations=((ISSUE, venue_report.quantity),),
+        furnished_confirmations=((confirmation, furnished),),
     )
     trade_date_statement_draft = build_statement_draft(
         books,
@@ -1549,6 +1554,7 @@ def run_golden_path(  # noqa: PLR0915
             )
         )
 
+    instruction_log = InstructionLog()
     cash_instructions = (
         MoneyInstruction(
             "GOLDEN-CASH-OPENING",
@@ -1565,21 +1571,20 @@ def run_golden_path(  # noqa: PLR0915
             "CLEARING",
         ),
     )
-    cash_statement = build_money_statement(
-        "synthetic firm bank statement", cash_instructions, reconciliation_date
-    )
-    cash_result = reconcile_values(
-        item_id="cash-to-bank",
-        books_values=book_money_balances(
-            books,
-            reconciliation_date,
-            frozenset({BookAccountType.CASH, BookAccountType.BANK_CONTROL}),
+    for instruction in cash_instructions:
+        instruction_log.append(instruction)
+    cash_statement = instruction_log.statement(
+        "synthetic firm bank statement",
+        reconciliation_date,
+        kinds=frozenset(
+            {
+                InstructionKind.OPENING,
+                InstructionKind.CNS_SETTLEMENT,
+                InstructionKind.CUSTOMER_DEPOSIT,
+            }
         ),
-        outside_values=cash_statement.balances,
-        owner="TREASURY_CONTROL",
-        as_of=reconciliation_date,
-        sources_read=("Atreides equities books", cash_statement.name),
     )
+    cash_result = reconcile_ps1("cash-to-bank", books, cash_statement, reconciliation_date)
     reserve_instructions = tuple(
         MoneyInstruction(
             f"GOLDEN-RESERVE-{deposit.computation}",
@@ -1595,22 +1600,15 @@ def run_golden_path(  # noqa: PLR0915
         for deposit in estate.reserve_deposits
         if deposit.deposit_date is not None and deposit.amount
     )
-    reserve_statement = build_money_statement(
-        "synthetic reserve bank statement", reserve_instructions, reconciliation_date
+    for instruction in reserve_instructions:
+        instruction_log.append(instruction)
+    reserve_statement = instruction_log.statement(
+        "synthetic reserve bank statement",
+        reconciliation_date,
+        kinds=frozenset({InstructionKind.RESERVE_TRANSFER}),
     )
-    reserve_result = reconcile_values(
-        item_id="reserve-bank-to-books",
-        books_values=book_money_balances(
-            books,
-            reconciliation_date,
-            frozenset(
-                {BookAccountType.RESERVE_BANK_CUSTOMER, BookAccountType.RESERVE_BANK_PAB}
-            ),
-        ),
-        outside_values=reserve_statement.balances,
-        owner="CUSTOMER_PROTECTION_CONTROL",
-        as_of=reconciliation_date,
-        sources_read=("Atreides equities books", reserve_statement.name),
+    reserve_result = reconcile_ps1(
+        "reserve-bank-to-books", books, reserve_statement, reconciliation_date
     )
     securities_count = build_securities_count(
         (
@@ -1624,16 +1622,8 @@ def run_golden_path(  # noqa: PLR0915
         ),
         reconciliation_date,
     )
-    securities_result = reconcile_values(
-        item_id="securities-count",
-        books_values=book_location_balances(books, reconciliation_date),
-        outside_values={
-            f"{issue}@{location}": quantity
-            for (issue, location), quantity in securities_count.positions.items()
-        },
-        owner="SECURITIES_COUNT_CONTROL",
-        as_of=reconciliation_date,
-        sources_read=("Atreides equities books", "synthetic DTC position statement"),
+    securities_result = reconcile_ps1(
+        "securities-count", books, securities_count, reconciliation_date
     )
 
     def money_completion(control: ControlResult) -> ReconciliationCompletion:
@@ -1799,6 +1789,8 @@ def run_golden_path(  # noqa: PLR0915
             }
             for item in control_calendar
         ),
+        tax_lot_rules=TAX_LOT_RULES,
+        account_treatment=ACCOUNT_TREATMENT_ROWS,
     )
 
 
@@ -1824,7 +1816,7 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
     # Convenience copy only. A sibling file is not an independent anchor.
     (output / "pack-digest-dsor.json").write_text(anchor.model_dump_json(indent=2) + "\n")
     summary_path.write_text(
-        "# PS-1B true reconciliation rows\n\n"
+        "# PS-1B closure\n\n"
         "This pack contains one declared-synthetic natural-person account and one "
         "declared-synthetic United States equity. It records the ordered cause chain "
         "from application through the settlement date close. No event was submitted to a venue, "
@@ -1842,6 +1834,16 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
         "settlement-date statement reports them as `SETTLED`. All six reconciliation "
         "calendar rows report `RAN` with zero breaks, and every clean-run invariant in "
         "`evidence-pack.json` is true.\n"
+        "\n## Tax-lot rules\n\n"
+        "FIFO is applied under 26 CFR 1.1012-1(c)(1)(i), and specific identification must be "
+        "recorded no later than the settlement deadline under 26 CFR 1.1012-1(c)(8). Broker "
+        "basis reporting is cited to 26 CFR 1.6045-1(d)(2)(i)(A). Wash-sale adjustment remains "
+        "`TO_VERIFY`: the journal does not carry the verified CUSIP or other covered-security "
+        "identifier required to apply 26 CFR 1.6045-1(d)(6)(iii) deterministically.\n\n"
+        "## Account treatment\n\n"
+        "The evidence pack includes a row for each PS-1 account type. Each is marked "
+        "`TO_VERIFY_AGAINST_PRIMARY_TEXT` because the pinned 17 CFR 240.15c3-3 and "
+        "240.15c3-3a text does not settle the internal placement.\n"
     )
     return evidence_path, summary_path
 

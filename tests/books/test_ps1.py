@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -18,14 +18,14 @@ from atreides.books.ledger import (
 )
 from atreides.books.ps1 import (
     InstructionKind,
+    InstructionLog,
     LotElection,
     MoneyInstruction,
     SecuritiesConfirmation,
-    book_location_balances,
     build_money_statement,
     build_securities_count,
     project_tax_lots,
-    reconcile_values,
+    reconcile,
 )
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.dsor.books import BooksPosting
@@ -108,29 +108,84 @@ def test_cash_instruction_missing_from_books_creates_owned_aged_break() -> None:
         (MoneyInstruction("DEP-1", day, Decimal("100.00"), InstructionKind.CUSTOMER_DEPOSIT),),
         day,
     )
-    result = reconcile_values(
-        item_id="cash-to-bank",
-        books_values={},
-        outside_values=statement.balances,
-        owner="TREASURY_CONTROL",
-        as_of=day,
-        sources_read=("Atreides equities books", statement.name),
-    )
+    result = reconcile("cash-to-bank", EquitiesBooks(break_owner="TEST"), statement, day)
     assert result.status == "FAILED"
     assert result.breaks[0].owner == "TREASURY_CONTROL"
     assert result.breaks[0].age_calendar_days == 0
 
 
+def test_instruction_log_is_append_only_and_refuses_duplicate_ids() -> None:
+    log = InstructionLog()
+    instruction = MoneyInstruction(
+        "DEP-1", date(2026, 11, 18), Decimal("100.00"), InstructionKind.CUSTOMER_DEPOSIT
+    )
+    log.append(instruction)
+    assert log.instructions == (instruction,)
+    with pytest.raises(ValueError, match="DUPLICATE_OUTSIDE_INSTRUCTION"):
+        log.append(instruction)
+
+
+def test_nonzero_books_refuse_an_empty_outside_source() -> None:
+    day = date(2026, 11, 18)
+    books = EquitiesBooks(break_owner="TEST")
+    books.post(_entry("BUY-EMPTY-SOURCE", day, Decimal(10), Decimal(-100)))
+    empty = build_securities_count((), day)
+    with pytest.raises(ValueError, match="EMPTY_OUTSIDE_SOURCE_WITH_BOOK_BALANCE"):
+        reconcile("securities-count", books, empty, day)
+
+
 def test_reserve_instruction_missing_from_statement_is_not_evidenced() -> None:
     day = date(2026, 11, 18)
-    result = reconcile_values(
-        item_id="reserve-bank-to-books",
-        books_values={"CUSTOMER_RESERVE": Decimal("500.00")},
-        outside_values={},
-        owner="CUSTOMER_PROTECTION_CONTROL",
-        as_of=day,
-        sources_read=("reserve bank statement", "reserve_bank_balances"),
+    books = EquitiesBooks(break_owner="TEST")
+    event_id = "evt_70000000000000000000000000"
+    books.post(
+        JournalEntry(
+            entry_id="RESERVE-1",
+            source_event_id=event_id,
+            source=PostingSource.CASH_MOVEMENT,
+            effective_date=day,
+            effective_date_basis="VALUE_DATE",
+            authority="PS1B_TEST",
+            lines=(
+                LedgerLine(
+                    account_id="RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
+                    account_type=AccountType.RESERVE_BANK_CUSTOMER,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=Decimal("500.00"),
+                ),
+                LedgerLine(
+                    account_id="FIRM-OPERATING-CASH",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=Decimal("-500.00"),
+                ),
+            ),
+            posting=BooksPosting(
+                posted_record_id="RESERVE-1",
+                posting_authority=ACTOR,
+                effective_time=datetime.combine(day, datetime.min.time(), tzinfo=UTC),
+                source_event_id=EventId(event_id),
+                provenance=Provenance.FACT_SYNTHETIC,
+            ),
+            synthetic=True,
+        )
     )
+    statement = build_money_statement(
+        "reserve bank statement",
+        (
+            MoneyInstruction(
+                "RESERVE-OPENING",
+                day,
+                Decimal(),
+                InstructionKind.OPENING,
+                "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
+            ),
+        ),
+        day,
+    )
+    result = reconcile("reserve-bank-to-books", books, statement, day)
     assert result.status == "FAILED"
     assert result.breaks[0].owner == "CUSTOMER_PROTECTION_CONTROL"
 
@@ -143,18 +198,7 @@ def test_one_share_securities_count_difference_is_owned() -> None:
         (SecuritiesConfirmation("DTC-1", day, "SYN-EQ", "PENDING_SETTLEMENT", Decimal(9)),),
         day,
     )
-    outside = {
-        f"{issue}@{location}": quantity
-        for (issue, location), quantity in count.positions.items()
-    }
-    result = reconcile_values(
-        item_id="securities-count",
-        books_values=book_location_balances(books, day),
-        outside_values=outside,
-        owner="SECURITIES_COUNT_CONTROL",
-        as_of=day,
-        sources_read=("equities books", "independent securities confirmations"),
-    )
+    result = reconcile("securities-count", books, count, day)
     assert result.status == "FAILED"
     assert result.breaks[0].difference == Decimal(1)
 
@@ -163,17 +207,33 @@ def test_fifo_specific_identification_and_late_election() -> None:
     first = _entry("BUY-1", date(2026, 11, 16), Decimal(10), Decimal(-100))
     second = _entry("BUY-2", date(2026, 11, 17), Decimal(10), Decimal(-200))
     sale = _entry("SALE-1", date(2026, 11, 18), Decimal(-12), Decimal(300))
+    settlement_time = datetime(2026, 11, 19, 14, tzinfo=UTC)
+    settlement_base = _entry(
+        "SETTLE-SALE-1", date(2026, 11, 19), Decimal(12), Decimal(-300)
+    )
+    settlement = settlement_base.model_copy(
+        update={
+            "effective_date_basis": "SETTLEMENT_DATE",
+            "settles_entry_id": "SALE-1",
+            "posting": settlement_base.posting.model_copy(
+                update={"effective_time": settlement_time}
+            ),
+        }
+    )
     lots, relief = project_tax_lots((first, second, sale), account_id="CUSTOMER-1", issue="SYN-EQ")
     assert relief[0].basis == Decimal("140.00")
     assert relief[0].realized_gain == Decimal("160.00")
     assert sum((lot.remaining_basis for lot in lots), Decimal()) == Decimal("160.00")
 
     lots, relief = project_tax_lots(
-        (first, second, sale),
+        (first, second, sale, settlement),
         account_id="CUSTOMER-1",
         issue="SYN-EQ",
-        elections=(LotElection("SALE-1", "LOT-BUY-2", date(2026, 11, 18)),),
-        settlement_dates={"SALE-1": date(2026, 11, 19)},
+        elections=(
+            LotElection(
+                "SALE-1", "LOT-BUY-2", datetime(2026, 11, 19, 13, 59, 59, tzinfo=UTC)
+            ),
+        ),
     )
     assert relief[0].basis == Decimal("220.00")
     assert relief[0].realized_gain == Decimal("80.00")
@@ -181,12 +241,21 @@ def test_fifo_specific_identification_and_late_election() -> None:
 
     with pytest.raises(ValueError, match="LATE_SPECIFIC_IDENTIFICATION_ELECTION"):
         project_tax_lots(
-            (first, second, sale),
+            (first, second, sale, settlement),
             account_id="CUSTOMER-1",
             issue="SYN-EQ",
-            elections=(LotElection("SALE-1", "LOT-BUY-2", date(2026, 11, 20)),),
-            settlement_dates={"SALE-1": date(2026, 11, 19)},
+            elections=(
+                LotElection(
+                    "SALE-1", "LOT-BUY-2", settlement_time + timedelta(seconds=1)
+                ),
+            ),
         )
+
+
+def test_trade_date_entry_cannot_claim_to_settle_another_entry() -> None:
+    entry = _entry("NOT-A-SETTLEMENT", date(2026, 11, 18), Decimal(1), Decimal(-10))
+    with pytest.raises(ValueError, match="only a settlement-date entry"):
+        JournalEntry(**(entry.model_dump() | {"settles_entry_id": "SALE-1"}))
 
 
 @seed(20261118)
