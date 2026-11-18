@@ -97,6 +97,7 @@ from atreides.rails.cns import (
     net_positions,
     settle_net_position,
 )
+from simulator.calibration import CalibrationPack
 from simulator.market import allocate_largest_remainder
 from simulator.model import Print
 from simulator.synthetic_attestation_fixture import (
@@ -239,6 +240,16 @@ def _actor() -> ActorRef:
     )
 
 
+def _approver() -> ActorRef:
+    return ActorRef(
+        actor_id=ActorId(_identifier("act_", 72)),
+        actor_kind=ActorKind.HUMAN,
+        role="sim-1b-synthetic-human-approver",
+        entitlement_refs=("SIM-1B_APPROVER",),
+        authenticated=True,
+    )
+
+
 def simulated_filed_credit_total(as_of: date, customer_credit: Decimal) -> tuple[Decimal, Decimal]:
     """Project a pre-run synthetic month-end through the real books seam.
 
@@ -344,6 +355,88 @@ def _wire(payload: ApprovedIntentPayload) -> bytes:
     )
 
 
+def validate_approval_provenance(envelope: ApprovedIntentEnvelope) -> None:
+    """Refuse human-judgment provenance unless the approver is a verified human."""
+    if envelope.provenance is Provenance.HUMAN_JUDGMENT and (
+        envelope.approved_by.actor_kind is not ActorKind.HUMAN
+        or not envelope.approved_by.authenticated
+    ):
+        raise ValueError("HUMAN_JUDGMENT requires an authenticated HUMAN approved_by actor")
+
+
+def seed_customer_cash(
+    books: EquitiesBooks,
+    *,
+    run_number: int,
+    business_date: date,
+    accounts: tuple[str, ...],
+    account_weights: tuple[int, ...],
+    balance: Decimal,
+) -> None:
+    """Post the declared synthetic customer cash that the market-access gate reads."""
+    if not balance:
+        return
+    actor = _actor()
+    base = datetime.combine(business_date, datetime.min.time(), tzinfo=UTC)
+    credit_event_id = _identifier("evt_", 70_000 + run_number)
+    credit_cents = int((balance * Decimal(100)).to_integral_exact())
+    allocations = allocate_largest_remainder(abs(credit_cents), account_weights)
+    sign = Decimal(1 if credit_cents >= 0 else -1)
+    customer_lines = tuple(
+        LedgerLine(
+            account_id=account,
+            account_type=AccountType.CUSTOMER_CASH,
+            record_side=RecordSide.MONEY,
+            currency="USD",
+            money=sign * Decimal(cents) / Decimal(100),
+        )
+        for account, cents in zip(accounts, allocations, strict=True)
+    )
+    books.post(
+        JournalEntry(
+            entry_id=f"SIM-1D-CREDIT-{run_number}",
+            source_event_id=credit_event_id,
+            source=PostingSource.CASH_MOVEMENT,
+            effective_date=business_date,
+            effective_date_basis="VALUE_DATE",
+            authority="SIM-1D_SYNTHETIC_CUSTOMER_ACTIVITY",
+            lines=(
+                *customer_lines,
+                LedgerLine(
+                    account_id="SYNTHETIC_CUSTOMER_CREDIT_FUNDING",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=-balance,
+                ),
+            ),
+            posting=BooksPosting(
+                posted_record_id=f"SIM-1D-CREDIT-{run_number}",
+                posting_authority=actor,
+                effective_time=base,
+                source_event_id=EventId(credit_event_id),
+                provenance=Provenance.FACT_SYNTHETIC,
+            ),
+            synthetic=True,
+        )
+    )
+
+
+def _customer_cash_capacity(books: EquitiesBooks, account: str) -> Decimal:
+    return sum(
+        (
+            line.money
+            for entry in books.entries
+            for line in entry.lines
+            if line.account_id == account
+            and line.account_type is AccountType.CUSTOMER_CASH
+            and line.record_side is RecordSide.MONEY
+            and line.money is not None
+        ),
+        Decimal(),
+    )
+
+
 def cash_account_purchase_lines(
     *, account_id: str, issue: str, quantity: Decimal, consideration: Decimal
 ) -> tuple[LedgerLine, LedgerLine]:
@@ -374,7 +467,8 @@ def exercise_simulator_market_access(
     reports: tuple[Print, ...],
     account_weights: tuple[int, ...],
     prior_close: Decimal,
-    customer_buying_power: Decimal,
+    pack: CalibrationPack,
+    books: EquitiesBooks,
 ) -> tuple[ApprovedIntentPayload, LifecycleRegister]:
     """Build the SIM-1B register and record its real market-access decision."""
     global _STATUS_TRUST_INSTALLED  # noqa: PLW0603 - process-local composition root
@@ -395,7 +489,7 @@ def exercise_simulator_market_access(
         quantity=total_quantity,
         policy_manifest=policy,
         authority_manifest=AuthorityManifest(
-            authority_id=actor.actor_id,
+            authority_id=_approver().actor_id,
             policy_manifest_digest=digest(policy),
             authorized=True,
         ),
@@ -414,7 +508,7 @@ def exercise_simulator_market_access(
                 established_by="SIM-1B generated day",
             ),
         ),
-        approved_by=actor,
+        approved_by=_approver(),
         provenance=Provenance.HUMAN_JUDGMENT,
         effects=OperationEffects(
             operation="simulate approved intent",
@@ -423,6 +517,7 @@ def exercise_simulator_market_access(
         ),
         payload_digest=digest_bytes(_wire(payload)),
     )
+    validate_approval_provenance(envelope)
     parent_id = OrderId(_identifier("ord_", 30_000 + run_number * 2))
     child_id = OrderId(_identifier("ord_", 30_001 + run_number * 2))
     outcome = accept_intent(
@@ -488,26 +583,24 @@ def exercise_simulator_market_access(
         as_of=base,
         maximum_age_seconds=300,
         synthetic=True,
-        journal_digest="sha256:" + "0" * 64,
+        journal_digest=books.digest(),
         firm_participant_id="SIM-1B-FIRM",
         accounts=tuple(
             CapacityAccount(
                 account_id=account,
                 capacity="CUSTOMER",
-                buying_power=max(
-                    customer_buying_power, total_quantity * prior_close, Decimal(1)
-                ),
-                margin_excess=max(
-                    customer_buying_power, total_quantity * prior_close, Decimal(1)
-                ),
-                margin_result_digest="sha256:" + "0" * 64,
+                buying_power=_customer_cash_capacity(books, account),
+                margin_excess=_customer_cash_capacity(books, account),
+                margin_result_digest=books.digest(),
                 positions=(),
             )
             for account in accounts
         ),
     )
     capacity_wire = canonical_bytes(capacity)
-    gate_capacity = max(customer_buying_power, total_quantity * prior_close, Decimal(1))
+    maximum_quantity = Decimal(str(pack.value("generator", "quantity_max")))
+    maximum_notional = maximum_quantity * Decimal(str(pack.value("market", "cns_prior_close")))
+    account_credit_limit = Decimal(str(pack.value("generator", "customer_credit_max")))
     decision = MarketAccessGate().evaluate(
         ChildRelease(
             order_event=register.events[-1],
@@ -518,11 +611,11 @@ def exercise_simulator_market_access(
         limits=LimitsManifest(
             version="SIM-1B-1",
             authority="SIM-1B-RISK",
-            account_credit_limits={account: gate_capacity for account in accounts},
-            firm_aggregate_threshold=gate_capacity,
+            account_credit_limits={account: account_credit_limit for account in accounts},
+            firm_aggregate_threshold=account_credit_limit,
             price_collar_percent=Decimal("0.10"),
-            maximum_quantity=max(total_quantity, Decimal(1)),
-            maximum_notional=gate_capacity,
+            maximum_quantity=maximum_quantity,
+            maximum_notional=maximum_notional,
             duplicate_window_seconds=60,
         ),
         capacity_input=AttestedInput(
@@ -598,7 +691,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         quantity=total_quantity,
         policy_manifest=policy,
         authority_manifest=AuthorityManifest(
-            authority_id=actor.actor_id,
+            authority_id=_approver().actor_id,
             policy_manifest_digest=digest(policy),
             authorized=True,
         ),
@@ -620,7 +713,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 established_by="SIM-1B generated day",
             ),
         ),
-        approved_by=actor,
+        approved_by=_approver(),
         provenance=Provenance.HUMAN_JUDGMENT,
         effects=OperationEffects(
             operation="simulate approved intent",
@@ -629,6 +722,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         ),
         payload_digest=digest_bytes(wire),
     )
+    validate_approval_provenance(envelope)
     if approved_register is None:
         raise ValueError("customer booking requires the register accepted by MarketAccessGate")
     register = approved_register
@@ -792,49 +886,14 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             ),
         )
     )
-    if customer_credit_balance:
-        credit_event_id = _identifier("evt_", 70_000 + run_number)
-        credit_cents = int((customer_credit_balance * Decimal(100)).to_integral_exact())
-        credit_allocations = allocate_largest_remainder(abs(credit_cents), account_weights)
-        credit_sign = Decimal(1 if credit_cents >= 0 else -1)
-        customer_credit_lines = tuple(
-            LedgerLine(
-                account_id=account,
-                account_type=AccountType.CUSTOMER_CASH,
-                record_side=RecordSide.MONEY,
-                currency="USD",
-                money=credit_sign * Decimal(cents) / Decimal(100),
-            )
-            for account, cents in zip(allocation_accounts, credit_allocations, strict=True)
-        )
-        books.post(
-            JournalEntry(
-                entry_id=f"SIM-1D-CREDIT-{run_number}",
-                source_event_id=credit_event_id,
-                source=PostingSource.CASH_MOVEMENT,
-                effective_date=business_date,
-                effective_date_basis="VALUE_DATE",
-                authority="SIM-1D_SYNTHETIC_CUSTOMER_ACTIVITY",
-                lines=(
-                    *customer_credit_lines,
-                    LedgerLine(
-                        account_id="SYNTHETIC_CUSTOMER_CREDIT_FUNDING",
-                        account_type=AccountType.CASH,
-                        record_side=RecordSide.MONEY,
-                        currency="USD",
-                        money=-customer_credit_balance,
-                    ),
-                ),
-                posting=BooksPosting(
-                    posted_record_id=f"SIM-1D-CREDIT-{run_number}",
-                    posting_authority=actor,
-                    effective_time=base,
-                    source_event_id=EventId(credit_event_id),
-                    provenance=Provenance.FACT_SYNTHETIC,
-                ),
-                synthetic=True,
-            )
-        )
+    seed_customer_cash(
+        books,
+        run_number=run_number,
+        business_date=business_date,
+        accounts=allocation_accounts,
+        account_weights=account_weights,
+        balance=customer_credit_balance,
+    )
     if financing_charge not in {None, Decimal()} and post_financing:
         financing_event_id = _identifier("evt_", 80_000 + run_number)
         books.post(
