@@ -16,7 +16,6 @@ from cannae_kernel.ids import ActorId, AllocationId, EventId, IntentId, Lifecycl
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
 from cannae_kernel.signed_attestation import sign_attestation
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from lc.events import OrderEvent, OrderTerms, OrderType, TimeInForce
 from lc.lifecycle import (
     ApprovedIntentPayload,
@@ -50,8 +49,6 @@ from lc.trade import (
     allocate,
     capture,
 )
-from lc.trust_anchors import TrustAnchor as LCTrustAnchor
-from lc.trust_anchors import install_runtime_trust_anchor as install_lc_anchor
 
 from atreides.account_lifecycle import (
     AccountType as LifecycleAccountType,
@@ -100,13 +97,17 @@ from atreides.rails.cns import (
     net_positions,
     settle_net_position,
 )
+from simulator.market import allocate_largest_remainder
 from simulator.model import Print
+from simulator.synthetic_attestation_fixture import (
+    LC_STATUS_KEY_ID,
+    LC_STATUS_PRIVATE_KEY,
+    configure_lc_status_trust,
+)
 
 #: SIM-1G deposit outcomes that leave the computation short at its deadline.
 DEPOSIT_BREACH_OUTCOMES = frozenset({"SHORT", "LATE", "NOT_DECLARED_IN_PACK"})
 
-_SIMULATOR_STATUS_KEY = Ed25519PrivateKey.generate()
-_SIMULATOR_STATUS_KEY_ID = "sim-1b-atreides-status-key"
 _STATUS_TRUST_INSTALLED = False
 
 
@@ -457,16 +458,11 @@ def exercise_simulator_market_access(
         ),
     ).journal
     if not _STATUS_TRUST_INSTALLED:
-        install_lc_anchor(
-            LCTrustAnchor(
-                key_id=_SIMULATOR_STATUS_KEY_ID,
-                producer="atreides",
-                public_key=_SIMULATOR_STATUS_KEY.public_key(),
-                valid_from=datetime(2000, 1, 1, tzinfo=UTC),
-                valid_to=datetime(2035, 1, 1, tzinfo=UTC),
-                revoked=False,
-            )
-        )
+        try:
+            configure_lc_status_trust()
+        except RuntimeError:
+            # Another synthetic path installed this exact process-local fixture.
+            pass
         _STATUS_TRUST_INSTALLED = True
     status = AccountTypeStatusDocument(
         as_of=base,
@@ -484,8 +480,8 @@ def exercise_simulator_market_access(
     status_wire = sign_attestation(
         canonical_bytes(status),
         producer="atreides",
-        key_id=_SIMULATOR_STATUS_KEY_ID,
-        private_key=_SIMULATOR_STATUS_KEY,
+        key_id=LC_STATUS_KEY_ID,
+        private_key=LC_STATUS_PRIVATE_KEY,
     )
     capacity = CapacityDocument(
         schema_version="atreides.equities_account_capacity/3",
@@ -798,16 +794,18 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     )
     if customer_credit_balance:
         credit_event_id = _identifier("evt_", 70_000 + run_number)
-        total_weight = sum(account_weights)
+        credit_cents = int((customer_credit_balance * Decimal(100)).to_integral_exact())
+        credit_allocations = allocate_largest_remainder(abs(credit_cents), account_weights)
+        credit_sign = Decimal(1 if credit_cents >= 0 else -1)
         customer_credit_lines = tuple(
             LedgerLine(
                 account_id=account,
                 account_type=AccountType.CUSTOMER_CASH,
                 record_side=RecordSide.MONEY,
                 currency="USD",
-                money=(customer_credit_balance * Decimal(weight) / Decimal(total_weight)),
+                money=credit_sign * Decimal(cents) / Decimal(100),
             )
-            for account, weight in zip(allocation_accounts, account_weights, strict=True)
+            for account, cents in zip(allocation_accounts, credit_allocations, strict=True)
         )
         books.post(
             JournalEntry(

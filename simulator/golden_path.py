@@ -18,13 +18,12 @@ from cannae_kernel.envelopes import ExecutionEvent
 from cannae_kernel.events import verify as verify_event
 from cannae_kernel.ids import ActorId, IntentId, LifecycleId, OrderId
 from cannae_kernel.journal import ChainReport
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from emulators.settlement import (
+from emulators.settlement import (  # type: ignore[import-untyped]
     RailOutcome,
     SyntheticEntitledMember,
     SyntheticRail,
 )
-from emulators.venue import (
+from emulators.venue import (  # type: ignore[import-untyped]
     VenueEmulator,
     VenueExecutionReport,
     VenueOrder,
@@ -127,6 +126,9 @@ from simulator.street import (
 from simulator.synthetic_attestation_fixture import (
     LC_KEY_ID,
     LC_PRIVATE_KEY,
+    LC_STATUS_KEY_ID,
+    LC_STATUS_PRIVATE_KEY,
+    configure_lc_status_trust,
     configure_synthetic_trust,
 )
 
@@ -266,7 +268,6 @@ class GoldenRecommendationGate:
         )
 
 
-_ATREIDES_KEY = Ed25519PrivateKey.generate()
 _TRUST_CONFIGURED = False
 
 
@@ -279,19 +280,11 @@ def _configure_trust() -> None:
     except RuntimeError:
         # The test composition root installs this exact process-local fixture.
         pass
-    from lc.trust_anchors import TrustAnchor as LCTrustAnchor
-    from lc.trust_anchors import install_runtime_trust_anchor as install_lc_anchor
-
-    install_lc_anchor(
-        LCTrustAnchor(
-            key_id="mvp3-atreides-key",
-            producer="atreides",
-            public_key=_ATREIDES_KEY.public_key(),
-            valid_from=datetime(2026, 1, 1, tzinfo=UTC),
-            valid_to=datetime(2035, 1, 1, tzinfo=UTC),
-            revoked=False,
-        )
-    )
+    try:
+        configure_lc_status_trust()
+    except RuntimeError:
+        # Another synthetic path installed this exact process-local fixture.
+        pass
     _TRUST_CONFIGURED = True
 
 
@@ -917,8 +910,8 @@ def run_golden_path(  # noqa: PLR0915
     status_wire = lifecycle.publish_status(
         as_of=clock(),
         maximum_age_seconds=PROFILE_MAXIMUM_AGE_SECONDS,
-        key_id="mvp3-atreides-key",
-        private_key=_ATREIDES_KEY,
+        key_id=LC_STATUS_KEY_ID,
+        private_key=LC_STATUS_PRIVATE_KEY,
     )
     if variant is Variant.ACCOUNT_RESTRICTED:
         lifecycle.transition(
@@ -932,8 +925,8 @@ def run_golden_path(  # noqa: PLR0915
         status_wire = lifecycle.publish_status(
             as_of=clock(),
             maximum_age_seconds=PROFILE_MAXIMUM_AGE_SECONDS,
-            key_id="mvp3-atreides-key",
-            private_key=_ATREIDES_KEY,
+            key_id=LC_STATUS_KEY_ID,
+            private_key=LC_STATUS_PRIVATE_KEY,
         )
     if variant is Variant.FORGED_STATUS:
         status_wire = status_wire[:-2] + b"xx"

@@ -11,7 +11,7 @@ from typing import Literal
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.canonical import canonical_bytes_of, digest_bytes
 from cannae_kernel.envelopes import ExecutionEvent
-from emulators.venue import VenueExecutionReport
+from emulators.venue import VenueExecutionReport  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict
 
 from atreides.books.ledger import AccountType, EquitiesBooks, JournalEntry, RecordSide
