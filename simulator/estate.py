@@ -598,7 +598,9 @@ def exercise_simulator_market_access(
         ),
     )
     capacity_wire = canonical_bytes(capacity)
-    maximum_quantity = Decimal(str(pack.value("generator", "quantity_max")))
+    maximum_quantity = Decimal(str(pack.value("generator", "quantity_max"))) + Decimal(2) * Decimal(
+        str(pack.value("generator", "auction_quantity_each"))
+    )
     maximum_notional = maximum_quantity * Decimal(str(pack.value("market", "cns_prior_close")))
     account_credit_limit = Decimal(str(pack.value("generator", "customer_credit_max")))
     decision = MarketAccessGate().evaluate(

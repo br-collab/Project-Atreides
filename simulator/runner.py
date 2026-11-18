@@ -266,14 +266,19 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         matched_at=base + timedelta(seconds=3),
         execution_price=order_price - price_spread,
     )
+    auction_quantity = int(pack.value("generator", "auction_quantity_each"))
     opening = auction_print(
-        order=order.model_copy(update={"order_id": f"ORD-{index}-OPEN", "quantity": 5}),
+        order=order.model_copy(
+            update={"order_id": f"ORD-{index}-OPEN", "quantity": auction_quantity}
+        ),
         clearing_price=order_price - Decimal("0.02"),
         imbalance=rng.randrange(1, 5),
         session="OPEN_AUCTION",
     )
     closing = auction_print(
-        order=order.model_copy(update={"order_id": f"ORD-{index}-CLOSE", "quantity": 5}),
+        order=order.model_copy(
+            update={"order_id": f"ORD-{index}-CLOSE", "quantity": auction_quantity}
+        ),
         clearing_price=order_price + Decimal("0.02"),
         imbalance=rng.randrange(1, 5),
         session="CLOSE_AUCTION",
