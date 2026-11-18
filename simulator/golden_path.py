@@ -213,6 +213,7 @@ class GoldenCloseResult(BaseModel):
 
 class GoldenPathResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+    run_id: str = "PS1-BOOKS-2026-11-18"
     variant: Variant
     disposition: str
     account_status: str
@@ -1664,19 +1665,26 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
     # Convenience copy only. A sibling file is not an independent anchor.
     (output / "pack-digest-dsor.json").write_text(anchor.model_dump_json(indent=2) + "\n")
     summary_path.write_text(
-        "# MVP-5C synthetic golden path closure\n\n"
+        "# PS-1 books on the right date\n\n"
         "This pack contains one declared-synthetic natural-person account and one "
         "declared-synthetic United States equity. It records the ordered cause chain "
-        "from application through the daily close. No event was submitted to a venue, "
+        "from application through the settlement date close. No event was submitted to a venue, "
         "depository, bank, or regulator.\n\n"
-        f"Evidence digest: `{result.evidence_digest}`\n\n"
         "| Figure | Prior pack | Current pack | Reason |\n"
         "| --- | ---: | ---: | --- |\n"
-        "| Closing free cash | 10000.00 | 9000.00 | Cash-account purchase now reduces free cash |\n"
-        "| Closing margin balance | Combined with cash | 0.00 | "
-        "Cash and margin are reported separately |\n"
-        "| Closing shares | 10 | 10 | Position posting is unchanged |\n\n"
-        "Every clean-run invariant in `evidence-pack.json` is true.\n"
+        "| Closing free cash | 9000.00 | 9000.00 | The customer obligation remains on the "
+        "trade date |\n"
+        "| Closing shares | 10 | 10 | Customer ownership remains on the trade date |\n"
+        "| Settlement status | Not published | SETTLED | Street cash and DTC location now "
+        "post on the calendar-derived settlement date |\n"
+        "| Cost basis | Not published | 1000.00 | The statement now replays acquisition "
+        "lots from the journal |\n"
+        "| Unrealized gain or loss | Not published | 0.00 | The synthetic closing price "
+        "equals the acquisition price |\n\n"
+        "The trade-date statement reports the same cash and shares as `UNSETTLED`; the "
+        "settlement-date statement reports them as `SETTLED`. All six reconciliation "
+        "calendar rows report `RAN` with zero breaks, and every clean-run invariant in "
+        "`evidence-pack.json` is true.\n"
     )
     return evidence_path, summary_path
 
