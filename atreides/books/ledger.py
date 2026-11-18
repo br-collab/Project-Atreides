@@ -126,6 +126,7 @@ class JournalEntry(_Frozen):
     lines: tuple[LedgerLine, ...] = Field(min_length=2)
     posting: BooksPosting
     reserve_source_facts: tuple[ReserveSourceFact, ...] = ()
+    settles_entry_id: str | None = None
     reverses_entry_id: str | None = None
     synthetic: bool = False
 
@@ -151,6 +152,8 @@ class JournalEntry(_Frozen):
             raise ValueError("a reversal must name the entry it reverses")
         if self.source is not PostingSource.REVERSAL and self.reverses_entry_id is not None:
             raise ValueError("only a reversal may name a reversed entry")
+        if self.settles_entry_id is not None and self.effective_date_basis != "SETTLEMENT_DATE":
+            raise ValueError("only a settlement-date entry may name the trade entry it settles")
         if self.source is PostingSource.MARGIN_INTEREST and not self.synthetic:
             raise ValueError("margin interest accrual must be labelled synthetic")
         reserve_lines = {

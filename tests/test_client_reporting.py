@@ -10,6 +10,7 @@ from atreides.client_reporting import (
     CustomerSideFacts,
     StatementTieOutError,
     build_statement_draft,
+    customer_side_facts_from_furnished_confirmations,
     generate_trade_confirmation,
     issue_statement,
 )
@@ -51,6 +52,31 @@ def test_confirmation_fields_cite_pinned_rule_and_source_record() -> None:
     assert result.confirmation_furnished is not None
     assert result.confirmation_furnished.channel == "SYNTHETIC_PORTAL"
     assert "Rule 10b-10(a)(2) capacity and remuneration" in confirmation.not_claimed
+
+
+def test_customer_side_position_reads_the_furnished_confirmation() -> None:
+    result = run_golden_path()
+    assert result.confirmation is not None
+    assert result.confirmation_furnished is not None
+    facts = customer_side_facts_from_furnished_confirmations(
+        deposit_instructions=(Decimal("10000"),),
+        venue_fills=((ISSUE, Decimal("999"), Decimal("100")),),
+        furnished_confirmations=((result.confirmation, result.confirmation_furnished),),
+    )
+    assert facts.confirmations == ((ISSUE, Decimal(10)),)
+
+
+def test_customer_side_position_refuses_a_different_furnished_record() -> None:
+    result = run_golden_path()
+    assert result.confirmation is not None
+    assert result.confirmation_furnished is not None
+    wrong = result.confirmation_furnished.model_copy(update={"confirmation_id": "CONF-WRONG"})
+    with pytest.raises(ValueError, match="FURNISHED_CONFIRMATION_ID_MISMATCH"):
+        customer_side_facts_from_furnished_confirmations(
+            deposit_instructions=(),
+            venue_fills=(),
+            furnished_confirmations=((result.confirmation, wrong),),
+        )
 
 
 def test_correction_and_cancellation_reference_immutable_original() -> None:

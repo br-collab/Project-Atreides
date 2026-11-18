@@ -8,7 +8,6 @@ from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import digest_bytes
 from cannae_kernel.ids import ActorId
-from cannae_kernel.journal import ChainReport
 from cannae_kernel.provenance import Provenance
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -29,7 +28,6 @@ from atreides.account_lifecycle import (
     RefusalReason,
     TransferInRecord,
     attest_first_permitted_trade,
-    kyc_chain_report,
     kyc_event_chain,
 )
 from atreides.agents.tier2.eligibility import (
@@ -123,6 +121,8 @@ def resolver(
     kyc_at: datetime = NOW,
     kyc_chain_valid: bool = True,
     kyc_chain_wrong_head: bool = False,
+    kyc_chain_missing: bool = False,
+    kyc_chain_tampered: bool = False,
     eligibility_id: str = ELIGIBILITY_ID,
     eligibility_at: datetime = NOW,
     eligible: bool = True,
@@ -150,22 +150,24 @@ def resolver(
         legal_entity_record_id=legal_entity_record_id,
         kyb_result_record_id=kyb_result_record_id,
     )
+    stored_chain = kyc_event_chain(
+        kyc_record.model_copy(update={"path_id": "TAMPERED"})
+        if kyc_chain_wrong_head
+        else kyc_record
+    )
+    if not kyc_chain_valid:
+        stored_chain = ()
+    elif kyc_chain_tampered:
+        stored_chain = (
+            stored_chain[0].model_copy(
+                update={"payload": kyc_record.model_copy(update={"path_id": "CHANGED"})}
+            ),
+        )
     return AuthoritativeEvidenceResolver(
         kyc_dsor_records={
             KYC_ID: kyc_record
         },
-        kyc_chain_reports={
-            KYC_ID: ChainReport(
-                ok=kyc_chain_valid,
-                event_count=1,
-                head_digest=(
-                    "sha256:" + "11" * 32
-                    if kyc_chain_wrong_head or not kyc_chain_valid
-                    else kyc_chain_report(kyc_record).head_digest
-                ),
-                issues=(),
-            )
-        },
+        kyc_event_chains={} if kyc_chain_missing else {KYC_ID: stored_chain},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
                 record_id=eligibility_id,
@@ -462,6 +464,18 @@ def test_kyc_report_with_ok_true_and_wrong_head_is_refused() -> None:
 
 def test_kyc_record_with_invalid_chain_is_refused() -> None:
     lifecycle = store(resolver(kyc_chain_valid=False))
+    with pytest.raises(AccountTransitionRefusedError, match="KYC_CHAIN_INVALID"):
+        approve(lifecycle)
+
+
+def test_kyc_record_with_tampered_stored_event_is_refused() -> None:
+    lifecycle = store(resolver(kyc_chain_tampered=True))
+    with pytest.raises(AccountTransitionRefusedError, match="KYC_CHAIN_INVALID"):
+        approve(lifecycle)
+
+
+def test_kyc_record_without_stored_chain_is_refused() -> None:
+    lifecycle = store(resolver(kyc_chain_missing=True))
     with pytest.raises(AccountTransitionRefusedError, match="KYC_CHAIN_INVALID"):
         approve(lifecycle)
 

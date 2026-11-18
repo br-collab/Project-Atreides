@@ -19,7 +19,7 @@ from atreides.account_lifecycle import (
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
     KYCDecisionRecord,
-    kyc_chain_report,
+    kyc_event_chain,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -188,7 +188,7 @@ def _run_one(
             )
         },
         kyc_dsor_records={kyc_id: kyc_record},
-        kyc_chain_reports={kyc_id: kyc_chain_report(kyc_record)},
+        kyc_event_chains={kyc_id: kyc_event_chain(kyc_record)},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
                 record_id=eligibility_id,

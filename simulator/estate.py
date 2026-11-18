@@ -932,6 +932,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
             ),
             effective_date=settlement_date,
             effective_date_basis="SETTLEMENT_DATE",
+            settles_entry_id=f"SIM-1B-{run_number}",
             authority="NSCC_SYNTHETIC",
             lines=tuple(settlement_lines),
             reserve_source_facts=reserve_source_facts,

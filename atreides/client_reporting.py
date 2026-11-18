@@ -130,6 +130,28 @@ class CustomerSideFacts(BaseModel):
     confirmations: tuple[tuple[str, Decimal], ...]
 
 
+def customer_side_facts_from_furnished_confirmations(
+    *,
+    deposit_instructions: tuple[Decimal, ...],
+    venue_fills: tuple[tuple[str, Decimal, Decimal], ...],
+    furnished_confirmations: tuple[tuple[TradeConfirmation, FurnishedEvent], ...],
+) -> CustomerSideFacts:
+    """Read position facts from the confirmation record proven furnished."""
+    positions = []
+    for confirmation, furnished in furnished_confirmations:
+        if furnished.confirmation_id != confirmation.confirmation_id:
+            raise ValueError("FURNISHED_CONFIRMATION_ID_MISMATCH")
+        fields = {field.name: field.value for field in confirmation.fields}
+        positions.append(
+            (fields["security_identity"], Decimal(fields["quantity"]))
+        )
+    return CustomerSideFacts(
+        deposit_instructions=deposit_instructions,
+        venue_fills=venue_fills,
+        confirmations=tuple(positions),
+    )
+
+
 def _rule_provenance(rule_id: str, source_record_id: str) -> ReportingProvenance:
     rule = load_rule_table().get(rule_id)
     if rule is None:

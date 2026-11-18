@@ -58,12 +58,14 @@ from atreides.books.projections import (
     reserve_bank_balances,
 )
 from atreides.books.ps1 import (
+    InstructionKind,
+    InstructionLog,
+    MoneyInstruction,
     SecuritiesConfirmation,
-    book_location_balances,
-    book_money_balances,
-    build_money_statement,
     build_securities_count,
-    reconcile_values,
+)
+from atreides.books.ps1 import (
+    reconcile as reconcile_ps1,
 )
 from atreides.customer_protection.control import check_possession_or_control
 from atreides.customer_protection.net_capital import compute_net_capital
@@ -91,6 +93,7 @@ from simulator.estate import (
     DEPOSIT_BREACH_OUTCOMES,
     DepositDraw,
     DepositPolicy,
+    ReserveDeposit,
     _complete_reserve_inputs,
     _post_reserve_deposits,
     _wire,
@@ -1430,6 +1433,7 @@ def _protections(  # noqa: PLR0915 - one control close keeps gate inputs visible
     dict[str, Decimal | None],
     FirmFocusTieOut,
     tuple[EarlyWarningNotice, ...],
+    tuple[ReserveDeposit, ...],
     bool,
     bool,
 ]:
@@ -1670,6 +1674,7 @@ def _protections(  # noqa: PLR0915 - one control close keeps gate inputs visible
         figures,
         focus_tie_out,
         notices,
+        deposits,
         warning_workflow_held(capital.early_warnings, notices),
         all(dispositions[name] == expected for name, expected in required.items()),
     )
@@ -1706,6 +1711,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
     carried_fails: dict[str, tuple[OpenFail, ...]] = {}
     loan_register = LoanRegister()
     all_settlement_outcomes: list[SettlementOutcome] = []
+    instruction_log = InstructionLog()
     started = time.perf_counter()
     total_executions = 0
     expected_customer_accounts = {
@@ -1755,6 +1761,18 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 business_date,
                 sequence,
                 profile.margin_account_share,
+            )
+            settlement_sign = Decimal(1) if rows[0].side == "BUY" else Decimal(-1)
+            instruction_log.append(
+                MoneyInstruction(
+                    f"SCF1-CNS-MONEY-{sequence}",
+                    business_date,
+                    settlement_sign * sum(
+                        (consideration for _, _, consideration in allocations), Decimal()
+                    ),
+                    InstructionKind.CNS_SETTLEMENT,
+                    "CLEARING",
+                )
             )
             if (
                 mutation in {"DROP_FILL_FROM_BOOKS", "STREET_MOVEMENT_BOOKS_MISSED"}
@@ -2012,30 +2030,25 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         )
         breaks = tuple(item for item_breaks, _ in observed_results for item in item_breaks)
         source_completions = tuple(completion for _, completion in observed_results)
-        cash_statement = build_money_statement("synthetic-firm-bank", (), business_date)
-        cash_result = reconcile_values(
-            item_id="cash-to-bank",
-            books_values=book_money_balances(
-                books, business_date, frozenset({AccountType.CASH, AccountType.BANK_CONTROL})
+        cash_statement = instruction_log.statement(
+            "synthetic-firm-bank",
+            business_date,
+            kinds=frozenset(
+                {
+                    InstructionKind.OPENING,
+                    InstructionKind.CNS_SETTLEMENT,
+                    InstructionKind.CUSTOMER_DEPOSIT,
+                }
             ),
-            outside_values=cash_statement.balances,
-            owner="TREASURY_CONTROL",
-            as_of=business_date,
-            sources_read=("synthetic-firm-bank", "dated-equities-books"),
         )
-        reserve_statement = build_money_statement("synthetic-reserve-banks", (), business_date)
-        reserve_result = reconcile_values(
-            item_id="reserve-bank-to-books",
-            books_values={
-                account_type.value: value
-                for account_type, value in reserve_bank_balances(
-                    books, through=business_date
-                ).items()
-            },
-            outside_values=reserve_statement.balances,
-            owner="CUSTOMER_PROTECTION_CONTROL",
-            as_of=business_date,
-            sources_read=("synthetic-reserve-bank-statements", "reserve-bank-books"),
+        cash_result = reconcile_ps1("cash-to-bank", books, cash_statement, business_date)
+        reserve_statement = instruction_log.statement(
+            "synthetic-reserve-banks",
+            business_date,
+            kinds=frozenset({InstructionKind.RESERVE_TRANSFER}),
+        )
+        reserve_result = reconcile_ps1(
+            "reserve-bank-to-books", books, reserve_statement, business_date
         )
         count_confirmation_rows: list[SecuritiesConfirmation] = []
         count_source_failed = False
@@ -2057,16 +2070,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             )
         count_confirmations = tuple(count_confirmation_rows)
         securities_count = build_securities_count(count_confirmations, business_date)
-        securities_result = reconcile_values(
-            item_id="securities-count",
-            books_values=book_location_balances(books, business_date),
-            outside_values={
-                f"{issue}@{location}": quantity
-                for (issue, location), quantity in securities_count.positions.items()
-            },
-            owner="SECURITIES_COUNT_CONTROL",
-            as_of=business_date,
-            sources_read=("depository-and-other-confirmations", "dated-equities-books"),
+        securities_result = reconcile_ps1(
+            "securities-count", books, securities_count, business_date
         )
         if count_source_failed:
             securities_result = securities_result.__class__(
@@ -2108,6 +2113,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             protection_figures,
             focus_tie_out,
             early_warning_notices,
+            reserve_deposits,
             i14,
             i6,
         ) = _protections(
@@ -2121,6 +2127,22 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             net_worth=(Decimal("10000") if early_warning_stress else net_worth),
             reserve_stress=reserve_stress,
         )
+        for deposit in reserve_deposits:
+            if deposit.deposit_date is None or not deposit.amount:
+                continue
+            instruction_log.append(
+                MoneyInstruction(
+                    f"SCF1-RESERVE-{day_index}-{deposit.computation}",
+                    deposit.deposit_date,
+                    deposit.amount,
+                    InstructionKind.RESERVE_TRANSFER,
+                    (
+                        "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+                        if deposit.computation == "customer"
+                        else "RESERVE_BANK_PAB@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+                    ),
+                )
+            )
         carry_complete = set(carried_fails) <= set(carried_input)
         covered_cns_issues = {item.position.security_id for item in settlements}
         invariants = {

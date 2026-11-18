@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.1 - 18 Nov 2026
+
+Close the PS-1 verification findings: statements now come from an append-only instruction log,
+the public reconciliation gate builds both sides, KYC replays the stored decision-event chain,
+lot-election timing comes from the sale's settlement journal entry, and customer-side position
+facts come from the furnished confirmation. Pin the 2025 annual GovInfo editions of 26 CFR
+1.1012-1, 1.6045-1, and 1.1091-1. FIFO and the specific-identification deadline are implemented;
+wash-sale adjustment remains `TO_VERIFY` because the synthetic journal does not carry the verified
+covered-security identifier required for deterministic same-account application. Publish the
+unsettled account-treatment questions as `TO_VERIFY_AGAINST_PRIMARY_TEXT` instead of claiming the
+pinned customer-protection text places those internal accounts.
+
 ## 1.1.0 - 18 Nov 2026
 
 Split equities trades into trade-date obligations and calendar-derived settlement-date street

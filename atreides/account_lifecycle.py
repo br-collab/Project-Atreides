@@ -148,12 +148,12 @@ class KYCDecisionRecord(BaseModel):
 
 
 def kyc_event_chain(record: KYCDecisionRecord) -> tuple[EventEnvelope[KYCDecisionRecord], ...]:
-    """Replay the sealed Decision System of Record event for a KYC decision."""
+    """Seal the event stored with a Know Your Customer decision."""
     actor = ActorRef(
         actor_id=ActorId("act_00000000000000000000000001"),
         actor_kind=ActorKind.DETERMINISTIC_SERVICE,
-        role="kyc-decision-record-replay",
-        entitlement_refs=("KYC_DSOR_REPLAY",),
+        role="kyc-decision-record-writer",
+        entitlement_refs=("KYC_DSOR_WRITE",),
         authenticated=True,
     )
     event = seal(
@@ -179,9 +179,11 @@ def kyc_event_chain(record: KYCDecisionRecord) -> tuple[EventEnvelope[KYCDecisio
     return (event,)
 
 
-def kyc_chain_report(record: KYCDecisionRecord) -> ChainReport:
-    """Verify the replayed KYC Decision System of Record event chain."""
-    return verify_chain(kyc_event_chain(record))
+def kyc_chain_report(
+    chain: tuple[EventEnvelope[KYCDecisionRecord], ...],
+) -> ChainReport:
+    """Verify a stored Know Your Customer decision event chain."""
+    return verify_chain(chain)
 
 
 class EligibilityResultRecord(BaseModel):
@@ -302,7 +304,7 @@ class AuthoritativeEvidenceResolver:
         self,
         *,
         kyc_dsor_records: Mapping[str, KYCDecisionRecord],
-        kyc_chain_reports: Mapping[str, ChainReport],
+        kyc_event_chains: Mapping[str, tuple[EventEnvelope[KYCDecisionRecord], ...]],
         eligibility_records: Mapping[str, EligibilityResultRecord],
         transfer_records: Mapping[str, TransferInRecord],
         first_trade_attestations: Mapping[str, bytes],
@@ -314,7 +316,7 @@ class AuthoritativeEvidenceResolver:
         kyb_records: Mapping[str, KYBClearResultRecord] | None = None,
     ) -> None:
         self._kyc_dsor_records = kyc_dsor_records
-        self._kyc_chain_reports = kyc_chain_reports
+        self._kyc_event_chains = kyc_event_chains
         self._eligibility_records = eligibility_records
         self._transfer_records = transfer_records
         self._first_trade_attestations = first_trade_attestations
@@ -331,12 +333,14 @@ class AuthoritativeEvidenceResolver:
         record = self._kyc_dsor_records.get(record_id)
         if record is None:
             raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_NOT_FOUND)
-        report = self._kyc_chain_reports.get(record_id)
+        chain = self._kyc_event_chains.get(record_id)
+        if chain is None:
+            raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
+        report = kyc_chain_report(chain)
         if (
-            report is None
-            or not report.ok
+            not report.ok
             or report.event_count != 1
-            or report.head_digest != kyc_chain_report(record).head_digest
+            or chain[-1].payload != record
         ):
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
         return record
