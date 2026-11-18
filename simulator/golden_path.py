@@ -67,12 +67,26 @@ from atreides.agents.tier2.eligibility import (
     verify_eligibility,
 )
 from atreides.books.ledger import (
+    AccountType as BookAccountType,
+)
+from atreides.books.ledger import (
     EquitiesBooks,
     JournalEntry,
     PostingSource,
     RecordSide,
 )
 from atreides.books.projections import classify_accounts, project_margin_accounts
+from atreides.books.ps1 import (
+    ControlResult,
+    InstructionKind,
+    MoneyInstruction,
+    SecuritiesConfirmation,
+    book_location_balances,
+    book_money_balances,
+    build_money_statement,
+    build_securities_count,
+    reconcile_values,
+)
 from atreides.client_reporting import (
     AccountStatement,
     CustomerSideFacts,
@@ -120,11 +134,15 @@ from simulator.protection_oracle import (
     required_reserve,
 )
 from simulator.street import (
+    DepositoryPosition,
     IndependentSourceInputs,
     OpenFail,
+    ReconciliationCompletion,
     SettlementOutcome,
+    StreetBreak,
     build_independent_sources,
     reconcile,
+    reconciliation_calendar,
 )
 from simulator.synthetic_attestation_fixture import (
     LC_KEY_ID,
@@ -213,7 +231,7 @@ class GoldenCloseResult(BaseModel):
 
 class GoldenPathResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-    run_id: str = "PS1-BOOKS-2026-11-18"
+    run_id: str = "PS1B-TRUE-RECONCILIATIONS-2026-11-18"
     variant: Variant
     disposition: str
     account_status: str
@@ -610,6 +628,7 @@ def run_golden_path(  # noqa: PLR0915
     order_quantity: Decimal = Decimal(10),
     funding_cash: Decimal | None = None,
     depository_quantity_delta: Decimal = Decimal(),
+    bank_statement_delta: Decimal = Decimal(),
 ) -> GoldenPathResult:
     """Run one deterministic account, or one named fail-closed mutation."""
     _configure_trust()
@@ -1375,39 +1394,13 @@ def run_golden_path(  # noqa: PLR0915
     )
     oracle_capital = required_net_capital(books, {ISSUE: Decimal("100")}, Decimal("1000000"), rules)
     oracle_control = required_control(books, {ISSUE: Decimal("100")}, rules)
-    location_balances: dict[tuple[str, str], Decimal] = {}
     observed_accounts: set[str] = set()
     for entry in books.entries:
         if entry.effective_date > clock().date():
             continue
         for line in entry.lines:
-            if line.record_side.value == "LOCATION" and line.issue is not None:
-                location = line.account_type.value
-                location_balances[(line.issue, location)] = (
-                    location_balances.get((line.issue, location), Decimal()) + line.quantity
-                )
             if line.account_type.value in {"CUSTOMER_CASH", "CUSTOMER_MARGIN"}:
                 observed_accounts.add(line.account_id)
-    location_balances = {
-        key: value
-        for key, value in location_balances.items()
-        if value and key[1] in {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
-    }
-    street_readers = build_independent_sources(
-        books,
-        IndependentSourceInputs(
-            as_of=clock().date(),
-            opening_depository=(),
-            settlement_outcomes=(),
-            open_fails=(),
-            loan_instructions=(),
-        ),
-    )
-    street_breaks, street_completion = reconcile(
-        location_balances,
-        tuple(reader.read() for reader in street_readers),
-        as_of=clock().date(),
-    )
     independent_control_lines = (
         ()
         if oracle_control is None
@@ -1494,6 +1487,174 @@ def run_golden_path(  # noqa: PLR0915
         if entry.source in {PostingSource.CNS_SETTLEMENT, PostingSource.CNS_FAIL}
     )
     clock.advance(timedelta(days=(settlement_date - clock().date()).days))
+    reconciliation_date = clock().date()
+    street_books: dict[tuple[str, str], Decimal] = {}
+    for entry in books.entries:
+        if entry.effective_date > reconciliation_date:
+            continue
+        for line in entry.lines:
+            if (
+                line.record_side is RecordSide.LOCATION
+                and line.issue is not None
+                and line.account_type.value in {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
+            ):
+                key = (line.issue, line.account_type.value)
+                street_books[key] = street_books.get(key, Decimal()) + line.quantity
+    street_readers = build_independent_sources(
+        books,
+        IndependentSourceInputs(
+            as_of=reconciliation_date,
+            opening_depository=(
+                DepositoryPosition(ISSUE, "DTC", depository_quantity_delta),
+            )
+            if depository_quantity_delta
+            else (),
+            settlement_outcomes=(
+                SettlementOutcome(
+                    ISSUE,
+                    venue_report.quantity,
+                    venue_report.quantity,
+                    settlement_date,
+                ),
+            ),
+            open_fails=(),
+            loan_instructions=(),
+        ),
+    )
+    street_sources = tuple(reader.read() for reader in street_readers)
+    street_specs = (
+        ("stock-record-to-street", "DTC", street_sources[0]),
+        ("ftr-to-cns-fail-statement", "FAIL_TO_RECEIVE", street_sources[1]),
+        ("stock-loan-to-contract-register", "STOCK_LOANED", street_sources[2]),
+    )
+    street_completions = []
+    street_breaks: list[StreetBreak] = []
+    for item_id, location, source in street_specs:
+        scoped_books = {key: value for key, value in street_books.items() if key[1] == location}
+        item_breaks, completion = reconcile(
+            scoped_books,
+            (source,),
+            as_of=reconciliation_date,
+            item_id=item_id,
+        )
+        street_breaks.extend(item_breaks)
+        street_completions.append(
+            ReconciliationCompletion(
+                item_id=item_id,
+                close_date=reconciliation_date,
+                sources_read=("Atreides equities books", *completion.sources_read),
+                break_count=len(item_breaks),
+                status="FAILED" if item_breaks else "COMPLETED",
+                error="reconciliation break" if item_breaks else None,
+            )
+        )
+
+    cash_instructions = (
+        MoneyInstruction(
+            "GOLDEN-CASH-OPENING",
+            START.date(),
+            -funded_cash,
+            InstructionKind.OPENING,
+            "SYN-CONVERSION-FUNDING",
+        ),
+        MoneyInstruction(
+            "GOLDEN-CNS-MONEY-SETTLEMENT",
+            settlement_date,
+            venue_report.quantity * venue_report.price + bank_statement_delta,
+            InstructionKind.CNS_SETTLEMENT,
+            "CLEARING",
+        ),
+    )
+    cash_statement = build_money_statement(
+        "synthetic firm bank statement", cash_instructions, reconciliation_date
+    )
+    cash_result = reconcile_values(
+        item_id="cash-to-bank",
+        books_values=book_money_balances(
+            books,
+            reconciliation_date,
+            frozenset({BookAccountType.CASH, BookAccountType.BANK_CONTROL}),
+        ),
+        outside_values=cash_statement.balances,
+        owner="TREASURY_CONTROL",
+        as_of=reconciliation_date,
+        sources_read=("Atreides equities books", cash_statement.name),
+    )
+    reserve_instructions = tuple(
+        MoneyInstruction(
+            f"GOLDEN-RESERVE-{deposit.computation}",
+            deposit.deposit_date,
+            deposit.amount,
+            InstructionKind.RESERVE_TRANSFER,
+            (
+                "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+                if deposit.computation == "customer"
+                else "RESERVE_BANK_PAB@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+            ),
+        )
+        for deposit in estate.reserve_deposits
+        if deposit.deposit_date is not None and deposit.amount
+    )
+    reserve_statement = build_money_statement(
+        "synthetic reserve bank statement", reserve_instructions, reconciliation_date
+    )
+    reserve_result = reconcile_values(
+        item_id="reserve-bank-to-books",
+        books_values=book_money_balances(
+            books,
+            reconciliation_date,
+            frozenset(
+                {BookAccountType.RESERVE_BANK_CUSTOMER, BookAccountType.RESERVE_BANK_PAB}
+            ),
+        ),
+        outside_values=reserve_statement.balances,
+        owner="CUSTOMER_PROTECTION_CONTROL",
+        as_of=reconciliation_date,
+        sources_read=("Atreides equities books", reserve_statement.name),
+    )
+    securities_count = build_securities_count(
+        (
+            SecuritiesConfirmation(
+                "GOLDEN-DTC-CONFIRMATION",
+                settlement_date,
+                ISSUE,
+                "DTC",
+                venue_report.quantity + depository_quantity_delta,
+            ),
+        ),
+        reconciliation_date,
+    )
+    securities_result = reconcile_values(
+        item_id="securities-count",
+        books_values=book_location_balances(books, reconciliation_date),
+        outside_values={
+            f"{issue}@{location}": quantity
+            for (issue, location), quantity in securities_count.positions.items()
+        },
+        owner="SECURITIES_COUNT_CONTROL",
+        as_of=reconciliation_date,
+        sources_read=("Atreides equities books", "synthetic DTC position statement"),
+    )
+
+    def money_completion(control: ControlResult) -> ReconciliationCompletion:
+        return ReconciliationCompletion(
+            item_id=control.item_id,
+            close_date=reconciliation_date,
+            sources_read=control.sources_read,
+            break_count=len(control.breaks),
+            status="FAILED" if control.status == "FAILED" else "COMPLETED",
+            error="reconciliation break" if control.breaks else None,
+        )
+
+    control_calendar = reconciliation_calendar(
+        reconciliation_date,
+        (
+            *street_completions,
+            money_completion(cash_result),
+            money_completion(reserve_result),
+            money_completion(securities_result),
+        ),
+    )
     statement_draft = build_statement_draft(
         books,
         account_id=ACCOUNT,
@@ -1577,7 +1738,8 @@ def run_golden_path(  # noqa: PLR0915
             and oracle_control is not None
             and oracle_control.outcome == estate.control_disposition
         ),
-        "street_reconciliation": not street_breaks and street_completion.status == "COMPLETED",
+        "street_reconciliation": not street_breaks
+        and all(item.status == "COMPLETED" for item in street_completions),
         "focus_tie_out": focus.held,
         "customer_in_books": ACCOUNT in observed_accounts,
     }
@@ -1620,25 +1782,22 @@ def run_golden_path(  # noqa: PLR0915
             "net_capital": estate.net_capital_disposition,
             "possession_or_control": estate.control_disposition,
             "street_reconciliation": (
-                "PASS" if not street_breaks and street_completion.status == "COMPLETED" else "HOLD"
+                "PASS"
+                if not street_breaks
+                and all(item.status == "COMPLETED" for item in street_completions)
+                else "HOLD"
             ),
         },
         early_warning_notices=(),
         reconciliation_calendar=tuple(
             {
-                "item_id": item_id,
-                "status": "RAN",
-                "break_count": 0,
-                "close_date": clock().date().isoformat(),
+                "item_id": item.item_id,
+                "status": item.status,
+                "break_count": item.break_count,
+                "close_date": item.close_date.isoformat(),
+                "sources_read": item.sources_read,
             }
-            for item_id in (
-                "stock-record-to-street",
-                "ftr-to-cns-fail-statement",
-                "stock-loan-to-contract-register",
-                "cash-to-bank",
-                "reserve-bank-to-books",
-                "securities-count",
-            )
+            for item in control_calendar
         ),
     )
 
@@ -1665,22 +1824,20 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
     # Convenience copy only. A sibling file is not an independent anchor.
     (output / "pack-digest-dsor.json").write_text(anchor.model_dump_json(indent=2) + "\n")
     summary_path.write_text(
-        "# PS-1 books on the right date\n\n"
+        "# PS-1B true reconciliation rows\n\n"
         "This pack contains one declared-synthetic natural-person account and one "
         "declared-synthetic United States equity. It records the ordered cause chain "
         "from application through the settlement date close. No event was submitted to a venue, "
         "depository, bank, or regulator.\n\n"
         "| Figure | Prior pack | Current pack | Reason |\n"
         "| --- | ---: | ---: | --- |\n"
-        "| Closing free cash | 9000.00 | 9000.00 | The customer obligation remains on the "
-        "trade date |\n"
-        "| Closing shares | 10 | 10 | Customer ownership remains on the trade date |\n"
-        "| Settlement status | Not published | SETTLED | Street cash and DTC location now "
-        "post on the calendar-derived settlement date |\n"
-        "| Cost basis | Not published | 1000.00 | The statement now replays acquisition "
-        "lots from the journal |\n"
-        "| Unrealized gain or loss | Not published | 0.00 | The synthetic closing price "
-        "equals the acquisition price |\n\n"
+        "| Reconciliation rows | Six constant RAN rows | Six control result rows | "
+        "Rows now carry each control's status, break count and sources read |\n"
+        "| Closing free cash | 9000.00 | 9000.00 | Customer economics are unchanged |\n"
+        "| Closing shares | 10 | 10 | Customer economics are unchanged |\n"
+        "| Settlement status | SETTLED | SETTLED | Dated posting is unchanged |\n"
+        "| Cost basis | 1000.00 | 1000.00 | Journal-replayed lots are unchanged |\n"
+        "| Unrealized gain or loss | 0.00 | 0.00 | Synthetic closing price is unchanged |\n\n"
         "The trade-date statement reports the same cash and shares as `UNSETTLED`; the "
         "settlement-date statement reports them as `SETTLED`. All six reconciliation "
         "calendar rows report `RAN` with zero breaks, and every clean-run invariant in "

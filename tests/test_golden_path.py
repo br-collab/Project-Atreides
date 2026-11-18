@@ -49,6 +49,21 @@ def test_clean_golden_path_closes_with_every_invariant_true() -> None:
     assert set(result.statement.settlement_status.values()) == {"SETTLED"}
     assert len(result.reconciliation_calendar) == 6
     assert {str(row["status"]) for row in result.reconciliation_calendar} == {"RAN"}
+    assert all(row["sources_read"] for row in result.reconciliation_calendar)
+
+
+def test_cash_statement_short_by_one_cent_fails_its_golden_row() -> None:
+    result = run_golden_path(bank_statement_delta=Decimal("-0.01"))
+    row = next(
+        item for item in result.reconciliation_calendar if item["item_id"] == "cash-to-bank"
+    )
+
+    assert row["status"] == "FAILED", "cash-to-bank control must publish its own failure"
+    assert row["break_count"] == 1
+    assert row["sources_read"] == (
+        "Atreides equities books",
+        "synthetic firm bank statement",
+    )
 
 
 def test_service_approver_cannot_claim_human_judgment() -> None:
