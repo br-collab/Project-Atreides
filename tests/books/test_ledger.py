@@ -310,12 +310,13 @@ def _reserve_entry(
     contract_price: Decimal,
     settlement_date: date,
     fail_id: str | None = None,
+    effective_date: date | None = None,
 ) -> JournalEntry:
     return entry(
         event,
         f"reserve-{event}",
         source=PostingSource.CNS_FAIL,
-        effective_date=settlement_date,
+        effective_date=effective_date or settlement_date,
         lines=(
             LedgerLine(
                 account_id=f"{activity.value}-{account_type.value}",
@@ -449,13 +450,14 @@ def test_fail_or_borrow_line_without_source_fact_is_refused() -> None:
 
 
 @pytest.mark.parametrize(
-    ("settlement_date", "reason"),
+    ("settlement_date", "reason", "effective_date"),
     [
-        (date(2026, 10, 18), "loaded business day"),
+        (date(2026, 10, 18), "loaded business day", None),
+        (date(2026, 10, 23), "cannot be after", date(2026, 10, 22)),
     ],
 )
 def test_reserve_source_date_must_be_a_past_business_day(
-    settlement_date: date, reason: str
+    settlement_date: date, reason: str, effective_date: date | None
 ) -> None:
     books = EquitiesBooks(break_owner="owner")
     books.post(
@@ -466,6 +468,7 @@ def test_reserve_source_date_must_be_a_past_business_day(
             quantity=Decimal(1),
             contract_price=Decimal(100),
             settlement_date=settlement_date,
+            effective_date=effective_date,
         )
     )
     with pytest.raises(ValueError, match=reason):
