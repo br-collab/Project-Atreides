@@ -107,6 +107,7 @@ from simulator.estate import (
     _identifier,
     _wire,
     drive_estate,
+    validate_approval_provenance,
 )
 from simulator.estate import _actor as estate_actor
 from simulator.focus import FirmFocusLines, tie_out_firm_close
@@ -329,9 +330,13 @@ def _evidence_event(
 def verify_evidence_artifacts(result: GoldenPathResult) -> bool:
     """Recompute every event digest from the artifacts carried by the result."""
     by_id = {item.event_id: item for item in result.evidence}
-    return set(by_id) == set(result.stored_artifacts) and all(
-        by_id[event_id].artifact_digest == digest_bytes(bytes.fromhex(artifact_hex))
-        for event_id, artifact_hex in result.stored_artifacts.items()
+    return (
+        len(by_id) == len(result.evidence)
+        and set(by_id) == set(result.stored_artifacts)
+        and all(
+            by_id[event_id].artifact_digest == digest_bytes(bytes.fromhex(artifact_hex))
+            for event_id, artifact_hex in result.stored_artifacts.items()
+        )
     )
 
 
@@ -848,7 +853,7 @@ def run_golden_path(  # noqa: PLR0915
         quantity=order_quantity,
         policy_manifest=policy,
         authority_manifest=AuthorityManifest(
-            authority_id=actor.actor_id, policy_manifest_digest=digest(policy), authorized=True
+            authority_id=approver.actor_id, policy_manifest_digest=digest(policy), authorized=True
         ),
         allocation_accounts=(ACCOUNT,),
         source_event_id=str(funded_event.event_id),
@@ -1011,13 +1016,14 @@ def run_golden_path(  # noqa: PLR0915
                 value=clock().date(), calendar="SIFMA-US", established_by="MVP-3 run clock"
             ),
         ),
-        approved_by=actor,
+        approved_by=approver,
         provenance=Provenance.HUMAN_JUDGMENT,
         effects=OperationEffects(
             operation="MVP-3 approved intent", effects=(), note="synthetic only"
         ),
         payload_digest=kernel_digest_bytes(wire),
     )
+    validate_approval_provenance(envelope)
     outcome = accept_intent(
         envelope,
         wire,
@@ -1158,7 +1164,7 @@ def run_golden_path(  # noqa: PLR0915
         event_id=str(venue_event.event_id),
         producer="VenueEmulator",
         signature_status="NOT_SIGNED",
-        cause_event_id=str(order_event.event_id),
+        cause_event_id=str(register.events[-1].event_id),
         summary="venue fill",
         artifact=venue_event,
     )
@@ -1212,38 +1218,15 @@ def run_golden_path(  # noqa: PLR0915
             bank_equity_capital=Decimal("1000000"),
         ),
     )
-    _append_evidence(
-        evidence_items,
-        stored_artifacts,
-        event_id=str(estate.approved_intent.intent_id),
-        producer="L.C. estate adapter",
-        signature_status="NOT_SIGNED",
-        cause_event_id=estate.approved_intent.source_event_id,
-        summary="estate approved intent",
-        artifact=estate.approved_intent,
-    )
-    for item in estate.lifecycle_events:
-        _append_evidence(
-            evidence_items,
-            stored_artifacts,
-            event_id=str(item.event_id),
-            producer="L.C.",
-            signature_status="VERIFIED" if verify_event(item) else "FAILED",
-            cause_event_id=(
-                str(item.parent_ids[0])
-                if item.parent_ids
-                else str(estate.approved_intent.intent_id)
-            ),
-            summary=item.payload.state.value,
-            artifact=item,
-        )
+    # The estate consumes the same approved intent and lifecycle register already
+    # published above. Publishing them a second time would duplicate evidence ids.
     _append_evidence(
         evidence_items,
         stored_artifacts,
         event_id=estate.capture_record.trade_id,
         producer="L.C.",
         signature_status="NOT_SIGNED",
-        cause_event_id=str(estate.lifecycle_events[-2].event_id),
+        cause_event_id=str(venue_event.event_id),
         summary="trade capture",
         artifact=estate.capture_record,
     )
@@ -1618,9 +1601,10 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
         pack_digest=pack_digest,
         recorded_at=START + timedelta(days=4),
     )
+    # Convenience copy only. A sibling file is not an independent anchor.
     (output / "pack-digest-dsor.json").write_text(anchor.model_dump_json(indent=2) + "\n")
     summary_path.write_text(
-        "# MVP-5B synthetic golden path closure\n\n"
+        "# MVP-5C synthetic golden path closure\n\n"
         "This pack contains one declared-synthetic natural-person account and one "
         "declared-synthetic United States equity. It records the ordered cause chain "
         "from application through the daily close. No event was submitted to a venue, "
@@ -1638,6 +1622,6 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
 
 
 def verify_published_pack(evidence_path: Path, anchor_path: Path) -> bool:
-    """Verify a published pack against its separate Decision System of Record anchor."""
+    """Verify a pack against a supplied digest record, which may be a convenience copy."""
     anchor = PackDigestDSORRecord.model_validate_json(anchor_path.read_text(encoding="utf-8"))
     return anchor.pack_digest == digest_bytes(evidence_path.read_bytes())

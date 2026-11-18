@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 - 18 Nov 2026
+
+Align approval provenance with the approving actor, make golden-path evidence identifiers unique,
+link the venue fill to the market-access decision, and source SIM-1B limits and capacity from the
+declared calibration policy and books. Publish the corrected pack and list the older packs that its
+cash-account posting supersedes.
+
 ## 1.0.0 - 17 Nov 2026
 
 Close the declared-synthetic retail minimum viable product from MVP-0 through MVP-5B: hardened
