@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -13,7 +14,7 @@ from cannae_kernel.canonical import canonical_bytes
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.domains import Domain
 from cannae_kernel.events import EventEnvelope, seal
-from cannae_kernel.ids import ActorId, CheckpointId, EventId, LifecycleId
+from cannae_kernel.ids import ActorId, CheckpointId, EventId, LifecycleId, encode_ulid
 from cannae_kernel.journal import ChainReport, JournalCheckpoint, verify_chain
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.signed_attestation import (
@@ -126,8 +127,8 @@ class AccountType(StrEnum):
     NATURAL_PERSON = "NATURAL_PERSON"
 
 
-class KYCDecisionRecord(BaseModel):
-    """Authoritative KYC ladder record resolved from the DSOR."""
+class KYCDecisionPayload(BaseModel):
+    """Immutable facts sealed when one Know Your Customer decision is recorded."""
 
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
     record_id: str = Field(min_length=1)
@@ -141,14 +142,45 @@ class KYCDecisionRecord(BaseModel):
     kyb_result_record_id: str | None = None
 
     @model_validator(mode="after")
-    def _person_binding_matches_account_type(self) -> KYCDecisionRecord:
+    def _person_binding_matches_account_type(self) -> KYCDecisionPayload:
         if (self.account_type is AccountType.NATURAL_PERSON) != (self.person_id is not None):
             raise ValueError("natural-person KYC requires one person binding")
         return self
 
 
-def kyc_event_chain(record: KYCDecisionRecord) -> tuple[EventEnvelope[KYCDecisionRecord], ...]:
-    """Seal the event stored with a Know Your Customer decision."""
+class KYCDecisionRecord(KYCDecisionPayload):
+    """Authoritative decision stored together with its sealed event chain."""
+
+    event_chain: tuple[EventEnvelope[KYCDecisionPayload], ...] = Field(min_length=1)
+
+    def payload(self) -> KYCDecisionPayload:
+        return KYCDecisionPayload.model_validate(self.model_dump(exclude={"event_chain"}))
+
+
+def record_kyc_decision(
+    *,
+    record_id: str,
+    account_id: str,
+    account_type: AccountType,
+    path_id: str,
+    decided_at: datetime,
+    maximum_age_seconds: int,
+    person_id: str | None = None,
+    legal_entity_record_id: str | None = None,
+    kyb_result_record_id: str | None = None,
+) -> KYCDecisionRecord:
+    """Seal and store one Know Your Customer decision as one operation."""
+    payload = KYCDecisionPayload(
+        record_id=record_id,
+        account_id=account_id,
+        account_type=account_type,
+        person_id=person_id,
+        path_id=path_id,
+        decided_at=decided_at,
+        maximum_age_seconds=maximum_age_seconds,
+        legal_entity_record_id=legal_entity_record_id,
+        kyb_result_record_id=kyb_result_record_id,
+    )
     actor = ActorRef(
         actor_id=ActorId("act_00000000000000000000000001"),
         actor_kind=ActorKind.DETERMINISTIC_SERVICE,
@@ -156,31 +188,34 @@ def kyc_event_chain(record: KYCDecisionRecord) -> tuple[EventEnvelope[KYCDecisio
         entitlement_refs=("KYC_DSOR_WRITE",),
         authenticated=True,
     )
+    decision_digest = hashlib.sha256(canonical_bytes(payload)).hexdigest()
+    timestamp_ms = int(payload.decided_at.timestamp() * 1000)
+    digest_bytes = bytes.fromhex(decision_digest)
     event = seal(
-        event_id=EventId("evt_00000000000000000000000001"),
-        lifecycle_id=LifecycleId("lif_00000000000000000000000001"),
+        event_id=EventId(f"evt_{encode_ulid(timestamp_ms, digest_bytes[:10])}"),
+        lifecycle_id=LifecycleId(f"lif_{encode_ulid(timestamp_ms, digest_bytes[10:20])}"),
         parent_ids=(),
         producer_domain=Domain.ATREIDES,
         event_type="KYCDecisionRecorded",
         schema_version="atreides.kyc_decision_recorded/1",
         rule_version="kyc-dsor/1",
         times=EventTimes(
-            event_time=record.decided_at,
-            observation_time=record.decided_at,
-            processing_time=record.decided_at,
-            decision_time=record.decided_at,
+            event_time=payload.decided_at,
+            observation_time=payload.decided_at,
+            processing_time=payload.decided_at,
+            decision_time=payload.decided_at,
         ),
         provenance=Provenance.POLICY_RESULT,
         actor=actor,
-        idempotency_key=f"kyc:{record.record_id}",
-        payload=record,
+        idempotency_key=f"kyc:{payload.record_id}",
+        payload=payload,
         prior_event_digest=None,
     )
-    return (event,)
+    return KYCDecisionRecord(**payload.model_dump(), event_chain=(event,))
 
 
 def kyc_chain_report(
-    chain: tuple[EventEnvelope[KYCDecisionRecord], ...],
+    chain: tuple[EventEnvelope[KYCDecisionPayload], ...],
 ) -> ChainReport:
     """Verify a stored Know Your Customer decision event chain."""
     return verify_chain(chain)
@@ -304,7 +339,6 @@ class AuthoritativeEvidenceResolver:
         self,
         *,
         kyc_dsor_records: Mapping[str, KYCDecisionRecord],
-        kyc_event_chains: Mapping[str, tuple[EventEnvelope[KYCDecisionRecord], ...]],
         eligibility_records: Mapping[str, EligibilityResultRecord],
         transfer_records: Mapping[str, TransferInRecord],
         first_trade_attestations: Mapping[str, bytes],
@@ -316,7 +350,6 @@ class AuthoritativeEvidenceResolver:
         kyb_records: Mapping[str, KYBClearResultRecord] | None = None,
     ) -> None:
         self._kyc_dsor_records = kyc_dsor_records
-        self._kyc_event_chains = kyc_event_chains
         self._eligibility_records = eligibility_records
         self._transfer_records = transfer_records
         self._first_trade_attestations = first_trade_attestations
@@ -333,13 +366,11 @@ class AuthoritativeEvidenceResolver:
         record = self._kyc_dsor_records.get(record_id)
         if record is None:
             raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_NOT_FOUND)
-        chain = self._kyc_event_chains.get(record_id)
-        if chain is None:
-            raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
+        chain = record.event_chain
         report = kyc_chain_report(chain)
         if not report.ok or report.event_count != 1:
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
-        if chain[-1].payload != record:
+        if chain[-1].payload != record.payload():
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
         return record
 
