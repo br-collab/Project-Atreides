@@ -20,9 +20,8 @@ from atreides.account_lifecycle import (
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
     KYBClearResultRecord,
-    KYCDecisionRecord,
     LegalEntityEvidenceRecord,
-    kyc_event_chain,
+    record_kyc_decision,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -90,7 +89,7 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
             ),
         )
     )
-    kyc_record = KYCDecisionRecord(
+    kyc_record = record_kyc_decision(
         record_id="SIM-1-G3-KYC",
         account_id="SYN-G3",
         path_id="KYC_ELIGIBLE_CLEAR",
@@ -114,7 +113,6 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
             )
         },
         kyc_dsor_records={"SIM-1-G3-KYC": kyc_record},
-        kyc_event_chains={"SIM-1-G3-KYC": kyc_event_chain(kyc_record)},
         eligibility_records={
             "SIM-1-G3-ELIGIBILITY": EligibilityResultRecord(
                 record_id="SIM-1-G3-ELIGIBILITY",

@@ -54,10 +54,9 @@ from atreides.account_lifecycle import (
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
     FirstPermittedTradeRecord,
-    KYCDecisionRecord,
     TransferInRecord,
     attest_first_permitted_trade,
-    kyc_event_chain,
+    record_kyc_decision,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -171,6 +170,7 @@ class Variant(StrEnum):
     SETTLEMENT_FAIL = "SETTLEMENT_FAIL"
     FORGED_STATUS = "FORGED_STATUS"
     STALE_CALLER_TIME = "STALE_CALLER_TIME"
+    KYC_CHAIN_SWAP = "KYC_CHAIN_SWAP"
 
 
 class FixedRunClock:
@@ -714,7 +714,7 @@ def run_golden_path(  # noqa: PLR0915
         )
     }
     trades: dict[str, bytes] = {}
-    kyc_record = KYCDecisionRecord(
+    kyc_record = record_kyc_decision(
         record_id=kyc_id,
         account_id=ACCOUNT,
         path_id="KYC_ELIGIBLE_CLEAR",
@@ -723,6 +723,17 @@ def run_golden_path(  # noqa: PLR0915
         account_type=AccountType.NATURAL_PERSON,
         person_id=PERSON,
     )
+    if variant is Variant.KYC_CHAIN_SWAP:
+        foreign_record = record_kyc_decision(
+            record_id="MVP3-KYC-FOREIGN",
+            account_id="SYN-ACCOUNT-GOLDEN002",
+            path_id="KYC_ELIGIBLE_CLEAR",
+            decided_at=START + timedelta(seconds=6),
+            maximum_age_seconds=999999,
+            account_type=AccountType.NATURAL_PERSON,
+            person_id="SYN-PERSON-GOLDEN002",
+        )
+        kyc_record = kyc_record.model_copy(update={"event_chain": foreign_record.event_chain})
     resolver = AuthoritativeEvidenceResolver(
         application_records={
             application_id: AccountApplication(
@@ -734,7 +745,6 @@ def run_golden_path(  # noqa: PLR0915
             )
         },
         kyc_dsor_records={kyc_id: kyc_record},
-        kyc_event_chains={kyc_id: kyc_event_chain(kyc_record)},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
                 record_id=eligibility_id,
