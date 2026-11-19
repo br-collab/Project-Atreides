@@ -7,10 +7,13 @@ never substitutes an agent for the named synthetic registered principal.
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,16 +73,84 @@ def record_review(
     return ReviewRecord(decision_id, decider, reviewer, outcome, reviewed_at)
 
 
+def execute_tests_to_junit(
+    junit_xml: Path,
+    *,
+    paths: tuple[str, ...],
+    deselect: tuple[str, ...] = (),
+    cwd: Path | None = None,
+) -> None:
+    """Run pytest and keep the JUnit file it writes.
+
+    Deselected tests are absent from that file. The caller does not supply the
+    executed-name set.
+    """
+
+    if not paths:
+        raise ValueError("WSP_JUNIT_PATHS_REQUIRED")
+    junit_xml.parent.mkdir(parents=True, exist_ok=True)
+    if junit_xml.exists():
+        junit_xml.unlink()
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        *paths,
+        "-o",
+        "addopts=",
+        "-q",
+        "--tb=line",
+        "--noconftest",
+        f"--junitxml={junit_xml}",
+        *(f"--deselect={item}" for item in deselect),
+    ]
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if not junit_xml.is_file():
+        detail = (completed.stderr or completed.stdout)[-400:]
+        raise RuntimeError(f"WSP_JUNIT_NOT_WRITTEN: {detail}")
+    if completed.returncode not in {0, 1}:
+        detail = (completed.stderr or completed.stdout)[-400:]
+        raise RuntimeError(f"WSP_JUNIT_RUNNER_FAILED: {completed.returncode} {detail}")
+
+
+def executed_names_from_junit(junit_xml: Path) -> frozenset[str]:
+    """Return test names the runner executed. Skipped rows are not executed."""
+
+    if not junit_xml.is_file():
+        raise ValueError("JUNIT_FILE_MISSING")
+    try:
+        root = ElementTree.parse(junit_xml).getroot()
+    except ElementTree.ParseError as exc:
+        raise ValueError("JUNIT_MALFORMED") from exc
+    names: set[str] = set()
+    for case in root.iter("testcase"):
+        if case.find("skipped") is not None:
+            continue
+        raw_name = case.attrib.get("name", "")
+        if raw_name:
+            names.add(raw_name.split("[", 1)[0])
+    return frozenset(names)
+
+
 def run_3120_testing(
     *,
-    run_id: str,
-    executed_tests: frozenset[str],
+    junit_xml: Path,
     addressed_to: str = "SYNTHETIC_SENIOR_MANAGEMENT",
 ) -> TestingReport:
+    """Compare the WSP register with the tests the JUnit file says ran."""
+
+    executed = executed_names_from_junit(junit_xml)
+    run_id = junit_xml.stem
     results = []
     for row in load_wsp_register():
         name = str(row["test"])
-        ran = name in executed_tests
+        ran = name in executed
         results.append(
             TestResult(
                 gate=str(row["gate"]),

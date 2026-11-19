@@ -1,5 +1,6 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -15,11 +16,25 @@ from atreides.supervision.aml import (
 from atreides.supervision.controls import (
     build_3130_draft,
     build_public_summary,
+    execute_tests_to_junit,
     load_wsp_register,
     record_review,
     run_3120_testing,
 )
 from simulator.golden_path import run_golden_path
+
+WSP_GATES = "tests/supervision/test_wsp_gates.py"
+
+
+def _junit_from_runner(tmp_path: Path, name: str, *, deselect: tuple[str, ...] = ()) -> Path:
+    junit_xml = tmp_path / name
+    execute_tests_to_junit(
+        junit_xml,
+        paths=(WSP_GATES,),
+        deselect=deselect,
+        cwd=Path(__file__).resolve().parents[2],
+    )
+    return junit_xml
 
 
 def test_wsp_register_covers_every_gate_with_an_existing_test() -> None:
@@ -31,19 +46,27 @@ def test_wsp_register_covers_every_gate_with_an_existing_test() -> None:
 
 def test_wsp_rows_have_complete_supervisory_fields() -> None:
     required = {
-        "gate", "rule", "control", "supervisor_role", "review_frequency",
-        "evidence", "escalation_path", "test",
+        "gate",
+        "rule",
+        "control",
+        "supervisor_role",
+        "review_frequency",
+        "evidence",
+        "escalation_path",
+        "test",
     }
     assert all(
-        required <= row.keys() and all(row[key] for key in required)
-        for row in load_wsp_register()
+        required <= row.keys() and all(row[key] for key in required) for row in load_wsp_register()
     )
 
 
 def test_supervisory_review_refuses_self_review() -> None:
     with pytest.raises(ValueError, match="SELF_REVIEW_REFUSED"):
         record_review(
-            decision_id="D1", decider="P1", reviewer="P1", outcome="AFFIRMED",
+            decision_id="D1",
+            decider="P1",
+            reviewer="P1",
+            outcome="AFFIRMED",
             reviewed_at=datetime(2026, 11, 18, tzinfo=UTC),
         )
 
@@ -51,8 +74,10 @@ def test_supervisory_review_refuses_self_review() -> None:
 def test_golden_path_produces_review_record_for_every_gate() -> None:
     records = tuple(
         record_review(
-            decision_id=str(row["gate"]), decider=f"DECIDER:{row['gate']}",
-            reviewer=str(row["supervisor_role"]), outcome="AFFIRMED",
+            decision_id=str(row["gate"]),
+            decider=f"DECIDER:{row['gate']}",
+            reviewer=str(row["supervisor_role"]),
+            outcome="AFFIRMED",
             reviewed_at=datetime(2026, 11, 18, tzinfo=UTC),
         )
         for row in load_wsp_register()
@@ -60,35 +85,53 @@ def test_golden_path_produces_review_record_for_every_gate() -> None:
     assert len(records) == 18
 
 
-def test_3120_run_executes_and_reports_every_wsp_test() -> None:
+def test_3120_run_executes_and_reports_every_wsp_test(tmp_path: Path) -> None:
     names = frozenset(str(row["test"]) for row in load_wsp_register())
-    report = run_3120_testing(run_id="PS3", executed_tests=names)
+    report = run_3120_testing(junit_xml=_junit_from_runner(tmp_path, "3120-all.xml"))
     assert report.addressed_to == "SYNTHETIC_SENIOR_MANAGEMENT"
     assert report.exception_count == 0
     assert {item.test_name for item in report.tests} == names
 
 
-def test_3120_missing_test_is_one_exception() -> None:
-    names = {str(row["test"]) for row in load_wsp_register()}
-    names.remove("test_confirmation_gate")
-    report = run_3120_testing(run_id="PS3", executed_tests=frozenset(names))
+def test_3120_missing_test_is_one_exception(tmp_path: Path) -> None:
+    report = run_3120_testing(
+        junit_xml=_junit_from_runner(
+            tmp_path,
+            "3120-missing.xml",
+            deselect=("tests/supervision/test_wsp_gates.py::test_confirmation_gate",),
+        )
+    )
     assert report.exception_count == 1
     assert next(item for item in report.tests if item.status == "EXCEPTION").remediation_owner
 
 
-def test_3130_is_unsigned_draft_citing_3120_report() -> None:
-    report = run_3120_testing(run_id="PS3", executed_tests=frozenset())
+def test_3130_is_unsigned_draft_citing_3120_report(tmp_path: Path) -> None:
+    empty = tmp_path / "3120-empty.xml"
+    empty.write_text('<testsuite name="empty" tests="0"></testsuite>\n', encoding="utf-8")
+    report = run_3120_testing(junit_xml=empty)
     draft = build_3130_draft(report=report, ceo="SYNTHETIC_CEO")
     assert draft.status == "UNSIGNED_DRAFT"
     assert draft.signed_by is None
     assert draft.testing_report_id == report.report_id
 
 
-def event(kind: EventKind, day: int, *, related: str | None = None, owner: str | None = None,
-          security: str | None = None) -> MonitoringEvent:
+def event(
+    kind: EventKind,
+    day: int,
+    *,
+    related: str | None = None,
+    owner: str | None = None,
+    security: str | None = None,
+) -> MonitoringEvent:
     return MonitoringEvent(
-        f"E-{kind}-{day}", "PLANTED", kind, date(2026, 11, day), Decimal("10000"),
-        related, owner, security,
+        f"E-{kind}-{day}",
+        "PLANTED",
+        kind,
+        date(2026, 11, day),
+        Decimal("10000"),
+        related,
+        owner,
+        security,
     )
 
 
@@ -132,7 +175,8 @@ def test_aml_deposit_withdrawal_scenario() -> None:
 
 def test_aml_unrelated_accounts_scenario() -> None:
     planted = monitor(
-        customer_id="PLANTED", books_events=(),
+        customer_id="PLANTED",
+        books_events=(),
         instruction_events=(event(EventKind.TRANSFER, 2, related="OTHER", owner="OWNER"),),
         policy=AMLPolicy(),
     )
@@ -151,8 +195,10 @@ def test_aml_fast_sale_scenario() -> None:
 
 def test_aml_case_close_requires_named_human_decision() -> None:
     case = monitor(
-        customer_id="PLANTED", books_events=(event(EventKind.CASH_DEPOSIT, 1),),
-        instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),), policy=AMLPolicy(),
+        customer_id="PLANTED",
+        books_events=(event(EventKind.CASH_DEPOSIT, 1),),
+        instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),),
+        policy=AMLPolicy(),
     )[0]
     with pytest.raises(ValueError, match="HUMAN_DECISION_REQUIRED"):
         close_case(case)
@@ -160,20 +206,27 @@ def test_aml_case_close_requires_named_human_decision() -> None:
 
 def test_aml_missed_30_day_clock_is_supervisory_exception() -> None:
     case = monitor(
-        customer_id="PLANTED", books_events=(event(EventKind.CASH_DEPOSIT, 1),),
-        instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),), policy=AMLPolicy(),
+        customer_id="PLANTED",
+        books_events=(event(EventKind.CASH_DEPOSIT, 1),),
+        instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),),
+        policy=AMLPolicy(),
     )[0]
     assert missed_clock_exception(case, as_of=date(2027, 1, 2))
 
 
 def test_aml_file_decision_produces_unfiled_draft() -> None:
     case = monitor(
-        customer_id="PLANTED", books_events=(event(EventKind.CASH_DEPOSIT, 1),),
-        instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),), policy=AMLPolicy(),
+        customer_id="PLANTED",
+        books_events=(event(EventKind.CASH_DEPOSIT, 1),),
+        instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),),
+        policy=AMLPolicy(),
     )[0]
     decided = record_human_decision(
-        case, officer="HUMAN_AML_OFFICER:Alex", outcome="SAR",
-        reason="documented synthetic reason", decided_on=date(2026, 11, 5),
+        case,
+        officer="HUMAN_AML_OFFICER:Alex",
+        outcome="SAR",
+        reason="documented synthetic reason",
+        decided_on=date(2026, 11, 5),
     )
     assert decided.draft_sar == {"status": "DRAFT_NOT_FILED", "case_id": case.case_id}
 
@@ -185,12 +238,9 @@ def test_sar_confidentiality_across_every_published_artifact() -> None:
     assert "case-" not in rendered
 
 
-def test_cop_and_pack_counts_equal_engine_results() -> None:
+def test_cop_and_pack_counts_equal_engine_results(tmp_path: Path) -> None:
     rows = load_wsp_register()
-    report = run_3120_testing(
-        run_id="PS3",
-        executed_tests=frozenset(str(row["test"]) for row in rows),
-    )
+    report = run_3120_testing(junit_xml=_junit_from_runner(tmp_path, "3120-pub.xml"))
     summary = build_public_summary(
         wsp_rows=rows,
         testing_report=report,
