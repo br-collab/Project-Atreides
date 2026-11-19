@@ -113,6 +113,7 @@ from simulator.protection_oracle import required_control as required_possession_
 from simulator.settlement import rule_204_deadline
 from simulator.street import (
     CalendarRun,
+    CalendarStatus,
     DepositoryPosition,
     IndependentSourceInputs,
     LoanInstruction,
@@ -324,7 +325,18 @@ def attack_firm_run(run: FirmRun) -> dict[str, tuple[str, ...]]:
         )
         attacked[mutation] = tuple(
             sorted(
-                {name for day in mutated.days for name, held in day.invariants.items() if not held}
+                {
+                    name
+                    for day in mutated.days
+                    for name, held in day.invariants.items()
+                    if not held
+                }
+                | {
+                    f"RECONCILIATION_{row.item_id}"
+                    for day in mutated.days
+                    for row in day.reconciliation_calendar
+                    if row.status == CalendarStatus.FAILED
+                }
             )
         )
     return attacked
