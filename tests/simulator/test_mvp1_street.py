@@ -52,23 +52,24 @@ def test_breaks_are_owned_aged_and_start_unclassified() -> None:
 
 def test_four_ordered_mutations_make_i3_false_with_owned_breaks() -> None:
     profile = load_firm_profile(load_calibration_pack("firm-synthetic/6"), "small")
-    assert run_firm(profile, days=1, verify_replay=False).days[0].invariants[
-        "I3_STOCK_RECORD_EQUALS_STREET"
-    ]
+    assert (
+        run_firm(profile, days=1, verify_replay=False)
+        .days[0]
+        .invariants["I3_STOCK_RECORD_EQUALS_STREET"]
+    )
     for mutation in (
         "BOOKED_QUANTITY_STREET_LACKS",
         "STREET_MOVEMENT_BOOKS_MISSED",
         "WRONG_LOCATION_BOOKING",
         "DUPLICATE_BOOKING",
     ):
-        day = run_firm(
-            profile, days=1, mutation=mutation, verify_replay=False
-        ).days[0]
+        day = run_firm(profile, days=1, mutation=mutation, verify_replay=False).days[0]
         assert not day.invariants["I3_STOCK_RECORD_EQUALS_STREET"]
         assert day.invariants["I4_EVERY_DIFFERENCE_OWNED"]
         assert day.street_breaks
         assert all(
-            item.owner and item.cause in {"UNCLASSIFIED", "UNSOURCED_LOCATION"}
+            item.owner
+            and item.cause in {"UNCLASSIFIED", "UNSOURCED_LOCATION", "QUANTITY_DIFFERENCE"}
             for item in day.street_breaks
         )
 

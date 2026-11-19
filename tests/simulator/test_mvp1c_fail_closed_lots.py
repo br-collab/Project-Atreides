@@ -13,6 +13,7 @@ from simulator.street import (
     LoanRegister,
     OpenFail,
     ReconciliationCompletion,
+    ReconciliationStatus,
     reconciliation_calendar,
 )
 
@@ -28,11 +29,11 @@ def test_failed_reconciliation_makes_i3_false(monkeypatch) -> None:  # type: ign
             close_date=kwargs["as_of"],
             sources_read=("Atreides equities books", "forced failure"),
             break_count=1,
-            status="FAILED",
+            status=ReconciliationStatus.FAILED,
             error="RuntimeError: forced reconciliation failure",
         )
 
-    monkeypatch.setattr(firm, "observed_reconcile", failed)
+    monkeypatch.setattr(firm, "reconcile_observed_street", failed)
     day = firm.run_firm(_profile(), days=1, verify_replay=False).days[0]
     assert not day.invariants["I3_STOCK_RECORD_EQUALS_STREET"]
     assert all(item.status == "FAILED" for item in day.reconciliation_calendar[:3])
@@ -66,7 +67,7 @@ def test_missing_required_completion_makes_i3_false() -> None:
         date(2027, 1, 4),
         ("books", "DTC"),
         0,
-        "COMPLETED",
+        ReconciliationStatus.COMPLETED,
     )
     assert not firm._reconciliation_held(  # acceptance seam
         (completion,),
