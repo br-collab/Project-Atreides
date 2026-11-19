@@ -1958,9 +1958,13 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         open_fails = tuple(fail for issue_lots in next_fails.values() for fail in issue_lots)
         source_opening = opening_depository
         if mutation == "DEPOSITORY_ONE_SHARE" and day_index == 0:
-            first = source_opening[0]
+            first_position = source_opening[0]
             source_opening = (
-                DepositoryPosition(first.issue, first.location, first.quantity + Decimal(1)),
+                DepositoryPosition(
+                    first_position.issue,
+                    first_position.location,
+                    first_position.quantity + Decimal(1),
+                ),
                 *source_opening[1:],
             )
         source_inputs = IndependentSourceInputs(

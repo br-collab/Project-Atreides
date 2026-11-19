@@ -593,12 +593,14 @@ def exercise_simulator_market_access(
                 capacity="CUSTOMER",
                 buying_power=_customer_cash_capacity(books, account),
                 margin_excess=_customer_cash_capacity(books, account),
-                margin_result_digest=digest(
-                    {
-                        "account_id": account,
-                        "cash_capacity": _customer_cash_capacity(books, account),
-                        "calculation": "cash-only capacity",
-                    }
+                margin_result_digest=digest_bytes(
+                    canonical_bytes_of(
+                        {
+                            "account_id": account,
+                            "cash_capacity": _customer_cash_capacity(books, account),
+                            "calculation": "cash-only capacity",
+                        }
+                    )
                 ),
                 positions=(),
             )
