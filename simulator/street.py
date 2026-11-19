@@ -193,9 +193,7 @@ def cns_fail_source(as_of: date, fails: tuple[OpenFail, ...]) -> PositionSource:
     return PositionSource("synthetic CNS open fail statement", "FAIL_TO_RECEIVE", as_of, positions)
 
 
-def loan_register_source(
-    as_of: date, instructions: tuple[LoanInstruction, ...]
-) -> PositionSource:
+def loan_register_source(as_of: date, instructions: tuple[LoanInstruction, ...]) -> PositionSource:
     balances: dict[str, Decimal] = {}
     for instruction in instructions:
         if instruction.effective_date <= as_of:
@@ -245,9 +243,13 @@ def reconcile(
     prior_breaks: tuple[StreetBreak, ...] = (),
     *,
     as_of: date,
-    owner: str = "SCF1_SETTLEMENT_CONTROL",
     item_id: str = "stock-record-to-street",
 ) -> tuple[tuple[StreetBreak, ...], ReconciliationCompletion]:
+    calendar_path = Path(__file__).with_name("reconciliation_calendar.json")
+    calendar_rows = cast(
+        list[dict[str, object]], json.loads(calendar_path.read_text(encoding="utf-8"))
+    )
+    owner = str(next(row for row in calendar_rows if row["id"] == item_id)["owner_role"])
     observed: dict[tuple[str, str], Decimal] = {}
     sourced_locations = {source.location for source in sources}
     for source in sources:
@@ -284,7 +286,8 @@ def reconcile(
         close_date=as_of,
         sources_read=tuple(source.name for source in sources),
         break_count=len(result),
-        status="COMPLETED",
+        status="FAILED" if result else "COMPLETED",
+        error="reconciliation differences detected" if result else None,
     )
 
 

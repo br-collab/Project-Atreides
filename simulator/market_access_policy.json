@@ -1,0 +1,8 @@
+{
+  "version": "ps3b/1",
+  "synthetic": true,
+  "maximum_quantity": "500000",
+  "maximum_notional": "5000",
+  "account_credit_limit": "10000000",
+  "basis": "Declared synthetic market-access policy independent of generator bounds"
+}

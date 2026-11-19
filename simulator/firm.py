@@ -269,6 +269,7 @@ MUTATIONS = (
     "UNSOURCED_BANK_CONTROL",
     "EARLY_WARNING_MISSING_DRAFT",
     "EARLY_WARNING_MISSING_OWNER",
+    "DEPOSITORY_ONE_SHARE",
 )
 
 
@@ -295,8 +296,7 @@ def _reconciliation_held(
 ) -> bool:
     by_id = {item.item_id: item for item in completions}
     return not breaks and all(
-        item_id in by_id and by_id[item_id].status == "COMPLETED"
-        for item_id in required_item_ids
+        item_id in by_id and by_id[item_id].status == "COMPLETED" for item_id in required_item_ids
     )
 
 
@@ -395,9 +395,7 @@ def _fail_lot_settlement_order(
     if declared.get("rule_anchor") != "TO_VERIFY_AGAINST_PRIMARY_TEXT":
         raise ValueError("fail-lot policy requires a TO_VERIFY_AGAINST_PRIMARY_TEXT anchor")
     if declared.get("order") == "OLDEST_FIRST":
-        raise ValueError(
-            "FAIL_LOT_ORDER_OLDEST_FIRST_AMBIGUOUS: use firm-synthetic/5 or later"
-        )
+        raise ValueError("FAIL_LOT_ORDER_OLDEST_FIRST_AMBIGUOUS: use firm-synthetic/5 or later")
     if declared.get("order") != "OLDEST_SETTLES_FIRST":
         raise ValueError("unsupported fail-lot order")
     return "OLDEST_SETTLES_FIRST"
@@ -757,9 +755,7 @@ def _opening_street(profile: FirmProfile, days: int) -> tuple[DepositoryPosition
         + profile.firm_investment_shares_per_issue
     )
     return tuple(
-        DepositoryPosition(
-            issue=f"SYN-SCF1-ISSUE-{index:04d}", location="DTC", quantity=-total
-        )
+        DepositoryPosition(issue=f"SYN-SCF1-ISSUE-{index:04d}", location="DTC", quantity=-total)
         for index in range(profile.issues)
     )
 
@@ -802,9 +798,7 @@ def _post_wrong_location(books: EquitiesBooks, business_date: date, issue: str) 
     )
 
 
-def _post_unsourced_bank_control(
-    books: EquitiesBooks, business_date: date, issue: str
-) -> None:
+def _post_unsourced_bank_control(books: EquitiesBooks, business_date: date, issue: str) -> None:
     event_id = _id("evt_", 825_000_001)
     books.post(
         JournalEntry(
@@ -1007,12 +1001,8 @@ def _post_fail_to_receive_movements(
     mutation: str | None,
 ) -> None:
     """Post each fail lot's opening, partial closing, or full closing by fail ID."""
-    prior_by_id = {
-        fail.fail_id: fail for issue_lots in carried.values() for fail in issue_lots
-    }
-    current_by_id = {
-        fail.fail_id: fail for issue_lots in closing.values() for fail in issue_lots
-    }
+    prior_by_id = {fail.fail_id: fail for issue_lots in carried.values() for fail in issue_lots}
+    current_by_id = {fail.fail_id: fail for issue_lots in closing.values() for fail in issue_lots}
     for offset, fail_id in enumerate(sorted(set(prior_by_id) | set(current_by_id))):
         prior = prior_by_id.get(fail_id)
         current = current_by_id.get(fail_id)
@@ -1138,8 +1128,7 @@ def _roll_fail_lots(
         result.append(
             OpenFail(
                 fail_id=(
-                    f"CNS-FAIL-{issue}-{opening_settlement_date.isoformat()}-"
-                    f"{len(result) + 1}"
+                    f"CNS-FAIL-{issue}-{opening_settlement_date.isoformat()}-{len(result) + 1}"
                 ),
                 issue=issue,
                 quantity=direction * remaining,
@@ -1235,9 +1224,7 @@ def _post_control_deficit(
         raise ValueError(f"no declared control loan for {run_days} run days")
     if loan <= 0:
         raise ValueError(f"declared control loan must be positive for {issue}")
-    instruction = LoanInstruction(
-        f"LOAN-OPEN-{day_index}", issue, loan, business_date
-    )
+    instruction = LoanInstruction(f"LOAN-OPEN-{day_index}", issue, loan, business_date)
     loan_register.record(instruction)
     books.post(
         _loan_entry(
@@ -1309,9 +1296,7 @@ def _pab_requirement_from_book_lines(
 ) -> Decimal:
     """Conserve the PAB requirement through customer excess-debit application."""
     customer_excess_debits = max(
-        customer_debits
-        - customer_debit_reduction_rate * customer_debits
-        - customer_credits,
+        customer_debits - customer_debit_reduction_rate * customer_debits - customer_credits,
         Decimal(),
     )
     raw_pab_requirement = max(pab_credits - pab_debits, Decimal())
@@ -1388,10 +1373,7 @@ def _focus_tie_out(
     )
     if mutation == "FOCUS_WRONG_NET_CAPITAL" and engine_lines.net_capital is not None:
         engine_lines = replace(engine_lines, net_capital=engine_lines.net_capital + Decimal("0.01"))
-    if (
-        mutation == "FOCUS_WRONG_RESERVE_CREDIT"
-        and engine_lines.reserve_total_credits is not None
-    ):
+    if mutation == "FOCUS_WRONG_RESERVE_CREDIT" and engine_lines.reserve_total_credits is not None:
         engine_lines = replace(
             engine_lines,
             reserve_total_credits=engine_lines.reserve_total_credits + Decimal("0.01"),
@@ -1744,11 +1726,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             rows = tuple(rows_list)
             sequence = day_index * 10_000 + batch_index
             allocations = _lc_allocate_batch(rows, business_date, sequence)
-            if (
-                mutation == "UPSTREAM_ALLOCATION_QUANTITY"
-                and day_index == 0
-                and batch_index == 0
-            ):
+            if mutation == "UPSTREAM_ALLOCATION_QUANTITY" and day_index == 0 and batch_index == 0:
                 first = allocations[0]
                 allocations = (
                     (first[0], first[1] + Decimal(1), first[2]),
@@ -1767,9 +1745,8 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 MoneyInstruction(
                     f"SCF1-CNS-MONEY-{sequence}",
                     business_date,
-                    settlement_sign * sum(
-                        (consideration for _, _, consideration in allocations), Decimal()
-                    ),
+                    settlement_sign
+                    * sum((consideration for _, _, consideration in allocations), Decimal()),
                     InstructionKind.CNS_SETTLEMENT,
                     "CLEARING",
                 )
@@ -1978,21 +1955,28 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         duplicates_refused = all(not books.post(entry).posted for entry in posted)
         i12 = duplicates_refused and before == books.digest()
         replay_digest = books.digest()
-        open_fails = tuple(
-            fail for issue_lots in next_fails.values() for fail in issue_lots
-        )
+        open_fails = tuple(fail for issue_lots in next_fails.values() for fail in issue_lots)
+        source_opening = opening_depository
+        if mutation == "DEPOSITORY_ONE_SHARE" and day_index == 0:
+            first_position = source_opening[0]
+            source_opening = (
+                DepositoryPosition(
+                    first_position.issue,
+                    first_position.location,
+                    first_position.quantity + Decimal(1),
+                ),
+                *source_opening[1:],
+            )
         source_inputs = IndependentSourceInputs(
             as_of=business_date,
-            opening_depository=opening_depository,
+            opening_depository=source_opening,
             settlement_outcomes=tuple(all_settlement_outcomes),
             open_fails=open_fails,
             loan_instructions=loan_register.instructions,
         )
         independent_readers = build_independent_sources(books, source_inputs)
         if mutation == "UNSOURCED_BANK_CONTROL" and day_index == 0:
-            _post_unsourced_bank_control(
-                books, business_date, f"SYN-SCF1-ISSUE-{0:04d}"
-            )
+            _post_unsourced_bank_control(books, business_date, f"SYN-SCF1-ISSUE-{0:04d}")
         location_balances = _location_balances(books)
         sourced_locations = {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
         reconciliation_specs = (
@@ -2017,8 +2001,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 {
                     key: quantity
                     for key, quantity in location_balances.items()
-                    if key[1] == location
-                    or (location == "DTC" and key[1] not in sourced_locations)
+                    if key[1] == location or (location == "DTC" and key[1] not in sourced_locations)
                 },
                 (reader,),
                 tuple(item for item in prior_breaks if item.location == location),
@@ -2038,14 +2021,22 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     InstructionKind.OPENING,
                     InstructionKind.CNS_SETTLEMENT,
                     InstructionKind.CUSTOMER_DEPOSIT,
+                    InstructionKind.RESERVE_TRANSFER,
                 }
             ),
+            account_ids=frozenset({"CLEARING", "FIRM-OPERATING-CASH"}),
         )
         cash_result = reconcile_ps1("cash-to-bank", books, cash_statement, business_date)
         reserve_statement = instruction_log.statement(
             "synthetic-reserve-banks",
             business_date,
             kinds=frozenset({InstructionKind.RESERVE_TRANSFER}),
+            account_ids=frozenset(
+                {
+                    "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
+                    "RESERVE_BANK_PAB@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
+                }
+            ),
         )
         reserve_result = reconcile_ps1(
             "reserve-bank-to-books", books, reserve_statement, business_date
@@ -2064,7 +2055,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     business_date,
                     position.issue,
                     position.location,
-                    position.quantity,
+                    -position.quantity,
                 )
                 for position in source.positions
             )
@@ -2143,6 +2134,15 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     ),
                 )
             )
+            instruction_log.append(
+                MoneyInstruction(
+                    f"SCF1-RESERVE-CASH-{day_index}-{deposit.computation}",
+                    deposit.deposit_date,
+                    -deposit.amount,
+                    InstructionKind.RESERVE_TRANSFER,
+                    "FIRM-OPERATING-CASH",
+                )
+            )
         carry_complete = set(carried_fails) <= set(carried_input)
         covered_cns_issues = {item.position.security_id for item in settlements}
         invariants = {
@@ -2198,9 +2198,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 ),
                 street_breaks=breaks,
                 reconciliation_completion=completion,
-                reconciliation_calendar=reconciliation_calendar(
-                    business_date, source_completions
-                ),
+                reconciliation_calendar=reconciliation_calendar(business_date, source_completions),
                 source_inputs=source_inputs,
                 reconciled_sources=reconciled_sources,
                 protection_dispositions=protections,
