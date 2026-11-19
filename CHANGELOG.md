@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.4.0 - 18 Nov 2026
+## Unreleased
 
 Rule 3120 testing reads the tests a pytest run actually executed from the JUnit XML
 file that run wrote. A written supervisory procedure test that did not run is an
