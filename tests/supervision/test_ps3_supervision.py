@@ -14,34 +14,44 @@ from atreides.supervision.aml import (
     record_human_decision,
 )
 from atreides.supervision.controls import (
+    TestOutcome,
     build_3130_draft,
     build_public_summary,
+    junit_key,
     load_wsp_register,
     record_review,
+    register_node_ids,
     run_3120_testing,
 )
 from simulator.golden_path import run_golden_path
 from tests.supervision.junit_runner import execute_tests_to_junit
 
-WSP_GATES = "tests/supervision/test_wsp_gates.py"
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _junit_from_runner(tmp_path: Path, name: str, *, deselect: tuple[str, ...] = ()) -> Path:
     junit_xml = tmp_path / name
     execute_tests_to_junit(
         junit_xml,
-        paths=(WSP_GATES,),
+        paths=register_node_ids(),
         deselect=deselect,
-        cwd=Path(__file__).resolve().parents[2],
+        cwd=REPO_ROOT,
     )
     return junit_xml
 
 
-def test_wsp_register_covers_every_gate_with_an_existing_test() -> None:
+def test_wsp_register_names_a_run_level_test_or_declares_the_gap() -> None:
     rows = load_wsp_register()
     assert len(rows) == 18
     assert {row["gate"] for row in rows} >= {"account opening", "KYC", "early warning"}
-    assert all(str(row["test"]).startswith("test_") for row in rows)
+    for row in rows:
+        node_id = row.get("test")
+        if node_id is None:
+            assert str(row.get("test_gap", "")).strip(), row["gate"]
+            continue
+        path, _ = str(node_id).split("::", 1)
+        assert (REPO_ROOT / path).is_file(), node_id
+        junit_key(str(node_id))
 
 
 def test_wsp_rows_have_complete_supervisory_fields() -> None:
@@ -53,10 +63,12 @@ def test_wsp_rows_have_complete_supervisory_fields() -> None:
         "review_frequency",
         "evidence",
         "escalation_path",
-        "test",
     }
     assert all(
-        required <= row.keys() and all(row[key] for key in required) for row in load_wsp_register()
+        required <= row.keys()
+        and all(row[key] for key in required)
+        and (row.get("test") or row.get("test_gap"))
+        for row in load_wsp_register()
     )
 
 
@@ -85,24 +97,18 @@ def test_golden_path_produces_review_record_for_every_gate() -> None:
     assert len(records) == 18
 
 
-def test_3120_run_executes_and_reports_every_wsp_test(tmp_path: Path) -> None:
-    names = frozenset(str(row["test"]) for row in load_wsp_register())
+def test_3120_run_executes_and_reports_every_wsp_row(tmp_path: Path) -> None:
+    rows = load_wsp_register()
     report = run_3120_testing(junit_xml=_junit_from_runner(tmp_path, "3120-all.xml"))
+    gaps = sum(not row.get("test") for row in rows)
     assert report.addressed_to == "SYNTHETIC_SENIOR_MANAGEMENT"
-    assert report.exception_count == 0
-    assert {item.test_name for item in report.tests} == names
-
-
-def test_3120_missing_test_is_one_exception(tmp_path: Path) -> None:
-    report = run_3120_testing(
-        junit_xml=_junit_from_runner(
-            tmp_path,
-            "3120-missing.xml",
-            deselect=("tests/supervision/test_wsp_gates.py::test_confirmation_gate",),
-        )
+    assert [item.gate for item in report.tests] == [str(row["gate"]) for row in rows]
+    assert report.exception_count == gaps
+    assert all(
+        item.outcome is TestOutcome.NO_RUN_LEVEL_TEST and item.remediation_owner
+        for item in report.tests
+        if item.status == "EXCEPTION"
     )
-    assert report.exception_count == 1
-    assert next(item for item in report.tests if item.status == "EXCEPTION").remediation_owner
 
 
 def test_3130_is_unsigned_draft_citing_3120_report(tmp_path: Path) -> None:
@@ -250,7 +256,7 @@ def test_cop_and_pack_counts_equal_engine_results(tmp_path: Path) -> None:
     )
     assert summary == {
         "wsp_count": len(rows),
-        "3120_exception_count": 0,
+        "3120_exception_count": report.exception_count,
         "cat_record_count": 3,
         "cat_exception_count": 1,
         "aml_alert_count": 3,

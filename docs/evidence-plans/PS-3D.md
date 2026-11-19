@@ -131,3 +131,27 @@ AML-08 is an owed PS-3 rule 14 row. Gate inputs: events come from the run's book
 Each repository this order changes takes the next free minor version on `main` at merge time. PS-3C assigns Project-Atreides 1.4.0. If that number is still free when the first Atreides code PR merges, this order uses 1.4.0 there, 1.4.0 for L.C., and 1.3.0 for aureon. If PS-3C has taken a number, Phase B moves this order's changelog heading to the next minor. List the tag commands for Bill. Do not tag or release.
 
 The report is `_reports/PS-3D-report-<date>.md`. It carries the baseline commits, each part's evidence, the rule 7 gate-input list, PR links and merge commits, and the headings Blocked and Unverified. A claim without a merge commit plus file and line, or a command and quoted output, goes under Unverified.
+
+## Addendum, 202611191600 (US Eastern): Part 2 reopened at gate G3
+
+Gate G3 reopened Part 2 after merge `3ed2e6d` (`_reports/PS-3D-verification-2026-11-19.md`).
+Claude made the fix, at Bill's direction. It supersedes SC-01 and SC-02 above.
+
+- **F1.** A test that ran and failed was graded `PASS`. Outcomes now come from the JUnit file:
+  passed is `PASSED`; failure or error is `FAILED`; absent or skipped is `NOT_RUN`.
+- **F2.** `tests/supervision/test_wsp_gates.py` tested the register, not the controls. It is
+  deleted. Each register row now names the node identifier of a test that plants a defect in that
+  control through `run_golden_path` or `run_firm`. Two rows have none yet (approved intent, owed by
+  PS-3C Part 4; stock loan to register, owed by PS-4A). They are `NO_RUN_LEVEL_TEST` exceptions
+  with their owners.
+- **F3.** Rows match the JUnit classname and test name, not a bare function name.
+
+| Case | Test | Deliberate break that makes it fail |
+|---|---|---|
+| SC-01b | `test_every_named_run_level_test_runs_and_only_honest_gaps_are_exceptions` | Grade every row `PASS` |
+| SC-02b | `test_deselecting_one_run_level_test_is_exactly_one_not_run_exception` | Grade an absent test `PASS` |
+| SC-03 | `test_a_wsp_test_that_ran_and_failed_is_a_failed_exception` | Grade a `<failure>` case `PASSED` |
+| SC-04 | `test_a_same_named_test_in_another_module_does_not_satisfy_the_row` | Match on bare test name |
+
+Versions: PS-3C releases Atreides 1.4.0 and PS-3D releases 1.5.0. That replaces the release
+paragraph above.

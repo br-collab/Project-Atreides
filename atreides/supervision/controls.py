@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
@@ -23,16 +24,30 @@ class ReviewRecord:
     reviewed_at: datetime
 
 
+class TestOutcome(StrEnum):
+    """Why a written supervisory procedure row is, or is not, an exception."""
+
+    __test__ = False
+
+    PASSED = "PASSED"
+    FAILED = "FAILED"
+    NOT_RUN = "NOT_RUN"
+    NO_RUN_LEVEL_TEST = "NO_RUN_LEVEL_TEST"
+
+
 @dataclass(frozen=True, slots=True)
 class TestResult:
+    __test__ = False
     gate: str
     test_name: str
     status: str
     remediation_owner: str | None
+    outcome: TestOutcome
 
 
 @dataclass(frozen=True, slots=True)
 class TestingReport:
+    __test__ = False
     report_id: str
     addressed_to: str
     run_id: str
@@ -71,8 +86,27 @@ def record_review(
     return ReviewRecord(decision_id, decider, reviewer, outcome, reviewed_at)
 
 
-def executed_names_from_junit(junit_xml: Path) -> frozenset[str]:
-    """Return test names the runner executed. Skipped rows are not executed."""
+def junit_key(node_id: str) -> tuple[str, str]:
+    """Return the JUnit (classname, name) pair pytest writes for one node identifier.
+
+    ``tests/simulator/test_x.py::test_y[case]`` becomes
+    ``("tests.simulator.test_x", "test_y[case]")``. A test inside a class keeps the class in the
+    classname, as pytest does.
+    """
+
+    path, _, rest = node_id.partition("::")
+    if not path.endswith(".py") or not rest:
+        raise ValueError(f"WSP_NODE_ID_INVALID: {node_id}")
+    parts = rest.split("::")
+    module = path[: -len(".py")].replace("/", ".")
+    return ".".join((module, *parts[:-1])), parts[-1]
+
+
+def junit_outcomes(junit_xml: Path) -> dict[tuple[str, str], str]:
+    """Read every test case the runner wrote and its outcome.
+
+    The outcome is ``PASSED``, ``FAILED`` (a failure or error element) or ``SKIPPED``.
+    """
 
     if not junit_xml.is_file():
         raise ValueError("JUNIT_FILE_MISSING")
@@ -80,14 +114,64 @@ def executed_names_from_junit(junit_xml: Path) -> frozenset[str]:
         root = ElementTree.parse(junit_xml).getroot()
     except ElementTree.ParseError as exc:
         raise ValueError("JUNIT_MALFORMED") from exc
-    names: set[str] = set()
+    outcomes: dict[tuple[str, str], str] = {}
     for case in root.iter("testcase"):
-        if case.find("skipped") is not None:
-            continue
-        raw_name = case.attrib.get("name", "")
-        if raw_name:
-            names.add(raw_name.split("[", 1)[0])
-    return frozenset(names)
+        key = (case.attrib.get("classname", ""), case.attrib.get("name", ""))
+        if case.find("failure") is not None or case.find("error") is not None:
+            outcome = "FAILED"
+        elif case.find("skipped") is not None:
+            outcome = "SKIPPED"
+        else:
+            outcome = "PASSED"
+        if outcomes.get(key) != "FAILED":
+            outcomes[key] = outcome
+    return outcomes
+
+
+def _row_outcome(node_id: str | None, outcomes: dict[tuple[str, str], str]) -> TestOutcome:
+    if not node_id:
+        return TestOutcome.NO_RUN_LEVEL_TEST
+    classname, name = junit_key(node_id)
+    if "[" in name:
+        found = [outcomes[(classname, name)]] if (classname, name) in outcomes else []
+    else:
+        found = [
+            outcome
+            for (case_class, case_name), outcome in outcomes.items()
+            if case_class == classname and (case_name == name or case_name.startswith(f"{name}["))
+        ]
+    if any(outcome == "FAILED" for outcome in found):
+        return TestOutcome.FAILED
+    if not any(outcome == "PASSED" for outcome in found):
+        return TestOutcome.NOT_RUN
+    return TestOutcome.PASSED
+
+
+def evaluate_3120(
+    register: tuple[dict[str, Any], ...],
+    junit_xml: Path,
+    *,
+    addressed_to: str = "SYNTHETIC_SENIOR_MANAGEMENT",
+) -> TestingReport:
+    """Grade each register row from the outcome the runner recorded for its node identifier."""
+
+    outcomes = junit_outcomes(junit_xml)
+    run_id = junit_xml.stem
+    results = []
+    for row in register:
+        node_id = row.get("test")
+        outcome = _row_outcome(str(node_id) if node_id else None, outcomes)
+        passed = outcome is TestOutcome.PASSED
+        results.append(
+            TestResult(
+                gate=str(row["gate"]),
+                test_name=str(node_id) if node_id else "",
+                status="PASS" if passed else "EXCEPTION",
+                remediation_owner=None if passed else str(row["supervisor_role"]),
+                outcome=outcome,
+            )
+        )
+    return TestingReport(f"3120-{run_id}", addressed_to, run_id, tuple(results))
 
 
 def run_3120_testing(
@@ -95,23 +179,24 @@ def run_3120_testing(
     junit_xml: Path,
     addressed_to: str = "SYNTHETIC_SENIOR_MANAGEMENT",
 ) -> TestingReport:
-    """Compare the WSP register with the tests the JUnit file says ran."""
+    """Compare the pinned WSP register with what the runner's JUnit file says happened.
 
-    executed = executed_names_from_junit(junit_xml)
-    run_id = junit_xml.stem
-    results = []
+    A row passes only when its named run-level test ran and passed. A failure or error is an
+    exception (``FAILED``), an absent or skipped test is an exception (``NOT_RUN``), and a row
+    with no run-level test yet is an exception (``NO_RUN_LEVEL_TEST``).
+    """
+
+    return evaluate_3120(load_wsp_register(), junit_xml, addressed_to=addressed_to)
+
+
+def register_node_ids() -> tuple[str, ...]:
+    """Every distinct run-level test node identifier the register names, in register order."""
+
+    seen: dict[str, None] = {}
     for row in load_wsp_register():
-        name = str(row["test"])
-        ran = name in executed
-        results.append(
-            TestResult(
-                gate=str(row["gate"]),
-                test_name=name,
-                status="PASS" if ran else "EXCEPTION",
-                remediation_owner=None if ran else str(row["supervisor_role"]),
-            )
-        )
-    return TestingReport(f"3120-{run_id}", addressed_to, run_id, tuple(results))
+        if row.get("test"):
+            seen.setdefault(str(row["test"]), None)
+    return tuple(seen)
 
 
 def build_3130_draft(*, report: TestingReport, ceo: str) -> CertificationDraft:
