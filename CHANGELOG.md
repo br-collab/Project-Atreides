@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+Rule 3120 testing reads the tests a pytest run actually executed from the JUnit XML
+file that run wrote. A written supervisory procedure test that did not run is an
+exception. The report no longer accepts an executed-test set from its caller. The
+pytest process is started by the test runner, not by the package.
+
 ## 1.3.0 - 18 Nov 2026
 
 Correct securities-count sign convention and make the clean five-day firm reconciliation run

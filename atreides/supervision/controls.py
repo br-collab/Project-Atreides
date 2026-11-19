@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,16 +71,38 @@ def record_review(
     return ReviewRecord(decision_id, decider, reviewer, outcome, reviewed_at)
 
 
+def executed_names_from_junit(junit_xml: Path) -> frozenset[str]:
+    """Return test names the runner executed. Skipped rows are not executed."""
+
+    if not junit_xml.is_file():
+        raise ValueError("JUNIT_FILE_MISSING")
+    try:
+        root = ElementTree.parse(junit_xml).getroot()
+    except ElementTree.ParseError as exc:
+        raise ValueError("JUNIT_MALFORMED") from exc
+    names: set[str] = set()
+    for case in root.iter("testcase"):
+        if case.find("skipped") is not None:
+            continue
+        raw_name = case.attrib.get("name", "")
+        if raw_name:
+            names.add(raw_name.split("[", 1)[0])
+    return frozenset(names)
+
+
 def run_3120_testing(
     *,
-    run_id: str,
-    executed_tests: frozenset[str],
+    junit_xml: Path,
     addressed_to: str = "SYNTHETIC_SENIOR_MANAGEMENT",
 ) -> TestingReport:
+    """Compare the WSP register with the tests the JUnit file says ran."""
+
+    executed = executed_names_from_junit(junit_xml)
+    run_id = junit_xml.stem
     results = []
     for row in load_wsp_register():
         name = str(row["test"])
-        ran = name in executed_tests
+        ran = name in executed
         results.append(
             TestResult(
                 gate=str(row["gate"]),
