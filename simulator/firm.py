@@ -97,6 +97,7 @@ from simulator.estate import (
     DepositPolicy,
     ReserveDeposit,
     _complete_reserve_inputs,
+    _deposit_entry,
     _post_reserve_deposits,
     _wire,
     simulated_filed_credit_total,
@@ -270,6 +271,8 @@ MUTATIONS = (
     "FOCUS_DROP_CUSTOMER_ACCOUNT",
     "PROJECTION_CUT_RESERVE_CREDIT",
     "UNSOURCED_BANK_CONTROL",
+    "UNPOSTED_DEPOSIT_INSTRUCTION",
+    "RESERVE_DEPOSIT_NOT_RECEIVED",
     "EARLY_WARNING_MISSING_DRAFT",
     "EARLY_WARNING_MISSING_OWNER",
     "DEPOSITORY_ONE_SHARE",
@@ -2029,6 +2032,46 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         )
         breaks = tuple(item for item_breaks, _ in observed_results for item in item_breaks)
         source_completions = tuple(completion for _, completion in observed_results)
+        if mutation == "UNPOSTED_DEPOSIT_INSTRUCTION" and day_index == 0:
+            instruction_log.append(
+                MoneyInstruction(
+                    "SCF1-MUTATION-UNPOSTED-DEPOSIT",
+                    business_date,
+                    Decimal("1.00"),
+                    InstructionKind.CUSTOMER_DEPOSIT,
+                    "FIRM-OPERATING-CASH",
+                )
+            )
+        if mutation == "RESERVE_DEPOSIT_NOT_RECEIVED" and day_index == 0:
+            books.post(
+                _deposit_entry(
+                    entry_id="SCF1-MUTATION-RESERVE-NOT-RECEIVED",
+                    event_number=870_000_000,
+                    account_type=AccountType.RESERVE_BANK_CUSTOMER,
+                    amount=Decimal("1.00"),
+                    effective=business_date,
+                    authority="PS3C_SYNTHETIC_RESERVE_RECEIPT_MUTATION",
+                    actor=_actor(),
+                )
+            )
+            instruction_log.append(
+                MoneyInstruction(
+                    "SCF1-MUTATION-RESERVE-STATEMENT-RECEIVED",
+                    business_date,
+                    Decimal(),
+                    InstructionKind.RESERVE_TRANSFER,
+                    "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
+                )
+            )
+            instruction_log.append(
+                MoneyInstruction(
+                    "SCF1-MUTATION-RESERVE-CASH-RECEIVED",
+                    business_date,
+                    Decimal("-1.00"),
+                    InstructionKind.RESERVE_TRANSFER,
+                    "FIRM-OPERATING-CASH",
+                )
+            )
         cash_statement = instruction_log.statement(
             "synthetic-firm-bank",
             business_date,
@@ -2054,6 +2097,16 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 }
             ),
         )
+        if mutation == "RESERVE_DEPOSIT_NOT_RECEIVED" and day_index == 0:
+            instruction_log.append(
+                MoneyInstruction(
+                    "SCF1-MUTATION-RESERVE-NOT-RECEIVED",
+                    business_date,
+                    Decimal("1.00"),
+                    InstructionKind.RESERVE_TRANSFER,
+                    "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
+                )
+            )
         reserve_result = reconcile_ps1(
             "reserve-bank-to-books", books, reserve_statement, business_date
         )
