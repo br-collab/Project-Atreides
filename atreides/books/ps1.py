@@ -247,6 +247,7 @@ def _compare(
     as_of: date,
     prior_breaks: tuple[ControlBreak, ...] = (),
     sources_read: tuple[str, ...],
+    unsourced_keys: frozenset[str] = frozenset(),
 ) -> ControlResult:
     prior = {item.key: item for item in prior_breaks if item.item_id == item_id}
     breaks = []
@@ -259,7 +260,9 @@ def _compare(
             opened_at = previous.opened_at if previous else as_of
             missing_instruction = not sources_read
             cause = (
-                "TIMING"
+                "UNSOURCED_LOCATION"
+                if key in unsourced_keys
+                else "TIMING"
                 if previous is not None and previous.opened_at < as_of
                 else "MISSING_INSTRUCTION"
                 if missing_instruction
@@ -296,6 +299,7 @@ def reconcile(
     if outside_source.as_of != as_of:
         raise ValueError("OUTSIDE_SOURCE_CLOSE_DATE_MISMATCH")
     owner = calendar_owner(item_id)
+    unsourced_keys: frozenset[str] = frozenset()
     if item_id == "cash-to-bank" and isinstance(outside_source, ExternalMoneyStatement):
         books_values = book_money_balances(
             books, as_of, frozenset({AccountType.CASH, AccountType.BANK_CONTROL})
@@ -319,13 +323,25 @@ def reconcile(
         location = STREET_CONTROL_LOCATIONS.get(item_id)
         if location is not None:
             suffix = f"@{location}"
+            excluded_suffixes = ("@FAIL_TO_RECEIVE", "@STOCK_LOANED")
             books_values = {
-                key: value for key, value in books_values.items() if key.endswith(suffix) and value
+                key: value
+                for key, value in books_values.items()
+                if value
+                and (
+                    key.endswith(suffix)
+                    or (item_id == "stock-record-to-street" and not key.endswith(excluded_suffixes))
+                )
             }
             outside_values = {
                 key: value
                 for key, value in outside_values.items()
                 if key.endswith(suffix) and value
+            }
+            unsourced_keys = frozenset(key for key in books_values if not key.endswith(suffix))
+            books_values = {
+                key: -value if key in unsourced_keys else value
+                for key, value in books_values.items()
             }
     else:
         raise TypeError(f"OUTSIDE_SOURCE_TYPE_MISMATCH: {item_id}")
@@ -344,6 +360,7 @@ def reconcile(
         as_of=as_of,
         prior_breaks=prior_breaks,
         sources_read=("Atreides equities books", outside_source.name),
+        unsourced_keys=unsourced_keys,
     )
 
 

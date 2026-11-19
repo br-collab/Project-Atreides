@@ -538,7 +538,9 @@ def _run_daily_close(
         books,
         IndependentSourceInputs(
             as_of=as_of.date(),
-            opening_depository=(),
+            opening_depository=(DepositoryPosition(ISSUE, "DTC", depository_quantity_delta),)
+            if depository_quantity_delta
+            else (),
             settlement_outcomes=(
                 ()
                 if fail_id is not None
