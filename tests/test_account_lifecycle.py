@@ -23,12 +23,11 @@ from atreides.account_lifecycle import (
     EligibilityResultRecord,
     FirstPermittedTradeRecord,
     KYBClearResultRecord,
-    KYCDecisionRecord,
     LegalEntityEvidenceRecord,
     RefusalReason,
     TransferInRecord,
     attest_first_permitted_trade,
-    kyc_event_chain,
+    record_kyc_decision,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -141,7 +140,7 @@ def resolver(
         permitted=True,
         traded_at=NOW,
     )
-    kyc_record = KYCDecisionRecord(
+    kyc_record = record_kyc_decision(
         record_id=KYC_ID,
         account_id=account,
         account_type=AccountType.INSTITUTIONAL,
@@ -151,28 +150,35 @@ def resolver(
         legal_entity_record_id=legal_entity_record_id,
         kyb_result_record_id=kyb_result_record_id,
     )
-    stored_chain = kyc_event_chain(
-        kyc_record.model_copy(update={"path_id": "TAMPERED"})
-        if kyc_chain_wrong_head
-        else kyc_record
-    )
+    stored_chain = kyc_record.event_chain
+    if kyc_chain_wrong_head:
+        stored_chain = record_kyc_decision(
+            record_id="SYN-KYC-WRONG-HEAD",
+            account_id=account,
+            account_type=AccountType.INSTITUTIONAL,
+            path_id="TAMPERED",
+            decided_at=kyc_at,
+            maximum_age_seconds=300,
+            legal_entity_record_id=legal_entity_record_id,
+            kyb_result_record_id=kyb_result_record_id,
+        ).event_chain
     if not kyc_chain_valid:
         stored_chain = ()
     elif kyc_chain_tampered:
         stored_chain = (
             stored_chain[0].model_copy(
-                update={"payload": kyc_record.model_copy(update={"path_id": "CHANGED"})}
+                update={"payload": kyc_record.payload().model_copy(update={"path_id": "CHANGED"})}
             ),
         )
     elif kyc_chain_broken_digest:
         stored_chain = (
             stored_chain[0].model_copy(update={"envelope_digest": "sha256:" + "0" * 64}),
         )
+    if kyc_chain_missing:
+        stored_chain = ()
+    kyc_record = kyc_record.model_copy(update={"event_chain": stored_chain})
     return AuthoritativeEvidenceResolver(
-        kyc_dsor_records={
-            KYC_ID: kyc_record
-        },
-        kyc_event_chains={} if kyc_chain_missing else {KYC_ID: stored_chain},
+        kyc_dsor_records={KYC_ID: kyc_record},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
                 record_id=eligibility_id,
@@ -229,7 +235,7 @@ def resolver(
 
 
 def test_kyc_chain_refuses_a_removed_event() -> None:
-    record = KYCDecisionRecord(
+    record = record_kyc_decision(
         record_id=KYC_ID,
         account_id=ACCOUNT,
         account_type=AccountType.INSTITUTIONAL,
@@ -241,7 +247,7 @@ def test_kyc_chain_refuses_a_removed_event() -> None:
     )
     from cannae_kernel.journal import verify_chain
 
-    report = verify_chain(kyc_event_chain(record)[:-1])
+    report = verify_chain(record.event_chain[:-1])
     assert not report.ok
     assert report.issues[0].code == "EMPTY_CHAIN"
 
