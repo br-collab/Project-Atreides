@@ -4,7 +4,7 @@
 
 Correct securities-count sign convention and make the clean five-day firm reconciliation run
 truthful. Record both reserve-transfer instruction legs, derive street reconciliation status and
-owner, use service policy provenance for simulator approvals, pin market-access limits separately
+owner, retain the enforced human-judgment approval model pending a signed approval record, and pin market-access limits separately
 from generator bounds, bind capacity to its computed result, apply the pinned earlier-of deadline
 for lot identification, sign confirmation quantity by side, and record publication anchor write
 time when written.
