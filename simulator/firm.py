@@ -58,6 +58,7 @@ from atreides.books.projections import (
     reserve_bank_balances,
 )
 from atreides.books.ps1 import (
+    ControlStatus,
     InstructionKind,
     InstructionLog,
     MoneyInstruction,
@@ -84,6 +85,7 @@ from atreides.dsor.books import BooksPosting
 from atreides.margin.engine import compute_margin
 from atreides.rails.cns import CloseOutRegime, MarketProfile, net_positions, settle_net_position
 from simulator.calibration import CalibrationPack
+from simulator.central_reconciliation import reconcile_observed_street
 from simulator.early_warning import (
     EarlyWarningNotice,
     draft_notices,
@@ -114,14 +116,15 @@ from simulator.street import (
     IndependentSourceInputs,
     LoanInstruction,
     LoanRegister,
+    ObservedSourceReader,
     OpenFail,
     PositionSource,
     ReconciliationCompletion,
+    ReconciliationStatus,
     SettlementOutcome,
     StreetBreak,
     SyntheticDepository,
     build_independent_sources,
-    observed_reconcile,
     reconciliation_calendar,
 )
 
@@ -270,6 +273,7 @@ MUTATIONS = (
     "EARLY_WARNING_MISSING_DRAFT",
     "EARLY_WARNING_MISSING_OWNER",
     "DEPOSITORY_ONE_SHARE",
+    "STREET_ONE_SHARE",
 )
 
 
@@ -736,15 +740,6 @@ def _balances(books: EquitiesBooks) -> tuple[dict[tuple[str, str], Decimal], dic
             ):
                 cash[line.account_id] += line.money
     return dict(positions), dict(cash)
-
-
-def _location_balances(books: EquitiesBooks) -> dict[tuple[str, str], Decimal]:
-    balances: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
-    for entry in books.entries:
-        for line in entry.lines:
-            if line.record_side is RecordSide.LOCATION and line.issue is not None:
-                balances[(line.issue, line.account_type.value)] += line.quantity
-    return {key: value for key, value in balances.items() if value}
 
 
 def _opening_street(profile: FirmProfile, days: int) -> tuple[DepositoryPosition, ...]:
@@ -1975,35 +1970,56 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             loan_instructions=loan_register.instructions,
         )
         independent_readers = build_independent_sources(books, source_inputs)
+        street_readers = independent_readers
+        if mutation == "STREET_ONE_SHARE" and day_index == 0:
+            depository_reader = independent_readers[0]
+
+            def read_one_share_street_difference(
+                reader: ObservedSourceReader = depository_reader,
+            ) -> PositionSource:
+                source = reader.read()
+                first_position = source.positions[0]
+                return PositionSource(
+                    source.name,
+                    source.location,
+                    source.as_of,
+                    (
+                        DepositoryPosition(
+                            first_position.issue,
+                            first_position.location,
+                            first_position.quantity + Decimal(1),
+                        ),
+                        *source.positions[1:],
+                    ),
+                )
+
+            street_readers = (
+                ObservedSourceReader(depository_reader.name, read_one_share_street_difference),
+                *independent_readers[1:],
+            )
         if mutation == "UNSOURCED_BANK_CONTROL" and day_index == 0:
             _post_unsourced_bank_control(books, business_date, f"SYN-SCF1-ISSUE-{0:04d}")
-        location_balances = _location_balances(books)
-        sourced_locations = {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
         reconciliation_specs = (
             (
                 "stock-record-to-street",
                 "DTC",
-                independent_readers[0],
+                street_readers[0],
             ),
             (
                 "ftr-to-cns-fail-statement",
                 "FAIL_TO_RECEIVE",
-                independent_readers[1],
+                street_readers[1],
             ),
             (
                 "stock-loan-to-contract-register",
                 "STOCK_LOANED",
-                independent_readers[2],
+                street_readers[2],
             ),
         )
         observed_results = tuple(
-            observed_reconcile(
-                {
-                    key: quantity
-                    for key, quantity in location_balances.items()
-                    if key[1] == location or (location == "DTC" and key[1] not in sourced_locations)
-                },
-                (reader,),
+            reconcile_observed_street(
+                books,
+                reader,
                 tuple(item for item in prior_breaks if item.location == location),
                 as_of=business_date,
                 item_id=item_id,
@@ -2067,7 +2083,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         if count_source_failed:
             securities_result = securities_result.__class__(
                 securities_result.item_id,
-                "FAILED",
+                ControlStatus.FAILED,
                 securities_result.breaks,
                 securities_result.sources_read,
             )
@@ -2077,10 +2093,14 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 business_date,
                 result.sources_read,
                 len(result.breaks),
-                "FAILED" if result.status == "FAILED" or result.breaks else "COMPLETED",
+                (
+                    ReconciliationStatus.FAILED
+                    if result.status == ControlStatus.FAILED or result.breaks
+                    else ReconciliationStatus.COMPLETED
+                ),
                 (
                     "source failure or reconciliation differences detected"
-                    if result.status == "FAILED" or result.breaks
+                    if result.status == ControlStatus.FAILED or result.breaks
                     else None
                 ),
             )

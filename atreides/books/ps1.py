@@ -212,12 +212,24 @@ class ControlBreak:
 @dataclass(frozen=True, slots=True)
 class ControlResult:
     item_id: str
-    status: str
+    status: ControlStatus
     breaks: tuple[ControlBreak, ...]
     sources_read: tuple[str, ...]
 
 
-def _calendar_owner(item_id: str) -> str:
+class ControlStatus(StrEnum):
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+STREET_CONTROL_LOCATIONS = {
+    "stock-record-to-street": "DTC",
+    "ftr-to-cns-fail-statement": "FAIL_TO_RECEIVE",
+    "stock-loan-to-contract-register": "STOCK_LOANED",
+}
+
+
+def calendar_owner(item_id: str) -> str:
     path = Path(__file__).parents[2] / "simulator/reconciliation_calendar.json"
     rows = json.loads(path.read_text(encoding="utf-8"))
     row = next((item for item in rows if item["id"] == item_id), None)
@@ -268,7 +280,8 @@ def _compare(
                     cause,
                 )
             )
-    return ControlResult(item_id, "FAILED" if breaks else "COMPLETED", tuple(breaks), sources_read)
+    status = ControlStatus.FAILED if breaks else ControlStatus.COMPLETED
+    return ControlResult(item_id, status, tuple(breaks), sources_read)
 
 
 def reconcile(
@@ -282,7 +295,7 @@ def reconcile(
     """Build both comparison sides and record the sources actually read."""
     if outside_source.as_of != as_of:
         raise ValueError("OUTSIDE_SOURCE_CLOSE_DATE_MISMATCH")
-    owner = _calendar_owner(item_id)
+    owner = calendar_owner(item_id)
     if item_id == "cash-to-bank" and isinstance(outside_source, ExternalMoneyStatement):
         books_values = book_money_balances(
             books, as_of, frozenset({AccountType.CASH, AccountType.BANK_CONTROL})
@@ -295,12 +308,25 @@ def reconcile(
             frozenset({AccountType.RESERVE_BANK_CUSTOMER, AccountType.RESERVE_BANK_PAB}),
         )
         outside_values = outside_source.balances
-    elif item_id == "securities-count" and isinstance(outside_source, SecuritiesCount):
+    elif isinstance(outside_source, SecuritiesCount) and (
+        item_id == "securities-count" or item_id in STREET_CONTROL_LOCATIONS
+    ):
         books_values = book_location_balances(books, as_of)
         outside_values = {
             f"{issue}@{location}": quantity
             for (issue, location), quantity in outside_source.positions.items()
         }
+        location = STREET_CONTROL_LOCATIONS.get(item_id)
+        if location is not None:
+            suffix = f"@{location}"
+            books_values = {
+                key: value for key, value in books_values.items() if key.endswith(suffix) and value
+            }
+            outside_values = {
+                key: value
+                for key, value in outside_values.items()
+                if key.endswith(suffix) and value
+            }
     else:
         raise TypeError(f"OUTSIDE_SOURCE_TYPE_MISMATCH: {item_id}")
     outside_evidence = (

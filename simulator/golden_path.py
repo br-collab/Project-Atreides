@@ -77,6 +77,7 @@ from atreides.books.ps1 import (
     ACCOUNT_TREATMENT_ROWS,
     TAX_LOT_RULES,
     ControlResult,
+    ControlStatus,
     InstructionKind,
     InstructionLog,
     MoneyInstruction,
@@ -113,6 +114,7 @@ from atreides.retail_identity import (
     build_cip_record,
 )
 from simulator.account_transfers import _post_transfer
+from simulator.central_reconciliation import reconcile_observed_street
 from simulator.conversion import StatementLine
 from simulator.estate import (
     DepositDraw,
@@ -137,10 +139,10 @@ from simulator.street import (
     IndependentSourceInputs,
     OpenFail,
     ReconciliationCompletion,
+    ReconciliationStatus,
     SettlementOutcome,
     StreetBreak,
     build_independent_sources,
-    reconcile,
     reconciliation_calendar,
 )
 from simulator.synthetic_attestation_fixture import (
@@ -525,26 +527,13 @@ def _run_daily_close(
     )
     capital = required_net_capital(books, {ISSUE: price}, Decimal("1000000"), rules)
     control = required_control(books, {ISSUE: price}, rules)
-    location_balances: dict[tuple[str, str], Decimal] = {}
     observed_accounts: set[str] = set()
     for entry in books.entries:
         if entry.effective_date > as_of.date():
             continue
         for line in entry.lines:
-            if line.record_side is RecordSide.LOCATION and line.issue is not None:
-                key = (line.issue, line.account_type.value)
-                location_balances[key] = location_balances.get(key, Decimal()) + line.quantity
             if line.account_type.value in {"CUSTOMER_CASH", "CUSTOMER_MARGIN"}:
                 observed_accounts.add(line.account_id)
-    location_balances = {
-        key: value
-        for key, value in location_balances.items()
-        if value and key[1] in {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
-    }
-    if depository_quantity_delta:
-        key = (ISSUE, "DTC")
-        location_balances[key] = location_balances.get(key, Decimal()) + depository_quantity_delta
-    location_balances = {key: value for key, value in location_balances.items() if value}
     readers = build_independent_sources(
         books,
         IndependentSourceInputs(
@@ -579,10 +568,12 @@ def _run_daily_close(
             loan_instructions=(),
         ),
     )
-    street_breaks, street_completion = reconcile(
-        location_balances,
-        tuple(reader.read() for reader in readers),
+    street_breaks, street_completion = reconcile_observed_street(
+        books,
+        readers[0],
         as_of=as_of.date(),
+        item_id="stock-record-to-street",
+        failure_location="DTC",
     )
     control_lines = (
         ()
@@ -1489,18 +1480,6 @@ def run_golden_path(  # noqa: PLR0915
     )
     clock.advance(timedelta(days=(settlement_date - clock().date()).days))
     reconciliation_date = clock().date()
-    street_books: dict[tuple[str, str], Decimal] = {}
-    for entry in books.entries:
-        if entry.effective_date > reconciliation_date:
-            continue
-        for line in entry.lines:
-            if (
-                line.record_side is RecordSide.LOCATION
-                and line.issue is not None
-                and line.account_type.value in {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
-            ):
-                key = (line.issue, line.account_type.value)
-                street_books[key] = street_books.get(key, Decimal()) + line.quantity
     street_readers = build_independent_sources(
         books,
         IndependentSourceInputs(
@@ -1520,33 +1499,23 @@ def run_golden_path(  # noqa: PLR0915
             loan_instructions=(),
         ),
     )
-    street_sources = tuple(reader.read() for reader in street_readers)
     street_specs = (
-        ("stock-record-to-street", "DTC", street_sources[0]),
-        ("ftr-to-cns-fail-statement", "FAIL_TO_RECEIVE", street_sources[1]),
-        ("stock-loan-to-contract-register", "STOCK_LOANED", street_sources[2]),
+        ("stock-record-to-street", "DTC", street_readers[0]),
+        ("ftr-to-cns-fail-statement", "FAIL_TO_RECEIVE", street_readers[1]),
+        ("stock-loan-to-contract-register", "STOCK_LOANED", street_readers[2]),
     )
     street_completions = []
     street_breaks: list[StreetBreak] = []
-    for item_id, location, source in street_specs:
-        scoped_books = {key: value for key, value in street_books.items() if key[1] == location}
-        item_breaks, completion = reconcile(
-            scoped_books,
-            (source,),
+    for item_id, location, reader in street_specs:
+        item_breaks, completion = reconcile_observed_street(
+            books,
+            reader,
             as_of=reconciliation_date,
             item_id=item_id,
+            failure_location=location,
         )
         street_breaks.extend(item_breaks)
-        street_completions.append(
-            ReconciliationCompletion(
-                item_id=item_id,
-                close_date=reconciliation_date,
-                sources_read=("Atreides equities books", *completion.sources_read),
-                break_count=len(item_breaks),
-                status="FAILED" if item_breaks else "COMPLETED",
-                error="reconciliation break" if item_breaks else None,
-            )
-        )
+        street_completions.append(completion)
 
     instruction_log = InstructionLog()
     cash_instructions = (
@@ -1626,7 +1595,11 @@ def run_golden_path(  # noqa: PLR0915
             close_date=reconciliation_date,
             sources_read=control.sources_read,
             break_count=len(control.breaks),
-            status="FAILED" if control.status == "FAILED" else "COMPLETED",
+            status=(
+                ReconciliationStatus.FAILED
+                if control.status == ControlStatus.FAILED
+                else ReconciliationStatus.COMPLETED
+            ),
             error="reconciliation break" if control.breaks else None,
         )
 
