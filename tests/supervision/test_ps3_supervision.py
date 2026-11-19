@@ -16,12 +16,12 @@ from atreides.supervision.aml import (
 from atreides.supervision.controls import (
     build_3130_draft,
     build_public_summary,
-    execute_tests_to_junit,
     load_wsp_register,
     record_review,
     run_3120_testing,
 )
 from simulator.golden_path import run_golden_path
+from tests.supervision.junit_runner import execute_tests_to_junit
 
 WSP_GATES = "tests/supervision/test_wsp_gates.py"
 

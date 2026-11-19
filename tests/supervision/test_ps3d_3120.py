@@ -4,11 +4,11 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from atreides.supervision.controls import (
-    execute_tests_to_junit,
     executed_names_from_junit,
     load_wsp_register,
     run_3120_testing,
 )
+from tests.supervision.junit_runner import execute_tests_to_junit
 
 WSP_PATH = "tests/supervision/test_wsp_gates.py"
 DESELECTED = "tests/supervision/test_wsp_gates.py::test_confirmation_gate"

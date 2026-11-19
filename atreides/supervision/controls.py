@@ -7,8 +7,6 @@ never substitutes an agent for the named synthetic registered principal.
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -71,52 +69,6 @@ def record_review(
     if reviewer == decider:
         raise ValueError("SELF_REVIEW_REFUSED")
     return ReviewRecord(decision_id, decider, reviewer, outcome, reviewed_at)
-
-
-def execute_tests_to_junit(
-    junit_xml: Path,
-    *,
-    paths: tuple[str, ...],
-    deselect: tuple[str, ...] = (),
-    cwd: Path | None = None,
-) -> None:
-    """Run pytest and keep the JUnit file it writes.
-
-    Deselected tests are absent from that file. The caller does not supply the
-    executed-name set.
-    """
-
-    if not paths:
-        raise ValueError("WSP_JUNIT_PATHS_REQUIRED")
-    junit_xml.parent.mkdir(parents=True, exist_ok=True)
-    if junit_xml.exists():
-        junit_xml.unlink()
-    command = [
-        sys.executable,
-        "-m",
-        "pytest",
-        *paths,
-        "-o",
-        "addopts=",
-        "-q",
-        "--tb=line",
-        "--noconftest",
-        f"--junitxml={junit_xml}",
-        *(f"--deselect={item}" for item in deselect),
-    ]
-    completed = subprocess.run(
-        command,
-        cwd=cwd,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if not junit_xml.is_file():
-        detail = (completed.stderr or completed.stdout)[-400:]
-        raise RuntimeError(f"WSP_JUNIT_NOT_WRITTEN: {detail}")
-    if completed.returncode not in {0, 1}:
-        detail = (completed.stderr or completed.stdout)[-400:]
-        raise RuntimeError(f"WSP_JUNIT_RUNNER_FAILED: {completed.returncode} {detail}")
 
 
 def executed_names_from_junit(junit_xml: Path) -> frozenset[str]:
