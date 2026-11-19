@@ -13,12 +13,22 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, replace
-from datetime import date, datetime
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
 
 from atreides.books.ledger import AccountType, EquitiesBooks, JournalEntry, RecordSide
+from atreides.deadlines.calendar import Market, MarketCalendar
+
+SPECIFIC_IDENTIFICATION_TIME_TEXT = (
+    "For purposes of this paragraph (c), an adequate identification of stock is made at the "
+    "time of sale, transfer, delivery, or distribution if the identification is made no later "
+    "than the earlier of the settlement date or the time for settlement required by Rule "
+    "15c6-1 under the Securities Exchange Act of 1934, 17 CFR 240.15c6-1 (or its successor). "
+    "A standing order or instruction for the specific identification of stock is treated as an "
+    "adequate identification made at the time of sale, transfer, delivery, or distribution."
+)
 
 TAX_LOT_RULES: tuple[dict[str, str], ...] = (
     {
@@ -118,10 +128,15 @@ class InstructionLog:
         as_of: date,
         *,
         kinds: frozenset[InstructionKind],
+        account_ids: frozenset[str] | None = None,
     ) -> ExternalMoneyStatement:
         return build_money_statement(
             name,
-            tuple(item for item in self._instructions if item.kind in kinds),
+            tuple(
+                item
+                for item in self._instructions
+                if item.kind in kinds and (account_ids is None or item.account_id in account_ids)
+            ),
             as_of,
         )
 
@@ -273,9 +288,7 @@ def reconcile(
             books, as_of, frozenset({AccountType.CASH, AccountType.BANK_CONTROL})
         )
         outside_values = outside_source.balances
-    elif item_id == "reserve-bank-to-books" and isinstance(
-        outside_source, ExternalMoneyStatement
-    ):
+    elif item_id == "reserve-bank-to-books" and isinstance(outside_source, ExternalMoneyStatement):
         books_values = book_money_balances(
             books,
             as_of,
@@ -404,8 +417,7 @@ def project_tax_lots(
             (
                 line.money
                 for line in entry.lines
-                if line.account_id == account_id
-                and line.record_side is RecordSide.MONEY
+                if line.account_id == account_id and line.record_side is RecordSide.MONEY
             ),
             Decimal(),
         )
@@ -426,10 +438,13 @@ def project_tax_lots(
             needed = -ownership
             election = election_by_sale.get(entry.entry_id)
             if election is not None:
-                settlement_time = settlement_times.get(entry.entry_id)
-                if settlement_time is None:
-                    raise ValueError("SALE_SETTLEMENT_ENTRY_MISSING")
-                if election.recorded_at > settlement_time:
+                contractual_date = MarketCalendar.load(Market.US_EQUITIES).add_business_days(
+                    entry.effective_date, 1
+                )
+                required_time = datetime.combine(contractual_date, time.max, tzinfo=UTC)
+                actual_time = settlement_times.get(entry.entry_id)
+                deadline = min(actual_time, required_time) if actual_time else required_time
+                if election.recorded_at > deadline:
                     raise ValueError("LATE_SPECIFIC_IDENTIFICATION_ELECTION")
             ordered = sorted(lots, key=lambda lot: (lot.acquisition_date, lot.lot_id))
             if election is not None:

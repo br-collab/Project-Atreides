@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
+from pathlib import Path
 
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
@@ -591,18 +593,25 @@ def exercise_simulator_market_access(
                 capacity="CUSTOMER",
                 buying_power=_customer_cash_capacity(books, account),
                 margin_excess=_customer_cash_capacity(books, account),
-                margin_result_digest=books.digest(),
+                margin_result_digest=digest(
+                    {
+                        "account_id": account,
+                        "cash_capacity": _customer_cash_capacity(books, account),
+                        "calculation": "cash-only capacity",
+                    }
+                ),
                 positions=(),
             )
             for account in accounts
         ),
     )
     capacity_wire = canonical_bytes(capacity)
-    maximum_quantity = Decimal(str(pack.value("generator", "quantity_max"))) + Decimal(2) * Decimal(
-        str(pack.value("generator", "auction_quantity_each"))
+    policy = json.loads(
+        Path(__file__).with_name("market_access_policy.json").read_text(encoding="utf-8")
     )
-    maximum_notional = maximum_quantity * Decimal(str(pack.value("market", "cns_prior_close")))
-    account_credit_limit = Decimal(str(pack.value("generator", "customer_credit_max")))
+    maximum_quantity = Decimal(policy["maximum_quantity"])
+    maximum_notional = Decimal(policy["maximum_notional"])
+    account_credit_limit = Decimal(policy["account_credit_limit"])
     decision = MarketAccessGate().evaluate(
         ChildRelease(
             order_event=register.events[-1],

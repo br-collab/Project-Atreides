@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.0 - 18 Nov 2026
+
+Correct securities-count sign convention and make the clean five-day firm reconciliation run
+truthful. Record both reserve-transfer instruction legs, derive street reconciliation status and
+owner, use service policy provenance for simulator approvals, pin market-access limits separately
+from generator bounds, bind capacity to its computed result, apply the pinned earlier-of deadline
+for lot identification, sign confirmation quantity by side, and record publication anchor write
+time when written.
+
+Retraction: version 1.1.0 did not have independent cash sources in every real firm-run path, and
+version 1.1.1 sealed KYC chains in resolver callers rather than storing them at decision time.
+Version 1.0.0's phrase "externally anchored" described a sibling digest copy, not an external
+anchor.
+
 ## 1.2.0 - 18 Nov 2026
 
 Add the versioned written supervisory procedure register, self-review refusal, Rule 3120

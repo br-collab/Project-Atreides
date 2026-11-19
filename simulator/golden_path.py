@@ -477,9 +477,7 @@ def _result(
     )
 
 
-def _capacity_from_books(
-    books: EquitiesBooks, *, clock: FixedRunClock
-) -> CapacityDocument:
+def _capacity_from_books(books: EquitiesBooks, *, clock: FixedRunClock) -> CapacityDocument:
     accounts = project_margin_accounts(books, prices={ISSUE: Decimal("100")})
     calendar = MarketCalendar.load(Market.US_EQUITIES)
     results = tuple(
@@ -713,8 +711,10 @@ def run_golden_path(  # noqa: PLR0915
         )
     )
     funded_cash = (
-        Decimal("400") if variant is Variant.CREDIT_LIMIT else Decimal("10000")
-    ) if funding_cash is None else funding_cash
+        (Decimal("400") if variant is Variant.CREDIT_LIMIT else Decimal("10000"))
+        if funding_cash is None
+        else funding_cash
+    )
     transfers = {
         transfer_id: TransferInRecord(
             record_id=transfer_id, account_id=ACCOUNT, completed=True, completed_at=clock()
@@ -740,9 +740,7 @@ def run_golden_path(  # noqa: PLR0915
                 applied_at=START,
             )
         },
-        kyc_dsor_records={
-            kyc_id: kyc_record
-        },
+        kyc_dsor_records={kyc_id: kyc_record},
         kyc_event_chains={kyc_id: kyc_event_chain(kyc_record)},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
@@ -847,9 +845,7 @@ def run_golden_path(  # noqa: PLR0915
     stages.append("Atreides: CIP, profile, eligibility, principal, and human approval passed")
     _post_transfer(
         books,
-        StatementLine(
-            account=ACCOUNT, issue=ISSUE, quantity=Decimal(0), cash_credit=funded_cash
-        ),
+        StatementLine(account=ACCOUNT, issue=ISSUE, quantity=Decimal(0), cash_credit=funded_cash),
         transfer_id=transfer_id,
         sequence=1,
         quantity=Decimal(0),
@@ -897,13 +893,13 @@ def run_golden_path(  # noqa: PLR0915
     )
     with DSORStore(":memory:") as dsor:
         dsor_record = ApprovedIntentDecisionRecord(
-                operation_id=UUID("00000000-0000-0000-0000-000000000301"),
-                lifecycle_id=LifecycleId(_identifier("lif_", 20001)),
-                intent_id=str(payload.intent_id),
-                intent_digest=digest(payload),
-                decided_at=clock(),
-                source_event_id=str(funded_event.event_id),
-            )
+            operation_id=UUID("00000000-0000-0000-0000-000000000301"),
+            lifecycle_id=LifecycleId(_identifier("lif_", 20001)),
+            intent_id=str(payload.intent_id),
+            intent_digest=digest(payload),
+            decided_at=clock(),
+            source_event_id=str(funded_event.event_id),
+        )
         dsor.append(
             dsor_record,
             dtg=clock(),
@@ -1509,9 +1505,7 @@ def run_golden_path(  # noqa: PLR0915
         books,
         IndependentSourceInputs(
             as_of=reconciliation_date,
-            opening_depository=(
-                DepositoryPosition(ISSUE, "DTC", depository_quantity_delta),
-            )
+            opening_depository=(DepositoryPosition(ISSUE, "DTC", depository_quantity_delta),)
             if depository_quantity_delta
             else (),
             settlement_outcomes=(
@@ -1811,7 +1805,7 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
     anchor = PackDigestDSORRecord(
         record_id=f"PACK-{pack_digest.removeprefix('sha256:')[:24]}",
         pack_digest=pack_digest,
-        recorded_at=START + timedelta(days=4),
+        recorded_at=datetime.now(UTC),
     )
     # Convenience copy only. A sibling file is not an independent anchor.
     (output / "pack-digest-dsor.json").write_text(anchor.model_dump_json(indent=2) + "\n")

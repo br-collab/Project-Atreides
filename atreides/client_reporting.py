@@ -142,9 +142,7 @@ def customer_side_facts_from_furnished_confirmations(
         if furnished.confirmation_id != confirmation.confirmation_id:
             raise ValueError("FURNISHED_CONFIRMATION_ID_MISMATCH")
         fields = {field.name: field.value for field in confirmation.fields}
-        positions.append(
-            (fields["security_identity"], Decimal(fields["quantity"]))
-        )
+        positions.append((fields["security_identity"], Decimal(fields["quantity"])))
     return CustomerSideFacts(
         deposit_instructions=deposit_instructions,
         venue_fills=venue_fills,
@@ -205,7 +203,7 @@ def generate_trade_confirmation(
     side = "BUY" if ownership[0].quantity > 0 else "SELL"
     trade_id = execution_report.execution_id
     executed_at = execution_event.times.event_time
-    quantity = execution_report.quantity
+    quantity = ownership[0].quantity
     price = execution_report.price
     if correction_kind == "ORIGINAL" and replaces is not None:
         raise ValueError("an original confirmation cannot replace another confirmation")
@@ -257,9 +255,7 @@ def find_book_entry_for_execution(
 ) -> JournalEntry:
     """Resolve the posting by the execution identifier recorded on the books."""
     matches = tuple(
-        entry
-        for entry in books.entries
-        if entry.source_event_id == str(execution_event.event_id)
+        entry for entry in books.entries if entry.source_event_id == str(execution_event.event_id)
     )
     if len(matches) != 1:
         raise ValueError("execution does not link to exactly one posted books entry")
@@ -288,9 +284,7 @@ def record_furnished(
         furnished_at=furnished_at,
         recipient_id=recipient_id,
         channel="SYNTHETIC_PORTAL",
-        provenance=_rule_provenance(
-            _CONFIRMATION_NOTIFICATION_RULE, confirmation.confirmation_id
-        ),
+        provenance=_rule_provenance(_CONFIRMATION_NOTIFICATION_RULE, confirmation.confirmation_id),
     )
 
 
@@ -313,9 +307,7 @@ def _balances(
                     margin += line.money
             elif line.record_side is RecordSide.OWNERSHIP and line.issue is not None:
                 positions[line.issue] = positions.get(line.issue, Decimal()) + line.quantity
-    return cash, margin, {
-        issue: quantity for issue, quantity in positions.items() if quantity
-    }
+    return cash, margin, {issue: quantity for issue, quantity in positions.items() if quantity}
 
 
 def _journal_oracle_balances(
@@ -357,9 +349,7 @@ def build_statement_draft(
     opening_cash, opening_margin, opening_positions = _balances(
         entries, account_id, period_start.fromordinal(period_start.toordinal() - 1)
     )
-    closing_cash, closing_margin, closing_positions = _balances(
-        entries, account_id, period_end
-    )
+    closing_cash, closing_margin, closing_positions = _balances(entries, account_id, period_end)
     activity: list[StatementActivity] = []
     for entry in entries:
         if not period_start <= entry.effective_date <= period_end:
@@ -473,8 +463,7 @@ def issue_statement(
             )
     issues = set(draft.opening_positions) | set(draft.closing_positions) | set(activity_positions)
     positions_tie = all(
-        draft.opening_positions.get(issue, Decimal())
-        + activity_positions.get(issue, Decimal())
+        draft.opening_positions.get(issue, Decimal()) + activity_positions.get(issue, Decimal())
         == draft.closing_positions.get(issue, Decimal())
         for issue in issues
     )
