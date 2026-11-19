@@ -7,6 +7,13 @@ file that run wrote. A written supervisory procedure test that did not run is an
 exception. The report no longer accepts an executed-test set from its caller. The
 pytest process is started by the test runner, not by the package.
 
+Rule 3120 now grades each row from the outcome the runner recorded: a test that ran and
+failed is a `FAILED` exception, an absent or skipped test is `NOT_RUN`, and rows match on
+the full test node identifier. Each written supervisory procedure row names a test that
+plants a defect in its control through the golden path or the firm run. The placeholder
+tests that only re-read the register are deleted. Two controls without a run-level test yet
+(approved intent, stock loan to register) are reported as exceptions with their owners.
+
 ## 1.3.0 - 18 Nov 2026
 
 Correct securities-count sign convention and make the clean five-day firm reconciliation run
