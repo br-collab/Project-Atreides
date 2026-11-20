@@ -35,6 +35,9 @@ class AMLPolicy:
     fast_sale_days: int = 5
     filing_days: int = 30
     extension_days: int = 30
+    # Synthetic policy data, not a rule: an account whose trading is below this share of the
+    # cash it moved counts as "no trading" for the deposit-withdrawal scenario.
+    trading_share_floor: Decimal = Decimal("0.10")
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,8 +96,9 @@ def monitor(
     deposits = [item for item in events if item.kind is EventKind.CASH_DEPOSIT]
     withdrawals = [item for item in events if item.kind is EventKind.CASH_WITHDRAWAL]
     trades = [item for item in events if item.kind is EventKind.TRADE]
-    if deposits and withdrawals and not trades:
-        moved = sum((item.amount for item in deposits + withdrawals), Decimal())
+    moved = sum((item.amount for item in deposits + withdrawals), Decimal())
+    traded = sum((item.amount for item in trades), Decimal())
+    if deposits and withdrawals and traded < moved * policy.trading_share_floor:
         if moved >= policy.movement_threshold:
             alerts.append(
                 _alert(
@@ -153,11 +157,7 @@ def record_human_decision(
     if outcome not in {"SAR", "NO_SAR"} or not reason:
         raise ValueError("SAR_OR_NO_SAR_WITH_REASON_REQUIRED")
     decision = AMLDecision(officer, outcome, reason, decided_on)
-    draft = (
-        {"status": "DRAFT_NOT_FILED", "case_id": case.case_id}
-        if outcome == "SAR"
-        else None
-    )
+    draft = {"status": "DRAFT_NOT_FILED", "case_id": case.case_id} if outcome == "SAR" else None
     return replace(case, decision=decision, draft_sar=draft)
 
 
@@ -167,6 +167,30 @@ def close_case(case: AMLCase) -> AMLCase:
     return case
 
 
+def extend_for_unidentified_suspect(case: AMLCase, *, policy: AMLPolicy) -> AMLCase:
+    """Use the extra period 31 CFR 1023.320(b)(3) allows when no suspect is identified.
+
+    The filing period runs from initial detection; the extension adds ``extension_days`` and
+    the outer limit is detection plus both periods (60 calendar days at the defaults).
+    """
+
+    if case.extended_due_on is not None:
+        raise ValueError("SAR_CLOCK_ALREADY_EXTENDED")
+    return replace(
+        case,
+        extended_due_on=case.alert.detected_on
+        + timedelta(days=policy.filing_days + policy.extension_days),
+    )
+
+
 def missed_clock_exception(case: AMLCase, *, as_of: date) -> bool:
+    """The SAR clock runs to filing, not to the decision.
+
+    A NO_SAR decision stops the clock. A SAR decision does not: the simulator never files, so
+    a SAR draft past its deadline is an exception, because a real filing would be late.
+    """
+
     deadline = case.extended_due_on or case.due_on
-    return case.decision is None and as_of > deadline
+    if as_of <= deadline:
+        return False
+    return case.decision is None or case.decision.outcome == "SAR"

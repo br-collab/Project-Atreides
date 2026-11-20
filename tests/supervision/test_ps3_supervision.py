@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -9,6 +9,7 @@ from atreides.supervision.aml import (
     EventKind,
     MonitoringEvent,
     close_case,
+    extend_for_unidentified_suspect,
     missed_clock_exception,
     monitor,
     record_human_decision,
@@ -218,6 +219,63 @@ def test_aml_missed_30_day_clock_is_supervisory_exception() -> None:
         policy=AMLPolicy(),
     )[0]
     assert missed_clock_exception(case, as_of=date(2027, 1, 2))
+
+
+def _planted_case():
+    return monitor(
+        customer_id="PLANTED",
+        books_events=(event(EventKind.CASH_DEPOSIT, 1),),
+        instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),),
+        policy=AMLPolicy(),
+    )[0]
+
+
+def test_a_sar_decision_does_not_stop_the_filing_clock() -> None:
+    case = _planted_case()
+    decided = record_human_decision(
+        case,
+        officer="HUMAN_AML_OFFICER:Alex",
+        outcome="SAR",
+        reason="documented synthetic reason",
+        decided_on=date(2026, 11, 5),
+    )
+    assert not missed_clock_exception(decided, as_of=case.due_on)
+    assert missed_clock_exception(decided, as_of=case.due_on + timedelta(days=1))
+
+
+def test_a_no_sar_decision_stops_the_clock() -> None:
+    case = _planted_case()
+    decided = record_human_decision(
+        case,
+        officer="HUMAN_AML_OFFICER:Alex",
+        outcome="NO_SAR",
+        reason="documented synthetic reason",
+        decided_on=date(2026, 11, 5),
+    )
+    assert not missed_clock_exception(decided, as_of=case.due_on + timedelta(days=10))
+
+
+def test_unidentified_suspect_extension_caps_at_60_days_from_detection() -> None:
+    case = _planted_case()
+    extended = extend_for_unidentified_suspect(case, policy=AMLPolicy())
+    assert extended.extended_due_on == case.alert.detected_on + timedelta(days=60)
+    assert not missed_clock_exception(extended, as_of=case.due_on + timedelta(days=1))
+    assert missed_clock_exception(extended, as_of=extended.extended_due_on + timedelta(days=1))
+    with pytest.raises(ValueError, match="SAR_CLOCK_ALREADY_EXTENDED"):
+        extend_for_unidentified_suspect(extended, policy=AMLPolicy())
+
+
+def test_one_token_trade_does_not_hide_deposit_withdrawal_movement() -> None:
+    token = MonitoringEvent(
+        "E-TRADE-3", "PLANTED", EventKind.TRADE, date(2026, 11, 3), Decimal("5")
+    )
+    cases = monitor(
+        customer_id="PLANTED",
+        books_events=(event(EventKind.CASH_DEPOSIT, 1), token),
+        instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),),
+        policy=AMLPolicy(),
+    )
+    assert [case.alert.scenario for case in cases] == ["DEPOSIT_WITHDRAWAL_NO_TRADING"]
 
 
 def test_aml_file_decision_produces_unfiled_draft() -> None:

@@ -21,7 +21,10 @@ def execute_tests_to_junit(
     """Run pytest and keep the JUnit file it writes.
 
     Deselected tests are absent from that file. The caller does not supply the
-    executed-name set.
+    executed-name set. The repository conftest loads, as it does in CI, so a WSP test sees
+    the same fixtures and settings. Only ``addopts`` is cleared: CI's coverage floor applies
+    to the whole suite and would fail a run of the WSP subset for reasons unrelated to any
+    control.
     """
 
     if not paths:
@@ -38,7 +41,6 @@ def execute_tests_to_junit(
         "addopts=",
         "-q",
         "--tb=line",
-        "--noconftest",
         f"--junitxml={junit_xml}",
         *(f"--deselect={item}" for item in deselect),
     ]

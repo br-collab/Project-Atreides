@@ -7,7 +7,7 @@ never substitutes an agent for the named synthetic registered principal.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
@@ -52,6 +52,7 @@ class TestingReport:
     addressed_to: str
     run_id: str
     tests: tuple[TestResult, ...]
+    register_version: str = ""
 
     @property
     def exception_count(self) -> int:
@@ -67,10 +68,20 @@ class CertificationDraft:
     signed_by: None = None
 
 
-def load_wsp_register() -> tuple[dict[str, Any], ...]:
+def _register_document() -> dict[str, Any]:
     path = Path(__file__).with_name("wsp_register.json")
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    return tuple(dict(item) for item in raw["rows"])
+    document: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return document
+
+
+def load_wsp_register() -> tuple[dict[str, Any], ...]:
+    return tuple(dict(item) for item in _register_document()["rows"])
+
+
+def wsp_register_version() -> str:
+    """The version of the register a 3120 report graded, so the report can be tied to it."""
+
+    return str(_register_document()["version"])
 
 
 def record_review(
@@ -186,7 +197,8 @@ def run_3120_testing(
     with no run-level test yet is an exception (``NO_RUN_LEVEL_TEST``).
     """
 
-    return evaluate_3120(load_wsp_register(), junit_xml, addressed_to=addressed_to)
+    report = evaluate_3120(load_wsp_register(), junit_xml, addressed_to=addressed_to)
+    return replace(report, register_version=wsp_register_version())
 
 
 def register_node_ids() -> tuple[str, ...]:
