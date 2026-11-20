@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+Reconciliation break causes are now read from the two sides (missing outside record, missing
+book entry, sign difference, quantity difference, unsourced location), never from age. Until
+now every carried break was labelled `TIMING`, which hid aged, unexplained differences
+(inventory finding N1, 19 November 2026). Age stays on each break as `age_calendar_days` with a
+new `carried` flag, and the five-day firm run now passes each day's control breaks forward, so
+an unposted deposit shows as `MISSING_BOOK_ENTRY` aged 0, 1 and 2 days. Test:
+`tests/books/test_ps3_break_causes.py`, through `run_firm`.
+
+The US equities calendar now carries the regular 4:00 p.m. close and the NYSE 1:00 p.m. early
+closes for 2026 and 2027 (27 November 2026, 24 December 2026, 26 November 2027), read from
+the NYSE Holidays and Trading Hours page on 20 November 2026. `MarketCalendar.session_close`
+fails closed for a year without session data.
+
+**Retraction (1.2.0).** The 1.2.0 entry below says the anti-money laundering monitoring runs
+"over books and instruction-log events" and that breaks are classified "from their own facts".
+Neither was true at 1.2.0: no run called the AML engine, and carried breaks were classified by
+age. Break causes are fixed above; AML wiring is PS-3D Phase B.
+
 PS-3D Phase A: Rule 3120 testing. Not yet called by `run_golden_path` or `run_firm`;
 PS-3D Phase B wires it into the runs. Until then it runs only from the test suite.
 
