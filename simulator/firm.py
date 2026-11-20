@@ -58,6 +58,7 @@ from atreides.books.projections import (
     reserve_bank_balances,
 )
 from atreides.books.ps1 import (
+    ControlBreak,
     ControlStatus,
     InstructionKind,
     InstructionLog,
@@ -217,6 +218,7 @@ class FirmDay:
     early_warning_notices: tuple[EarlyWarningNotice, ...]
     rule_204_close_outs: dict[str, date]
     economics_digest: str
+    control_breaks: tuple[ControlBreak, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -1696,6 +1698,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
     opening_depository = _opening_street(profile, days)
     street = SyntheticDepository(opening_depository)
     prior_breaks: tuple[StreetBreak, ...] = ()
+    prior_control_breaks: tuple[ControlBreak, ...] = ()
     opening_positions, opening_cash = _balances(books)
     if mutation == "WRONG_OPENING_POSITION":
         opening_positions[next(iter(opening_positions))] += 1
@@ -2097,7 +2100,13 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             ),
             account_ids=frozenset({"CLEARING", "FIRM-OPERATING-CASH"}),
         )
-        cash_result = reconcile_ps1("cash-to-bank", books, cash_statement, business_date)
+        cash_result = reconcile_ps1(
+            "cash-to-bank",
+            books,
+            cash_statement,
+            business_date,
+            prior_breaks=prior_control_breaks,
+        )
         reserve_statement = instruction_log.statement(
             "synthetic-reserve-banks",
             business_date,
@@ -2120,7 +2129,11 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 )
             )
         reserve_result = reconcile_ps1(
-            "reserve-bank-to-books", books, reserve_statement, business_date
+            "reserve-bank-to-books",
+            books,
+            reserve_statement,
+            business_date,
+            prior_breaks=prior_control_breaks,
         )
         count_confirmation_rows: list[SecuritiesConfirmation] = []
         count_source_failed = False
@@ -2143,7 +2156,11 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         count_confirmations = tuple(count_confirmation_rows)
         securities_count = build_securities_count(count_confirmations, business_date)
         securities_result = reconcile_ps1(
-            "securities-count", books, securities_count, business_date
+            "securities-count",
+            books,
+            securities_count,
+            business_date,
+            prior_breaks=prior_control_breaks,
         )
         if count_source_failed:
             securities_result = securities_result.__class__(
@@ -2182,6 +2199,10 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         )
         completion = source_completions[0]
         prior_breaks = breaks
+        day_control_breaks = (
+            cash_result.breaks + reserve_result.breaks + securities_result.breaks
+        )
+        prior_control_breaks = day_control_breaks
         (
             protections,
             required_outcomes,
@@ -2311,6 +2332,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                         }
                     )
                 ).hexdigest(),
+                control_breaks=day_control_breaks,
             )
         )
         # Protection posts same-day reserve movements after the trading close.
