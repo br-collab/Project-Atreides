@@ -37,4 +37,4 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 - repo
 - clearing fund waterfall
 
-- Artifact freshness: `STALE`; source commit `68e348c4fe6ea48d3a58fb7f591d555f8124adc8` is behind current main `db0b589b9204d4457270cf97a18ceac0312b3b79`.
+- Artifact freshness: `STALE`; source commit `68e348c4fe6ea48d3a58fb7f591d555f8124adc8` is behind current main `407a158d6ae049a316cc3ee29a14621deec0a0e6`.
