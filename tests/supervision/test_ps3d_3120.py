@@ -18,6 +18,9 @@ from atreides.supervision.controls import (
     register_node_ids,
     run_3120_testing,
 )
+from atreides.supervision.controls import (
+    wsp_register_version as load_wsp_register_version,
+)
 from tests.supervision.junit_runner import execute_tests_to_junit
 
 KYC_NODE = (
@@ -60,6 +63,7 @@ def test_every_named_run_level_test_runs_and_only_honest_gaps_are_exceptions(
                 for case_class, case in outcomes
             ), CONTROL
     assert report.exception_count == len(gaps), CONTROL
+    assert report.register_version == load_wsp_register_version(), CONTROL
 
 
 def test_deselecting_one_run_level_test_is_exactly_one_not_run_exception(
