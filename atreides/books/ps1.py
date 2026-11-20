@@ -207,6 +207,7 @@ class ControlBreak:
     opened_at: date
     age_calendar_days: int
     cause: str
+    carried: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,6 +239,31 @@ def calendar_owner(item_id: str) -> str:
     return str(row["owner_role"])
 
 
+def _break_cause(
+    *,
+    key: str,
+    books_values: dict[str, Decimal],
+    outside_values: dict[str, Decimal],
+    unsourced_keys: frozenset[str],
+) -> str:
+    """Classify a difference from what the two sides show, never from its age.
+
+    Age is reported separately (``age_calendar_days`` and ``carried``) so an old, unexplained
+    difference stays visible as what it is and can be escalated, not relabelled as timing.
+    """
+
+    if key in unsourced_keys:
+        return "UNSOURCED_LOCATION"
+    if key not in outside_values:
+        return "MISSING_OUTSIDE_RECORD"
+    if key not in books_values:
+        return "MISSING_BOOK_ENTRY"
+    books_value, outside_value = books_values[key], outside_values[key]
+    if books_value and outside_value and (books_value > 0) != (outside_value > 0):
+        return "SIGN_DIFFERENCE"
+    return "QUANTITY_DIFFERENCE"
+
+
 def _compare(
     *,
     item_id: str,
@@ -258,17 +284,11 @@ def _compare(
         if difference:
             previous = prior.get(key)
             opened_at = previous.opened_at if previous else as_of
-            missing_instruction = not sources_read
-            cause = (
-                "UNSOURCED_LOCATION"
-                if key in unsourced_keys
-                else "TIMING"
-                if previous is not None and previous.opened_at < as_of
-                else "MISSING_INSTRUCTION"
-                if missing_instruction
-                else "QUANTITY_DIFFERENCE"
-                if difference != 0
-                else "UNKNOWN"
+            cause = _break_cause(
+                key=key,
+                books_values=books_values,
+                outside_values=outside_values,
+                unsourced_keys=unsourced_keys,
             )
             breaks.append(
                 ControlBreak(
@@ -281,6 +301,7 @@ def _compare(
                     opened_at,
                     (as_of - opened_at).days,
                     cause,
+                    previous is not None and previous.opened_at < as_of,
                 )
             )
     status = ControlStatus.FAILED if breaks else ControlStatus.COMPLETED

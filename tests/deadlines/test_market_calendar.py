@@ -28,3 +28,27 @@ def test_close1_stress_years_are_sourced_and_observe_good_friday() -> None:
 
     assert len(government.year_sources[2020]) == 2
     assert len(government.year_sources[2023]) == 2
+
+
+def test_session_close_reads_nyse_early_closes() -> None:
+    from datetime import time
+
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    assert calendar.session_close(date(2026, 11, 27)) == time(13, 0)
+    assert calendar.session_close(date(2026, 12, 24)) == time(13, 0)
+    assert calendar.session_close(date(2027, 11, 26)) == time(13, 0)
+    assert calendar.session_close(date(2026, 11, 25)) == time(16, 0)
+
+
+def test_session_close_fails_closed_without_data_or_on_a_holiday() -> None:
+    import pytest
+
+    from atreides.deadlines.calendar import CalendarIndeterminateError
+
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    with pytest.raises(CalendarIndeterminateError):
+        calendar.session_close(date(2023, 11, 24))
+    with pytest.raises(ValueError, match="closed"):
+        calendar.session_close(date(2026, 11, 26))
+    with pytest.raises(CalendarIndeterminateError):
+        MarketCalendar.load(Market.US_GOVERNMENT_SECURITIES).session_close(date(2026, 11, 27))
