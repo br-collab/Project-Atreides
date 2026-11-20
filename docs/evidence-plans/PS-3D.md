@@ -155,3 +155,12 @@ Claude made the fix, at Bill's direction. It supersedes SC-01 and SC-02 above.
 
 Versions: PS-3C releases Atreides 1.4.0 and PS-3D releases 1.5.0. That replaces the release
 paragraph above.
+
+## Correction, 202611200900 (US Eastern): Phase A wording
+
+Part 2 is accepted for **Phase A only**. `run_3120_testing` is not yet called by `run_golden_path`
+or `run_firm`; it runs from the test suite. Phase B wires it into the runs, as line 29 of this plan
+already states. The addendum above and the Unreleased changelog overstated register coverage
+(inventory finding M1, 19 November 22:45 UTC). The account opening row now names no test, because
+no run plants a principal-approval defect; it is a `NO_RUN_LEVEL_TEST` exception owed by PS-3C
+Part 4. The 3120 report shows three exceptions. WSP register version 1.1.0.

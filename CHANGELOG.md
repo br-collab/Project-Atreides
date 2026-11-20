@@ -2,17 +2,22 @@
 
 ## Unreleased
 
-Rule 3120 testing reads the tests a pytest run actually executed from the JUnit XML
-file that run wrote. A written supervisory procedure test that did not run is an
-exception. The report no longer accepts an executed-test set from its caller. The
-pytest process is started by the test runner, not by the package.
+PS-3D Phase A: Rule 3120 testing. Not yet called by `run_golden_path` or `run_firm`;
+PS-3D Phase B wires it into the runs. Until then it runs only from the test suite.
 
-Rule 3120 now grades each row from the outcome the runner recorded: a test that ran and
-failed is a `FAILED` exception, an absent or skipped test is `NOT_RUN`, and rows match on
-the full test node identifier. Each written supervisory procedure row names a test that
-plants a defect in its control through the golden path or the firm run. The placeholder
-tests that only re-read the register are deleted. Two controls without a run-level test yet
-(approved intent, stock loan to register) are reported as exceptions with their owners.
+Rule 3120 grades each written supervisory procedure row from the outcome the pytest
+runner recorded in its JUnit XML file: a test that ran and failed is a `FAILED` exception,
+an absent or skipped test is `NOT_RUN`, and rows match on the full test node identifier.
+The report no longer accepts an executed-test set from its caller, and the placeholder
+tests that only re-read the register are deleted.
+
+Coverage is partial. Rows name an existing test that exercises the control, most through
+the golden path or the firm run; the confirmation and statement tests call their builders
+on golden path output, and the fail-to-receive row plants a source outage, not a quantity
+difference. Customer profile and recommendation share one golden path test. Three rows
+have no run-level test yet and are exceptions with their owners: account opening
+(principal approval) and approved intent, both owed by PS-3C Part 4, and stock loan to
+register, owed by PS-4A. WSP register version 1.1.0.
 
 ## 1.3.0 - 18 Nov 2026
 
