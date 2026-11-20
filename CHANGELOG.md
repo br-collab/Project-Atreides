@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+The suspicious activity report clock runs to filing, not to the decision (inventory finding N4).
+Under 31 CFR 1023.320(b)(3) the period is 30 calendar days from initial detection, extendable by
+30 when no suspect is identified, never past 60. A `NO_SAR` decision stops the clock; a `SAR`
+decision does not, because the simulator never files. `extend_for_unidentified_suspect` applies
+the extension once. One token trade no longer hides deposit and withdrawal movement: trading
+below a synthetic policy share of the cash moved (`trading_share_floor`, 10%) counts as none.
+The Rule 3120 report now carries the WSP register version it graded (M3), and the WSP runner
+loads the repository conftest as CI does (M4). Still Phase A: no run calls these yet.
+
 Reconciliation break causes are now read from the two sides (missing outside record, missing
 book entry, sign difference, quantity difference, unsourced location), never from age. Until
 now every carried break was labelled `TIMING`, which hid aged, unexplained differences
