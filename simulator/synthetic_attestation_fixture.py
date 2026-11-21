@@ -55,7 +55,7 @@ def configure_synthetic_trust() -> None:
             key_id=HUMAN_APPROVAL_KEY_ID,
             producer=HUMAN_APPROVAL_PRODUCER,
             public_key=HUMAN_APPROVAL_PRIVATE_KEY.public_key(),
-            valid_from=datetime(2026, 1, 1, tzinfo=UTC),
+            valid_from=datetime(2000, 1, 1, tzinfo=UTC),
             valid_to=datetime(2035, 12, 31, 23, 59, 59, tzinfo=UTC),
             revoked=False,
         )
@@ -65,7 +65,7 @@ def configure_synthetic_trust() -> None:
             key_id=HUMAN_APPROVAL_KEY_ID,
             producer=HUMAN_APPROVAL_PRODUCER,
             public_key=HUMAN_APPROVAL_PRIVATE_KEY.public_key(),
-            valid_from=datetime(2026, 1, 1, tzinfo=UTC),
+            valid_from=datetime(2000, 1, 1, tzinfo=UTC),
             valid_to=datetime(2035, 12, 31, 23, 59, 59, tzinfo=UTC),
             revoked=False,
         )
