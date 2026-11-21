@@ -40,6 +40,7 @@ from atreides.traceability import (
     validate_requirement_markers,
     write_traceability,
 )
+from simulator.synthetic_attestation_fixture import configure_synthetic_trust
 
 REGISTER_PATH = Path(__file__).resolve().parents[1] / "docs/requirements/register.json"
 REPOSITORY_ROOT = REGISTER_PATH.parents[2]
@@ -59,6 +60,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 def pytest_sessionstart() -> None:
     """Capture one timestamp for the complete test session."""
+    configure_synthetic_trust()
     _node_requirements.clear()
     _outcomes.clear()
     _run_timestamp[0] = datetime.now(UTC).isoformat()

@@ -19,7 +19,7 @@ Demonstrate the reconciliation control that compares the tasked delivery against
 
 2. **Phase 06 - Settlement Execution.** The Tier 1 Settlement Operations Analyst runs the ordered checks. DSOR pre-trade lineage matches. Intraday funding is sufficient. Clearing-fund compliance passes. **The net-obligation check does not.** The tasked figure and the CCP's published figure disagree by 500K.
 
-3. **Phase 07 - Decision-of-Record.** The hold, the two figures, and the delta are appended.
+3. **Phase 07 - Decision System of Record.** The hold, the two figures, and the delta are appended.
 
 **Decision:**
 

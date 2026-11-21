@@ -20,11 +20,47 @@
       "filename": "17-CFR-240.17a-11.xml"
     },
     {
+      "source_id": "17cfr240.10b-10",
+      "filename": "17-CFR-240.10b-10.xml"
+    },
+    {
       "source_id": "sec-faq-15c3-3-daily",
       "filename": "SEC-FAQ-15c3-3-daily-reserve.html"
     }
   ],
   "items": [
+    {
+      "id": "10b-10.a.notification",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.10b-10(a)",
+      "source_id": "17cfr240.10b-10",
+      "sha256": "a3386a496d502963b1be472f833c14466dc47572cc7139dabe6a02c62b4f24b5",
+      "quote": "It shall be unlawful for any broker or dealer to effect for or with an account of a customer any transaction in, or to induce the purchase or sale by such customer of, any security (other than U.S. Savings Bonds or municipal securities) unless such broker or dealer, at or before completion of such transaction, gives or sends to such customer written notification disclosing:"
+    },
+    {
+      "id": "10b-10.a1.transaction_terms",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.10b-10(a)(1)",
+      "source_id": "17cfr240.10b-10",
+      "sha256": "a3386a496d502963b1be472f833c14466dc47572cc7139dabe6a02c62b4f24b5",
+      "quote": "The date and time of the transaction (or the fact that the time of the transaction will be furnished upon written request to such customer) and the identity, price, and number of shares or units (or principal amount) of such security purchased or sold by such customer;"
+    },
+    {
+      "id": "15c3-1.c2vi.scope",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-1(c)(2)(vi)",
+      "source_id": "17cfr240.15c3-1",
+      "sha256": "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a",
+      "quote": "of the market value of all securities, money market instruments or options in the proprietary or other accounts of the broker or dealer."
+    },
+    {
+      "id": "15c3-3a.pab_note_1.apply_exhibit_a",
+      "kind": "PROVISION",
+      "citation": "17 CFR 240.15c3-3a, PAB Note 1",
+      "source_id": "17cfr240.15c3-3a",
+      "sha256": "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd",
+      "quote": "Broker-dealers should use the formula in Exhibit A for the purposes of computing the PAB reserve requirement, except that references to “accounts,” “customer accounts, or “customers” will be treated as references to PAB accounts."
+    },
     {
       "id": "15c3-3a.item.01",
       "kind": "EXHIBIT_A_CREDIT",

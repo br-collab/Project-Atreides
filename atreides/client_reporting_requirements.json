@@ -1,0 +1,16 @@
+{
+  "requirements": [
+    {
+      "id": "finra-2231.periodic-statement",
+      "citation": "FINRA Rule 2231",
+      "status": "TO_VERIFY_AGAINST_PRIMARY_TEXT",
+      "description": "Periodic customer account statement requirement"
+    },
+    {
+      "id": "finra-2231.account-activity",
+      "citation": "FINRA Rule 2231",
+      "status": "TO_VERIFY_AGAINST_PRIMARY_TEXT",
+      "description": "Account activity and balance presentation requirements"
+    }
+  ]
+}

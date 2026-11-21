@@ -10,6 +10,7 @@ from simulator.conversion import VARIANTS, publish_conversion, run_conversion_va
 from simulator.firm import TIERS, load_firm_profile, publish_firm, run_firm
 from simulator.phase2 import publish_phase2
 from simulator.runner import publish_run, run_simulation
+from simulator.synthetic_attestation_fixture import configure_synthetic_trust
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int)
@@ -23,13 +24,14 @@ parser.add_argument("--calibration-uri")
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--repository-sha", action="append", default=[])
 args = parser.parse_args()
+configure_synthetic_trust()
 repository_shas = dict(value.split("=", 1) for value in args.repository_sha)
 if args.phase_2:
     publish_phase2(args.output)
 elif args.firm:
     publish_firm(
         run_firm(
-            load_firm_profile(load_calibration_pack("firm-synthetic/1"), args.firm),
+            load_firm_profile(load_calibration_pack("firm-synthetic/6"), args.firm),
             seed=args.seed or 20261024,
             days=args.days or 5,
             start=args.start or date(2027, 1, 4),

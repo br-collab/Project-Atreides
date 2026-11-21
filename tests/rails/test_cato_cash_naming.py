@@ -14,7 +14,15 @@ def test_cato_cash_is_the_only_operational_identity() -> None:
 
     offenders: list[str] = []
     for path in ROOT.rglob("*"):
-        ignored_parts = {".git", ".venv", ".uv-cache"}
+        ignored_parts = {
+            ".git",
+            ".hypothesis",
+            ".mypy_cache",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".uv-cache",
+            ".venv",
+        }
         if not path.is_file() or path in excluded or ignored_parts & set(path.parts):
             continue
         if "__pycache__" in path.parts or path.suffix == ".pyc":

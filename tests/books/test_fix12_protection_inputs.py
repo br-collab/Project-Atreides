@@ -1,0 +1,252 @@
+"""FIX-12 regressions for protection inputs N2 through N5."""
+
+from datetime import date
+from decimal import Decimal
+
+import pytest
+
+from atreides.books.ledger import (
+    AccountType,
+    EquitiesBooks,
+    LedgerLine,
+    PostingSource,
+    RecordSide,
+    ReserveActivity,
+)
+from atreides.books.projections import (
+    ProjectionSourceFactMissingError,
+    project_customer_protection,
+)
+from atreides.deadlines.calendar import Market, MarketCalendar
+from tests.books.test_ledger import _margin_results, _reserve_entry, entry
+
+AS_OF = date(2026, 10, 22)
+PRICE = {"ACME": Decimal(100)}
+RULE_15C3_1_SHA256 = "939491851c7975f6168c6a93e0879818d658250cab305d1364212c74f42c172a"
+RULE_15C3_3_SHA256 = "c7d7067f656bb6032182c0d81530a78d6d80d59cc4a842be84d9e43d13609443"
+RULE_15C3_3A_SHA256 = "8046b00e1ff4114afd773268cde5c2445fa714a1ed751def9499ee47d1682dbd"
+
+
+def _project(books: EquitiesBooks):  # type: ignore[no-untyped-def]
+    return project_customer_protection(
+        books,
+        as_of=AS_OF,
+        prices=PRICE,
+        net_worth=Decimal(1_000_000),
+        calendar=MarketCalendar.load(Market.US_EQUITIES),
+        margin_results=_margin_results(books),
+    )
+
+
+def test_n2_customer_positions_are_not_firm_haircut_positions() -> None:
+    # 17 CFR 240.15c3-1(c)(2)(vi), pinned by RULE_15C3_1_SHA256:
+    # "of the market value of all securities, money market instruments or options in
+    # the proprietary or other accounts of the broker or dealer." Bill's recorded N2
+    # decision excludes customer positions from that scope.
+    assert RULE_15C3_1_SHA256
+    books = EquitiesBooks(break_owner="owner")
+    books.post(entry())
+    assert _project(books).net_capital.positions == ()
+
+
+def test_n3_pab_free_credit_enters_pab_item_1() -> None:
+    # 17 CFR 240.15c3-3a, PAB Note 1, pinned by RULE_15C3_3A_SHA256:
+    # "Broker-dealers should use the formula in Exhibit A for the purposes of computing
+    # the PAB reserve requirement, except that references to accounts, customer accounts,
+    # or customers will be treated as references to PAB accounts."
+    assert RULE_15C3_3A_SHA256
+    books = EquitiesBooks(break_owner="owner")
+    books.post(
+        entry(
+            "2",
+            "pab-cash",
+            source=PostingSource.CASH_MOVEMENT,
+            lines=(
+                LedgerLine(
+                    account_id="SYN-PAB-1",
+                    account_type=AccountType.PAB,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=Decimal(125),
+                ),
+                LedgerLine(
+                    account_id="SYN-CASH",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=Decimal(-125),
+                ),
+            ),
+        )
+    )
+    item_1 = next(
+        line.amount
+        for line in _project(books).pab_reserve.lines
+        if line.rule_id == "15c3-3a.item.01"
+    )
+    assert item_1 == Decimal(125)
+
+
+def test_n4_fail_to_deliver_is_not_a_d2_control_holding() -> None:
+    # 17 CFR 240.15c3-3(d)(2), pinned by RULE_15C3_3_SHA256:
+    # "Securities included on the broker's or dealer's books or records as failed to
+    # receive more than 30 calendar days".
+    assert RULE_15C3_3_SHA256
+    books = EquitiesBooks(break_owner="owner")
+    books.post(entry())
+    books.post(
+        _reserve_entry(
+            event="3",
+            account_type=AccountType.FAIL_TO_DELIVER,
+            activity=ReserveActivity.CUSTOMER,
+            quantity=Decimal(2),
+            contract_price=Decimal(70),
+            settlement_date=AS_OF,
+        )
+    )
+    holdings = _project(books).control.issues[0].holdings
+    assert all(holding.location != "15c3-3.noncontrol.d2" for holding in holdings)
+
+
+def test_fail_to_receive_counts_against_control_only_after_30_calendar_days() -> None:
+    # 17 CFR 240.15c3-3(d)(2), pinned by RULE_15C3_3_SHA256:
+    # "Securities included on the broker's or dealer's books or records as failed to
+    # receive more than 30 calendar days".
+    assert RULE_15C3_3_SHA256
+    for age, expected in ((30, False), (31, True)):
+        books = EquitiesBooks(break_owner="owner")
+        books.post(entry())
+        books.post(
+            _reserve_entry(
+                event=str(age - 27),
+                account_type=AccountType.FAIL_TO_RECEIVE,
+                activity=ReserveActivity.CUSTOMER,
+                quantity=Decimal(2),
+                contract_price=Decimal(70),
+                settlement_date=date.fromordinal(AS_OF.toordinal() - age),
+            )
+        )
+        holdings = _project(books).control.issues[0].holdings
+        is_noncontrol = any(
+            holding.location == "15c3-3.noncontrol.d2" for holding in holdings
+        )
+        assert is_noncontrol is expected
+
+
+def test_n5_stock_loan_holding_declares_loaned_true() -> None:
+    # 17 CFR 240.15c3-3(d)(1), pinned by RULE_15C3_3_SHA256:
+    # "Securities subject to a lien securing moneys borrowed by the broker or dealer or
+    # securities loaned to another broker or dealer or a clearing corporation".
+    assert RULE_15C3_3_SHA256
+    books = EquitiesBooks(break_owner="owner")
+    loan_lines = tuple(
+        line.model_copy(update={"account_type": AccountType.STOCK_LOANED})
+        if line.account_type is AccountType.DTC
+        else line
+        for line in entry().lines
+    )
+    books.post(entry("4", "loan", source=PostingSource.STOCK_LOAN, lines=loan_lines))
+    holding = next(
+        holding
+        for holding in _project(books).control.issues[0].holdings
+        if holding.location == "15c3-3.noncontrol.d1"
+    )
+    assert holding.loaned is True
+
+
+def test_ftr_lifecycle_nets_closes_and_ages_from_opening() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    books.post(entry("5", "ftr-base"))
+    opened = date(2026, 9, 21)
+    books.post(
+        _reserve_entry(
+            event="6",
+            account_type=AccountType.FAIL_TO_RECEIVE,
+            activity=ReserveActivity.CUSTOMER,
+            quantity=Decimal(10),
+            contract_price=Decimal(70),
+            settlement_date=opened,
+            fail_id="FTR-LIFECYCLE",
+        )
+    )
+    books.post(
+        _reserve_entry(
+            event="7",
+            account_type=AccountType.FAIL_TO_RECEIVE,
+            activity=ReserveActivity.CUSTOMER,
+            quantity=Decimal(-4),
+            contract_price=Decimal(70),
+            settlement_date=opened,
+            fail_id="FTR-LIFECYCLE",
+        )
+    )
+    projected = _project(books)
+    holding = next(
+        item
+        for item in projected.control.issues[0].holdings
+        if item.location == "15c3-3.noncontrol.d2"
+    )
+    assert holding.quantity == 6
+    item_4 = next(
+        line.amount for line in projected.reserve.lines if line.rule_id == "15c3-3a.item.04"
+    )
+    assert item_4 == 600
+
+    books.post(
+        _reserve_entry(
+                event="4",
+            account_type=AccountType.FAIL_TO_RECEIVE,
+            activity=ReserveActivity.CUSTOMER,
+            quantity=Decimal(-6),
+            contract_price=Decimal(70),
+            settlement_date=opened,
+            fail_id="FTR-LIFECYCLE",
+        )
+    )
+    closed = _project(books)
+    assert all(
+        item.location not in {"15c3-3.noncontrol.d2", "15c3-3.pending-fail-to-receive"}
+        for item in closed.control.issues[0].holdings
+    )
+    assert next(
+        line.amount for line in closed.reserve.lines if line.rule_id == "15c3-3a.item.04"
+    ) in {None, Decimal()}
+
+
+def test_stock_loan_figure_uses_only_net_open_location_balance() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    loan_lines = tuple(
+        line.model_copy(update={"account_type": AccountType.STOCK_LOANED})
+        if line.account_type is AccountType.DTC
+        else line
+        for line in entry().lines
+    )
+    books.post(entry("5", "loan-open", source=PostingSource.STOCK_LOAN, lines=loan_lines))
+    books.post(
+        entry(
+            "6",
+            "loan-close",
+            source=PostingSource.STOCK_LOAN,
+            lines=tuple(
+                line.model_copy(update={"quantity": -line.quantity}) for line in loan_lines
+            ),
+        )
+    )
+    assert _project(books).audit.derived_values["stock_loaned_market_value"] == 0
+
+
+def test_ftr_without_source_fact_uses_named_projection_refusal() -> None:
+    books = EquitiesBooks(break_owner="owner")
+    invalid = _reserve_entry(
+        event="7",
+        account_type=AccountType.FAIL_TO_RECEIVE,
+        activity=ReserveActivity.CUSTOMER,
+        quantity=Decimal(1),
+        contract_price=Decimal(70),
+        settlement_date=AS_OF,
+    ).model_copy(update={"reserve_source_facts": ()})
+    books._entries.append(invalid)
+    with pytest.raises(
+        ProjectionSourceFactMissingError, match="FAIL_TO_RECEIVE_FAIL_ID_MISSING"
+    ):
+        _project(books)

@@ -4,7 +4,7 @@
     {
       "breaks_by_owner": {},
       "business_date": "2027-01-04",
-      "economics_digest": "sha256:ed65448654cf0c2ab859d049e9d6e71aa976a02a8cf2e46a28b218f5edf15cf4",
+      "economics_digest": "sha256:f2a374a751d9c0a69849c0134f176aac879772c47f1d6d6cbeadde775917dd79",
       "executions": 1000,
       "fails_by_age": {
         "0": 20
@@ -33,9 +33,9 @@
         "customer_credits": "4958857.35",
         "customer_debits": "6923940.52",
         "independent_control_short_issues": "0",
-        "independent_net_capital": "338700347.3905",
-        "net_capital": "338700347.3905",
-        "pab_reserve_requirement": "0",
+        "independent_net_capital": "338893750.0000",
+        "net_capital": "338893750.0000",
+        "pab_reserve_requirement": "1516647.88",
         "reserve_requirement": "0"
       },
       "protection_reasons": {
@@ -55,7 +55,7 @@
     {
       "breaks_by_owner": {},
       "business_date": "2027-01-05",
-      "economics_digest": "sha256:bfb50a53a91f27bb04d6f7dba8d2ff7e928efbbb45c02ec94e59b3fe5b078be7",
+      "economics_digest": "sha256:7cfadf2a8bb56bc318eb5e55ff72efe76dd7482dbe0b0c58f5e623ba2dd85a23",
       "executions": 1000,
       "fails_by_age": {
         "0": 20
@@ -84,16 +84,15 @@
         "customer_credits": "6254925.16",
         "customer_debits": "9328183.69",
         "independent_control_short_issues": "1",
-        "independent_net_capital": "310059594.0790",
-        "net_capital": "310059594.0790",
-        "pab_reserve_requirement": "0",
+        "independent_net_capital": "310285381.6975",
+        "net_capital": "310285381.6975",
+        "pab_reserve_requirement": "2362018.29",
         "reserve_requirement": "0"
       },
       "protection_reasons": {
         "net_capital": [],
         "pab_reserve": [],
         "possession_or_control": [
-          "loaned[SYN-SCF1-ISSUE-0000]",
           "SYN-SCF1-ISSUE-0000: 100 fully paid or excess margin securities are not in possession or control"
         ],
         "reserve": []
@@ -130,7 +129,7 @@
     {
       "breaks_by_owner": {},
       "business_date": "2027-01-06",
-      "economics_digest": "sha256:7440a45e5c24e2f16a153b8f5a0fea70f546bda710544e2be5cf247776430f57",
+      "economics_digest": "sha256:4a8c2940e9de1878581e14ccc05d8940339dd0bd6b70d1c5021f47eca89723ac",
       "executions": 1000,
       "fails_by_age": {
         "1": 20
@@ -159,9 +158,9 @@
         "customer_credits": "7962799.20",
         "customer_debits": "10741137.46",
         "independent_control_short_issues": "0",
-        "independent_net_capital": "65633831.6815",
-        "net_capital": "65633831.6815",
-        "pab_reserve_requirement": "0",
+        "independent_net_capital": "66083832.9355",
+        "net_capital": "66083832.9355",
+        "pab_reserve_requirement": "3116773.91",
         "reserve_requirement": "0"
       },
       "protection_reasons": {
@@ -202,7 +201,7 @@
     {
       "breaks_by_owner": {},
       "business_date": "2027-01-07",
-      "economics_digest": "sha256:1ce122c5d36c9bef606039bee175b41fdbee163245c07eafd644701fdfc98bdc",
+      "economics_digest": "sha256:7d4cff84726dec5df1cd228186d0c07d43773128ee4b8f211759f3bae0cdfb6d",
       "executions": 1000,
       "fails_by_age": {
         "2": 20
@@ -231,9 +230,9 @@
         "customer_credits": "10152874.71",
         "customer_debits": "12171677.79",
         "independent_control_short_issues": "0",
-        "independent_net_capital": "128084837.8930",
-        "net_capital": "128084837.8930",
-        "pab_reserve_requirement": "0",
+        "independent_net_capital": "128533448.1955",
+        "net_capital": "128533448.1955",
+        "pab_reserve_requirement": "4285995.83",
         "reserve_requirement": "0"
       },
       "protection_reasons": {
@@ -274,7 +273,7 @@
     {
       "breaks_by_owner": {},
       "business_date": "2027-01-08",
-      "economics_digest": "sha256:2c606942fc2fd19fdb748405fa889831fc208877ef02f6364e5da85d21549d04",
+      "economics_digest": "sha256:680e91fddb2ba850ecbd6fe395ee843c1a24e635b9bd922bf9edcd081b9d3fbb",
       "executions": 1000,
       "fails_by_age": {
         "3": 20
@@ -303,9 +302,9 @@
         "customer_credits": "12340532.00",
         "customer_debits": "13250494.92",
         "independent_control_short_issues": "0",
-        "independent_net_capital": "59270118.3370",
-        "net_capital": "59270118.3370",
-        "pab_reserve_requirement": "0",
+        "independent_net_capital": "59332470.3190",
+        "net_capital": "59332470.3190",
+        "pab_reserve_requirement": "4814585.90",
         "reserve_requirement": "0"
       },
       "protection_reasons": {
@@ -344,11 +343,14 @@
       }
     }
   ],
-  "elapsed_seconds": 4.8283347599999615,
-  "executions_per_second": 1035.5537154180336,
+  "elapsed_seconds": 16.911028467991855,
+  "executions_per_second": 295.66504541481254,
   "firm_profile": {
     "accounts": 200,
     "buy_share": "0.50",
+    "calibration_manifest_digest": "sha256:4f51f3bab45387c40cbbfb97ff3793b4a74082e781a8605dc3e434dd54089aea",
+    "calibration_pack_id": "firm-synthetic",
+    "calibration_pack_version": "2",
     "control_deficit": [
       1,
       0,
@@ -381,10 +383,13 @@
     "real customer assets",
     "real firm, account or security identifiers"
   ],
-  "peak_memory_bytes": 102240256,
+  "peak_memory_bytes": 109973504,
   "profile": {
     "accounts": 200,
     "buy_share": "0.50",
+    "calibration_manifest_digest": "sha256:4f51f3bab45387c40cbbfb97ff3793b4a74082e781a8605dc3e434dd54089aea",
+    "calibration_pack_id": "firm-synthetic",
+    "calibration_pack_version": "2",
     "control_deficit": [
       1,
       0,
@@ -410,5 +415,11 @@
     "synthetic": true,
     "tier": "small"
   },
+  "publication_change_reasons": [
+    "N2 restricts net capital haircut inputs to firm proprietary positions",
+    "N3 includes PAB free credits in the PAB reserve computation",
+    "N4 removes fails to deliver from the Rule 15c3-3(d)(2) control location",
+    "N5 declares stock-loan holdings as loaned"
+  ],
   "seed": 20261024
 }
