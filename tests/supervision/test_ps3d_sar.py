@@ -60,6 +60,8 @@ def test_unidentified_suspect_extension_refused_without_facts() -> None:
             "officer": "HUMAN_AML_OFFICER:Alex",
             "decided_on": within.isoformat(),
             "basis": basis,
+            "case_id": case.case_id,
+            "alert_id": case.alert.alert_id,
         }
     )
     with pytest.raises(ValueError, match=CONTROL_EXTENSION):
@@ -79,6 +81,8 @@ def test_unidentified_suspect_extension_refused_after_day_30() -> None:
             "officer": "HUMAN_AML_OFFICER:Alex",
             "decided_on": late.isoformat(),
             "basis": basis,
+            "case_id": case.case_id,
+            "alert_id": case.alert.alert_id,
         }
     )
     try:
@@ -100,6 +104,8 @@ def test_signed_extension_records_the_attestation_on_the_case() -> None:
             "officer": "HUMAN_AML_OFFICER:Alex",
             "decided_on": decided.isoformat(),
             "basis": basis,
+            "case_id": case.case_id,
+            "alert_id": case.alert.alert_id,
         }
     )
     extended = extend_for_unidentified_suspect(case, signed, decided, basis, policy=AMLPolicy())
