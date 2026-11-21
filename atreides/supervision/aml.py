@@ -96,6 +96,14 @@ def unidentified_suspect_basis(detected_on: date) -> str:
     return f"{_NO_SUSPECT_BASIS} {detected_on.isoformat()}"
 
 
+def _attestation_bound_to_case(document: dict[str, str], case: AMLCase) -> bool:
+    """The verified payload names this case and this alert, and no other."""
+
+    return (
+        document.get("case_id") == case.case_id and document.get("alert_id") == case.alert.alert_id
+    )
+
+
 def _verified_officer_bytes(wire: bytes) -> bytes:
     anchor, registry = resolve_pinned_anchor(wire, expected_producer=AML_OFFICER_PRODUCER)
     payload = verify_attestation(
@@ -208,12 +216,15 @@ def record_human_decision(case: AMLCase, wire: bytes) -> AMLCase:
     """Record a suspicious activity report decision read from a verified attestation.
 
     Phase A: neither run calls this yet. Officer, outcome, reason and date come from the
-    verified payload. An unsigned or unverifiable wire is refused.
+    verified payload, which must name this case and this alert. An unsigned wire, an
+    unverifiable wire, or a payload bound to another case is refused.
     """
 
     document = _decision_document(wire)
     if document.get("purpose") != SAR_DECISION_PURPOSE:
         raise ValueError(_DECISION_CONTROL)
+    if not _attestation_bound_to_case(document, case):
+        raise ValueError("SAR decision case binding control")
     officer = document.get("officer", "")
     outcome = document.get("outcome", "")
     reason = document.get("reason", "")
@@ -277,21 +288,27 @@ def extend_for_unidentified_suspect(
     The filing period runs from initial detection. The extension adds ``extension_days`` and
     the outer limit is detection plus both periods (60 calendar days at the defaults).
     Phase A: no run calls this yet. The officer attestation, the decision date and the stated
-    basis are recorded on the case. An extension without them, or made after day 30, is refused.
+    basis are recorded on the case. The attestation must name this case and this alert. An
+    extension without those facts, bound to another case, or made after day 30, is refused.
     """
 
     if case.extended_due_on is not None:
         raise ValueError("SAR_CLOCK_ALREADY_EXTENDED")
     if not _extension_facts_present(case, attestation, decision_date, basis):
         raise ValueError("unidentified suspect extension control")
+    document = {
+        str(key): str(value)
+        for key, value in json.loads(_verified_officer_bytes(attestation)).items()
+    }
+    if not _attestation_bound_to_case(document, case):
+        raise ValueError("extension case binding control")
     if decision_date > case.alert.detected_on + timedelta(days=policy.filing_days):
         raise ValueError("unidentified suspect day 30 control")
-    document = json.loads(_verified_officer_bytes(attestation))
     return replace(
         case,
         extended_due_on=case.alert.detected_on
         + timedelta(days=policy.filing_days + policy.extension_days),
-        extension_officer=str(document["officer"]),
+        extension_officer=document["officer"],
         extension_attestation=attestation,
         extension_decided_on=decision_date,
         extension_basis=basis,
