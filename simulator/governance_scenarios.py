@@ -33,6 +33,7 @@ from atreides.agents.tier2.eligibility import (
 from atreides.dsor.governance_scenario import GovernanceScenarioEvidence
 from atreides.dsor.store import DSORStore
 from atreides.reference_data import LegalEntityRecord
+from simulator.synthetic_attestation_fixture import KYC_KEY_ID, KYC_PRIVATE_KEY
 
 _NOW = datetime(2026, 11, 7, 17, 0, tzinfo=UTC)
 _EXIT_PLAN_LABEL = "simulated, not a tested exit plan"
@@ -95,6 +96,8 @@ def _evidence_resolver() -> AuthoritativeEvidenceResolver:
         path_id="KYC_ELIGIBLE_CLEAR",
         decided_at=_NOW,
         maximum_age_seconds=300,
+        key_id=KYC_KEY_ID,
+        private_key=KYC_PRIVATE_KEY,
         account_type=AccountType.INSTITUTIONAL,
         person_id=None,
         legal_entity_record_id="SIM-1-G3-LEGAL",

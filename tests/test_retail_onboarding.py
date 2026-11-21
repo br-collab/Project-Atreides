@@ -38,6 +38,7 @@ from atreides.retail_identity import (
     build_account_record,
     build_cip_record,
 )
+from simulator.synthetic_attestation_fixture import KYC_KEY_ID, KYC_PRIVATE_KEY
 
 NOW = datetime(2026, 11, 9, 10, tzinfo=UTC)
 ACCOUNT = "SYN-ACCOUNT-RETAIL1"
@@ -196,6 +197,8 @@ def _store(
         path_id="KYC_ELIGIBLE_CLEAR",
         decided_at=cip_at,
         maximum_age_seconds=86400,
+        key_id=KYC_KEY_ID,
+        private_key=KYC_PRIVATE_KEY,
         legal_entity_record_id=legal_entity_record_id,
         kyb_result_record_id=kyb_result_record_id,
     )

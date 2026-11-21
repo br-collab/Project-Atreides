@@ -36,6 +36,7 @@ from atreides.retail_identity import (
     VerificationMethod,
     build_cip_record,
 )
+from simulator.synthetic_attestation_fixture import KYC_KEY_ID, KYC_PRIVATE_KEY
 
 START = datetime(2026, 11, 9, 14, tzinfo=UTC)
 
@@ -173,6 +174,8 @@ def _run_one(
         path_id="KYC_ELIGIBLE_CLEAR",
         decided_at=START + timedelta(seconds=10),
         maximum_age_seconds=3600,
+        key_id=KYC_KEY_ID,
+        private_key=KYC_PRIVATE_KEY,
         account_type=AccountType.NATURAL_PERSON,
         person_id=person_id,
     )

@@ -1,6 +1,7 @@
 """Pinned signed attestations for synthetic human approval decisions."""
 
 from datetime import datetime
+from typing import Protocol
 
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes
@@ -29,16 +30,26 @@ class HumanApproval(BaseModel):
     approved_at: datetime
 
 
+HUMAN_APPROVAL_PRODUCER = "atreides-human-approval"
+
+
+class RegisteredApproverVerifier(Protocol):
+    def is_registered(self, actor: ActorRef) -> bool: ...
+
+
 def attest_human_approval(
     approval: HumanApproval,
     *,
     key_id: str,
     private_key: SigningKey,
+    approver_verifier: RegisteredApproverVerifier,
 ) -> bytes:
-    """Sign one human decision under the pinned Atreides producer identity."""
+    """Sign only for an approver resolved from the verified principal register."""
+    if not approver_verifier.is_registered(approval.approver):
+        raise ValueError("HUMAN_APPROVER_NOT_REGISTERED")
     return sign_attestation(
         canonical_bytes(approval),
-        producer="atreides",
+        producer=HUMAN_APPROVAL_PRODUCER,
         key_id=key_id,
         private_key=private_key,
     )
@@ -53,8 +64,12 @@ def verify_human_approval(
 ) -> HumanApproval:
     """Resolve pinned trust and bind a signed decision to its envelope."""
     try:
-        anchor, registry = resolve_pinned_anchor(wire, expected_producer="atreides")
-        payload = verify_attestation(wire, expected_producer="atreides", registry=registry)
+        anchor, registry = resolve_pinned_anchor(
+            wire, expected_producer=HUMAN_APPROVAL_PRODUCER
+        )
+        payload = verify_attestation(
+            wire, expected_producer=HUMAN_APPROVAL_PRODUCER, registry=registry
+        )
         approval = HumanApproval.model_validate_json(payload)
         require_anchor_valid_at(anchor, evaluated_at)
     except (TrustAnchorError, AttestationVerificationError, ValueError) as exc:
