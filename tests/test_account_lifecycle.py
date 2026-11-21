@@ -42,7 +42,12 @@ from atreides.agents.tier2.outputs import (
     EligibilityVerification,
 )
 from atreides.reference_data import LegalEntityRecord
-from simulator.synthetic_attestation_fixture import LC_KEY_ID, LC_PRIVATE_KEY
+from simulator.synthetic_attestation_fixture import (
+    KYC_KEY_ID,
+    KYC_PRIVATE_KEY,
+    LC_KEY_ID,
+    LC_PRIVATE_KEY,
+)
 
 NOW = datetime(2026, 11, 8, 9, tzinfo=UTC)
 ACCOUNT = "SYN-ACCOUNT-001"
@@ -147,6 +152,8 @@ def resolver(
         path_id=kyc_path,
         decided_at=kyc_at,
         maximum_age_seconds=300,
+        key_id=KYC_KEY_ID,
+        private_key=KYC_PRIVATE_KEY,
         legal_entity_record_id=legal_entity_record_id,
         kyb_result_record_id=kyb_result_record_id,
     )
@@ -159,6 +166,8 @@ def resolver(
             path_id="TAMPERED",
             decided_at=kyc_at,
             maximum_age_seconds=300,
+            key_id=KYC_KEY_ID,
+            private_key=KYC_PRIVATE_KEY,
             legal_entity_record_id=legal_entity_record_id,
             kyb_result_record_id=kyb_result_record_id,
         ).event_chain
@@ -242,6 +251,8 @@ def test_kyc_chain_refuses_a_removed_event() -> None:
         path_id="KYC_ELIGIBLE_CLEAR",
         decided_at=NOW,
         maximum_age_seconds=300,
+        key_id=KYC_KEY_ID,
+        private_key=KYC_PRIVATE_KEY,
         legal_entity_record_id=LEGAL_ENTITY_ID,
         kyb_result_record_id=KYB_ID,
     )

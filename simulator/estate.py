@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from pathlib import Path
-from typing import cast
 
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
@@ -25,16 +24,13 @@ from lc.lifecycle import (
     AuthorityManifest,
     ChildOrder,
     EventInput,
-    IntentOutcome,
     LifecycleRegister,
     OrderSide,
     PolicyManifest,
+    accept_intent,
     activate_parent,
     authorize_strategy,
     split_parent,
-)
-from lc.lifecycle import (
-    accept_intent as lc_accept_intent,
 )
 from lc.market_access import (
     AttestedInput,
@@ -55,7 +51,6 @@ from lc.trade import (
     allocate,
     capture,
 )
-from pydantic import BaseModel, ConfigDict, model_validator
 
 from atreides.account_lifecycle import (
     AccountType as LifecycleAccountType,
@@ -63,8 +58,9 @@ from atreides.account_lifecycle import (
 from atreides.account_lifecycle import (
     AccountTypeStatusDocument,
     AccountTypeStatusEntry,
+    ActorRegistryApproverVerifier,
 )
-from atreides.approval_attestations import verify_human_approval
+from atreides.approval_attestations import HumanApproval, attest_human_approval
 from atreides.books.ledger import (
     AccountType,
     EquitiesBooks,
@@ -109,6 +105,8 @@ from simulator.calibration import CalibrationPack
 from simulator.market import allocate_largest_remainder
 from simulator.model import Print
 from simulator.synthetic_attestation_fixture import (
+    HUMAN_APPROVAL_KEY_ID,
+    HUMAN_APPROVAL_PRIVATE_KEY,
     LC_STATUS_KEY_ID,
     LC_STATUS_PRIVATE_KEY,
     configure_lc_status_trust,
@@ -118,30 +116,6 @@ from simulator.synthetic_attestation_fixture import (
 DEPOSIT_BREACH_OUTCOMES = frozenset({"SHORT", "LATE", "NOT_DECLARED_IN_PACK"})
 
 _STATUS_TRUST_INSTALLED = False
-
-
-class PolicyIntentEnvelope(BaseModel):
-    """Synthetic volume decision made by a deterministic policy service."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
-    envelope_id: IntentId
-    lifecycle_id: LifecycleId
-    revision: int
-    prior_digest: str | None
-    session: SessionContext
-    approved_by: ActorRef
-    provenance: Provenance
-    effects: OperationEffects
-    payload_digest: str
-
-    @model_validator(mode="after")
-    def _service_policy_result(self) -> PolicyIntentEnvelope:
-        if (
-            self.approved_by.actor_kind is not ActorKind.DETERMINISTIC_SERVICE
-            or self.provenance is not Provenance.POLICY_RESULT
-        ):
-            raise ValueError("volume intent requires deterministic service policy result")
-        return self
 
 
 @dataclass(frozen=True, slots=True)
@@ -272,6 +246,16 @@ def _actor() -> ActorRef:
     )
 
 
+def _volume_approver(run_number: int) -> ActorRef:
+    return ActorRef(
+        actor_id=ActorId(_identifier("act_", 100_000 + run_number)),
+        actor_kind=ActorKind.HUMAN,
+        role="synthetic approver, simulated volume",
+        entitlement_refs=("SYNTHETIC_REGISTERED_PRINCIPAL",),
+        authenticated=True,
+    )
+
+
 def simulated_filed_credit_total(as_of: date, customer_credit: Decimal) -> tuple[Decimal, Decimal]:
     """Project a pre-run synthetic month-end through the real books seam.
 
@@ -374,60 +358,6 @@ def _wire(payload: ApprovedIntentPayload) -> bytes:
             },
             "allocation_accounts": payload.allocation_accounts,
         }
-    )
-
-
-def validate_approval_provenance(
-    envelope: ApprovedIntentEnvelope | PolicyIntentEnvelope,
-    approval_attestation: bytes | None = None,
-    *,
-    evaluated_at: datetime | None = None,
-) -> str | None:
-    """Enforce service provenance or a pinned signed human approval."""
-    human_claim = (
-        envelope.provenance is Provenance.HUMAN_JUDGMENT
-        or envelope.approved_by.actor_kind is ActorKind.HUMAN
-    )
-    if not human_claim:
-        if envelope.provenance is not Provenance.POLICY_RESULT:
-            raise ValueError("DETERMINISTIC_SERVICE requires POLICY_RESULT provenance")
-        return None
-    if approval_attestation is None:
-        raise ValueError("HUMAN_APPROVAL_ATTESTATION_REQUIRED")
-    if evaluated_at is None:
-        evaluated_at = datetime.combine(
-            envelope.session.business_date.value, datetime.min.time(), tzinfo=UTC
-        )
-    approval = verify_human_approval(
-        approval_attestation,
-        decision_digest=envelope.payload_digest,
-        approver=envelope.approved_by,
-        evaluated_at=evaluated_at,
-    )
-    return approval.approval_id
-
-
-def accept_intent(
-    envelope: ApprovedIntentEnvelope | PolicyIntentEnvelope,
-    payload_bytes: bytes,
-    *,
-    parent_order_id: OrderId,
-    actor: ActorRef,
-    event: EventInput,
-    approval_attestation: bytes | None = None,
-) -> IntentOutcome:
-    """Apply approval provenance before L.C. accepts the exact intent bytes."""
-    validate_approval_provenance(
-        envelope,
-        approval_attestation,
-        evaluated_at=event.times.processing_time,
-    )
-    return lc_accept_intent(
-        cast(ApprovedIntentEnvelope, envelope),
-        payload_bytes,
-        parent_order_id=parent_order_id,
-        actor=actor,
-        event=event,
     )
 
 
@@ -540,6 +470,7 @@ def exercise_simulator_market_access(
     """Build the SIM-1B register and record its real market-access decision."""
     global _STATUS_TRUST_INSTALLED  # noqa: PLW0603 - process-local composition root
     actor = _actor()
+    approver = _volume_approver(run_number)
     base = datetime.combine(business_date, datetime.min.time(), tzinfo=UTC)
     total_quantity = sum((Decimal(item.quantity) for item in reports), Decimal())
     accounts = tuple(f"ACCOUNT-{index + 1}" for index in range(len(account_weights)))
@@ -556,13 +487,13 @@ def exercise_simulator_market_access(
         quantity=total_quantity,
         policy_manifest=policy,
         authority_manifest=AuthorityManifest(
-            authority_id=actor.actor_id,
+            authority_id=approver.actor_id,
             policy_manifest_digest=digest(policy),
             authorized=True,
         ),
         allocation_accounts=accounts,
     )
-    envelope = PolicyIntentEnvelope(
+    envelope = ApprovedIntentEnvelope(
         envelope_id=payload.intent_id,
         lifecycle_id=LifecycleId(_identifier("lif_", 20_000 + run_number)),
         revision=1,
@@ -575,14 +506,25 @@ def exercise_simulator_market_access(
                 established_by="SIM-1B generated day",
             ),
         ),
-        approved_by=actor,
-        provenance=Provenance.POLICY_RESULT,
+        approved_by=approver,
+        provenance=Provenance.HUMAN_JUDGMENT,
         effects=OperationEffects(
             operation="simulate approved intent",
             effects=(),
             note="synthetic input only; no submission capability",
         ),
         payload_digest=digest_bytes(_wire(payload)),
+    )
+    approval_attestation = attest_human_approval(
+        HumanApproval(
+            approval_id=f"SIM-1B-VOLUME-{run_number}",
+            decision_digest=envelope.payload_digest,
+            approver=approver,
+            approved_at=base,
+        ),
+        key_id=HUMAN_APPROVAL_KEY_ID,
+        private_key=HUMAN_APPROVAL_PRIVATE_KEY,
+        approver_verifier=ActorRegistryApproverVerifier({str(approver.actor_id): approver}),
     )
     parent_id = OrderId(_identifier("ord_", 30_000 + run_number * 2))
     child_id = OrderId(_identifier("ord_", 30_001 + run_number * 2))
@@ -592,6 +534,7 @@ def exercise_simulator_market_access(
         parent_order_id=parent_id,
         actor=actor,
         event=_event(40_000 + run_number * 20, base),
+        approval_attestation=approval_attestation,
     )
     outcome = authorize_strategy(outcome, actor=actor, event=_event(40_001 + run_number * 20, base))
     outcome = activate_parent(outcome, actor=actor, event=_event(40_002 + run_number * 20, base))
@@ -748,6 +691,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     allocation and the real Atreides ... stock record, reserve and gate code."
     """
     actor = _actor()
+    approver = _volume_approver(run_number)
     base = datetime.combine(business_date, datetime.min.time(), tzinfo=UTC)
     total_quantity = sum((Decimal(item.quantity) for item in reports), Decimal())
     policy = PolicyManifest(
@@ -768,7 +712,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
         quantity=total_quantity,
         policy_manifest=policy,
         authority_manifest=AuthorityManifest(
-            authority_id=actor.actor_id,
+            authority_id=approver.actor_id,
             policy_manifest_digest=digest(policy),
             authorized=True,
         ),
@@ -777,7 +721,7 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
     )
     wire = _wire(payload)
     lifecycle_id = LifecycleId(_identifier("lif_", 20_000 + run_number))
-    envelope = PolicyIntentEnvelope(
+    envelope = ApprovedIntentEnvelope(
         envelope_id=payload.intent_id,
         lifecycle_id=lifecycle_id,
         revision=1,
@@ -790,8 +734,8 @@ def drive_estate(  # noqa: PLR0915 - intentionally drives the end-to-end estate 
                 established_by="SIM-1B generated day",
             ),
         ),
-        approved_by=actor,
-        provenance=Provenance.POLICY_RESULT,
+        approved_by=approver,
+        provenance=Provenance.HUMAN_JUDGMENT,
         effects=OperationEffects(
             operation="simulate approved intent",
             effects=(),

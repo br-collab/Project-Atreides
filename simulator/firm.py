@@ -22,7 +22,7 @@ from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes_of, digest, digest_bytes
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.effects import OperationEffects
-from cannae_kernel.envelopes import ExecutionEvent
+from cannae_kernel.envelopes import ApprovedIntentEnvelope, ExecutionEvent
 from cannae_kernel.ids import ActorId, AllocationId, EventId, IntentId, LifecycleId, OrderId
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
@@ -33,6 +33,7 @@ from lc.lifecycle import (
     ChildOrder,
     OrderSide,
     PolicyManifest,
+    accept_intent,
     activate_parent,
     authorize_strategy,
     split_parent,
@@ -41,6 +42,8 @@ from lc.lifecycle import (
 from lc.policy import ExecutionReport, apply_execution
 from lc.trade import AllocationPlan, AllocationRule, AllocationTarget, allocate, capture
 
+from atreides.account_lifecycle import ActorRegistryApproverVerifier
+from atreides.approval_attestations import HumanApproval, attest_human_approval
 from atreides.books.ledger import (
     AccountType,
     EquitiesBooks,
@@ -95,13 +98,11 @@ from simulator.estate import (
     DEPOSIT_BREACH_OUTCOMES,
     DepositDraw,
     DepositPolicy,
-    PolicyIntentEnvelope,
     ReserveDeposit,
     _complete_reserve_inputs,
     _deposit_entry,
     _post_reserve_deposits,
     _wire,
-    accept_intent,
     simulated_filed_credit_total,
 )
 from simulator.focus import FirmFocusLines, FirmFocusTieOut, tie_out_firm_close
@@ -130,6 +131,10 @@ from simulator.street import (
     SyntheticDepository,
     build_independent_sources,
     reconciliation_calendar,
+)
+from simulator.synthetic_attestation_fixture import (
+    HUMAN_APPROVAL_KEY_ID,
+    HUMAN_APPROVAL_PRIVATE_KEY,
 )
 
 TierName = Literal["small", "medium", "large"]
@@ -437,6 +442,16 @@ def _actor() -> ActorRef:
     )
 
 
+def _volume_approver(sequence: int) -> ActorRef:
+    return ActorRef(
+        actor_id=ActorId(_id("act_", 5_000_000 + sequence)),
+        actor_kind=ActorKind.HUMAN,
+        role="synthetic approver, simulated volume",
+        entitlement_refs=("SYNTHETIC_REGISTERED_PRINCIPAL",),
+        authenticated=True,
+    )
+
+
 def _event(number: int, at: datetime) -> Any:
     from lc.lifecycle import EventInput
 
@@ -502,6 +517,7 @@ def _lc_allocate_batch(
 ) -> tuple[tuple[str, Decimal, Decimal], ...]:
     """Drive real L.C. lifecycle, capture and allocation for one issue/side batch."""
     actor = _actor()
+    approver = _volume_approver(sequence)
     base = datetime.combine(business_date, datetime.min.time(), tzinfo=UTC)
     total = sum((row.quantity for row in rows), Decimal())
     policy = PolicyManifest(
@@ -517,13 +533,15 @@ def _lc_allocate_batch(
         quantity=total,
         policy_manifest=policy,
         authority_manifest=AuthorityManifest(
-            authority_id=actor.actor_id, policy_manifest_digest=digest(policy), authorized=True
+            authority_id=approver.actor_id,
+            policy_manifest_digest=digest(policy),
+            authorized=True,
         ),
         allocation_accounts=tuple(dict.fromkeys(row.account for row in rows)),
     )
     wire = _wire(payload)
     lifecycle_id = LifecycleId(_id("lif_", 2_000_000 + sequence))
-    envelope = PolicyIntentEnvelope(
+    envelope = ApprovedIntentEnvelope(
         envelope_id=payload.intent_id,
         lifecycle_id=lifecycle_id,
         revision=1,
@@ -534,10 +552,21 @@ def _lc_allocate_batch(
                 value=business_date, calendar="SIFMA-US", established_by="SCF-1 synthetic day"
             ),
         ),
-        approved_by=actor,
-        provenance=Provenance.POLICY_RESULT,
+        approved_by=approver,
+        provenance=Provenance.HUMAN_JUDGMENT,
         effects=OperationEffects(operation="simulate volume", effects=(), note=DISCLAIMER),
         payload_digest=digest_bytes(wire),
+    )
+    approval_attestation = attest_human_approval(
+        HumanApproval(
+            approval_id=f"SCF-1-VOLUME-{sequence}",
+            decision_digest=envelope.payload_digest,
+            approver=approver,
+            approved_at=base,
+        ),
+        key_id=HUMAN_APPROVAL_KEY_ID,
+        private_key=HUMAN_APPROVAL_PRIVATE_KEY,
+        approver_verifier=ActorRegistryApproverVerifier({str(approver.actor_id): approver}),
     )
     parent = OrderId(_id("ord_", 3_000_000 + sequence * 2))
     child = OrderId(_id("ord_", 3_000_001 + sequence * 2))
@@ -547,6 +576,7 @@ def _lc_allocate_batch(
         parent_order_id=parent,
         actor=actor,
         event=_event(4_000_000 + sequence * 10, base),
+        approval_attestation=approval_attestation,
     )
     outcome = authorize_strategy(
         outcome, actor=actor, event=_event(4_000_001 + sequence * 10, base)
