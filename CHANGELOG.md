@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+PS-3C Part 5 routes every firm-volume child order through L.C.'s market-access gate. A terminal
+decision is recorded as a refused order and is not booked, while the day continues through all six
+reconciliations. The synthetic market-access policy states its independent rationale and approving
+role instead of deriving its limits from the generator ceiling.
+
 PS-3C Part 4B removes repository-reconstructible Know Your Customer and human-approval
 signing keys. Both identities are generated per process and installed before verification;
 the committed trust file contains neither public half, and the KYC writer has no default

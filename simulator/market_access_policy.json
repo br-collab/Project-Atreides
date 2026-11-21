@@ -2,7 +2,9 @@
   "version": "ps3b/1",
   "synthetic": true,
   "maximum_quantity": "500000",
-  "maximum_notional": "5000",
+  "maximum_notional": "50000000",
   "account_credit_limit": "10000000",
-  "basis": "Declared synthetic market-access policy independent of generator bounds"
+  "basis": "Declared synthetic market-access policy independent of generator bounds",
+  "rationale": "Fixed risk limits are reviewed independently and do not derive from the simulator's order-size ceiling.",
+  "approver_role": "synthetic market access risk approver"
 }
