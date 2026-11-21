@@ -10,7 +10,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-28",
-      "economics_digest": "sha256:a2ebddd746af7c46c724463b0ef782e3da84fbfe5b889ff7599e6c56bbb9d0b3",
+      "economics_digest": "sha256:feed7e960e483f0023b7f18e7143f7bdc5d0947d9bad9d482f7e8e9353cd3406",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -131,7 +131,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-29",
-      "economics_digest": "sha256:3a21301d5be532d98f4f085fabd5bfb43075c9810ed1303ea27ce3751d9dd750",
+      "economics_digest": "sha256:e55ef9f54e0c1dacba1475ddccb219844b6e15b6c49a0b5fad82c2e69be73afb",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -248,7 +248,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-30",
-      "economics_digest": "sha256:7804a71b89dc71a33af9613ba81434c6beefe2ee80359591881791c3188156d8",
+      "economics_digest": "sha256:ca5c6de6d7558f95dc1f877787b2e2bacebb45e8088cf2149de2d1184ee9f6fc",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -365,7 +365,7 @@
     {
       "breaks": [],
       "business_date": "2026-12-31",
-      "economics_digest": "sha256:2ac69839d027be7911beebbb481c2fe633be7d49d11891eb049dc130c40d8608",
+      "economics_digest": "sha256:3bf2f015544e8a8eb53420aa94f121112b7023512fe7accc38f87c1a3e500dd1",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -489,7 +489,7 @@
     {
       "breaks": [],
       "business_date": "2027-01-04",
-      "economics_digest": "sha256:3999f50bf343a2e63c77016159513cc7685c064b92281fb5f68e42ccc2ea862c",
+      "economics_digest": "sha256:4d513fab5aaf5dd2726e6567661ea6a3613171d3e0a9cd41a58a84d0d3262759",
       "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL"
@@ -610,7 +610,7 @@
   ],
   "days": 5,
   "disclaimer": "SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of production correctness",
-  "economics_digest": "sha256:632f0d0c5e6d7568f60fdc0308bb40fab5355d35f4635aef48e9f126ac83948d",
+  "economics_digest": "sha256:c51929a7d8362fb88caa0b29c76e38496bf5e1c3df4ad248f66434736a84235d",
   "filed_credit_history": [
     {
       "customer_total_credits": "50000000",
@@ -708,8 +708,8 @@
   "ny_fed_notices": [],
   "repository_shas": {
     "Cato-FICC-MCP": "be9c06a14c5175b783cc4559956e3377e420ec9e",
-    "L.C.": "4fe86386b0ab638e0389d7b422afd56dcc947a36",
-    "atreides": "2553763916d5b695a2d5c0a346d04518476d3e92",
+    "L.C.": "cf4819fe1131a33d2a46cf80ad924cd4d8a5aece",
+    "atreides": "d170bab93feed0af4f7c3d97b6b52724d339546e",
     "aureon": "0de18745dfa9cba5ce9e020a111d1bf50902ec8d",
     "cannae-kernel": "5e68a52331650a719b30c5d95318039044c5e3cc"
   },
