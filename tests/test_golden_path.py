@@ -91,7 +91,7 @@ def test_service_approver_cannot_claim_human_judgment() -> None:
         payload_digest="sha256:" + "0" * 64,
     )
 
-    with pytest.raises(ValueError, match="HUMAN_JUDGMENT requires an authenticated HUMAN"):
+    with pytest.raises(ValueError, match="HUMAN_APPROVAL_ATTESTATION_REQUIRED"):
         validate_approval_provenance(envelope)
 
 

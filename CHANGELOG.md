@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+PS-3C Part 4 binds stored Know Your Customer decisions to a pinned Atreides signature and to the
+deterministic service holding `KYC_DSOR_WRITE` with policy-result provenance. Human approved
+intents require a pinned signed attestation bound to the exact intent digest and human approver;
+firm volume records deterministic-service policy results instead of claiming human action. Golden
+path mutations prove wrong KYC sealers, missing or bad signatures, missing principal approval,
+self-approval, and unattested intent approval are refused. The account-opening and approved-intent
+written supervisory procedure rows now point at those run-level tests. Register version 1.2.0.
+
 The suspicious activity report clock runs to filing, not to the decision (inventory finding N4).
 Under 31 CFR 1023.320(b)(3) the period is 30 calendar days from initial detection, extendable by
 30 when no suspect is identified, never past 60. A `NO_SAR` decision stops the clock; a `SAR`
@@ -41,10 +49,9 @@ tests that only re-read the register are deleted.
 Coverage is partial. Rows name an existing test that exercises the control, most through
 the golden path or the firm run; the confirmation and statement tests call their builders
 on golden path output, and the fail-to-receive row plants a source outage, not a quantity
-difference. Customer profile and recommendation share one golden path test. Three rows
-have no run-level test yet and are exceptions with their owners: account opening
-(principal approval) and approved intent, both owed by PS-3C Part 4, and stock loan to
-register, owed by PS-4A. WSP register version 1.1.0.
+difference. Customer profile and recommendation share one golden path test. One row has no
+run-level test yet and is an exception with its owner: stock loan to register, owed by PS-4A.
+WSP register version 1.2.0.
 
 ## 1.3.0 - 18 Nov 2026
 

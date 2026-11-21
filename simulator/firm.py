@@ -22,7 +22,7 @@ from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes_of, digest, digest_bytes
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.effects import OperationEffects
-from cannae_kernel.envelopes import ApprovedIntentEnvelope, ExecutionEvent
+from cannae_kernel.envelopes import ExecutionEvent
 from cannae_kernel.ids import ActorId, AllocationId, EventId, IntentId, LifecycleId, OrderId
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
@@ -33,7 +33,6 @@ from lc.lifecycle import (
     ChildOrder,
     OrderSide,
     PolicyManifest,
-    accept_intent,
     activate_parent,
     authorize_strategy,
     split_parent,
@@ -96,11 +95,13 @@ from simulator.estate import (
     DEPOSIT_BREACH_OUTCOMES,
     DepositDraw,
     DepositPolicy,
+    PolicyIntentEnvelope,
     ReserveDeposit,
     _complete_reserve_inputs,
     _deposit_entry,
     _post_reserve_deposits,
     _wire,
+    accept_intent,
     simulated_filed_credit_total,
 )
 from simulator.focus import FirmFocusLines, FirmFocusTieOut, tie_out_firm_close
@@ -522,7 +523,7 @@ def _lc_allocate_batch(
     )
     wire = _wire(payload)
     lifecycle_id = LifecycleId(_id("lif_", 2_000_000 + sequence))
-    envelope = ApprovedIntentEnvelope(
+    envelope = PolicyIntentEnvelope(
         envelope_id=payload.intent_id,
         lifecycle_id=lifecycle_id,
         revision=1,
@@ -534,7 +535,7 @@ def _lc_allocate_batch(
             ),
         ),
         approved_by=actor,
-        provenance=Provenance.HUMAN_JUDGMENT,
+        provenance=Provenance.POLICY_RESULT,
         effects=OperationEffects(operation="simulate volume", effects=(), note=DISCLAIMER),
         payload_digest=digest_bytes(wire),
     )

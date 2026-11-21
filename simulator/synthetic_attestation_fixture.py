@@ -12,6 +12,8 @@ LC_KEY_ID = "synthetic-lc-run-key-1"
 LC_PRIVATE_KEY = Ed25519PrivateKey.generate()
 LC_STATUS_KEY_ID = "synthetic-atreides-status-key-1"
 LC_STATUS_PRIVATE_KEY = Ed25519PrivateKey.generate()
+HUMAN_APPROVAL_KEY_ID = "synthetic-atreides-human-approval-key-1"
+HUMAN_APPROVAL_PRIVATE_KEY = Ed25519PrivateKey.from_private_bytes(bytes([23]) * 32)
 
 
 def configure_synthetic_trust() -> None:
