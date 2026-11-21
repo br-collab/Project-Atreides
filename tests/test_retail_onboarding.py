@@ -14,8 +14,7 @@ from atreides.account_lifecycle import (
     ActorRegistryApproverVerifier,
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
-    KYCDecisionRecord,
-    kyc_chain_report,
+    record_kyc_decision,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -189,7 +188,7 @@ def _store(
             approval_ref="SYN-PRINCIPAL-APPROVAL-RETAIL1",
         )
     )
-    kyc_record = KYCDecisionRecord(
+    kyc_record = record_kyc_decision(
         record_id=KYC_ID,
         account_id=ACCOUNT,
         account_type=kyc_type,
@@ -202,7 +201,6 @@ def _store(
     )
     resolver = AuthoritativeEvidenceResolver(
         kyc_dsor_records={KYC_ID: kyc_record},
-        kyc_chain_reports={KYC_ID: kyc_chain_report(kyc_record)},
         eligibility_records={ELIGIBILITY_ID: _eligibility(profile_at)},
         transfer_records={},
         first_trade_attestations={},

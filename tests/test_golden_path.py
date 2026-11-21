@@ -1,10 +1,25 @@
 import json
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
+from pathlib import Path
 
 import emulators.venue
+import pytest
+from cannae_kernel.actor import ActorKind, ActorRef
+from cannae_kernel.effects import OperationEffects
+from cannae_kernel.envelopes import ApprovedIntentEnvelope
+from cannae_kernel.ids import ActorId, IntentId, LifecycleId
+from cannae_kernel.provenance import Provenance
+from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
 
 from atreides.account_lifecycle import AccountTransitionRefusedError, RefusalReason
+from atreides.books.ledger import EquitiesBooks
+from simulator.calibration import load_calibration_pack
+from simulator.estate import (
+    exercise_simulator_market_access,
+    seed_customer_cash,
+    validate_approval_provenance,
+)
 from simulator.golden_path import (
     Variant,
     replay_evidence_digest,
@@ -14,6 +29,7 @@ from simulator.golden_path import (
     verify_published_pack,
     write_golden_path_publication,
 )
+from simulator.model import Print
 
 
 def test_clean_golden_path_closes_with_every_invariant_true() -> None:
@@ -25,6 +41,122 @@ def test_clean_golden_path_closes_with_every_invariant_true() -> None:
     assert result.close_report == "NORMAL_CLOSE"
     assert result.invariants
     assert all(result.invariants.values())
+    assert result.trade_date_statement is not None
+    assert result.statement is not None
+    assert result.trade_date_statement.period_end.isoformat() == "2026-11-13"
+    assert set(result.trade_date_statement.settlement_status.values()) == {"UNSETTLED"}
+    assert result.statement.period_end.isoformat() == "2026-11-16"
+    assert set(result.statement.settlement_status.values()) == {"SETTLED"}
+    assert len(result.reconciliation_calendar) == 6
+    assert {str(row["status"]) for row in result.reconciliation_calendar} == {"RAN"}
+    assert all(row["sources_read"] for row in result.reconciliation_calendar)
+
+
+def test_cash_statement_short_by_one_cent_fails_its_golden_row() -> None:
+    result = run_golden_path(bank_statement_delta=Decimal("-0.01"))
+    row = next(
+        item for item in result.reconciliation_calendar if item["item_id"] == "cash-to-bank"
+    )
+
+    assert row["status"] == "FAILED", "cash-to-bank control must publish its own failure"
+    assert row["break_count"] == 1
+    assert row["sources_read"] == (
+        "Atreides equities books",
+        "synthetic firm bank statement",
+    )
+
+
+def test_service_approver_cannot_claim_human_judgment() -> None:
+    actor = ActorRef(
+        actor_id=ActorId("act_00000000000000000000000001"),
+        actor_kind=ActorKind.DETERMINISTIC_SERVICE,
+        role="synthetic service",
+        entitlement_refs=("SIM-1B",),
+        authenticated=True,
+    )
+    envelope = ApprovedIntentEnvelope(
+        envelope_id=IntentId("int_00000000000000000000000001"),
+        lifecycle_id=LifecycleId("lif_00000000000000000000000001"),
+        revision=1,
+        prior_digest=None,
+        session=SessionContext(
+            session=MarketSession.REGULAR,
+            business_date=BusinessDate(
+                value=date(2026, 11, 18), calendar="SIFMA-US", established_by="test"
+            ),
+        ),
+        approved_by=actor,
+        provenance=Provenance.HUMAN_JUDGMENT,
+        effects=OperationEffects(operation="test", effects=(), note="synthetic only"),
+        payload_digest="sha256:" + "0" * 64,
+    )
+
+    with pytest.raises(ValueError, match="HUMAN_APPROVAL_ATTESTATION_REQUIRED"):
+        validate_approval_provenance(envelope)
+
+
+def test_duplicate_evidence_id_fails_pack_check() -> None:
+    result = run_golden_path()
+    duplicate = result.model_copy(update={"evidence": (*result.evidence, result.evidence[-1])})
+    assert not verify_evidence_artifacts(duplicate)
+
+
+def test_venue_fill_is_caused_by_market_access_gate() -> None:
+    result = run_golden_path()
+    fill = next(item for item in result.evidence if item.summary == "venue fill")
+    gate = next(item for item in result.evidence if item.summary == "MARKET_ACCESS_PASSED")
+    assert fill.cause_event_id == gate.event_id
+
+
+def test_supersession_register_names_every_older_pack_and_corrected_figures() -> None:
+    text = (Path(__file__).parents[1] / "simulator/publication/SUPERSEDED.md").read_text()
+    for pack in (
+        "mvp3-golden-path-2026-11-15",
+        "mvp3-golden-path-2026-11-15-v2",
+        "mvp3b-golden-path-2026-11-15",
+        "mvp4-client-reporting-2026-11-15",
+        "mvp4-client-reporting-2026-11-15-v2",
+    ):
+        assert f"`{pack}`" in text
+    assert "customer cash 9,000.00" in text
+    assert "customer credits 9,000.00" in text
+    assert "requirement of 9,000.00" in text
+
+
+def test_simulator_market_access_refuses_above_declared_notional_limit() -> None:
+    pack = load_calibration_pack()
+    books = EquitiesBooks(break_owner="TEST")
+    business_date = date(2026, 12, 28)
+    seed_customer_cash(
+        books,
+        run_number=1,
+        business_date=business_date,
+        accounts=("ACCOUNT-1",),
+        account_weights=(1,),
+        balance=Decimal("10000"),
+    )
+    at = datetime(2026, 12, 28, 14, 30, tzinfo=UTC)
+    report = Print(
+        print_id="OVER-LIMIT",
+        order_id="ORDER-OVER-LIMIT",
+        issue="SYN-EQ-LIMIT",
+        quantity=int(pack.value("generator", "quantity_max")),
+        price=Decimal(str(pack.value("market", "cns_prior_close"))) * 2,
+        matched_at=at,
+        reported_at=at,
+    )
+
+    with pytest.raises(ValueError, match="SIM-1B market access refused: MAXIMUM_NOTIONAL"):
+        exercise_simulator_market_access(
+            run_number=1,
+            business_date=business_date,
+            issue=report.issue,
+            reports=(report,),
+            account_weights=(1,),
+            prior_close=report.price,
+            pack=pack,
+            books=books,
+        )
 
 
 def test_lc_venue_is_importable_in_atreides_environment() -> None:

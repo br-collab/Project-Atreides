@@ -12,9 +12,10 @@ from cannae_kernel.account import AccountStatus
 from cannae_kernel.canonical import canonical_bytes_of, digest_bytes
 from cannae_kernel.envelopes import ExecutionEvent
 from emulators.venue import VenueExecutionReport  # type: ignore[import-untyped]
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from atreides.books.ledger import AccountType, EquitiesBooks, JournalEntry, RecordSide
+from atreides.books.ps1 import project_tax_lots
 from atreides.customer_protection.rules import load_rule_table
 
 _REQUIREMENTS_PATH = Path(__file__).with_name("client_reporting_requirements.json")
@@ -100,6 +101,10 @@ class StatementDraft(BaseModel):
     closing_margin: Decimal
     opening_positions: dict[str, Decimal]
     closing_positions: dict[str, Decimal]
+    cost_basis: dict[str, Decimal] = Field(default_factory=dict)
+    unrealized_gain_loss: dict[str, Decimal | None] = Field(default_factory=dict)
+    settlement_status: dict[str, str] = Field(default_factory=dict)
+    tax_disclaimer: str = "Synthetic illustration only; not tax advice"
     activity: tuple[StatementActivity, ...]
     replaces_statement_id: str | None = None
 
@@ -110,11 +115,38 @@ class AccountStatement(StatementDraft):
     finra_requirements: tuple[dict[str, str], ...]
     not_claimed: tuple[str, ...] = (
         "FINRA Rule 2231 compliance",
-        "cost basis",
-        "tax lots",
         "tax forms",
         "fee billing beyond posted books lines",
         "delivery to a real person",
+    )
+
+
+class CustomerSideFacts(BaseModel):
+    """Independent expected customer balances from instructions, fills and confirmations."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+    deposit_instructions: tuple[Decimal, ...]
+    venue_fills: tuple[tuple[str, Decimal, Decimal], ...]
+    confirmations: tuple[tuple[str, Decimal], ...]
+
+
+def customer_side_facts_from_furnished_confirmations(
+    *,
+    deposit_instructions: tuple[Decimal, ...],
+    venue_fills: tuple[tuple[str, Decimal, Decimal], ...],
+    furnished_confirmations: tuple[tuple[TradeConfirmation, FurnishedEvent], ...],
+) -> CustomerSideFacts:
+    """Read position facts from the confirmation record proven furnished."""
+    positions = []
+    for confirmation, furnished in furnished_confirmations:
+        if furnished.confirmation_id != confirmation.confirmation_id:
+            raise ValueError("FURNISHED_CONFIRMATION_ID_MISMATCH")
+        fields = {field.name: field.value for field in confirmation.fields}
+        positions.append((fields["security_identity"], Decimal(fields["quantity"])))
+    return CustomerSideFacts(
+        deposit_instructions=deposit_instructions,
+        venue_fills=venue_fills,
+        confirmations=tuple(positions),
     )
 
 
@@ -171,7 +203,7 @@ def generate_trade_confirmation(
     side = "BUY" if ownership[0].quantity > 0 else "SELL"
     trade_id = execution_report.execution_id
     executed_at = execution_event.times.event_time
-    quantity = execution_report.quantity
+    quantity = ownership[0].quantity
     price = execution_report.price
     if correction_kind == "ORIGINAL" and replaces is not None:
         raise ValueError("an original confirmation cannot replace another confirmation")
@@ -223,9 +255,7 @@ def find_book_entry_for_execution(
 ) -> JournalEntry:
     """Resolve the posting by the execution identifier recorded on the books."""
     matches = tuple(
-        entry
-        for entry in books.entries
-        if entry.source_event_id == str(execution_event.event_id)
+        entry for entry in books.entries if entry.source_event_id == str(execution_event.event_id)
     )
     if len(matches) != 1:
         raise ValueError("execution does not link to exactly one posted books entry")
@@ -254,9 +284,7 @@ def record_furnished(
         furnished_at=furnished_at,
         recipient_id=recipient_id,
         channel="SYNTHETIC_PORTAL",
-        provenance=_rule_provenance(
-            _CONFIRMATION_NOTIFICATION_RULE, confirmation.confirmation_id
-        ),
+        provenance=_rule_provenance(_CONFIRMATION_NOTIFICATION_RULE, confirmation.confirmation_id),
     )
 
 
@@ -279,9 +307,7 @@ def _balances(
                     margin += line.money
             elif line.record_side is RecordSide.OWNERSHIP and line.issue is not None:
                 positions[line.issue] = positions.get(line.issue, Decimal()) + line.quantity
-    return cash, margin, {
-        issue: quantity for issue, quantity in positions.items() if quantity
-    }
+    return cash, margin, {issue: quantity for issue, quantity in positions.items() if quantity}
 
 
 def _journal_oracle_balances(
@@ -315,6 +341,7 @@ def build_statement_draft(
     period_start: date,
     period_end: date,
     replaces: AccountStatement | None = None,
+    market_prices: dict[str, Decimal] | None = None,
 ) -> StatementDraft:
     if period_end < period_start:
         raise ValueError("statement period end precedes its start")
@@ -322,9 +349,7 @@ def build_statement_draft(
     opening_cash, opening_margin, opening_positions = _balances(
         entries, account_id, period_start.fromordinal(period_start.toordinal() - 1)
     )
-    closing_cash, closing_margin, closing_positions = _balances(
-        entries, account_id, period_end
-    )
+    closing_cash, closing_margin, closing_positions = _balances(entries, account_id, period_end)
     activity: list[StatementActivity] = []
     for entry in entries:
         if not period_start <= entry.effective_date <= period_end:
@@ -347,6 +372,23 @@ def build_statement_draft(
                     money=line.money,
                 )
             )
+    cost_basis: dict[str, Decimal] = {}
+    for issue in closing_positions:
+        lots, _ = project_tax_lots(entries, account_id=account_id, issue=issue)
+        cost_basis[issue] = sum((lot.remaining_basis for lot in lots), Decimal())
+    pending_by_issue: dict[str, Decimal] = {}
+    for entry in entries:
+        if entry.effective_date > period_end:
+            continue
+        for line in entry.lines:
+            if (
+                line.record_side is RecordSide.LOCATION
+                and line.account_type is AccountType.PENDING_SETTLEMENT
+                and line.issue is not None
+            ):
+                pending_by_issue[line.issue] = (
+                    pending_by_issue.get(line.issue, Decimal()) - line.quantity
+                )
     return StatementDraft(
         account_id=account_id,
         account_status=account_status,
@@ -358,18 +400,45 @@ def build_statement_draft(
         closing_margin=closing_margin,
         opening_positions=opening_positions,
         closing_positions=closing_positions,
+        cost_basis=cost_basis,
+        unrealized_gain_loss={
+            issue: None
+            if market_prices is None or issue not in market_prices
+            else closing_positions[issue] * market_prices[issue] - cost_basis[issue]
+            for issue in closing_positions
+        },
+        settlement_status={
+            issue: "UNSETTLED" if pending_by_issue.get(issue) else "SETTLED"
+            for issue in closing_positions
+        },
         activity=tuple(activity),
         replaces_statement_id=None if replaces is None else replaces.statement_id,
     )
 
 
 def issue_statement(
-    draft: StatementDraft, books: EquitiesBooks, *, issued_at: datetime
+    draft: StatementDraft,
+    books: EquitiesBooks,
+    *,
+    issued_at: datetime,
+    customer_side_facts: CustomerSideFacts | None = None,
 ) -> AccountStatement:
     entries = books.entries
-    expected_cash, expected_margin, expected_positions = _journal_oracle_balances(
-        entries, draft.account_id, draft.period_end
-    )
+    if customer_side_facts is None:
+        expected_cash, expected_margin, expected_positions = _journal_oracle_balances(
+            entries, draft.account_id, draft.period_end
+        )
+    else:
+        expected_cash = sum(customer_side_facts.deposit_instructions, Decimal()) - sum(
+            (quantity * price for _, quantity, price in customer_side_facts.venue_fills), Decimal()
+        )
+        expected_positions = {}
+        for issue, quantity in customer_side_facts.confirmations:
+            expected_positions[issue] = expected_positions.get(issue, Decimal()) + quantity
+        expected_positions = {
+            issue: quantity for issue, quantity in expected_positions.items() if quantity
+        }
+        expected_margin = Decimal()
     activity_cash = sum(
         (
             item.money
@@ -394,8 +463,7 @@ def issue_statement(
             )
     issues = set(draft.opening_positions) | set(draft.closing_positions) | set(activity_positions)
     positions_tie = all(
-        draft.opening_positions.get(issue, Decimal())
-        + activity_positions.get(issue, Decimal())
+        draft.opening_positions.get(issue, Decimal()) + activity_positions.get(issue, Decimal())
         == draft.closing_positions.get(issue, Decimal())
         for issue in issues
     )

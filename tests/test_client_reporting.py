@@ -7,8 +7,10 @@ from cannae_kernel.canonical import canonical_bytes_of, digest_bytes
 
 from atreides.books.ledger import EquitiesBooks
 from atreides.client_reporting import (
+    CustomerSideFacts,
     StatementTieOutError,
     build_statement_draft,
+    customer_side_facts_from_furnished_confirmations,
     generate_trade_confirmation,
     issue_statement,
 )
@@ -50,6 +52,31 @@ def test_confirmation_fields_cite_pinned_rule_and_source_record() -> None:
     assert result.confirmation_furnished is not None
     assert result.confirmation_furnished.channel == "SYNTHETIC_PORTAL"
     assert "Rule 10b-10(a)(2) capacity and remuneration" in confirmation.not_claimed
+
+
+def test_customer_side_position_reads_the_furnished_confirmation() -> None:
+    result = run_golden_path()
+    assert result.confirmation is not None
+    assert result.confirmation_furnished is not None
+    facts = customer_side_facts_from_furnished_confirmations(
+        deposit_instructions=(Decimal("10000"),),
+        venue_fills=((ISSUE, Decimal("999"), Decimal("100")),),
+        furnished_confirmations=((result.confirmation, result.confirmation_furnished),),
+    )
+    assert facts.confirmations == ((ISSUE, Decimal(10)),)
+
+
+def test_customer_side_position_refuses_a_different_furnished_record() -> None:
+    result = run_golden_path()
+    assert result.confirmation is not None
+    assert result.confirmation_furnished is not None
+    wrong = result.confirmation_furnished.model_copy(update={"confirmation_id": "CONF-WRONG"})
+    with pytest.raises(ValueError, match="FURNISHED_CONFIRMATION_ID_MISMATCH"):
+        customer_side_facts_from_furnished_confirmations(
+            deposit_instructions=(),
+            venue_fills=(),
+            furnished_confirmations=((result.confirmation, wrong),),
+        )
 
 
 def test_correction_and_cancellation_reference_immutable_original() -> None:
@@ -95,6 +122,11 @@ def test_statement_ties_to_books_for_cash_positions_and_activity() -> None:
     assert statement is not None
     assert statement.closing_cash == Decimal("9000.00")
     assert statement.closing_margin == Decimal("0")
+    assert statement.cost_basis == {ISSUE: Decimal("1000.00")}
+    assert statement.unrealized_gain_loss == {ISSUE: Decimal()}
+    assert statement.tax_disclaimer == "Synthetic illustration only; not tax advice"
+    assert "cost basis" not in statement.not_claimed
+    assert "tax lots" not in statement.not_claimed
     activity_cash = sum(
         (item.money for item in statement.activity if item.account_type == "CUSTOMER_CASH"),
         Decimal(),
@@ -136,6 +168,30 @@ def test_statement_that_does_not_tie_is_refused() -> None:
 
     with pytest.raises(StatementTieOutError, match="does not tie"):
         issue_statement(broken, books, issued_at=datetime(2026, 11, 15, tzinfo=UTC))
+
+
+def test_customer_side_oracle_refuses_eleven_booked_shares_against_ten_share_fill() -> None:
+    books, _ = _replayed_books()
+    draft = build_statement_draft(
+        books,
+        account_id=ACCOUNT,
+        account_status=AccountStatus.ACTIVE,
+        period_start=START.date(),
+        period_end=START.date(),
+    )
+    facts = CustomerSideFacts(
+        deposit_instructions=(Decimal("10000"),),
+        venue_fills=((ISSUE, Decimal(10), Decimal(100)),),
+        confirmations=((ISSUE, Decimal(10)),),
+    )
+    broken = draft.model_copy(update={"closing_positions": {ISSUE: Decimal(11)}})
+    with pytest.raises(StatementTieOutError, match="does not tie"):
+        issue_statement(
+            broken,
+            books,
+            issued_at=datetime(2026, 11, 15, tzinfo=UTC),
+            customer_side_facts=facts,
+        )
 
 
 def test_confirmation_refuses_fill_price_that_disagrees_with_books() -> None:

@@ -25,7 +25,7 @@ from atreides.account_lifecycle import (
     LegalEntityEvidenceRecord,
     TransferInRecord,
     attest_first_permitted_trade,
-    kyc_chain_report,
+    record_kyc_decision,
 )
 from atreides.account_lifecycle import (
     AccountType as LifecycleAccountType,
@@ -126,7 +126,7 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
         legal_entity_id = f"SIM-1-LEGAL-{index:04d}"
         kyb_id = f"SIM-1-KYB-{index:04d}"
         entity_id = f"SYN-ENTITY-{index:04d}"
-        kyc_records[kyc_id] = KYCDecisionRecord(
+        kyc_records[kyc_id] = record_kyc_decision(
             record_id=kyc_id,
             account_id=line.account,
             path_id="KYC_ELIGIBLE_CLEAR",
@@ -184,9 +184,6 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
     return AuthoritativeEvidenceResolver(
         application_records=application_records,
         kyc_dsor_records=kyc_records,
-        kyc_chain_reports={
-            record_id: kyc_chain_report(record) for record_id, record in kyc_records.items()
-        },
         eligibility_records=eligibility_records,
         transfer_records=transfer_records,
         first_trade_attestations=trade_attestations,

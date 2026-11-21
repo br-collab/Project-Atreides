@@ -107,6 +107,10 @@ def test_small_day_drives_real_estate_and_mutations_fail(tmp_path) -> None:
     attacked = attack_firm_run(run)
     assert set(attacked) == set(MUTATIONS)
     assert all(attacked.values())
+    assert attacked["UNPOSTED_DEPOSIT_INSTRUCTION"] == ("RECONCILIATION_cash-to-bank",)
+    assert attacked["RESERVE_DEPOSIT_NOT_RECEIVED"] == (
+        "RECONCILIATION_reserve-bank-to-books",
+    )
     assert {"I1_QUANTITY_MONEY_CONSERVE", "I11_POSITION_ROLL_FORWARD"} <= set(
         attacked["DROP_FILL_FROM_BOOKS"]
     )

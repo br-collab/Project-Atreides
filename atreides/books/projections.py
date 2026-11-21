@@ -264,6 +264,8 @@ def project_customer_protection(  # noqa: PLR0915 - each projection source remai
 
     ftr_reserve: dict[tuple[str, str, ReserveActivity], tuple[Decimal, ReserveSourceFact]] = {}
     for entry in books.entries:
+        if entry.effective_date > as_of:
+            continue
         source_facts = {
             (fact.account_type, fact.issue): fact for fact in entry.reserve_source_facts
         }

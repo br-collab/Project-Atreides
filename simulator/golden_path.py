@@ -15,9 +15,10 @@ from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes, canonical_bytes_of, digest, digest_bytes
 from cannae_kernel.envelopes import ExecutionEvent
+from cannae_kernel.events import seal
 from cannae_kernel.events import verify as verify_event
 from cannae_kernel.ids import ActorId, IntentId, LifecycleId, OrderId
-from cannae_kernel.journal import ChainReport
+from cannae_kernel.signed_attestation import sign_attestation
 from emulators.settlement import (  # type: ignore[import-untyped]
     RailOutcome,
     SyntheticEntitledMember,
@@ -47,6 +48,7 @@ from lc.recommendation_profile import (
 from pydantic import BaseModel, ConfigDict, Field
 
 from atreides.account_lifecycle import (
+    SYNTHETIC_KYC_PRIVATE_KEY,
     AccountApplication,
     AccountLifecycleStore,
     AccountTransitionRefusedError,
@@ -55,9 +57,9 @@ from atreides.account_lifecycle import (
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
     FirstPermittedTradeRecord,
-    KYCDecisionRecord,
     TransferInRecord,
     attest_first_permitted_trade,
+    record_kyc_decision,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -66,17 +68,34 @@ from atreides.agents.tier2.eligibility import (
     SanctionsScreeningEvidence,
     verify_eligibility,
 )
+from atreides.approval_attestations import HumanApproval, attest_human_approval
 from atreides.books.ledger import (
     EquitiesBooks,
     JournalEntry,
+    PostingSource,
     RecordSide,
 )
 from atreides.books.projections import classify_accounts, project_margin_accounts
+from atreides.books.ps1 import (
+    ACCOUNT_TREATMENT_ROWS,
+    TAX_LOT_RULES,
+    ControlResult,
+    ControlStatus,
+    InstructionKind,
+    InstructionLog,
+    MoneyInstruction,
+    SecuritiesConfirmation,
+    build_securities_count,
+)
+from atreides.books.ps1 import (
+    reconcile as reconcile_ps1,
+)
 from atreides.client_reporting import (
     AccountStatement,
     FurnishedEvent,
     TradeConfirmation,
     build_statement_draft,
+    customer_side_facts_from_furnished_confirmations,
     find_book_entry_for_execution,
     generate_trade_confirmation,
     issue_statement,
@@ -98,6 +117,7 @@ from atreides.retail_identity import (
     build_cip_record,
 )
 from simulator.account_transfers import _post_transfer
+from simulator.central_reconciliation import reconcile_observed_street
 from simulator.conversion import StatementLine
 from simulator.estate import (
     DepositDraw,
@@ -106,6 +126,7 @@ from simulator.estate import (
     _event,
     _identifier,
     _wire,
+    accept_intent,
     drive_estate,
 )
 from simulator.estate import _actor as estate_actor
@@ -117,13 +138,19 @@ from simulator.protection_oracle import (
     required_reserve,
 )
 from simulator.street import (
+    DepositoryPosition,
     IndependentSourceInputs,
     OpenFail,
+    ReconciliationCompletion,
+    ReconciliationStatus,
     SettlementOutcome,
+    StreetBreak,
     build_independent_sources,
-    reconcile,
+    reconciliation_calendar,
 )
 from simulator.synthetic_attestation_fixture import (
+    HUMAN_APPROVAL_KEY_ID,
+    HUMAN_APPROVAL_PRIVATE_KEY,
     LC_KEY_ID,
     LC_PRIVATE_KEY,
     LC_STATUS_KEY_ID,
@@ -149,6 +176,15 @@ class Variant(StrEnum):
     SETTLEMENT_FAIL = "SETTLEMENT_FAIL"
     FORGED_STATUS = "FORGED_STATUS"
     STALE_CALLER_TIME = "STALE_CALLER_TIME"
+    KYC_CHAIN_SWAP = "KYC_CHAIN_SWAP"
+    KYC_WRONG_ACTOR = "KYC_WRONG_ACTOR"
+    KYC_UNSIGNED = "KYC_UNSIGNED"
+    KYC_BAD_SIGNATURE = "KYC_BAD_SIGNATURE"
+    PRINCIPAL_APPROVAL_MISSING = "PRINCIPAL_APPROVAL_MISSING"
+    PRINCIPAL_SELF_APPROVAL = "PRINCIPAL_SELF_APPROVAL"
+    INTENT_SERVICE_HUMAN_JUDGMENT = "INTENT_SERVICE_HUMAN_JUDGMENT"
+    INTENT_HUMAN_NO_ATTESTATION = "INTENT_HUMAN_NO_ATTESTATION"
+    INTENT_HUMAN_BAD_SIGNATURE = "INTENT_HUMAN_BAD_SIGNATURE"
 
 
 class FixedRunClock:
@@ -172,6 +208,7 @@ class EvidenceEvent(BaseModel):
     artifact_digest: str
     recorded_at: datetime
     actor_kind: str
+    attestation_id: str | None = None
 
 
 class StateSnapshot(BaseModel):
@@ -210,6 +247,7 @@ class GoldenCloseResult(BaseModel):
 
 class GoldenPathResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+    run_id: str = "PS1B-TRUE-RECONCILIATIONS-2026-11-18"
     variant: Variant
     disposition: str
     account_status: str
@@ -235,10 +273,14 @@ class GoldenPathResult(BaseModel):
     confirmation: TradeConfirmation | None = None
     confirmation_furnished: FurnishedEvent | None = None
     statement: AccountStatement | None = None
+    trade_date_statement: AccountStatement | None = None
     venue_execution_event: ExecutionEvent | None = None
     venue_execution_report: VenueExecutionReport | None = None
     engine_dispositions: dict[str, str] = Field(default_factory=dict)
     early_warning_notices: tuple[dict[str, str], ...] = ()
+    reconciliation_calendar: tuple[dict[str, object], ...] = ()
+    tax_lot_rules: tuple[dict[str, str], ...] = ()
+    account_treatment: tuple[dict[str, str], ...] = ()
 
 
 class PackDigestDSORRecord(BaseModel):
@@ -313,6 +355,8 @@ def _evidence_event(
     summary: str,
     artifact: BaseModel | bytes,
     recorded_at: datetime,
+    actor_kind: str,
+    attestation_id: str | None,
 ) -> EvidenceEvent:
     return EvidenceEvent(
         event_id=event_id,
@@ -322,16 +366,21 @@ def _evidence_event(
         summary=summary,
         artifact_digest=digest_bytes(_artifact_bytes(artifact)),
         recorded_at=recorded_at,
-        actor_kind="HUMAN" if summary == "account approved" else "SERVICE",
+        actor_kind=actor_kind,
+        attestation_id=attestation_id,
     )
 
 
 def verify_evidence_artifacts(result: GoldenPathResult) -> bool:
     """Recompute every event digest from the artifacts carried by the result."""
     by_id = {item.event_id: item for item in result.evidence}
-    return set(by_id) == set(result.stored_artifacts) and all(
-        by_id[event_id].artifact_digest == digest_bytes(bytes.fromhex(artifact_hex))
-        for event_id, artifact_hex in result.stored_artifacts.items()
+    return (
+        len(by_id) == len(result.evidence)
+        and set(by_id) == set(result.stored_artifacts)
+        and all(
+            by_id[event_id].artifact_digest == digest_bytes(bytes.fromhex(artifact_hex))
+            for event_id, artifact_hex in result.stored_artifacts.items()
+        )
     )
 
 
@@ -345,6 +394,8 @@ def _append_evidence(
     cause_event_id: str | None,
     summary: str,
     artifact: BaseModel | bytes,
+    actor_kind: str = "SERVICE",
+    attestation_id: str | None = None,
 ) -> None:
     event = _evidence_event(
         event_id=event_id,
@@ -354,6 +405,8 @@ def _append_evidence(
         summary=summary,
         artifact=artifact,
         recorded_at=START + timedelta(microseconds=len(events)),
+        actor_kind=actor_kind,
+        attestation_id=attestation_id,
     )
     events.append(event)
     artifacts[event_id] = _artifact_bytes(artifact).hex()
@@ -400,10 +453,14 @@ def _result(
     confirmation: TradeConfirmation | None = None,
     confirmation_furnished: FurnishedEvent | None = None,
     statement: AccountStatement | None = None,
+    trade_date_statement: AccountStatement | None = None,
     venue_execution_event: ExecutionEvent | None = None,
     venue_execution_report: VenueExecutionReport | None = None,
     engine_dispositions: dict[str, str] | None = None,
     early_warning_notices: tuple[dict[str, str], ...] = (),
+    reconciliation_calendar: tuple[dict[str, object], ...] = (),
+    tax_lot_rules: tuple[dict[str, str], ...] = (),
+    account_treatment: tuple[dict[str, str], ...] = (),
 ) -> GoldenPathResult:
     return GoldenPathResult(
         variant=variant,
@@ -433,16 +490,18 @@ def _result(
         confirmation=confirmation,
         confirmation_furnished=confirmation_furnished,
         statement=statement,
+        trade_date_statement=trade_date_statement,
         venue_execution_event=venue_execution_event,
         venue_execution_report=venue_execution_report,
         engine_dispositions={} if engine_dispositions is None else engine_dispositions,
         early_warning_notices=early_warning_notices,
+        reconciliation_calendar=reconciliation_calendar,
+        tax_lot_rules=tax_lot_rules,
+        account_treatment=account_treatment,
     )
 
 
-def _capacity_from_books(
-    books: EquitiesBooks, *, clock: FixedRunClock
-) -> CapacityDocument:
+def _capacity_from_books(books: EquitiesBooks, *, clock: FixedRunClock) -> CapacityDocument:
     accounts = project_margin_accounts(books, prices={ISSUE: Decimal("100")})
     calendar = MarketCalendar.load(Market.US_EQUITIES)
     results = tuple(
@@ -490,23 +549,20 @@ def _run_daily_close(
     )
     capital = required_net_capital(books, {ISSUE: price}, Decimal("1000000"), rules)
     control = required_control(books, {ISSUE: price}, rules)
-    location_balances: dict[tuple[str, str], Decimal] = {}
     observed_accounts: set[str] = set()
     for entry in books.entries:
+        if entry.effective_date > as_of.date():
+            continue
         for line in entry.lines:
-            if line.record_side is RecordSide.LOCATION and line.issue is not None:
-                key = (line.issue, line.account_type.value)
-                location_balances[key] = location_balances.get(key, Decimal()) + line.quantity
             if line.account_type.value in {"CUSTOMER_CASH", "CUSTOMER_MARGIN"}:
                 observed_accounts.add(line.account_id)
-    if depository_quantity_delta:
-        key = (ISSUE, "DTC")
-        location_balances[key] = location_balances.get(key, Decimal()) + depository_quantity_delta
     readers = build_independent_sources(
         books,
         IndependentSourceInputs(
             as_of=as_of.date(),
-            opening_depository=(),
+            opening_depository=(DepositoryPosition(ISSUE, "DTC", depository_quantity_delta),)
+            if depository_quantity_delta
+            else (),
             settlement_outcomes=(
                 ()
                 if fail_id is not None
@@ -536,10 +592,12 @@ def _run_daily_close(
             loan_instructions=(),
         ),
     )
-    street_breaks, street_completion = reconcile(
-        location_balances,
-        tuple(reader.read() for reader in readers),
+    street_breaks, street_completion = reconcile_observed_street(
+        books,
+        readers[0],
         as_of=as_of.date(),
+        item_id="stock-record-to-street",
+        failure_location="DTC",
     )
     control_lines = (
         ()
@@ -588,6 +646,7 @@ def run_golden_path(  # noqa: PLR0915
     order_quantity: Decimal = Decimal(10),
     funding_cash: Decimal | None = None,
     depository_quantity_delta: Decimal = Decimal(),
+    bank_statement_delta: Decimal = Decimal(),
 ) -> GoldenPathResult:
     """Run one deterministic account, or one named fail-closed mutation."""
     _configure_trust()
@@ -667,15 +726,17 @@ def run_golden_path(  # noqa: PLR0915
         )
     )
     funded_cash = (
-        Decimal("400") if variant is Variant.CREDIT_LIMIT else Decimal("10000")
-    ) if funding_cash is None else funding_cash
+        (Decimal("400") if variant is Variant.CREDIT_LIMIT else Decimal("10000"))
+        if funding_cash is None
+        else funding_cash
+    )
     transfers = {
         transfer_id: TransferInRecord(
             record_id=transfer_id, account_id=ACCOUNT, completed=True, completed_at=clock()
         )
     }
     trades: dict[str, bytes] = {}
-    kyc_record = KYCDecisionRecord(
+    kyc_record = record_kyc_decision(
         record_id=kyc_id,
         account_id=ACCOUNT,
         path_id="KYC_ELIGIBLE_CLEAR",
@@ -684,6 +745,47 @@ def run_golden_path(  # noqa: PLR0915
         account_type=AccountType.NATURAL_PERSON,
         person_id=PERSON,
     )
+    if variant is Variant.KYC_CHAIN_SWAP:
+        foreign_record = record_kyc_decision(
+            record_id="MVP3-KYC-FOREIGN",
+            account_id="SYN-ACCOUNT-GOLDEN002",
+            path_id="KYC_ELIGIBLE_CLEAR",
+            decided_at=START + timedelta(seconds=6),
+            maximum_age_seconds=999999,
+            account_type=AccountType.NATURAL_PERSON,
+            person_id="SYN-PERSON-GOLDEN002",
+        )
+        kyc_record = kyc_record.model_copy(update={"event_chain": foreign_record.event_chain})
+    elif variant is Variant.KYC_WRONG_ACTOR:
+        original = kyc_record.event_chain[0]
+        resealed = seal(
+            event_id=original.event_id,
+            lifecycle_id=original.lifecycle_id,
+            parent_ids=original.parent_ids,
+            producer_domain=original.producer_domain,
+            event_type=original.event_type,
+            schema_version=original.schema_version,
+            rule_version=original.rule_version,
+            times=original.times,
+            provenance=original.provenance,
+            actor=_human("3", "synthetic unauthorized KYC sealer"),
+            idempotency_key=original.idempotency_key,
+            payload=original.payload,
+            prior_event_digest=original.prior_event_digest,
+        )
+        signature = sign_attestation(
+            canonical_bytes(resealed),
+            producer="atreides",
+            key_id="synthetic-atreides-kyc-key-1",
+            private_key=SYNTHETIC_KYC_PRIVATE_KEY,
+        )
+        kyc_record = kyc_record.model_copy(
+            update={"event_chain": (resealed,), "signed_attestation": signature}
+        )
+    elif variant is Variant.KYC_UNSIGNED:
+        kyc_record = kyc_record.model_copy(update={"signed_attestation": b""})
+    elif variant is Variant.KYC_BAD_SIGNATURE:
+        kyc_record = kyc_record.model_copy(update={"signed_attestation": b"not-an-attestation"})
     resolver = AuthoritativeEvidenceResolver(
         application_records={
             application_id: AccountApplication(
@@ -694,14 +796,7 @@ def run_golden_path(  # noqa: PLR0915
                 applied_at=START,
             )
         },
-        kyc_dsor_records={
-            kyc_id: kyc_record
-        },
-        kyc_chain_reports={
-            kyc_id: ChainReport(
-                ok=True, event_count=1, head_digest=digest(kyc_record), issues=()
-            )
-        },
+        kyc_dsor_records={kyc_id: kyc_record},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
                 record_id=eligibility_id,
@@ -714,14 +809,14 @@ def run_golden_path(  # noqa: PLR0915
         first_trade_attestations=trades,
         cip_records={cip_id: cip},
         profile_records={profile_id: profile},
-        principal_acceptance_records={
+        principal_acceptance_records={} if variant is Variant.PRINCIPAL_APPROVAL_MISSING else {
             principal_id: PrincipalAcceptanceRecord(
                 record_id=principal_id,
                 account_id=ACCOUNT,
                 person_id=PERSON,
                 profile_record_id=profile_id,
                 accepted_at=START + timedelta(seconds=20),
-                actor=approver,
+                actor=principal if variant is Variant.PRINCIPAL_SELF_APPROVAL else approver,
                 approval_ref="MVP3-HUMAN-APPROVAL",
             )
         },
@@ -805,9 +900,7 @@ def run_golden_path(  # noqa: PLR0915
     stages.append("Atreides: CIP, profile, eligibility, principal, and human approval passed")
     _post_transfer(
         books,
-        StatementLine(
-            account=ACCOUNT, issue=ISSUE, quantity=Decimal(0), cash_credit=funded_cash
-        ),
+        StatementLine(account=ACCOUNT, issue=ISSUE, quantity=Decimal(0), cash_credit=funded_cash),
         transfer_id=transfer_id,
         sequence=1,
         quantity=Decimal(0),
@@ -848,20 +941,20 @@ def run_golden_path(  # noqa: PLR0915
         quantity=order_quantity,
         policy_manifest=policy,
         authority_manifest=AuthorityManifest(
-            authority_id=actor.actor_id, policy_manifest_digest=digest(policy), authorized=True
+            authority_id=approver.actor_id, policy_manifest_digest=digest(policy), authorized=True
         ),
         allocation_accounts=(ACCOUNT,),
         source_event_id=str(funded_event.event_id),
     )
     with DSORStore(":memory:") as dsor:
         dsor_record = ApprovedIntentDecisionRecord(
-                operation_id=UUID("00000000-0000-0000-0000-000000000301"),
-                lifecycle_id=LifecycleId(_identifier("lif_", 20001)),
-                intent_id=str(payload.intent_id),
-                intent_digest=digest(payload),
-                decided_at=clock(),
-                source_event_id=str(funded_event.event_id),
-            )
+            operation_id=UUID("00000000-0000-0000-0000-000000000301"),
+            lifecycle_id=LifecycleId(_identifier("lif_", 20001)),
+            intent_id=str(payload.intent_id),
+            intent_digest=digest(payload),
+            decided_at=clock(),
+            source_event_id=str(funded_event.event_id),
+        )
         dsor.append(
             dsor_record,
             dtg=clock(),
@@ -993,13 +1086,15 @@ def run_golden_path(  # noqa: PLR0915
     from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
     from lc.lifecycle import (
         ChildOrder,
-        accept_intent,
         activate_parent,
         authorize_strategy,
         split_parent,
     )
 
     wire = _wire(payload)
+    intent_approver = (
+        estate_actor() if variant is Variant.INTENT_SERVICE_HUMAN_JUDGMENT else approver
+    )
     envelope = KernelEnvelope(
         envelope_id=payload.intent_id,
         lifecycle_id=LifecycleId(_identifier("lif_", 20001)),
@@ -1011,19 +1106,50 @@ def run_golden_path(  # noqa: PLR0915
                 value=clock().date(), calendar="SIFMA-US", established_by="MVP-3 run clock"
             ),
         ),
-        approved_by=actor,
+        approved_by=intent_approver,
         provenance=Provenance.HUMAN_JUDGMENT,
         effects=OperationEffects(
             operation="MVP-3 approved intent", effects=(), note="synthetic only"
         ),
         payload_digest=kernel_digest_bytes(wire),
     )
+    approval_wire: bytes | None = attest_human_approval(
+        HumanApproval(
+            approval_id="MVP3-HUMAN-APPROVAL",
+            decision_digest=envelope.payload_digest,
+            approver=approver,
+            approved_at=clock(),
+        ),
+        key_id=HUMAN_APPROVAL_KEY_ID,
+        private_key=HUMAN_APPROVAL_PRIVATE_KEY,
+    )
+    if variant in {
+        Variant.INTENT_SERVICE_HUMAN_JUDGMENT,
+        Variant.INTENT_HUMAN_NO_ATTESTATION,
+    }:
+        approval_wire = None
+    elif variant is Variant.INTENT_HUMAN_BAD_SIGNATURE:
+        approval_wire = b"not-an-attestation"
+    if approval_wire is not None and variant is not Variant.INTENT_HUMAN_BAD_SIGNATURE:
+        _append_evidence(
+            evidence_items,
+            stored_artifacts,
+            event_id="MVP3-HUMAN-APPROVAL",
+            producer="Atreides",
+            signature_status="VERIFIED",
+            cause_event_id=str(payload.intent_id),
+            summary="approved intent human approval",
+            artifact=approval_wire,
+            actor_kind="HUMAN",
+            attestation_id="MVP3-HUMAN-APPROVAL",
+        )
     outcome = accept_intent(
         envelope,
         wire,
         parent_order_id=OrderId(_identifier("ord_", 30002)),
         actor=actor,
         event=_event(40001, clock()),
+        approval_attestation=approval_wire,
     )
     outcome = authorize_strategy(outcome, actor=actor, event=_event(40002, clock()))
     outcome = activate_parent(outcome, actor=actor, event=_event(40003, clock()))
@@ -1158,7 +1284,7 @@ def run_golden_path(  # noqa: PLR0915
         event_id=str(venue_event.event_id),
         producer="VenueEmulator",
         signature_status="NOT_SIGNED",
-        cause_event_id=str(order_event.event_id),
+        cause_event_id=str(register.events[-1].event_id),
         summary="venue fill",
         artifact=venue_event,
     )
@@ -1212,38 +1338,15 @@ def run_golden_path(  # noqa: PLR0915
             bank_equity_capital=Decimal("1000000"),
         ),
     )
-    _append_evidence(
-        evidence_items,
-        stored_artifacts,
-        event_id=str(estate.approved_intent.intent_id),
-        producer="L.C. estate adapter",
-        signature_status="NOT_SIGNED",
-        cause_event_id=estate.approved_intent.source_event_id,
-        summary="estate approved intent",
-        artifact=estate.approved_intent,
-    )
-    for item in estate.lifecycle_events:
-        _append_evidence(
-            evidence_items,
-            stored_artifacts,
-            event_id=str(item.event_id),
-            producer="L.C.",
-            signature_status="VERIFIED" if verify_event(item) else "FAILED",
-            cause_event_id=(
-                str(item.parent_ids[0])
-                if item.parent_ids
-                else str(estate.approved_intent.intent_id)
-            ),
-            summary=item.payload.state.value,
-            artifact=item,
-        )
+    # The estate consumes the same approved intent and lifecycle register already
+    # published above. Publishing them a second time would duplicate evidence ids.
     _append_evidence(
         evidence_items,
         stored_artifacts,
         event_id=estate.capture_record.trade_id,
         producer="L.C.",
         signature_status="NOT_SIGNED",
-        cause_event_id=str(estate.lifecycle_events[-2].event_id),
+        cause_event_id=str(venue_event.event_id),
         summary="trade capture",
         artifact=estate.capture_record,
     )
@@ -1379,39 +1482,13 @@ def run_golden_path(  # noqa: PLR0915
     )
     oracle_capital = required_net_capital(books, {ISSUE: Decimal("100")}, Decimal("1000000"), rules)
     oracle_control = required_control(books, {ISSUE: Decimal("100")}, rules)
-    location_balances: dict[tuple[str, str], Decimal] = {}
     observed_accounts: set[str] = set()
     for entry in books.entries:
+        if entry.effective_date > clock().date():
+            continue
         for line in entry.lines:
-            if line.record_side.value == "LOCATION" and line.issue is not None:
-                location = line.account_type.value
-                location_balances[(line.issue, location)] = (
-                    location_balances.get((line.issue, location), Decimal()) + line.quantity
-                )
             if line.account_type.value in {"CUSTOMER_CASH", "CUSTOMER_MARGIN"}:
                 observed_accounts.add(line.account_id)
-    street_readers = build_independent_sources(
-        books,
-        IndependentSourceInputs(
-            as_of=clock().date(),
-            opening_depository=(),
-            settlement_outcomes=(
-                SettlementOutcome(
-                    issue=ISSUE,
-                    net_quantity=venue_report.quantity,
-                    allocated_quantity=venue_report.quantity,
-                    settlement_date=clock().date(),
-                ),
-            ),
-            open_fails=(),
-            loan_instructions=(),
-        ),
-    )
-    street_breaks, street_completion = reconcile(
-        location_balances,
-        tuple(reader.read() for reader in street_readers),
-        as_of=clock().date(),
-    )
     independent_control_lines = (
         ()
         if oracle_control is None
@@ -1473,14 +1550,178 @@ def run_golden_path(  # noqa: PLR0915
         furnished_at=clock(),
         recipient_id=PERSON,
     )
+    customer_side_facts = customer_side_facts_from_furnished_confirmations(
+        deposit_instructions=(funded_cash,),
+        venue_fills=((ISSUE, venue_report.quantity, venue_report.price),),
+        furnished_confirmations=((confirmation, furnished),),
+    )
+    trade_date_statement_draft = build_statement_draft(
+        books,
+        account_id=ACCOUNT,
+        account_status=lifecycle.status(ACCOUNT),
+        period_start=START.date(),
+        period_end=clock().date(),
+        market_prices={ISSUE: venue_report.price},
+    )
+    trade_date_statement = issue_statement(
+        trade_date_statement_draft,
+        books,
+        issued_at=clock(),
+        customer_side_facts=customer_side_facts,
+    )
+    settlement_date = max(
+        entry.effective_date
+        for entry in books.entries
+        if entry.source in {PostingSource.CNS_SETTLEMENT, PostingSource.CNS_FAIL}
+    )
+    clock.advance(timedelta(days=(settlement_date - clock().date()).days))
+    reconciliation_date = clock().date()
+    street_readers = build_independent_sources(
+        books,
+        IndependentSourceInputs(
+            as_of=reconciliation_date,
+            opening_depository=(DepositoryPosition(ISSUE, "DTC", depository_quantity_delta),)
+            if depository_quantity_delta
+            else (),
+            settlement_outcomes=(
+                SettlementOutcome(
+                    ISSUE,
+                    venue_report.quantity,
+                    venue_report.quantity,
+                    settlement_date,
+                ),
+            ),
+            open_fails=(),
+            loan_instructions=(),
+        ),
+    )
+    street_specs = (
+        ("stock-record-to-street", "DTC", street_readers[0]),
+        ("ftr-to-cns-fail-statement", "FAIL_TO_RECEIVE", street_readers[1]),
+        ("stock-loan-to-contract-register", "STOCK_LOANED", street_readers[2]),
+    )
+    street_completions = []
+    street_breaks: list[StreetBreak] = []
+    for item_id, location, reader in street_specs:
+        item_breaks, completion = reconcile_observed_street(
+            books,
+            reader,
+            as_of=reconciliation_date,
+            item_id=item_id,
+            failure_location=location,
+        )
+        street_breaks.extend(item_breaks)
+        street_completions.append(completion)
+
+    instruction_log = InstructionLog()
+    cash_instructions = (
+        MoneyInstruction(
+            "GOLDEN-CASH-OPENING",
+            START.date(),
+            -funded_cash,
+            InstructionKind.OPENING,
+            "SYN-CONVERSION-FUNDING",
+        ),
+        MoneyInstruction(
+            "GOLDEN-CNS-MONEY-SETTLEMENT",
+            settlement_date,
+            venue_report.quantity * venue_report.price + bank_statement_delta,
+            InstructionKind.CNS_SETTLEMENT,
+            "CLEARING",
+        ),
+    )
+    for instruction in cash_instructions:
+        instruction_log.append(instruction)
+    cash_statement = instruction_log.statement(
+        "synthetic firm bank statement",
+        reconciliation_date,
+        kinds=frozenset(
+            {
+                InstructionKind.OPENING,
+                InstructionKind.CNS_SETTLEMENT,
+                InstructionKind.CUSTOMER_DEPOSIT,
+            }
+        ),
+    )
+    cash_result = reconcile_ps1("cash-to-bank", books, cash_statement, reconciliation_date)
+    reserve_instructions = tuple(
+        MoneyInstruction(
+            f"GOLDEN-RESERVE-{deposit.computation}",
+            deposit.deposit_date,
+            deposit.amount,
+            InstructionKind.RESERVE_TRANSFER,
+            (
+                "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+                if deposit.computation == "customer"
+                else "RESERVE_BANK_PAB@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+            ),
+        )
+        for deposit in estate.reserve_deposits
+        if deposit.deposit_date is not None and deposit.amount
+    )
+    for instruction in reserve_instructions:
+        instruction_log.append(instruction)
+    reserve_statement = instruction_log.statement(
+        "synthetic reserve bank statement",
+        reconciliation_date,
+        kinds=frozenset({InstructionKind.RESERVE_TRANSFER}),
+    )
+    reserve_result = reconcile_ps1(
+        "reserve-bank-to-books", books, reserve_statement, reconciliation_date
+    )
+    securities_count = build_securities_count(
+        (
+            SecuritiesConfirmation(
+                "GOLDEN-DTC-CONFIRMATION",
+                settlement_date,
+                ISSUE,
+                "DTC",
+                venue_report.quantity + depository_quantity_delta,
+            ),
+        ),
+        reconciliation_date,
+    )
+    securities_result = reconcile_ps1(
+        "securities-count", books, securities_count, reconciliation_date
+    )
+
+    def money_completion(control: ControlResult) -> ReconciliationCompletion:
+        return ReconciliationCompletion(
+            item_id=control.item_id,
+            close_date=reconciliation_date,
+            sources_read=control.sources_read,
+            break_count=len(control.breaks),
+            status=(
+                ReconciliationStatus.FAILED
+                if control.status == ControlStatus.FAILED
+                else ReconciliationStatus.COMPLETED
+            ),
+            error="reconciliation break" if control.breaks else None,
+        )
+
+    control_calendar = reconciliation_calendar(
+        reconciliation_date,
+        (
+            *street_completions,
+            money_completion(cash_result),
+            money_completion(reserve_result),
+            money_completion(securities_result),
+        ),
+    )
     statement_draft = build_statement_draft(
         books,
         account_id=ACCOUNT,
         account_status=lifecycle.status(ACCOUNT),
         period_start=START.date(),
         period_end=clock().date(),
+        market_prices={ISSUE: venue_report.price},
     )
-    statement = issue_statement(statement_draft, books, issued_at=clock())
+    statement = issue_statement(
+        statement_draft,
+        books,
+        issued_at=clock(),
+        customer_side_facts=customer_side_facts,
+    )
     clean_close = _run_daily_close(
         books=books,
         estate=estate,
@@ -1550,7 +1791,8 @@ def run_golden_path(  # noqa: PLR0915
             and oracle_control is not None
             and oracle_control.outcome == estate.control_disposition
         ),
-        "street_reconciliation": not street_breaks and street_completion.status == "COMPLETED",
+        "street_reconciliation": not street_breaks
+        and all(item.status == "COMPLETED" for item in street_completions),
         "focus_tie_out": focus.held,
         "customer_in_books": ACCOUNT in observed_accounts,
     }
@@ -1584,6 +1826,7 @@ def run_golden_path(  # noqa: PLR0915
         confirmation=confirmation,
         confirmation_furnished=furnished,
         statement=statement,
+        trade_date_statement=trade_date_statement,
         venue_execution_event=venue_event,
         venue_execution_report=venue_report,
         engine_dispositions={
@@ -1592,10 +1835,25 @@ def run_golden_path(  # noqa: PLR0915
             "net_capital": estate.net_capital_disposition,
             "possession_or_control": estate.control_disposition,
             "street_reconciliation": (
-                "PASS" if not street_breaks and street_completion.status == "COMPLETED" else "HOLD"
+                "PASS"
+                if not street_breaks
+                and all(item.status == "COMPLETED" for item in street_completions)
+                else "HOLD"
             ),
         },
         early_warning_notices=(),
+        reconciliation_calendar=tuple(
+            {
+                "item_id": item.item_id,
+                "status": item.status,
+                "break_count": item.break_count,
+                "close_date": item.close_date.isoformat(),
+                "sources_read": item.sources_read,
+            }
+            for item in control_calendar
+        ),
+        tax_lot_rules=TAX_LOT_RULES,
+        account_treatment=ACCOUNT_TREATMENT_ROWS,
     )
 
 
@@ -1616,28 +1874,44 @@ def write_golden_path_publication(output: Path) -> tuple[Path, Path]:
     anchor = PackDigestDSORRecord(
         record_id=f"PACK-{pack_digest.removeprefix('sha256:')[:24]}",
         pack_digest=pack_digest,
-        recorded_at=START + timedelta(days=4),
+        recorded_at=datetime.now(UTC),
     )
+    # Convenience copy only. A sibling file is not an independent anchor.
     (output / "pack-digest-dsor.json").write_text(anchor.model_dump_json(indent=2) + "\n")
     summary_path.write_text(
-        "# MVP-5B synthetic golden path closure\n\n"
+        "# PS-1B closure\n\n"
         "This pack contains one declared-synthetic natural-person account and one "
         "declared-synthetic United States equity. It records the ordered cause chain "
-        "from application through the daily close. No event was submitted to a venue, "
+        "from application through the settlement date close. No event was submitted to a venue, "
         "depository, bank, or regulator.\n\n"
-        f"Evidence digest: `{result.evidence_digest}`\n\n"
         "| Figure | Prior pack | Current pack | Reason |\n"
         "| --- | ---: | ---: | --- |\n"
-        "| Closing free cash | 10000.00 | 9000.00 | Cash-account purchase now reduces free cash |\n"
-        "| Closing margin balance | Combined with cash | 0.00 | "
-        "Cash and margin are reported separately |\n"
-        "| Closing shares | 10 | 10 | Position posting is unchanged |\n\n"
-        "Every clean-run invariant in `evidence-pack.json` is true.\n"
+        "| Reconciliation rows | Six constant RAN rows | Six control result rows | "
+        "Rows now carry each control's status, break count and sources read |\n"
+        "| Closing free cash | 9000.00 | 9000.00 | Customer economics are unchanged |\n"
+        "| Closing shares | 10 | 10 | Customer economics are unchanged |\n"
+        "| Settlement status | SETTLED | SETTLED | Dated posting is unchanged |\n"
+        "| Cost basis | 1000.00 | 1000.00 | Journal-replayed lots are unchanged |\n"
+        "| Unrealized gain or loss | 0.00 | 0.00 | Synthetic closing price is unchanged |\n\n"
+        "The trade-date statement reports the same cash and shares as `UNSETTLED`; the "
+        "settlement-date statement reports them as `SETTLED`. All six reconciliation "
+        "calendar rows report `RAN` with zero breaks, and every clean-run invariant in "
+        "`evidence-pack.json` is true.\n"
+        "\n## Tax-lot rules\n\n"
+        "FIFO is applied under 26 CFR 1.1012-1(c)(1)(i), and specific identification must be "
+        "recorded no later than the settlement deadline under 26 CFR 1.1012-1(c)(8). Broker "
+        "basis reporting is cited to 26 CFR 1.6045-1(d)(2)(i)(A). Wash-sale adjustment remains "
+        "`TO_VERIFY`: the journal does not carry the verified CUSIP or other covered-security "
+        "identifier required to apply 26 CFR 1.6045-1(d)(6)(iii) deterministically.\n\n"
+        "## Account treatment\n\n"
+        "The evidence pack includes a row for each PS-1 account type. Each is marked "
+        "`TO_VERIFY_AGAINST_PRIMARY_TEXT` because the pinned 17 CFR 240.15c3-3 and "
+        "240.15c3-3a text does not settle the internal placement.\n"
     )
     return evidence_path, summary_path
 
 
 def verify_published_pack(evidence_path: Path, anchor_path: Path) -> bool:
-    """Verify a published pack against its separate Decision System of Record anchor."""
+    """Verify a pack against a supplied digest record, which may be a convenience copy."""
     anchor = PackDigestDSORRecord.model_validate_json(anchor_path.read_text(encoding="utf-8"))
     return anchor.pack_digest == digest_bytes(evidence_path.read_bytes())
