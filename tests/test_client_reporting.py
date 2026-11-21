@@ -216,6 +216,43 @@ def test_confirmation_refuses_fill_price_that_disagrees_with_books() -> None:
         )
 
 
+def test_sale_confirmation_has_negative_quantity_positive_proceeds_from_books() -> None:
+    result = run_golden_path()
+    assert result.confirmation is not None
+    assert result.venue_execution_report is not None
+    assert result.venue_execution_event is not None
+    original = next(
+        item for item in result.books_entries if item.entry_id == result.confirmation.book_entry_id
+    )
+    sale = original.model_copy(
+        update={
+            "entry_id": original.entry_id + "-SALE",
+            "lines": tuple(
+                line.model_copy(update={"quantity": -line.quantity, "money": -line.money})
+                if line.account_id == ACCOUNT
+                else line
+                for line in original.lines
+            ),
+        }
+    )
+    confirmation = generate_trade_confirmation(
+        account_id=ACCOUNT,
+        book_entry=sale,
+        execution_event=result.venue_execution_event,
+        execution_report=result.venue_execution_report,
+    )
+    fields = {item.name: item.value for item in confirmation.fields}
+    book_proceeds = sum(
+        line.money
+        for line in sale.lines
+        if line.account_id == ACCOUNT and line.record_side.value == "MONEY"
+    )
+    assert fields["side"] == "SELL"
+    assert Decimal(fields["quantity"]) < 0
+    assert book_proceeds > 0
+    assert confirmation.book_entry_id == sale.entry_id
+
+
 def test_statement_issuance_refuses_a_defect_in_draft_balance_projection(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

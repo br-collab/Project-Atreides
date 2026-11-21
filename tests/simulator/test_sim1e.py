@@ -197,6 +197,22 @@ def test_all_dated_publications_keep_the_same_not_tested_boundary() -> None:
     assert len(boundaries) == 1
 
 
+def test_superseded_register_records_every_changed_runner_pack() -> None:
+    register = (
+        Path(__file__).parents[2] / "simulator/publication/SUPERSEDED.md"
+    ).read_text()
+    expected = {
+        "spike-2019": ("1,000,000.00 to 1,000,000.00", "999,556.00 to 999,865.00"),
+        "stress-2020-03": ("1,000,000.00 to 1,000,000.00", "999,533.50 to 999,871.00"),
+        "stress-2023-03": ("1,000,000.00 to 1,000,000.00", "999,551.50 to 999,859.00"),
+    }
+    for pack, (old_figure, new_figure) in expected.items():
+        row = next((line for line in register.splitlines() if f"`{pack}`" in line), None)
+        assert row is not None, f"SUPERSEDED.md omits changed runner pack {pack}"
+        assert old_figure in row and new_figure in row
+        assert "seeded books" in row and "haircuts" in row
+
+
 def test_publication_labels_a_behind_source_and_removes_the_label_when_current(
     tmp_path: Path,
 ) -> None:

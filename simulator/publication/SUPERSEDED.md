@@ -22,3 +22,18 @@ customer credit. Every figure is declared synthetic.
 
 The PS-1B pack retains the PS-1 customer figures and replaces its constant reconciliation rows
 with rows projected from the six control completion records.
+
+## SIM-1 runner packs
+
+The three dated runner packs below were rerun from their locked local inputs at
+`ead38fe^` (`22cf88d13c073e15cf20bee289ced798e1888257`) and at current main. The
+old run reported a constant synthetic net capital of 1,000,000 on every
+derivable close. Current main seeds the books and drives the estate from those
+book entries, so declared proprietary positions and their haircuts change the
+daily net capital figure.
+
+| Pack | Old net capital range | New net capital range | Reason |
+| --- | ---: | ---: | --- |
+| `spike-2019` | 1,000,000.00 to 1,000,000.00 | 999,556.00 to 999,865.00 | The runner now derives the estate from seeded books, including declared proprietary positions and haircuts |
+| `stress-2020-03` | 1,000,000.00 to 1,000,000.00 | 999,533.50 to 999,871.00 | The runner now derives the estate from seeded books, including declared proprietary positions and haircuts |
+| `stress-2023-03` | 1,000,000.00 to 1,000,000.00 | 999,551.50 to 999,859.00 | The runner now derives the estate from seeded books, including declared proprietary positions and haircuts |

@@ -2,6 +2,7 @@
 
 import pytest
 
+from atreides.books.ps1 import InstructionKind, InstructionLog
 from simulator.firm import load_firm_profile, run_firm
 from simulator.runner import load_calibration_pack
 
@@ -31,3 +32,21 @@ def test_money_mutation_fails_exactly_its_reconciliation_row(
         for item_id, row in rows.items()
         if item_id != failed_item_id
     ), f"{mutation} changed an unrelated reconciliation row"
+
+
+def test_clean_run_issues_opening_customer_and_reserve_instructions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: list[tuple[str, InstructionKind]] = []
+    original = InstructionLog.append
+
+    def capture(self: InstructionLog, instruction) -> None:  # type: ignore[no-untyped-def]
+        observed.append((instruction.instruction_id, instruction.kind))
+        original(self, instruction)
+
+    monkeypatch.setattr(InstructionLog, "append", capture)
+    day = run_firm(_small_profile(), days=1, verify_replay=False).days[0]
+    assert all(row.status == "RAN" and row.break_count == 0 for row in day.reconciliation_calendar)
+    assert InstructionKind.OPENING in {kind for _, kind in observed}
+    assert InstructionKind.CUSTOMER_DEPOSIT in {kind for _, kind in observed}
+    assert "SCF1-OPENING-RESERVE-INSTRUCTION" in {identifier for identifier, _ in observed}
