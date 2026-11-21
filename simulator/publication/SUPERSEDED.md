@@ -22,3 +22,17 @@ customer credit. Every figure is declared synthetic.
 
 The PS-1B pack retains the PS-1 customer figures and replaces its constant reconciliation rows
 with rows projected from the six control completion records.
+
+## SIM-1 runner packs
+
+The three dated runner packs below were rerun from their locked local inputs at
+`ead38fe^` (`22cf88d13c073e15cf20bee289ced798e1888257`) and at current main. The
+old run passed the drawn customer-credit balance straight into the reserve
+engine. Current main seeds the books and drives the estate from those book
+entries, so trade activity changes free credits and the reserve requirement.
+
+| Pack | Old reserve-requirement range | New reserve-requirement range | Reason |
+| --- | ---: | ---: | --- |
+| `spike-2019` | 50,000,000.00 to 900,000,000.00 | 49,995,645.58 to 899,997,311.70 | The runner now derives free credits from seeded books after trade activity |
+| `stress-2020-03` | 50,000,000.00 to 900,000,000.00 | 49,995,494.37 to 899,997,723.00 | The runner now derives free credits from seeded books after trade activity |
+| `stress-2023-03` | 50,000,000.00 to 900,000,000.00 | 49,995,632.71 to 899,997,723.00 | The runner now derives free credits from seeded books after trade activity |

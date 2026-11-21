@@ -120,7 +120,6 @@ from simulator.estate import (
     DepositPolicy,
     ReserveDeposit,
     _complete_reserve_inputs,
-    _deposit_entry,
     _post_reserve_deposits,
     _wire,
     simulated_filed_credit_total,
@@ -1066,6 +1065,152 @@ def _seed_inventory(books: EquitiesBooks, profile: FirmProfile, start: date, day
         )
 
 
+def _seed_cash(
+    books: EquitiesBooks, start: date
+) -> tuple[MoneyInstruction, ...]:
+    """Book and independently instruct the declared opening cash and customer deposit."""
+    amount = Decimal("10000.00")
+    actor = _actor()
+    for entry_id, event_number, authority, lines in (
+        (
+            "SCF1-OPENING-CASH",
+            900_100_000,
+            "SCF1_SYNTHETIC_OPENING_CASH",
+            (
+                LedgerLine(
+                    account_id="FIRM-OPERATING-CASH",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=amount,
+                ),
+                LedgerLine(
+                    account_id="FIRM-OPENING-OFFSET",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=-amount,
+                ),
+            ),
+        ),
+        (
+            "SCF1-CUSTOMER-DEPOSIT",
+            900_100_001,
+            "SCF1_SYNTHETIC_CUSTOMER_DEPOSIT",
+            (
+                LedgerLine(
+                    account_id="SYN-SCF1-ACCOUNT-000000",
+                    account_type=AccountType.CUSTOMER_CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=amount,
+                ),
+                LedgerLine(
+                    account_id="FIRM-OPERATING-CASH",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=-amount,
+                ),
+            ),
+        ),
+        (
+            "SCF1-OPENING-RESERVE-TRANSFER",
+            900_100_002,
+            "SCF1_SYNTHETIC_OPENING_RESERVE_TRANSFER",
+            (
+                LedgerLine(
+                    account_id=(
+                        "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+                    ),
+                    account_type=AccountType.RESERVE_BANK_CUSTOMER,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=Decimal("100.00"),
+                ),
+                LedgerLine(
+                    account_id="RESERVE_BANK_PAB@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
+                    account_type=AccountType.RESERVE_BANK_PAB,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=Decimal("50.00"),
+                ),
+                LedgerLine(
+                    account_id="FIRM-OPERATING-CASH",
+                    account_type=AccountType.CASH,
+                    record_side=RecordSide.MONEY,
+                    currency="USD",
+                    money=Decimal("-150.00"),
+                ),
+            ),
+        ),
+    ):
+        event_id = _id("evt_", event_number)
+        books.post(
+            JournalEntry(
+                entry_id=entry_id,
+                source_event_id=event_id,
+                source=PostingSource.CASH_MOVEMENT,
+                effective_date=start,
+                effective_date_basis="VALUE_DATE",
+                authority=authority,
+                lines=lines,
+                posting=BooksPosting(
+                    posted_record_id=entry_id,
+                    posting_authority=actor,
+                    effective_time=datetime.combine(start, datetime.min.time(), tzinfo=UTC),
+                    source_event_id=EventId(event_id),
+                    provenance=Provenance.FACT_SYNTHETIC,
+                ),
+                synthetic=True,
+            )
+        )
+    return (
+        MoneyInstruction(
+            "SCF1-OPENING-CASH-INSTRUCTION",
+            start,
+            amount,
+            InstructionKind.OPENING,
+            "FIRM-OPERATING-CASH",
+        ),
+        MoneyInstruction(
+            "SCF1-OPENING-OFFSET-INSTRUCTION",
+            start,
+            -amount,
+            InstructionKind.OPENING,
+            "FIRM-OPENING-OFFSET",
+        ),
+        MoneyInstruction(
+            "SCF1-CUSTOMER-DEPOSIT-INSTRUCTION",
+            start,
+            -amount,
+            InstructionKind.CUSTOMER_DEPOSIT,
+            "FIRM-OPERATING-CASH",
+        ),
+        MoneyInstruction(
+            "SCF1-OPENING-RESERVE-INSTRUCTION",
+            start,
+            Decimal("100.00"),
+            InstructionKind.RESERVE_TRANSFER,
+            "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
+        ),
+        MoneyInstruction(
+            "SCF1-OPENING-RESERVE-CASH-INSTRUCTION",
+            start,
+            Decimal("-150.00"),
+            InstructionKind.RESERVE_TRANSFER,
+            "FIRM-OPERATING-CASH",
+        ),
+        MoneyInstruction(
+            "SCF1-OPENING-PAB-RESERVE-INSTRUCTION",
+            start,
+            Decimal("50.00"),
+            InstructionKind.RESERVE_TRANSFER,
+            "RESERVE_BANK_PAB@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
+        ),
+    )
+
+
 def synthetic_filed_history(profile: FirmProfile, start: date) -> tuple[Decimal, ...] | None:
     """Return the declared 12-month SIMULATED_FOCUS_STAND_IN, or honest absence."""
     if profile.filed_history_months == 0:
@@ -1844,7 +1989,15 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         raise ValueError(f"unknown firm mutation: {mutation}")
     ensure_synthetic_trust()
     books = EquitiesBooks(break_owner="SCF1_SETTLEMENT_CONTROL")
+    instruction_log = InstructionLog()
     _seed_inventory(books, profile, start, days)
+    for instruction in _seed_cash(books, start):
+        if (
+            mutation == "RESERVE_DEPOSIT_NOT_RECEIVED"
+            and instruction.instruction_id == "SCF1-OPENING-RESERVE-INSTRUCTION"
+        ):
+            continue
+        instruction_log.append(instruction)
     opening_depository = _opening_street(profile, days)
     street = SyntheticDepository(opening_depository)
     prior_breaks: tuple[StreetBreak, ...] = ()
@@ -1856,7 +2009,6 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
     carried_fails: dict[str, tuple[OpenFail, ...]] = {}
     loan_register = LoanRegister()
     all_settlement_outcomes: list[SettlementOutcome] = []
-    instruction_log = InstructionLog()
     started = time.perf_counter()
     total_executions = 0
     expected_customer_accounts = {
@@ -2212,6 +2364,57 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         )
         breaks = tuple(item for item_breaks, _ in observed_results for item in item_breaks)
         source_completions = tuple(completion for _, completion in observed_results)
+        (
+            protections,
+            required_outcomes,
+            protection_reasons,
+            protection_figures,
+            focus_tie_out,
+            early_warning_notices,
+            reserve_deposits,
+            i14,
+            i6,
+        ) = _protections(
+            books,
+            business_date,
+            prices,
+            profile,
+            day_index,
+            mutation,
+            expected_customer_accounts,
+            net_worth=(Decimal("10000") if early_warning_stress else net_worth),
+            reserve_stress=reserve_stress,
+        )
+        for deposit in reserve_deposits:
+            if deposit.deposit_date is None or not deposit.amount:
+                continue
+            if not (
+                mutation == "RESERVE_DEPOSIT_NOT_RECEIVED"
+                and day_index == 0
+                and deposit.computation == "customer"
+            ):
+                instruction_log.append(
+                    MoneyInstruction(
+                        f"SCF1-RESERVE-{day_index}-{deposit.computation}",
+                        deposit.deposit_date,
+                        deposit.amount,
+                        InstructionKind.RESERVE_TRANSFER,
+                        (
+                            "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+                            if deposit.computation == "customer"
+                            else "RESERVE_BANK_PAB@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
+                        ),
+                    )
+                )
+            instruction_log.append(
+                MoneyInstruction(
+                    f"SCF1-RESERVE-CASH-{day_index}-{deposit.computation}",
+                    deposit.deposit_date,
+                    -deposit.amount,
+                    InstructionKind.RESERVE_TRANSFER,
+                    "FIRM-OPERATING-CASH",
+                )
+            )
         if mutation == "UNPOSTED_DEPOSIT_INSTRUCTION" and day_index == 0:
             instruction_log.append(
                 MoneyInstruction(
@@ -2219,37 +2422,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     business_date,
                     Decimal("1.00"),
                     InstructionKind.CUSTOMER_DEPOSIT,
-                    "FIRM-OPERATING-CASH",
-                )
-            )
-        if mutation == "RESERVE_DEPOSIT_NOT_RECEIVED" and day_index == 0:
-            books.post(
-                _deposit_entry(
-                    entry_id="SCF1-MUTATION-RESERVE-NOT-RECEIVED",
-                    event_number=870_000_000,
-                    account_type=AccountType.RESERVE_BANK_CUSTOMER,
-                    amount=Decimal("1.00"),
-                    effective=business_date,
-                    authority="PS3C_SYNTHETIC_RESERVE_RECEIPT_MUTATION",
-                    actor=_actor(),
-                )
-            )
-            instruction_log.append(
-                MoneyInstruction(
-                    "SCF1-MUTATION-RESERVE-STATEMENT-RECEIVED",
-                    business_date,
-                    Decimal(),
-                    InstructionKind.RESERVE_TRANSFER,
-                    "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
-                )
-            )
-            instruction_log.append(
-                MoneyInstruction(
-                    "SCF1-MUTATION-RESERVE-CASH-RECEIVED",
-                    business_date,
-                    Decimal("-1.00"),
-                    InstructionKind.RESERVE_TRANSFER,
-                    "FIRM-OPERATING-CASH",
+                    "UNPOSTED-DEPOSIT-CASH",
                 )
             )
         cash_statement = instruction_log.statement(
@@ -2263,7 +2436,14 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     InstructionKind.RESERVE_TRANSFER,
                 }
             ),
-            account_ids=frozenset({"CLEARING", "FIRM-OPERATING-CASH"}),
+            account_ids=frozenset(
+                {
+                    "CLEARING",
+                    "FIRM-OPERATING-CASH",
+                    "FIRM-OPENING-OFFSET",
+                    "UNPOSTED-DEPOSIT-CASH",
+                }
+            ),
         )
         cash_result = reconcile_ps1(
             "cash-to-bank",
@@ -2283,16 +2463,6 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 }
             ),
         )
-        if mutation == "RESERVE_DEPOSIT_NOT_RECEIVED" and day_index == 0:
-            instruction_log.append(
-                MoneyInstruction(
-                    "SCF1-MUTATION-RESERVE-NOT-RECEIVED",
-                    business_date,
-                    Decimal("1.00"),
-                    InstructionKind.RESERVE_TRANSFER,
-                    "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK",
-                )
-            )
         reserve_result = reconcile_ps1(
             "reserve-bank-to-books",
             books,
@@ -2368,52 +2538,6 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             cash_result.breaks + reserve_result.breaks + securities_result.breaks
         )
         prior_control_breaks = day_control_breaks
-        (
-            protections,
-            required_outcomes,
-            protection_reasons,
-            protection_figures,
-            focus_tie_out,
-            early_warning_notices,
-            reserve_deposits,
-            i14,
-            i6,
-        ) = _protections(
-            books,
-            business_date,
-            prices,
-            profile,
-            day_index,
-            mutation,
-            expected_customer_accounts,
-            net_worth=(Decimal("10000") if early_warning_stress else net_worth),
-            reserve_stress=reserve_stress,
-        )
-        for deposit in reserve_deposits:
-            if deposit.deposit_date is None or not deposit.amount:
-                continue
-            instruction_log.append(
-                MoneyInstruction(
-                    f"SCF1-RESERVE-{day_index}-{deposit.computation}",
-                    deposit.deposit_date,
-                    deposit.amount,
-                    InstructionKind.RESERVE_TRANSFER,
-                    (
-                        "RESERVE_BANK_CUSTOMER@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
-                        if deposit.computation == "customer"
-                        else "RESERVE_BANK_PAB@SYNTHETIC-NON-AFFILIATED-RESERVE-BANK"
-                    ),
-                )
-            )
-            instruction_log.append(
-                MoneyInstruction(
-                    f"SCF1-RESERVE-CASH-{day_index}-{deposit.computation}",
-                    deposit.deposit_date,
-                    -deposit.amount,
-                    InstructionKind.RESERVE_TRANSFER,
-                    "FIRM-OPERATING-CASH",
-                )
-            )
         carry_complete = set(carried_fails) <= set(carried_input)
         covered_cns_issues = {item.position.security_id for item in settlements}
         invariants = {

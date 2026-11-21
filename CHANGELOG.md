@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+PS-3C Part 6 makes the clean firm run independently observable through opening,
+customer-deposit and reserve-transfer instructions. The reserve break now omits
+an instructed receipt instead of manufacturing a post-statement dollar. The
+three locked dated SIM-1 packs run again by using their declared minimum order
+quantity when they predate the dedicated auction-size field. Their changed net
+capital ranges are recorded in `SUPERSEDED.md`, and sale confirmations are
+covered with negative quantity, positive proceeds and a books link.
+
 PS-3C Part 5 routes every firm-volume child order through L.C.'s market-access gate. A terminal
 decision is recorded as a refused order and is not booked, while the day continues through all six
 reconciliations. The synthetic market-access policy states its independent rationale and approving

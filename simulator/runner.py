@@ -266,7 +266,12 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         matched_at=base + timedelta(seconds=3),
         execution_price=order_price - price_spread,
     )
-    auction_quantity = int(pack.value("generator", "auction_quantity_each"))
+    try:
+        auction_quantity = int(pack.value("generator", "auction_quantity_each"))
+    except KeyError:
+        # Legacy dated packs predate the dedicated auction field. Their
+        # declared minimum order quantity is the conservative auction size.
+        auction_quantity = int(pack.value("generator", "quantity_min"))
     opening = auction_print(
         order=order.model_copy(
             update={"order_id": f"ORD-{index}-OPEN", "quantity": auction_quantity}
