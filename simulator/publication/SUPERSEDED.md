@@ -27,13 +27,12 @@ with rows projected from the six control completion records.
 
 The three dated runner packs below were rerun from their locked local inputs at
 `ead38fe^` (`22cf88d13c073e15cf20bee289ced798e1888257`) and at current main. The
-old run reported a constant synthetic net capital of 1,000,000 on every
-derivable close. Current main seeds the books and drives the estate from those
-book entries, so declared proprietary positions and their haircuts change the
-daily net capital figure.
+old run passed the drawn customer-credit balance straight into the reserve
+engine. Current main seeds the books and drives the estate from those book
+entries, so trade activity changes free credits and the reserve requirement.
 
-| Pack | Old net capital range | New net capital range | Reason |
+| Pack | Old reserve-requirement range | New reserve-requirement range | Reason |
 | --- | ---: | ---: | --- |
-| `spike-2019` | 1,000,000.00 to 1,000,000.00 | 999,556.00 to 999,865.00 | The runner now derives the estate from seeded books, including declared proprietary positions and haircuts |
-| `stress-2020-03` | 1,000,000.00 to 1,000,000.00 | 999,533.50 to 999,871.00 | The runner now derives the estate from seeded books, including declared proprietary positions and haircuts |
-| `stress-2023-03` | 1,000,000.00 to 1,000,000.00 | 999,551.50 to 999,859.00 | The runner now derives the estate from seeded books, including declared proprietary positions and haircuts |
+| `spike-2019` | 50,000,000.00 to 900,000,000.00 | 49,995,645.58 to 899,997,311.70 | The runner now derives free credits from seeded books after trade activity |
+| `stress-2020-03` | 50,000,000.00 to 900,000,000.00 | 49,995,494.37 to 899,997,723.00 | The runner now derives free credits from seeded books after trade activity |
+| `stress-2023-03` | 50,000,000.00 to 900,000,000.00 | 49,995,632.71 to 899,997,723.00 | The runner now derives free credits from seeded books after trade activity |

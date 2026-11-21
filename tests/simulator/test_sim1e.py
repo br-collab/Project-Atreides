@@ -136,7 +136,7 @@ def test_cli_boundary_requires_both_dates_for_a_dated_pack(tmp_path: Path) -> No
             "stress-2020-03",
             "2",
             ("2020-02-10", "2020-03-31"),
-            (19, 17, 0, 17),
+            (18, 18, 1, 17),
             (18, 18, 1, 17),
         ),
         (
@@ -144,7 +144,7 @@ def test_cli_boundary_requires_both_dates_for_a_dated_pack(tmp_path: Path) -> No
             "stress-2023-03",
             "2",
             ("2023-02-09", "2023-03-24"),
-            (14, 17, 0, 17),
+            (13, 18, 1, 17),
             (14, 17, 0, 17),
         ),
     ],
@@ -202,15 +202,24 @@ def test_superseded_register_records_every_changed_runner_pack() -> None:
         Path(__file__).parents[2] / "simulator/publication/SUPERSEDED.md"
     ).read_text()
     expected = {
-        "spike-2019": ("1,000,000.00 to 1,000,000.00", "999,556.00 to 999,865.00"),
-        "stress-2020-03": ("1,000,000.00 to 1,000,000.00", "999,533.50 to 999,871.00"),
-        "stress-2023-03": ("1,000,000.00 to 1,000,000.00", "999,551.50 to 999,859.00"),
+        "spike-2019": (
+            "50,000,000.00 to 900,000,000.00",
+            "49,995,645.58 to 899,997,311.70",
+        ),
+        "stress-2020-03": (
+            "50,000,000.00 to 900,000,000.00",
+            "49,995,494.37 to 899,997,723.00",
+        ),
+        "stress-2023-03": (
+            "50,000,000.00 to 900,000,000.00",
+            "49,995,632.71 to 899,997,723.00",
+        ),
     }
     for pack, (old_figure, new_figure) in expected.items():
         row = next((line for line in register.splitlines() if f"`{pack}`" in line), None)
         assert row is not None, f"SUPERSEDED.md omits changed runner pack {pack}"
         assert old_figure in row and new_figure in row
-        assert "seeded books" in row and "haircuts" in row
+        assert "seeded books" in row and "trade activity" in row
 
 
 def test_publication_labels_a_behind_source_and_removes_the_label_when_current(

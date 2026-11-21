@@ -11,13 +11,13 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 - Final SOFR: `0.01` percent
 - Final financing need: `$104665.25`
 - Final financing charge: `$0.03`
-- Source commit: `68e348c4fe6ea48d3a58fb7f591d555f8124adc8`
+- Source commit: `7ebb70c73b616c83b201a73cdb7a4378d59db36a`
 - Provenance: locally generated from the locked Mac pack; this folder contains run outputs only, not the pack or its data.
 
 ## Reserve protection
 
 - Customer deposit policy: declared SYNTHETIC in the pack
-- Customer reserve: `19` PASS, `17` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `17` missing inputs or other engine reasons)
+- Customer reserve: `18` PASS, `18` HOLD (`0` no declared deposit, `1` simulated short or late deposit, `17` missing inputs or other engine reasons)
 - PAB deposit policy: declared SYNTHETIC in the pack
 - PAB reserve: `18` PASS, `18` HOLD (`0` no declared deposit, `1` simulated short or late deposit, `17` missing inputs or other engine reasons)
 

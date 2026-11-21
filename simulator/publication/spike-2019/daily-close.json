@@ -3,7 +3,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-19",
-      "economics_digest": "sha256:6cbc7f83aedd2680f36a8dafe38d71726462d9d4af62ca2fc6ee72325bc85325",
+      "economics_digest": "sha256:f680c6f7aeb30ffb7081458031226a7b2b53a77f1405543f87cf98d76cfc6b50",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -23,7 +23,7 @@
       },
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899995882.41",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -47,16 +47,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "900000000.00",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "amount": "899995882.41",
+            "balance_at_deadline": "899995882.41",
+            "closing_balance": "899995882.41",
             "deadline": "2019-08-21",
             "deposit_date": "2019-08-21",
             "drawn_outcome": "ON_TIME",
-            "needed": "900000000.00",
+            "needed": "899995882.41",
             "opening_balance": "0",
             "outcome": "ON_TIME",
-            "requirement": "900000000.00"
+            "requirement": "899995882.41"
           },
           "pab": {
             "amount": "0",
@@ -79,9 +79,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999584.5000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "900000000.00"
+          "reserve_requirement": "899995882.41"
         },
         "holds_required": {
           "pab_reserve": true,
@@ -124,7 +124,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-20",
-      "economics_digest": "sha256:6fada3bcfe9efbae1b60f09b1f1f32337fb3f5c6edc6042a695dceaaafdea17e",
+      "economics_digest": "sha256:ba1320c31da6478d87106e3149b9f60f40086d4ebaffad6bb5d10fe7d0844382",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -142,7 +142,7 @@
       "market_access_refusals": {},
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899997147.26",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -166,16 +166,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "amount": "1264.85",
+            "balance_at_deadline": "899997147.26",
+            "closing_balance": "899997147.26",
             "deadline": "2019-08-22",
-            "deposit_date": null,
+            "deposit_date": "2019-08-22",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "900000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "900000000.00"
+            "needed": "1264.85",
+            "opening_balance": "899995882.41",
+            "outcome": "ON_TIME",
+            "requirement": "899997147.26"
           },
           "pab": {
             "amount": "0",
@@ -198,9 +198,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999773.5000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "900000000.00"
+          "reserve_requirement": "899997147.26"
         },
         "holds_required": {
           "pab_reserve": true,
@@ -241,7 +241,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-21",
-      "economics_digest": "sha256:f99629c366ddeaa9d5d781e83c73381ea7835580d572100641ec1e71ff3dc808",
+      "economics_digest": "sha256:6afa0904791f930000f1ad4325e0f4c24f348ed17954753164a1dee12716a319",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -259,7 +259,7 @@
       "market_access_refusals": {},
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899996507.14",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -283,16 +283,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "amount": "-640.12",
+            "balance_at_deadline": "899996507.14",
+            "closing_balance": "899996507.14",
             "deadline": "2019-08-23",
-            "deposit_date": null,
+            "deposit_date": "2019-08-23",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "900000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "900000000.00"
+            "needed": "-640.12",
+            "opening_balance": "899997147.26",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
+            "requirement": "899996507.14"
           },
           "pab": {
             "amount": "0",
@@ -315,9 +315,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999679.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "900000000.00"
+          "reserve_requirement": "899996507.14"
         },
         "holds_required": {
           "pab_reserve": true,
@@ -358,7 +358,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-22",
-      "economics_digest": "sha256:e8d396ebed2553c92decf692f9be62c83b85bc205dcae4af0f86a66ddb13dfee",
+      "economics_digest": "sha256:18b1be24ea68c59e0f703402dec4e2475d1c92d818d153ef96b785f996816e77",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -376,7 +376,7 @@
       "market_access_refusals": {},
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899997502.62",
         "book_pab_total_credits": "2355260.00",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -401,13 +401,13 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "balance_at_deadline": "899996507.14",
+            "closing_balance": "899996507.14",
             "deadline": "2019-08-26",
             "deposit_date": null,
             "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "900000000.00",
+            "opening_balance": "899996507.14",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
@@ -482,7 +482,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-23",
-      "economics_digest": "sha256:29162189bfdc9293b169f1cd5af2f41f6f3a1803286a236c23ffb7b8d305f73b",
+      "economics_digest": "sha256:c79d8315ad451126cffd0550c513250498f6eba31c4e08bde10fdd1b7d12d401",
       "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL",
@@ -503,7 +503,7 @@
       },
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899997267.64",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -527,16 +527,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "amount": "760.50",
+            "balance_at_deadline": "899997267.64",
+            "closing_balance": "899997267.64",
             "deadline": "2019-08-27",
-            "deposit_date": null,
+            "deposit_date": "2019-08-27",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "900000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "900000000.00"
+            "needed": "760.50",
+            "opening_balance": "899996507.14",
+            "outcome": "ON_TIME",
+            "requirement": "899997267.64"
           },
           "pab": {
             "amount": "0",
@@ -559,9 +559,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999790.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "900000000.00"
+          "reserve_requirement": "899997267.64"
         },
         "holds_required": {
           "pab_reserve": true,
@@ -604,7 +604,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-26",
-      "economics_digest": "sha256:ebc8566588e6fa19c8b5d6ea50b38cd4011a012b70cc7386f883fa4b69d68da3",
+      "economics_digest": "sha256:1d26773c5148ce6c613a89df5d1ae7a46443f4bd0447832258f51033dc79e0d0",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -622,7 +622,7 @@
       "market_access_refusals": {},
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899996404.40",
         "book_pab_total_credits": "317370.00",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -646,16 +646,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "amount": "-863.24",
+            "balance_at_deadline": "899996404.40",
+            "closing_balance": "899996404.40",
             "deadline": "2019-08-28",
-            "deposit_date": null,
+            "deposit_date": "2019-08-28",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "900000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "900000000.00"
+            "needed": "-863.24",
+            "opening_balance": "899997267.64",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
+            "requirement": "899996404.40"
           },
           "pab": {
             "amount": "317370.00",
@@ -678,9 +678,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999670.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "317370.00",
-          "reserve_requirement": "900000000.00"
+          "reserve_requirement": "899996404.40"
         },
         "holds_required": {
           "pab_reserve": true,
@@ -721,7 +721,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-27",
-      "economics_digest": "sha256:94b03cd1de9cc9f027df7d514d05a47c42b95d53af6b7d2068053c4cd7020eb6",
+      "economics_digest": "sha256:2e38b45458da2990b0ba18fae32d51c92731b3126026e7cf4336a3a9890b7b74",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -741,7 +741,7 @@
       },
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899997311.70",
         "book_pab_total_credits": "205410.00",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -765,16 +765,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "amount": "907.30",
+            "balance_at_deadline": "899997311.70",
+            "closing_balance": "899997311.70",
             "deadline": "2019-08-29",
-            "deposit_date": null,
+            "deposit_date": "2019-08-29",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "900000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "900000000.00"
+            "needed": "907.30",
+            "opening_balance": "899996404.40",
+            "outcome": "ON_TIME",
+            "requirement": "899997311.70"
           },
           "pab": {
             "amount": "-111960.00",
@@ -797,9 +797,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999797.5000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "205410.00",
-          "reserve_requirement": "900000000.00"
+          "reserve_requirement": "899997311.70"
         },
         "holds_required": {
           "pab_reserve": true,
@@ -840,7 +840,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-28",
-      "economics_digest": "sha256:6cff2854afa4f265862d18beb523ba6516ae851377af4a4e74b5184a24a39db9",
+      "economics_digest": "sha256:2a061a1d777cbd960509ae6dac1738a3cad99acfbe1237140c4d683c0a52a4c2",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -858,7 +858,7 @@
       "market_access_refusals": {},
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899995703.14",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -882,16 +882,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "amount": "-1608.56",
+            "balance_at_deadline": "899995703.14",
+            "closing_balance": "899995703.14",
             "deadline": "2019-08-30",
-            "deposit_date": null,
+            "deposit_date": "2019-08-30",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "900000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "900000000.00"
+            "needed": "-1608.56",
+            "opening_balance": "899997311.70",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
+            "requirement": "899995703.14"
           },
           "pab": {
             "amount": "-205410.00",
@@ -914,9 +914,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999562.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "900000000.00"
+          "reserve_requirement": "899995703.14"
         },
         "holds_required": {
           "pab_reserve": true,
@@ -957,7 +957,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-29",
-      "economics_digest": "sha256:77a03258d14b747cc343e4fe53e18e3e829eea679f03e059d78d7c643e25f7d8",
+      "economics_digest": "sha256:7beab3f16d2dcff4ba700a91ab7898ce39bbd5e1c520e41813e792041fe7af28",
       "fails_by_age": {},
       "holds": [
         "PROTECTION_INPUTS"
@@ -977,7 +977,7 @@
       },
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899996573.12",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -1001,16 +1001,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "amount": "869.98",
+            "balance_at_deadline": "899996573.12",
+            "closing_balance": "899996573.12",
             "deadline": "2019-09-03",
-            "deposit_date": null,
+            "deposit_date": "2019-09-03",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "900000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "900000000.00"
+            "needed": "869.98",
+            "opening_balance": "899995703.14",
+            "outcome": "ON_TIME",
+            "requirement": "899996573.12"
           },
           "pab": {
             "amount": "0",
@@ -1033,9 +1033,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999692.5000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "900000000.00"
+          "reserve_requirement": "899996573.12"
         },
         "holds_required": {
           "pab_reserve": true,
@@ -1077,7 +1077,7 @@
     {
       "breaks": [],
       "business_date": "2019-08-30",
-      "economics_digest": "sha256:f081069f07d8053346b492687c0cf095b74fb3cd63bc89d571f8b176181fd96a",
+      "economics_digest": "sha256:9b9beaadf638db5e9dc3abf1e6eee343de9f206550afea25d5f9e3144211f87d",
       "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL",
@@ -1096,7 +1096,7 @@
       "market_access_refusals": {},
       "market_data": {
         "average_total_credits": null,
-        "book_customer_total_credits": "900000000.00",
+        "book_customer_total_credits": "899997605.38",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "900000000",
         "daily_exit_notice_date": null,
@@ -1121,13 +1121,13 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "900000000.00",
-            "closing_balance": "900000000.00",
+            "balance_at_deadline": "899996573.12",
+            "closing_balance": "899996573.12",
             "deadline": "2019-09-04",
             "deposit_date": null,
             "drawn_outcome": "ON_TIME",
             "needed": null,
-            "opening_balance": "900000000.00",
+            "opening_balance": "899996573.12",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
@@ -1203,7 +1203,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-03",
-      "economics_digest": "sha256:403cc9fb71bcaecf3c783217761fb159df05216d0a84a8a7ba0604555a847713",
+      "economics_digest": "sha256:fadba2cc1bb2f06d14db5f9a298d201017e47e81a196c327b2326bb7baab538e",
       "fails_by_age": {},
       "holds": [],
       "invariant_results": {
@@ -1218,8 +1218,8 @@
       },
       "market_access_refusals": {},
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49997630.08",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -1243,16 +1243,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "-850000000.00",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "-849998943.04",
+            "balance_at_deadline": "49997630.08",
+            "closing_balance": "49997630.08",
             "deadline": "2019-09-05",
             "deposit_date": "2019-09-05",
             "drawn_outcome": "SHORT",
-            "needed": "-850000000.00",
-            "opening_balance": "900000000.00",
+            "needed": "-849998943.04",
+            "opening_balance": "899996573.12",
             "outcome": "WITHDRAWAL_TO_REQUIREMENT",
-            "requirement": "50000000.00"
+            "requirement": "49997630.08"
           },
           "pab": {
             "amount": "0",
@@ -1275,9 +1275,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999848.5000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49997630.08"
         },
         "holds_required": {
           "pab_reserve": false,
@@ -1318,7 +1318,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-04",
-      "economics_digest": "sha256:2e944853989863f239e4273ef3320572dc62f31bf1c547862c106f9f71b11249",
+      "economics_digest": "sha256:f5ca10b21a03b5ce03fcab8239103fc8fe011627f9df5330b63e83c5435f295d",
       "fails_by_age": {},
       "holds": [],
       "invariant_results": {
@@ -1333,8 +1333,8 @@
       },
       "market_access_refusals": {},
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49995876.73",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -1358,16 +1358,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "-1753.35",
+            "balance_at_deadline": "49995876.73",
+            "closing_balance": "49995876.73",
             "deadline": "2019-09-06",
-            "deposit_date": null,
+            "deposit_date": "2019-09-06",
             "drawn_outcome": "SHORT",
-            "needed": "0.00",
-            "opening_balance": "50000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "50000000.00"
+            "needed": "-1753.35",
+            "opening_balance": "49997630.08",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
+            "requirement": "49995876.73"
           },
           "pab": {
             "amount": "0",
@@ -1390,9 +1390,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999583.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49995876.73"
         },
         "holds_required": {
           "pab_reserve": false,
@@ -1433,7 +1433,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-05",
-      "economics_digest": "sha256:563a4adec0a6c66f87d1dcedd33b248713cdb60d03ecbaa767d888986ecfe4f0",
+      "economics_digest": "sha256:e884d822c34257fb606c36ff64c3bbb9eb987e4b26bddd80daf8428c26796dec",
       "fails_by_age": {},
       "holds": [],
       "invariant_results": {
@@ -1448,8 +1448,8 @@
       },
       "market_access_refusals": {},
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49996008.13",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -1473,16 +1473,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "131.40",
+            "balance_at_deadline": "49996008.13",
+            "closing_balance": "49996008.13",
             "deadline": "2019-09-09",
-            "deposit_date": null,
+            "deposit_date": "2019-09-09",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "50000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "50000000.00"
+            "needed": "131.40",
+            "opening_balance": "49995876.73",
+            "outcome": "ON_TIME",
+            "requirement": "49996008.13"
           },
           "pab": {
             "amount": "0",
@@ -1505,9 +1505,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999604.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49996008.13"
         },
         "holds_required": {
           "pab_reserve": false,
@@ -1548,7 +1548,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-06",
-      "economics_digest": "sha256:77ff97c89d32d21225dad1073f90c8eea23c1de57d82322caa74e22688189a65",
+      "economics_digest": "sha256:3a0be16683b21373bdeefe754ccbcab51c9556ce5d4a0886f8591d325927b5b3",
       "fails_by_age": {},
       "holds": [
         "STALE_MARKET_DATA",
@@ -1566,8 +1566,8 @@
       },
       "market_access_refusals": {},
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49997819.16",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -1592,13 +1592,13 @@
         "deposits": {
           "customer": {
             "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "balance_at_deadline": "49996008.13",
+            "closing_balance": "49996008.13",
             "deadline": "2019-09-10",
             "deposit_date": null,
             "drawn_outcome": "LATE",
             "needed": null,
-            "opening_balance": "50000000.00",
+            "opening_balance": "49996008.13",
             "outcome": "NOT_COMPUTED",
             "requirement": null
           },
@@ -1673,7 +1673,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-09",
-      "economics_digest": "sha256:60400cb9cba54dbd4776a3f720a432288597d860615902da1abde50ece32de52",
+      "economics_digest": "sha256:996f1d49073eb0de9ebfae199a0604e1b85132ea28ae33854cef57fd80e59fdb",
       "fails_by_age": {},
       "holds": [],
       "invariant_results": {
@@ -1688,8 +1688,8 @@
       },
       "market_access_refusals": {},
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49997305.39",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -1713,16 +1713,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "1297.26",
+            "balance_at_deadline": "49997305.39",
+            "closing_balance": "49997305.39",
             "deadline": "2019-09-11",
-            "deposit_date": null,
+            "deposit_date": "2019-09-11",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "50000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "50000000.00"
+            "needed": "1297.26",
+            "opening_balance": "49996008.13",
+            "outcome": "ON_TIME",
+            "requirement": "49997305.39"
           },
           "pab": {
             "amount": "0",
@@ -1745,9 +1745,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999799.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49997305.39"
         },
         "holds_required": {
           "pab_reserve": false,
@@ -1788,7 +1788,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-10",
-      "economics_digest": "sha256:b18c0de836564d3e7d72f123bbde71be7e620083d8bb958c18ada7069f8224f4",
+      "economics_digest": "sha256:03e517d6b32267076a90e3c955f54998dd5ee065c99f7be63e0cefceb08a6f3e",
       "fails_by_age": {},
       "holds": [],
       "invariant_results": {
@@ -1805,8 +1805,8 @@
         "RULE_204_B": 1
       },
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49997272.88",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -1830,16 +1830,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "-32.51",
+            "balance_at_deadline": "49997272.88",
+            "closing_balance": "49997272.88",
             "deadline": "2019-09-12",
-            "deposit_date": null,
+            "deposit_date": "2019-09-12",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "50000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "50000000.00"
+            "needed": "-32.51",
+            "opening_balance": "49997305.39",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
+            "requirement": "49997272.88"
           },
           "pab": {
             "amount": "0",
@@ -1862,9 +1862,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999794.5000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49997272.88"
         },
         "holds_required": {
           "pab_reserve": false,
@@ -1906,7 +1906,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-11",
-      "economics_digest": "sha256:a1327f7ff926333b25d87b6483d1fcd09e10d77ceacc7d13f7c81cf7da8a894e",
+      "economics_digest": "sha256:33a3df31c22c9fd9320286e12549118d7f5fc993ebcbd1c764fa87d70b32dca1",
       "fails_by_age": {},
       "holds": [],
       "invariant_results": {
@@ -1921,8 +1921,8 @@
       },
       "market_access_refusals": {},
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49996240.20",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -1946,16 +1946,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "-1032.68",
+            "balance_at_deadline": "49996240.20",
+            "closing_balance": "49996240.20",
             "deadline": "2019-09-13",
-            "deposit_date": null,
+            "deposit_date": "2019-09-13",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "50000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "50000000.00"
+            "needed": "-1032.68",
+            "opening_balance": "49997272.88",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
+            "requirement": "49996240.20"
           },
           "pab": {
             "amount": "0",
@@ -1978,9 +1978,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999640.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49996240.20"
         },
         "holds_required": {
           "pab_reserve": false,
@@ -2021,7 +2021,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-12",
-      "economics_digest": "sha256:01445f4051ba55b18fb9d26bf40aaec28f32f4f545513652884767ffa2d50134",
+      "economics_digest": "sha256:2f1d57343b2aa6ea94d70ef6f4535546e60802e66edac38ce24f005be3099fcc",
       "fails_by_age": {},
       "holds": [
         "DTC_CAP_OR_COLLATERAL"
@@ -2041,8 +2041,8 @@
         "RULE_204_B": 1
       },
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49996297.56",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -2066,16 +2066,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "57.36",
+            "balance_at_deadline": "49996297.56",
+            "closing_balance": "49996297.56",
             "deadline": "2019-09-16",
-            "deposit_date": null,
+            "deposit_date": "2019-09-16",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "50000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "50000000.00"
+            "needed": "57.36",
+            "opening_balance": "49996240.20",
+            "outcome": "ON_TIME",
+            "requirement": "49996297.56"
           },
           "pab": {
             "amount": "0",
@@ -2098,9 +2098,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999647.5000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49996297.56"
         },
         "holds_required": {
           "pab_reserve": false,
@@ -2143,7 +2143,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-13",
-      "economics_digest": "sha256:5635908b5f3830975838ba4e5ae5a4112d1d0b8d15982c4070432772da38cbcf",
+      "economics_digest": "sha256:9a243e221460ca8f95fe25ceb117a945f09b69b6592f5f36a898c0b7cd78df1f",
       "fails_by_age": {},
       "holds": [],
       "invariant_results": {
@@ -2160,8 +2160,8 @@
         "RULE_204_B": 1
       },
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49997664.72",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -2185,16 +2185,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "1367.16",
+            "balance_at_deadline": "49997664.72",
+            "closing_balance": "49997664.72",
             "deadline": "2019-09-17",
-            "deposit_date": null,
+            "deposit_date": "2019-09-17",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "50000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "50000000.00"
+            "needed": "1367.16",
+            "opening_balance": "49996297.56",
+            "outcome": "ON_TIME",
+            "requirement": "49997664.72"
           },
           "pab": {
             "amount": "0",
@@ -2217,9 +2217,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999853.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49997664.72"
         },
         "holds_required": {
           "pab_reserve": false,
@@ -2261,7 +2261,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-16",
-      "economics_digest": "sha256:0c64f1963e7e0d4919802cd5b7146d5240caece5bbf811549557734adb23c72d",
+      "economics_digest": "sha256:309fc3a42e31bc20aafa93086f3881bfb6fc498b2d29f8abb7408842371df282",
       "fails_by_age": {},
       "holds": [],
       "invariant_results": {
@@ -2276,8 +2276,8 @@
       },
       "market_access_refusals": {},
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49995645.58",
         "book_pab_total_credits": "548580.00",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -2301,16 +2301,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "-2019.14",
+            "balance_at_deadline": "49995645.58",
+            "closing_balance": "49995645.58",
             "deadline": "2019-09-18",
-            "deposit_date": null,
+            "deposit_date": "2019-09-18",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "50000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "50000000.00"
+            "needed": "-2019.14",
+            "opening_balance": "49997664.72",
+            "outcome": "WITHDRAWAL_TO_REQUIREMENT",
+            "requirement": "49995645.58"
           },
           "pab": {
             "amount": "548580.00",
@@ -2333,9 +2333,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999556.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "548580.00",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49995645.58"
         },
         "holds_required": {
           "pab_reserve": false,
@@ -2377,7 +2377,7 @@
     {
       "breaks": [],
       "business_date": "2019-09-17",
-      "economics_digest": "sha256:0ca8d5ebfede1586c11ad7969f726acca45389a02942c75e761525e1813ec8fe",
+      "economics_digest": "sha256:4a3a38fc0a2fa61b304503e72c4e4d7e78637e5b477047746d29ab94b1fe1c90",
       "fails_by_age": {},
       "holds": [],
       "invariant_results": {
@@ -2392,8 +2392,8 @@
       },
       "market_access_refusals": {},
       "market_data": {
-        "average_total_credits": "516666666.6666666666666666667",
-        "book_customer_total_credits": "50000000.00",
+        "average_total_credits": "516666467.115",
+        "book_customer_total_credits": "49997742.30",
         "book_pab_total_credits": "0",
         "customer_credit_balance": "50000000",
         "daily_exit_notice_date": null,
@@ -2417,16 +2417,16 @@
       "protection": {
         "deposits": {
           "customer": {
-            "amount": "0",
-            "balance_at_deadline": "50000000.00",
-            "closing_balance": "50000000.00",
+            "amount": "2096.72",
+            "balance_at_deadline": "49997742.30",
+            "closing_balance": "49997742.30",
             "deadline": "2019-09-19",
-            "deposit_date": null,
+            "deposit_date": "2019-09-19",
             "drawn_outcome": "ON_TIME",
-            "needed": "0.00",
-            "opening_balance": "50000000.00",
-            "outcome": "NO_DEPOSIT_NEEDED",
-            "requirement": "50000000.00"
+            "needed": "2096.72",
+            "opening_balance": "49995645.58",
+            "outcome": "ON_TIME",
+            "requirement": "49997742.30"
           },
           "pab": {
             "amount": "-548580.00",
@@ -2449,9 +2449,9 @@
         },
         "figures": {
           "control_shortfall": "0",
-          "net_capital": "999865.0000",
+          "net_capital": "1000000",
           "pab_reserve_requirement": "0",
-          "reserve_requirement": "50000000.00"
+          "reserve_requirement": "49997742.30"
         },
         "holds_required": {
           "pab_reserve": false,
