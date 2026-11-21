@@ -2,10 +2,34 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from enum import StrEnum
+
+from cannae_kernel.signed_attestation import (
+    AttestationVerificationError,
+    sign_attestation,
+    verify_attestation,
+)
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from atreides.trust_anchors import (
+    TrustAnchorError,
+    require_anchor_valid_at,
+    resolve_pinned_anchor,
+)
+
+AML_OFFICER_PRODUCER = "synthetic-aml-officer"
+AML_OFFICER_KEY_ID = "synthetic-aml-officer-1"
+_OFFICER_SEED_LABEL = b"synthetic-aml-officer-phase-a"
+SAR_DECISION_PURPOSE = "SAR_DECISION"
+EXTENSION_PURPOSE = "UNIDENTIFIED_SUSPECT_EXTENSION"
+_NO_SUSPECT_BASIS = "no suspect was identified on the date of initial detection"
+_DECISION_CONTROL = "SAR decision attestation control"
 
 
 class EventKind(StrEnum):
@@ -66,6 +90,65 @@ class AMLCase:
     advisory_narrative: str | None = None
     decision: AMLDecision | None = None
     draft_sar: dict[str, str] | None = None
+    extension_officer: str | None = None
+    extension_attestation: bytes | None = None
+    extension_decided_on: date | None = None
+    extension_basis: str | None = None
+
+
+def unidentified_suspect_basis(detected_on: date) -> str:
+    """The stated basis an extension must carry: no suspect on the detection date."""
+
+    return f"{_NO_SUSPECT_BASIS} {detected_on.isoformat()}"
+
+
+def _officer_private_key() -> Ed25519PrivateKey:
+    seed = hashlib.sha256(_OFFICER_SEED_LABEL).digest()
+    return Ed25519PrivateKey.from_private_bytes(seed)
+
+
+def sign_aml_officer_attestation(payload: Mapping[str, str]) -> bytes:
+    """Sign a synthetic AML officer payload. Decision functions accept only the wire."""
+
+    body = json.dumps(dict(payload), sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return sign_attestation(
+        body,
+        producer=AML_OFFICER_PRODUCER,
+        key_id=AML_OFFICER_KEY_ID,
+        private_key=_officer_private_key(),
+    )
+
+
+def _verified_officer_bytes(wire: bytes) -> bytes:
+    anchor, registry = resolve_pinned_anchor(wire, expected_producer=AML_OFFICER_PRODUCER)
+    payload = verify_attestation(
+        wire,
+        expected_producer=AML_OFFICER_PRODUCER,
+        registry=registry,
+    )
+    document = json.loads(payload)
+    if not isinstance(document, dict) or "decided_on" not in document:
+        raise ValueError(_DECISION_CONTROL)
+    decided_on = date.fromisoformat(str(document["decided_on"]))
+    require_anchor_valid_at(anchor, datetime.combine(decided_on, time.min, tzinfo=UTC))
+    return bytes(payload)
+
+
+def _decision_document(wire: bytes) -> dict[str, str]:
+    try:
+        payload = _verified_officer_bytes(wire)
+    except (
+        TrustAnchorError,
+        AttestationVerificationError,
+        ValueError,
+        KeyError,
+        json.JSONDecodeError,
+    ) as exc:
+        raise ValueError(_DECISION_CONTROL) from exc
+    document = json.loads(payload)
+    if not isinstance(document, dict):
+        raise ValueError(_DECISION_CONTROL)
+    return {str(key): str(value) for key, value in document.items()}
 
 
 def _alert(customer: str, scenario: str, events: tuple[MonitoringEvent, ...]) -> Alert:
@@ -144,18 +227,24 @@ def monitor(
     )
 
 
-def record_human_decision(
-    case: AMLCase,
-    *,
-    officer: str,
-    outcome: str,
-    reason: str,
-    decided_on: date,
-) -> AMLCase:
+def record_human_decision(case: AMLCase, wire: bytes) -> AMLCase:
+    """Record a suspicious activity report decision read from a verified attestation.
+
+    Phase A: neither run calls this yet. Officer, outcome, reason and date come from the
+    verified payload. An unsigned or unverifiable wire is refused.
+    """
+
+    document = _decision_document(wire)
+    if document.get("purpose") != SAR_DECISION_PURPOSE:
+        raise ValueError(_DECISION_CONTROL)
+    officer = document.get("officer", "")
+    outcome = document.get("outcome", "")
+    reason = document.get("reason", "")
     if not officer.startswith("HUMAN_AML_OFFICER:"):
         raise ValueError("NAMED_HUMAN_AML_OFFICER_REQUIRED")
     if outcome not in {"SAR", "NO_SAR"} or not reason:
         raise ValueError("SAR_OR_NO_SAR_WITH_REASON_REQUIRED")
+    decided_on = date.fromisoformat(document["decided_on"])
     decision = AMLDecision(officer, outcome, reason, decided_on)
     draft = {"status": "DRAFT_NOT_FILED", "case_id": case.case_id} if outcome == "SAR" else None
     return replace(case, decision=decision, draft_sar=draft)
@@ -167,19 +256,68 @@ def close_case(case: AMLCase) -> AMLCase:
     return case
 
 
-def extend_for_unidentified_suspect(case: AMLCase, *, policy: AMLPolicy) -> AMLCase:
+def _extension_facts_present(
+    case: AMLCase,
+    attestation: bytes,
+    decision_date: date | None,
+    basis: str,
+) -> bool:
+    if not attestation or decision_date is None or not basis:
+        return False
+    if basis != unidentified_suspect_basis(case.alert.detected_on):
+        return False
+    try:
+        payload = _verified_officer_bytes(attestation)
+        document = json.loads(payload)
+    except (
+        TrustAnchorError,
+        AttestationVerificationError,
+        ValueError,
+        KeyError,
+        json.JSONDecodeError,
+    ):
+        return False
+    if not isinstance(document, dict):
+        return False
+    return bool(
+        document.get("purpose") == EXTENSION_PURPOSE
+        and str(document.get("officer", "")).startswith("HUMAN_AML_OFFICER:")
+        and document.get("decided_on") == decision_date.isoformat()
+        and document.get("basis") == basis
+    )
+
+
+def extend_for_unidentified_suspect(
+    case: AMLCase,
+    attestation: bytes,
+    decision_date: date,
+    basis: str,
+    *,
+    policy: AMLPolicy,
+) -> AMLCase:
     """Use the extra period 31 CFR 1023.320(b)(3) allows when no suspect is identified.
 
-    The filing period runs from initial detection; the extension adds ``extension_days`` and
+    The filing period runs from initial detection. The extension adds ``extension_days`` and
     the outer limit is detection plus both periods (60 calendar days at the defaults).
+    Phase A: no run calls this yet. The officer attestation, the decision date and the stated
+    basis are recorded on the case. An extension without them, or made after day 30, is refused.
     """
 
     if case.extended_due_on is not None:
         raise ValueError("SAR_CLOCK_ALREADY_EXTENDED")
+    if not _extension_facts_present(case, attestation, decision_date, basis):
+        raise ValueError("unidentified suspect extension control")
+    if decision_date > case.alert.detected_on + timedelta(days=policy.filing_days):
+        raise ValueError("unidentified suspect day 30 control")
+    document = json.loads(_verified_officer_bytes(attestation))
     return replace(
         case,
         extended_due_on=case.alert.detected_on
         + timedelta(days=policy.filing_days + policy.extension_days),
+        extension_officer=str(document["officer"]),
+        extension_attestation=attestation,
+        extension_decided_on=decision_date,
+        extension_basis=basis,
     )
 
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Phase A: a suspicious activity report (SAR) decision is accepted only as a signed attestation from the pinned synthetic AML (anti-money laundering) officer. Officer, outcome, reason and date are read from the verified payload. `extend_for_unidentified_suspect` records the officer attestation, the decision date and the stated basis that no suspect was identified on the date of initial detection, and it refuses an extension without them or made after day 30 (inventory finding F1, 20 November 2026). No run calls these yet.
+
 The suspicious activity report clock runs to filing, not to the decision (inventory finding N4).
 Under 31 CFR 1023.320(b)(3) the period is 30 calendar days from initial detection, extendable by
 30 when no suspect is identified, never past 60. A `NO_SAR` decision stops the clock; a `SAR`
