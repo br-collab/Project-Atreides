@@ -45,7 +45,9 @@ All non-clear rungs escalate through C2 to human authority — never laterally. 
 - **31 CFR 1010/1020 (BSA/CIP)** — identity verification and currency (expiry rung; missing/unparseable expiry treated as expired).
 - **FinCEN CDD Rule (31 CFR 1010.230)** — beneficial ownership resolution as a dedicated halt rung.
 - **FATF Recommendations 10/12/19** — CDD, PEP handling (EDD before proceeding), high-risk-jurisdiction escalation, prohibited-jurisdiction termination.
-- **SR 11-7** — Tier 1 declared; independent validation before autonomy expansion.
+- **NIST AI RMF 1.0 plus Aureon doctrine**: independent validation before autonomy expansion.
+  SR 26-2 / OCC Bulletin 2026-13 applies only if a component is a theory-based quantitative
+  method or non-generative, non-agentic artificial intelligence within the guidance.
 - **EU AI Act** — high-risk (access to financial services); conformity assessment gated on EU deployment.
 
 ## Out of scope

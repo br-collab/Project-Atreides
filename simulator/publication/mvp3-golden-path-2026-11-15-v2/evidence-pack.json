@@ -1,0 +1,141 @@
+{
+  "variant": "CLEAN",
+  "disposition": "PASS",
+  "account_status": "ACTIVE",
+  "refusal": null,
+  "exception_owner": null,
+  "exception_age_seconds": null,
+  "stages": [
+    "Atreides: natural-person application recorded",
+    "Atreides: CIP, profile, eligibility, principal, and human approval passed",
+    "Atreides: completed transfer posted to books",
+    "Atreides: account moved to FUNDED",
+    "Aureon: recommended equity BUY intent approved",
+    "Atreides: intent decision appended to DSOR",
+    "L.C.: recommendation profile and signed account status passed",
+    "L.C.: firm market access passed",
+    "L.C.: order sealed for synthetic venue",
+    "Venue: execution emulator produced a fill",
+    "L.C.: execution captured and allocated",
+    "Atreides: CNS settlement posted to books",
+    "Atreides: L.C. signed first-trade evidence moved account to ACTIVE",
+    "Atreides: daily close completed"
+  ],
+  "evidence": [
+    {
+      "event_id": "MVP3-001",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": null,
+      "summary": "natural-person application recorded"
+    },
+    {
+      "event_id": "MVP3-002",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-001",
+      "summary": "CIP, profile, eligibility, principal, and human approval passed"
+    },
+    {
+      "event_id": "MVP3-003",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-002",
+      "summary": "completed transfer posted to books"
+    },
+    {
+      "event_id": "MVP3-004",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-003",
+      "summary": "account moved to FUNDED"
+    },
+    {
+      "event_id": "MVP3-005",
+      "producer": "Aureon",
+      "signature_status": "N/A",
+      "cause_event_id": "MVP3-004",
+      "summary": "recommended equity BUY intent approved"
+    },
+    {
+      "event_id": "MVP3-006",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-005",
+      "summary": "intent decision appended to DSOR"
+    },
+    {
+      "event_id": "MVP3-007",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-006",
+      "summary": "recommendation profile and signed account status passed"
+    },
+    {
+      "event_id": "MVP3-008",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-007",
+      "summary": "firm market access passed"
+    },
+    {
+      "event_id": "MVP3-009",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-008",
+      "summary": "order sealed for synthetic venue"
+    },
+    {
+      "event_id": "MVP3-010",
+      "producer": "Venue",
+      "signature_status": "N/A",
+      "cause_event_id": "MVP3-009",
+      "summary": "execution emulator produced a fill"
+    },
+    {
+      "event_id": "MVP3-011",
+      "producer": "L.C.",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-010",
+      "summary": "execution captured and allocated"
+    },
+    {
+      "event_id": "MVP3-012",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-011",
+      "summary": "CNS settlement posted to books"
+    },
+    {
+      "event_id": "MVP3-013",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-012",
+      "summary": "L.C. signed first-trade evidence moved account to ACTIVE"
+    },
+    {
+      "event_id": "MVP3-014",
+      "producer": "Atreides",
+      "signature_status": "VERIFIED",
+      "cause_event_id": "MVP3-013",
+      "summary": "daily close completed"
+    }
+  ],
+  "evidence_digest": "sha256:65aab9195aeae3729be18bca3a642a5d87a8141538866777922fd02e03e8f350",
+  "dsor_records": 1,
+  "books_digest": "sha256:7837380ceccb2d9ae0d31c9cd1e18f36de2f308f8980ecb4105c715534561c31",
+  "invariants": {
+    "stock_record": true,
+    "reserve": true,
+    "pab_reserve": true,
+    "net_capital": true,
+    "possession_or_control": true,
+    "settlement_two_sided": true,
+    "evidence_chain": true,
+    "independent_oracle": true,
+    "street_reconciliation": true,
+    "focus_tie_out": true,
+    "customer_in_books": true
+  },
+  "close_report": "NORMAL_CLOSE"
+}

@@ -1,0 +1,994 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="cfr.xsl"?>
+<CFRGRANULE xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="CFRMergedXML.xsd">
+    <FDSYS>
+        <CFRTITLE>26</CFRTITLE>
+        <CFRTITLETEXT>Internal Revenue</CFRTITLETEXT>
+        <VOL>13</VOL>
+        <DATE>2025-04-01</DATE>
+        <COVERONLY>false</COVERONLY>
+        <ORIGINALDATE>2025-04-01</ORIGINALDATE>
+        <TITLE>Example.</TITLE>
+        <ANCESTORS>
+            <PARENT HEADING="Title 26" SEQ="4">Internal Revenue</PARENT>
+            <PARENT HEADING="CHAPTER I" SEQ="3">INTERNAL REVENUE SERVICE, DEPARTMENT OF THE TREASURY (CONTINUED)</PARENT>
+            <PARENT HEADING="SUBCHAPTER A" SEQ="2">INCOME TAX (CONTINUED)</PARENT>
+            <PARENT HEADING="PART 1" SEQ="1">INCOME TAXES (CONTINUED)</PARENT>
+            <PARENT HEADING="" SEQ="0">Basis Rules of General Application</PARENT>
+        </ANCESTORS>
+    </FDSYS>
+    <SECTION>
+        <SECTNO>§ 1.1012-1</SECTNO>
+        <SUBJECT>Basis of property.</SUBJECT>
+        <P>
+            (a) 
+            <E T="03">General rule.</E>
+             In general, the basis of property is the cost thereof. The cost is the amount paid for such property in cash or other property. This general rule is subject to exceptions stated in subchapter O (relating to gain or loss on the disposition of property), subchapter C (relating to corporate distributions and adjustments), subchapter K (relating to partners and partnerships), and subchapter P (relating to capital gains and losses), chapter 1 of the code.
+        </P>
+        <P>
+            (b) 
+            <E T="03">Real estate taxes as part of cost.</E>
+             In computing the cost of real property, the purchaser shall not take into account any amount paid to the seller as reimbursement for real property taxes which are treated under section 164(d) as imposed upon the purchaser. This rule applies whether or not the contract of sale calls for the purchaser to reimburse the seller for such real estate taxes paid or to be paid by the seller. On the other hand, where the purchaser pays (or assumes liability for) real estate taxes which are treated under section 164(d) as imposed upon the seller, such taxes shall be considered part of the cost of the property. It is immaterial whether or not the contract of sale specifies that the sale price has been reduced by, or is in any way intended to reflect, real estate taxes allocable to the seller under section 164(d). For illustrations of the application of this paragraph, see paragraph (b) of § 1.1001-1.
+        </P>
+        <P>
+            (c) 
+            <E T="03">Sale of stock</E>
+            —(1) 
+            <E T="03">In general.</E>
+             (i) Except as provided in paragraph (e)(2) of this section (dealing with stock for which the average basis method is permitted), if a taxpayer sells or transfers shares of stock in a corporation that the taxpayer purchased or acquired on different dates or at different prices and the taxpayer does not adequately identify the lot from which the stock is sold or transferred, the stock sold or transferred is charged against the earliest lot the taxpayer purchased or acquired to determine the basis and holding period of the stock. If the earliest lot purchased or acquired is held in a stock certificate that represents multiple lots of stock, and the taxpayer does not adequately identify the lot from which the stock is sold or transferred, the stock sold or transferred is charged against the earliest lot included in the certificate. See paragraphs (c)(2), (c)(3), and (c)(4) of this section for rules on what constitutes an adequate identification.
+        </P>
+        <P>
+            (ii) A taxpayer must determine the basis of identical stock (within the meaning of paragraph (e)(4) of this section) by averaging the cost of each share if the stock is purchased at separate times on the same calendar day in executing a single trade order and the broker executing the trade provides a single confirmation that reports an aggregate total cost or an average cost per share. However, the taxpayer may 
+            <PRTPAGE P="48"/>
+            determine the basis of the stock by the actual cost per share if the taxpayer notifies the broker in writing of this intent. The taxpayer must notify the broker by the earlier of the date of the sale of any of the stock for which the taxpayer received the confirmation or one year after the date of the confirmation. A broker may extend the one-year period but the taxpayer must notify the broker no later than the date of sale of any of the stock.
+        </P>
+        <P>
+            (2) 
+            <E T="03">Identification of stock.</E>
+             An adequate identification is made if it is shown that certificates representing shares of stock from a lot which was purchased or acquired on a certain date or for a certain price were delivered to the taxpayer's transferee. Except as otherwise provided in subparagraph (3) or (4) of this paragraph, such stock certificates delivered to the transferee constitute the stock sold or transferred by the taxpayer. Thus, unless the requirements of subparagraph (3) or (4) of this paragraph are met, the stock sold or transferred is charged to the lot to which the certificates delivered to the transferee belong, whether or not the taxpayer intends, or instructs his broker or other agent, to sell or transfer stock from a lot purchased or acquired on a different date or for a different price.
+        </P>
+        <P>
+            (3) 
+            <E T="03">Identification on confirmation document.</E>
+             (i) Where the stock is left in the custody of a broker or other agent, an adequate identification is made if—
+        </P>
+        <P>
+            (
+            <E T="03">a</E>
+            ) At the time of the sale or transfer, the taxpayer specifies to such broker or other agent having custody of the stock the particular stock to be sold or transferred, and
+        </P>
+        <P>
+            (
+            <E T="03">b</E>
+            ) Within a reasonable time thereafter, confirmation of such specification is set forth in a written document from such broker or other agent.
+        </P>
+        <FP>Stock identified pursuant to this subdivision is the stock sold or transferred by the taxpayer, even though stock certificates from a different lot are delivered to the taxpayer's transferee.</FP>
+        <P>(ii) Where a single stock certificate represents stock from different lots, where such certificate is held by the taxpayer rather than his broker or other agent, and where the taxpayer sells a part of the stock represented by such certificate through a broker or other agent, an adequate identification is made if—</P>
+        <P>
+            (
+            <E T="03">a</E>
+            ) At the time of the delivery of the certificate to the broker or other agent, the taxpayer specifies to such broker or other agent the particular stock to be sold or transferred, and
+        </P>
+        <P>
+            (
+            <E T="03">b</E>
+            ) Within a reasonable time thereafter, confirmation of such specification is set forth in a written document from such broker or agent.
+        </P>
+        <FP>Where part of the stock represented by a single certificate is sold or transferred directly by the taxpayer to the purchaser or transferee instead of through a broker or other agent, an adequate identification is made if the taxpayer maintains a written record of the particular stock which he intended to sell or transfer.</FP>
+        <P>
+            (4) 
+            <E T="03">Stock held by a trustee, executor, or administrator.</E>
+             (i) A trustee or executor or administrator of an estate holding stock (not left in the custody of a broker) makes an adequate identification if the trustee, executor, or administrator—
+        </P>
+        <P>
+            (
+            <E T="03">a</E>
+            ) Specifies in writing in the books and records of the trust or estate the particular stock to be sold, transferred, or distributed;
+        </P>
+        <P>
+            (
+            <E T="03">b</E>
+            ) In the case of a distribution, furnishes the distributee with a written document identifying the particular stock distributed; and
+        </P>
+        <P>
+            (
+            <E T="03">c</E>
+            ) In the case of a sale or transfer through a broker or other agent, specifies to the broker or agent the particular stock to be sold or transferred, and within a reasonable time thereafter the broker or agent confirms the specification in a written document.
+        </P>
+        <P>(ii) The stock the trust or estate identifies under paragraph (c)(4)(i) of this section is the stock treated as sold, transferred, or distributed, even if the trustee, executor, or administrator delivers stock certificates from a different lot.</P>
+        <P>
+            (5) 
+            <E T="03">Subsequent sales.</E>
+             If stock identified under subparagraph (3) or (4) of this paragraph as belonging to a particular lot is sold, transferred, or distributed, the stock so identified shall be deemed to have been sold, transferred, or distributed, and such sale, transfer, or distribution will be taken into consideration in identifying the 
+            <PRTPAGE P="49"/>
+            taxpayer's remaining stock for purposes of subsequent sales, transfers, or distributions.
+        </P>
+        <P>
+            (6) 
+            <E T="03">Bonds.</E>
+             Paragraphs (1) through (5), (8), and (9) of this section apply to the sale or transfer of bonds.
+        </P>
+        <P>
+            (7) 
+            <E T="03">Book-entry securities.</E>
+             (i) In applying the provisions of subparagraph (3)(i)(
+            <E T="03">a</E>
+            ) of this paragraph in the case of a sale or transfer of a book-entry security (as defined in subdivision (iii) (
+            <E T="03">a</E>
+            ) of this subparagraph) which is made after December 31, 1970, pursuant to a written instruction by the taxpayer, a specification by the taxpayer of the unique lot number which he has assigned to the lot which contains the securities being sold or transferred shall constitute specification as required by such subparagraph. The specification of the lot number shall be made either—
+        </P>
+        <P>
+            (
+            <E T="03">a</E>
+            ) In such written instruction, or
+        </P>
+        <P>
+            (
+            <E T="03">b</E>
+            ) In the case of a taxpayer in whose name the book entry by the Reserve Bank is made, in a list of lot numbers with respect to all book-entry securities on the books of the Reserve Bank sold or transferred on that date by the taxpayer, provided such list is mailed to or received by the Reserve Bank on or before the Reserve Bank's next business day.
+        </P>
+        <FP>This subdivision shall apply only if the taxpayer assigns lot numbers in numerical sequence to successive purchases of securities of the same loan title (series) and maturity date, except that securities of the same loan title (series) and maturity date which are purchased at the same price on the same date may be included within the same lot.</FP>
+        <P>
+            (ii) In applying paragraph (c)(3)(i)(
+            <E T="03">b</E>
+            ) of this section to a sale or transfer of a book-entry security pursuant to a taxpayer's written instruction, a confirmation is made by furnishing to the taxpayer a written advice of transaction from the Reserve Bank or other person through whom the taxpayer sells or transfers the securities. The confirmation document must describe the securities and specify the date of the transaction and amount of securities sold or transferred.
+        </P>
+        <P>(iii) For purposes of this paragraph (c)(7):</P>
+        <P>
+            (
+            <E T="03">a</E>
+            ) The term 
+            <E T="03">book-entry security</E>
+             means a transferable Treasury bond, note, certificate of indebtedness, or bill issued under the Second Liberty Bond Act (31 U.S.C. 774(2)), as amended, or other security of the United States (as defined in paragraph (c)(7)(iii)(
+            <E T="03">b</E>
+            ) of this section) in the form of an entry made as prescribed in 31 CFR Part 306, or other comparable Federal regulations, on the records of a Reserve Bank.
+        </P>
+        <P>
+            (
+            <E T="03">b</E>
+            ) The term 
+            <E T="03">other security of the United States</E>
+             means a bond, note, certificate of indebtedness, bill, debenture, or similar obligation which is subject to the provisions of 31 CFR part 306 or other comparable Federal regulations and which is issued by (
+            <E T="03">1</E>
+            ) any department or agency of the Government of the United States, or (
+            <E T="03">2</E>
+            ) the Federal National Mortgage Association, the Federal Home Loan Banks, the Federal Home Loan Mortgage Corporation, the Federal Land Banks, the Federal Intermediate Credit Banks, the Banks for Cooperatives, or the Tennessee Valley Authority;
+        </P>
+        <P>
+            (
+            <E T="03">c</E>
+            ) The term 
+            <E T="03">serially-numbered advice of transaction</E>
+             means the confirmation (prescribed in 31 CFR 306.116) issued by the Reserve Bank which is identifiable by a unique number and indicates that a particular written instruction to the Reserve Bank with respect to the deposit or withdrawal of a specified book-entry security (or securities) has been executed; and
+        </P>
+        <P>
+            (
+            <E T="03">d</E>
+            ) The term 
+            <E T="03">Reserve Bank</E>
+             means a Federal Reserve Bank and its branches acting as Fiscal Agent of the United States.
+        </P>
+        <P>
+            (8) 
+            <E T="03">Time for making identification.</E>
+             For purposes of this paragraph (c), an adequate identification of stock is made at the time of sale, transfer, delivery, or distribution if the identification is made no later than the earlier of the settlement date or the time for settlement required by Rule 15c6-1 under the Securities Exchange Act of 1934, 17 CFR 240.15c6-1 (or its successor). A standing order or instruction for the specific identification of stock is treated as an adequate identification made at the time of sale, transfer, delivery, or distribution.
+        </P>
+        <P>
+            (9) 
+            <E T="03">Method of writing.</E>
+             (i) A written confirmation, record, document, instruction, notification, or advice includes a writing in electronic format.
+            <PRTPAGE P="50"/>
+        </P>
+        <P>(ii) A broker or agent may include the written confirmation required under this paragraph (c) in an account statement or other document the broker or agent periodically provides to the taxpayer if the broker or agent provides the statement or other document within a reasonable time after the sale or transfer.</P>
+        <P>
+            (10) 
+            <E T="03">Method for determining basis of stock.</E>
+             A method of determining the basis of stock, including a method of identifying stock sold under this paragraph (c) and the average basis method described in paragraph (e) of this section, is not a method of accounting. Therefore, a change in a method of determining the basis of stock is not a change in method of accounting to which sections 446 and 481 apply.
+        </P>
+        <P>
+            (11) 
+            <E T="03">Effective/applicability date.</E>
+             Paragraphs (c)(1), (c)(4), (c)(6), (c)(7)(ii), (c)(7)(iii)(
+            <E T="03">a</E>
+            ), (c)(8), (c)(9), and (c)(10) of this section apply for taxable years beginning after October 18, 2010.
+        </P>
+        <P>
+            (d) 
+            <E T="03">Obligations issued as part of an investment unit.</E>
+             For purposes of determining the basis of the individual elements of an investment unit (as defined in paragraph (b)(2)(ii)(
+            <E T="03">a</E>
+            ) of § 1.1232-3) consisting of an obligation and an option (which is not an excluded option under paragraph (b)(1)(iii)(
+            <E T="03">c</E>
+            ) of § 1.1232-3), security, or other property, the cost of such investment unit shall be allocated to such individual elements on the basis of their respective fair market values. In the case of the initial issuance of an investment unit consisting of an obligation and an option, security, or other property, where neither the obligation nor the option, security, or other property has a readily ascertainable fair market value, the portion of the cost of the unit which is allocable to the obligation shall be an amount equal to the issue price of the obligation as determined under paragraph (b)(2)(ii)(
+            <E T="03">a</E>
+            ) of § 1.1232-3.
+        </P>
+        <P>
+            (e) 
+            <E T="03">Election to use average basis method</E>
+            —(1) 
+            <E T="03">In general.</E>
+             Notwithstanding paragraph (c) of this section, and except as provided in paragraph (e)(8) of this section, a taxpayer may use the average basis method described in paragraph (e)(7) of this section to determine the cost or other basis of identical shares of stock if—
+        </P>
+        <P>(i) The taxpayer leaves shares of stock in a regulated investment company (as defined in paragraph (e)(5) of this section) or shares of stock acquired after December 31, 2010, in connection with a dividend reinvestment plan (as defined in paragraph (e)(6) of this section) with a custodian or agent in an account maintained for the acquisition or redemption, sale, or other disposition of shares of the stock; and</P>
+        <P>(ii) The taxpayer acquires identical shares of stock at different prices or bases in the account.</P>
+        <P>
+            (2) 
+            <E T="03">Determination of method.</E>
+             (i) If a taxpayer places shares of stock described in paragraph (e)(1)(i) of this section acquired on or after January 1, 2012, in the custody of a broker (as defined by section 6045(c)(1)), including by transfer from an account with another broker, the basis of the shares is determined in accordance with the broker's default method, unless the taxpayer notifies the broker that the taxpayer elects another permitted method. The taxpayer must report gain or loss using the method the taxpayer elects or, if the taxpayer fails to make an election, the broker's default method. 
+            <E T="03">See</E>
+             paragraphs (e)(9)(i) and (e)(9)(v), 
+            <E T="03">Example 2,</E>
+             of this section.
+        </P>
+        <P>(ii) The provisions of this paragraph (e)(2) are illustrated by the following example:</P>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example.</HD>
+            <P>(i) In connection with a dividend reinvestment plan, Taxpayer B acquires 100 shares of G Company in 2012 and 100 shares of G Company in 2013, in an account B maintains with R Broker. B notifies R in writing that B elects to use the average basis method to compute the basis of the shares of G Company. In 2014, B transfers the shares of G Company to an account with S Broker. B does not notify S of the basis determination method B chooses to use for the shares of G Company, and S's default method is first-in, first-out. In 2015, B purchases 200 shares of G Company in the account with S. In 2016, B instructs S to sell 150 shares of G Company.</P>
+            <P>(ii) Because B does not notify S of a basis determination method for the shares of G Company, under paragraph (e)(2)(i) of this section, the basis of the 150 shares of G Company S sells for B in 2016 must be determined under S's default method, first-in, first-out.</P>
+        </EXAMPLE>
+        <P>
+            (3) 
+            <E T="03">Shares of stock.</E>
+             For purposes of this paragraph (e), securities issued by unit investment trusts described in paragraph (e)(5) of this section are treated as shares of stock and the term 
+            <PRTPAGE P="51"/>
+            <E T="03">share</E>
+             or 
+            <E T="03">shares</E>
+             includes fractions of a share.
+        </P>
+        <P>
+            (4) 
+            <E T="03">Identical stock.</E>
+             For purposes of this paragraph (e), 
+            <E T="03">identical shares of stock</E>
+             means stock with the same Committee on Uniform Security Identification Procedures (CUSIP) number or other security identifier number as permitted in published guidance of general applicability, 
+            <E T="03">see</E>
+             § 601.601(d)(2) of this chapter.
+        </P>
+        <P>
+            (5) 
+            <E T="03">Regulated investment company.</E>
+             (i) For purposes of this paragraph, a 
+            <E T="03">regulated investment company</E>
+             means any domestic corporation (other than a personal holding company as defined in section 542) which meets the limitations of section 851(b) and § 1.851-2, and which is registered at all times during the taxable year under the Investment Company Act of 1940, as amended (15 U.S.C. 80a-1 to 80b-2), either as a management company, or as a unit investment trust.
+        </P>
+        <P>(ii) Notwithstanding subdivision (i), this paragraph shall not apply in the case of a unit investment trust unless it is one—</P>
+        <P>
+            (
+            <E T="03">a</E>
+            ) Substantially all of the assets of which consist (
+            <E T="03">1</E>
+            ) of securities issued by a single management company (as defined in such Act) and securities acquired pursuant to subdivision (
+            <E T="03">b</E>
+            ) of this subdivision (ii), or (
+            <E T="03">2</E>
+            ) securities issued by a single other corporation, and
+        </P>
+        <P>
+            (
+            <E T="03">b</E>
+            ) Which has no power to invest in any other securities except securities issued by a single other management company, when permitted by such Act or the rules and regulations of the Securities and Exchange Commission.
+        </P>
+        <P>
+            (6) 
+            <E T="03">Dividend reinvestment plan</E>
+            —(i) 
+            <E T="03">In general.</E>
+             For purposes of this paragraph (e), the term 
+            <E T="03">dividend reinvestment plan</E>
+             means any written plan, arrangement, or program under which at least 10 percent of every dividend (within the meaning of section 316) on any share of stock is reinvested in stock identical to the stock on which the dividend is paid. A plan is a dividend reinvestment plan if the plan documents require that at least 10 percent of any dividend paid is reinvested in identical stock even if the plan includes stock on which no dividends have ever been declared or paid or on which an issuer ceases paying dividends. A plan that holds one or more different stocks may permit a taxpayer to reinvest a different percentage of dividends in the stocks held. A dividend reinvestment plan may reinvest other distributions on stock, such as capital gain distributions, non-taxable returns of capital, and cash in lieu of fractional shares. The term dividend reinvestment plan includes both issuer administered dividend reinvestment plans and non-issuer administered dividend reinvestment plans.
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Acquisition of stock.</E>
+             Stock is acquired in connection with a dividend reinvestment plan if the stock is acquired under that plan, arrangement, or program, or if the dividends and other distributions paid on the stock are subject to that plan, arrangement, or program. Shares of stock acquired in connection with a dividend reinvestment plan include the initial purchase of stock in the dividend reinvestment plan, transfers of identical stock into the dividend reinvestment plan, additional periodic purchases of identical stock in the dividend reinvestment plan, and identical stock acquired through reinvestment of the dividends or other distributions paid on the stock held in the plan.
+        </P>
+        <P>
+            (iii) 
+            <E T="03">Dividends and other distributions paid after reorganization.</E>
+             For purposes of this paragraph (e)(6), dividends and other distributions declared or announced before or pending a corporate action (such as a merger, consolidation, acquisition, split-off, or spin-off) involving the issuer and subsequently paid and reinvested in shares of stock in the successor entity or entities are treated as reinvested in shares of stock identical to the shares of stock of the issuer.
+        </P>
+        <P>
+            (iv) 
+            <E T="03">Withdrawal from or termination of plan.</E>
+             If a taxpayer withdraws stock from a dividend reinvestment plan or the plan administrator terminates the dividend reinvestment plan, the shares of identical stock the taxpayer acquires after the withdrawal or termination are not acquired in connection with a dividend reinvestment plan. The taxpayer may not use the average basis method after the withdrawal or termination but may use any other permissible basis determination method. See paragraph (e)(7)(v) of this section for 
+            <PRTPAGE P="52"/>
+            the basis of the shares after withdrawal or termination.
+        </P>
+        <P>
+            (7) 
+            <E T="03">Computation of average basis</E>
+            —(i) 
+            <E T="03">In general.</E>
+             Average basis is determined by averaging the basis of all shares of identical stock in an account regardless of holding period. However, for this purpose, shares of stock in a dividend reinvestment plan are not identical to shares of stock with the same CUSIP number that are not in a dividend reinvestment plan. The basis of each share of identical stock in the account is the aggregate basis of all shares of that stock in the account divided by the aggregate number of shares. Unless a single-account election is in effect, see paragraph (e)(11) of this section, a taxpayer may not average together the basis of identical stock held in separate accounts that the taxpayer sells, exchanges, or otherwise disposes of on or after January 1, 2012.
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Order of disposition of shares sold or transferred.</E>
+             In the case of the sale or transfer of shares of stock to which the average basis method election applies, shares sold or transferred are deemed to be the shares first acquired. Thus, the first shares sold or transferred are those with a holding period of more than 1 year (long-term shares) to the extent that the account contains long-term shares. If the number of shares sold or transferred exceeds the number of long-term shares in the account, the excess shares sold or transferred are deemed to be shares with a holding period of 1 year or less (short-term shares). Any gain or loss attributable to shares held for more than 1 year constitutes long-term gain or loss, and any gain or loss attributable to shares held for 1 year or less constitutes short-term gain or loss. For example, if a taxpayer sells 50 shares from an account containing 100 long-term shares and 100 short-term shares, the shares sold or transferred are all long-term shares. If, however, the account contains 40 long-term shares and 100 short-term shares, the taxpayer has sold 40 long-term shares and 10 short-term shares.
+        </P>
+        <P>
+            (iii) 
+            <E T="03">Transition rule from double-category method.</E>
+             This paragraph (e)(7)(iii) applies to stock for which a taxpayer uses the double-category method under § 1.1012-1(e)(3) (April 1, 2010), that the taxpayer acquired before April 1, 2011, and that the taxpayer sells, exchanges, or otherwise disposes of on or after that date. The taxpayer must calculate the average basis of this stock by averaging together all identical shares of stock in the account on April 1, 2011, regardless of holding period.
+        </P>
+        <P>
+            (iv) 
+            <E T="03">Wash sales.</E>
+             A taxpayer must apply section 1091 and the associated regulations (dealing with wash sales of substantially identical securities) in computing average basis regardless of whether the stock or security sold or otherwise disposed of and the stock acquired are in the same account or in different accounts.
+        </P>
+        <P>
+            (v) 
+            <E T="03">Basis after change from average basis method.</E>
+             Unless a taxpayer revokes an average basis method election under paragraph (e)(9)(iii) of this section, if a taxpayer changes from the average basis method to another basis determination method (including a change resulting from a withdrawal from or termination of a dividend reinvestment plan), the basis of each share of stock immediately after the change is the same as the basis immediately before the change. 
+            <E T="03">See</E>
+             paragraph (e)(9)(iv) of this section for rules for changing from the average basis method.
+        </P>
+        <P>(vi) The provisions of this paragraph (e)(7) are illustrated by the following examples:</P>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 1.</HD>
+            <P>(i) In 2011, Taxpayer C acquires 100 shares of H Company and enrolls them in a dividend reinvestment plan administered by T Custodian. C elects to use the average basis method for the shares of H Company enrolled in the dividend reinvestment plan. T also acquires for C's account 50 shares of H Company and does not enroll these shares in the dividend reinvestment plan.</P>
+            <P>(ii) Under paragraph (e)(7)(i) of this section, the 50 shares of H Company not in the dividend reinvestment plan are not identical to the 100 shares of H Company enrolled in the dividend reinvestment plan, even if they have the same CUSIP number. Accordingly, under paragraphs (e)(1) and (e)(7)(i) of this section, C may not average the basis of the 50 shares of H Company with the basis of the 100 shares of H Company. Under paragraph (e)(1)(i) of this section, C may not use the average basis method for the 50 shares of H Company because the shares are not acquired in connection with a dividend reinvestment plan.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 2.</HD>
+            <P>
+                (i) Taxpayer D enters into an agreement with W Custodian establishing an account for the periodic acquisition of shares 
+                <PRTPAGE P="53"/>
+                of L Company, a regulated investment company. W acquires for D's account shares of L Company stock on the following dates and amounts:
+            </P>
+            <GPOTABLE COLS="3" OPTS="L2" CDEF="s75,8,8">
+                <BOXHD>
+                    <CHED H="1">Date</CHED>
+                    <CHED H="1">Number of shares</CHED>
+                    <CHED H="1">Cost</CHED>
+                </BOXHD>
+                <ROW>
+                    <ENT I="01">January 8, 2010</ENT>
+                    <ENT>25</ENT>
+                    <ENT>$200</ENT>
+                </ROW>
+                <ROW>
+                    <ENT I="01">February 8, 2010</ENT>
+                    <ENT>24</ENT>
+                    <ENT>200</ENT>
+                </ROW>
+                <ROW>
+                    <ENT I="01">March 8, 2010</ENT>
+                    <ENT>20</ENT>
+                    <ENT>200</ENT>
+                </ROW>
+                <ROW>
+                    <ENT I="01">April 8, 2010</ENT>
+                    <ENT>20</ENT>
+                    <ENT>200</ENT>
+                </ROW>
+            </GPOTABLE>
+            <P>(ii) At D's direction, W sells 40 shares from the account on January 15, 2011, for $10 per share or a total of $400. D elects to use the average basis method for the shares of L Company. The average basis for the shares sold on January 15, 2011, is $8.99 (total cost of shares, $800, divided by the total number of shares, 89).</P>
+            <P>(iii) Under paragraph (e)(7)(ii) of this section, the shares sold are the shares first acquired. Thus, D realizes $25.25 ($1.01 * 25) long-term capital gain for the 25 shares acquired on January 8, 2010, and $15.15 ($1.01 * 15) short-term capital gain for 15 of the shares acquired on February 8, 2010.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 3.</HD>
+            <P>
+                (i) The facts are the same as in 
+                <E T="03">Example 2,</E>
+                 except that on February 8, 2011, D changes to the first-in, first-out basis determination method. W purchases 25 shares of L Company for D on March 8, 2011, at $12 per share. D sells 40 shares on May 8, 2011, and 34 shares on July 8, 2012.
+            </P>
+            <P>(ii) Because D uses the first-in, first-out method, the 40 shares sold on May 8, 2011 are 9 shares purchased on February 8, 2010, 20 shares purchased on March 8, 2010, and 11 shares purchased on April 8, 2010. Because, under paragraph (e)(7)(v) of this section, the basis of the shares D owns when D changes from the average basis method remains the same, the basis of the shares sold on May 8, 2011, is $8.99 per share, not the original cost of $8.33 per share for the shares purchased on February 8, 2010, or $10 per share for the shares purchased on March 8, 2010, and April 8, 2010. The basis of the shares sold on July 8, 2012, is $8.99 per share for 9 shares purchased on April 8, 2010, and $12 per share for 25 shares purchased on March 8, 2011.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 4.</HD>
+            <P>
+                (i) The facts are the same as in 
+                <E T="03">Example 2,</E>
+                 except that D uses the first-in, first-out method for the 40 shares sold on January 15, 2011. W purchases 25 shares of L Company for D on March 8, 2011, at $12 per share. D sells 40 shares on May 8, 2011, and elects the average basis method.
+            </P>
+            <P>(ii) Because D uses the first-in, first-out method for the sale on January 15, 2011, the 40 shares sold are the 25 shares acquired on January 8, 2010, for $200 (basis $8 per share) and 15 of the 24 shares purchased on February 8, 2010, for $200 (basis $8.33 per share).</P>
+            <P>(iii) Under paragraph (e)(7)(i) of this section, under the average basis method, the basis of all of the shares of identical stock in D's account is averaged. Thus, the basis of each share D sells on May 8, 2011, after electing the average basis method, is $10.47. This figure is the total cost of the shares in D's account ($74.97 for the 9 shares acquired on February 8, 2010, $200 for the 20 shares acquired on March 8, 2010, $200 for the 20 shares acquired on April 8, 2010, and $300 for the 25 shares acquired on March 8, 2011) divided by 74, the total number of shares ($774.97/74).</P>
+        </EXAMPLE>
+        <P>
+            (8) 
+            <E T="03">Limitation on use of average basis method for certain gift shares.</E>
+             (i) Except as provided in paragraph (e)(8)(ii) of this section, a taxpayer may not use the average basis method for shares of stock a taxpayer acquires by gift after December 31, 1920, if the basis of the shares (adjusted for the period before the date of the gift as provided in section 1016) in the hands of the donor or the last preceding owner by whom the shares were not acquired by gift was greater than the fair market value of the shares at the time of the gift. This paragraph (e)(8)(i) does not apply to shares the taxpayer acquires as a result of a taxable dividend or capital gain distribution on the gift shares.
+        </P>
+        <P>(ii) Notwithstanding paragraph (e)(8)(i) of this section, a taxpayer may use the average basis method if the taxpayer states in writing that the taxpayer will treat the basis of the gift shares as the fair market value of the shares at the time the taxpayer acquires the shares. The taxpayer must provide this statement when the taxpayer makes the election under paragraph (e)(9) of this section or when transferring the shares to an account for which the taxpayer has made this election, whichever occurs later. The statement must be effective for any gift shares identical to the gift shares to which the average basis method election applies that the taxpayer acquires at any time and must remain in effect as long as the election remains in effect.</P>
+        <P>(iii) The provisions of this paragraph (e)(8) are illustrated by the following examples:</P>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 1.</HD>
+            <P>
+                (i) Taxpayer E owns an account for the periodic acquisition of shares of M Company, a regulated investment company. On April 15, 2010, E acquires identical shares of M Company by gift and transfers those shares into the account. These shares had an adjusted basis in the hands of the donor that was greater than the fair market value of 
+                <PRTPAGE P="54"/>
+                the shares on that date. On June 15, 2010, E sells shares from the account and elects to use the average basis method.
+            </P>
+            <P>
+                (ii) Under paragraph (e)(8)(ii) of this section, E may elect to use the average basis method for shares sold or transferred from the account if E includes a statement with E's election that E will treat the basis of the gift shares in the account as the fair market value of the shares at the time E acquired them. 
+                <E T="03">See</E>
+                 paragraph (e)(9)(ii) of this section.
+            </P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 2.</HD>
+            <P>
+                (i) The facts are the same as in 
+                <E T="03">Example 1,</E>
+                 except E acquires the gift shares on April 15, 2012, transfers those shares into the account, and used the average basis method for sales of shares of M Company before acquiring the gift shares. E sells shares of M Company on June 15, 2012.
+            </P>
+            <P>
+                (ii) Under paragraph (e)(8)(ii) of this section, the basis of the gift shares may be averaged with the basis of the other shares of M Company in E's account if, when E transfers the gift shares to the account, E provides a statement to E's broker that E will treat the basis of the gift shares in the account as the fair market value of the shares at the time E acquired them. 
+                <E T="03">See</E>
+                 paragraph (e)(9)(i) of this section.
+            </P>
+        </EXAMPLE>
+        <P>
+            (9) 
+            <E T="03">Time and manner for making the average basis method election</E>
+            —(i) 
+            <E T="03">In general.</E>
+             A taxpayer makes an election to use the average basis method for shares of stock described in paragraph (e)(1)(i) of this section that are covered securities (within the meaning of section 6045(g)(3)) by notifying the custodian or agent in writing by any reasonable means. For purposes of this paragraph (e), a writing may be in electronic format. A taxpayer has not made an election within the meaning of this section if the taxpayer fails to notify a broker of the taxpayer's basis determination method and basis is determined by the broker's default method under paragraph (e)(2) of this section. A taxpayer may make the average basis method election at any time, effective for sales or other dispositions of stock occurring after the taxpayer notifies the custodian or agent. The election must identify each account with that custodian or agent and each stock in that account to which the election applies. The election may specify that it applies to all accounts with a custodian or agent, including accounts the taxpayer later establishes with the custodian or agent. If the election applies to gift shares, the taxpayer must provide the statement required by paragraph (e)(8)(ii) of this section, if applicable, to the custodian or agent with the taxpayer's election.
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Average basis method election for securities that are noncovered securities.</E>
+             A taxpayer makes an election to use the average basis method for shares of stock described in paragraph (e)(1)(i) of this section that are noncovered securities (as described in § 1.6045-1(a)(16)) on the taxpayer's income tax return for the first taxable year for which the election applies. A taxpayer may make the election on an amended return filed no later than the time prescribed (including extensions) for filing the original return for the taxable year for which the election applies. The taxpayer must indicate on the return that the taxpayer used the average basis method in reporting gain or loss on the sale or other disposition. A taxpayer must attach to the return the statement described in paragraph (e)(8)(ii) of this section, if applicable. A taxpayer making the election must maintain records necessary to substantiate the average basis reported.
+        </P>
+        <P>
+            (iii) 
+            <E T="03">Revocation of election.</E>
+             A taxpayer may revoke an election under paragraph (e)(9)(i) of this section by the earlier of one year after the taxpayer makes the election or the date of the first sale, transfer, or disposition of that stock following the election. A custodian or agent may extend the one-year period but a taxpayer may not revoke an election after the first sale, transfer, or disposition of the stock. A revocation applies to all stock the taxpayer holds in an account that is identical to the shares of stock for which the taxpayer revokes the election. A revocation is effective when the taxpayer notifies, in writing by any reasonable means, the custodian or agent holding the stock to which the revocation applies. After revocation, the taxpayer's basis in the shares of stock to which the revocation applies is the basis before averaging.
+        </P>
+        <P>
+            (iv) 
+            <E T="03">Change from average basis method.</E>
+             A taxpayer may change basis determination methods from the average basis method to another method prospectively at any time. A change from the average basis method applies to all identical stock the taxpayer sells or otherwise disposes of before January 1, 2012, that was held in any account. A 
+            <PRTPAGE P="55"/>
+            change from the average basis method applies on an account by account basis (within the meaning of paragraph (e)(10) of this section) to all identical stock the taxpayer sells or otherwise disposes of on or after January 1, 2012. The taxpayer must notify, in writing by any reasonable means, the custodian or agent holding the stock to which the change applies. Unless paragraph (e)(9)(iii) of this section applies, the basis of each share of stock to which the change applies remains the same as the basis immediately before the change. 
+            <E T="03">See</E>
+             paragraph (e)(7)(v) of this section.
+        </P>
+        <P>
+            (v) 
+            <E T="03">Examples.</E>
+             The provisions of this paragraph (e)(9) are illustrated by the following examples:
+        </P>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 1.</HD>
+            <P>(i) Taxpayer F enters into an agreement with W Custodian establishing an account for the periodic acquisition of shares of N Company, a regulated investment company. W acquires for F's account shares of N Company on the following dates and amounts:</P>
+            <GPOTABLE COLS="3" OPTS="L2" CDEF="s75,8,8">
+                <BOXHD>
+                    <CHED H="1">Date</CHED>
+                    <CHED H="1">Number of shares</CHED>
+                    <CHED H="1">Cost</CHED>
+                </BOXHD>
+                <ROW>
+                    <ENT I="01">January 8, 2012</ENT>
+                    <ENT>25</ENT>
+                    <ENT>$200</ENT>
+                </ROW>
+                <ROW>
+                    <ENT I="01">February 8, 2012</ENT>
+                    <ENT>24</ENT>
+                    <ENT>200</ENT>
+                </ROW>
+                <ROW>
+                    <ENT I="01">March 8, 2012</ENT>
+                    <ENT>20</ENT>
+                    <ENT>200</ENT>
+                </ROW>
+            </GPOTABLE>
+            <P>(ii) F notifies W that F elects, under paragraph (e)(9)(i) of this section, to use the average basis method for the shares of N Company. On May 8, 2012, under paragraph (e)(9)(iii) of this section, F notifies W that F revokes the average basis method election. On June 1, 2012, F sells 60 shares of N Company using the first-in, first-out basis determination method.</P>
+            <P>(iii) Under paragraph (e)(9)(iii) of this section, the basis of the N Company shares upon revocation, and for purposes of determining gain on the sale, is $8.00 per share for each of the 25 shares purchased on January 8, 2012, $8.34 per share for each of the 24 shares purchased on February 8, 2012, and $10 per share for the remaining 11 shares purchased on March 8, 2012.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 2.</HD>
+            <P>
+                (i) The facts are the same as in 
+                <E T="03">Example 1,</E>
+                 except that F does not notify W that F elects a basis determination method. W's default basis determination method is the average basis method and W maintains an averaged basis for F's shares of N Company on W's books and records.
+            </P>
+            <P>(ii) F has not elected the average basis method under paragraph (e)(9)(i) of this section. Therefore, F's notification to W on May 8, 2012, is not an effective revocation under paragraph (e)(9)(iii) of this section. F's attempted revocation is, instead, notification of a change from the average basis method under paragraph (e)(9)(iv) of this section. Accordingly, the basis of each share of stock F sells on June 1, 2012, is the basis immediately before the change, $8.70 (total cost of shares, $600, divided by the total number of shares, 69).</P>
+        </EXAMPLE>
+        <P>
+            (10) 
+            <E T="03">Application of average basis method account by account</E>
+            —(i) 
+            <E T="03">In general.</E>
+             For sales, exchanges, or other dispositions on or after January 1, 2012, of stock described in paragraph (e)(1)(i) of this section, the average basis method applies on an account by account basis. A taxpayer may use the average basis method for stock in a regulated investment company or stock acquired in connection with a dividend reinvestment plan in one account but use a different basis determination method for identical stock in a different account. If a taxpayer uses the average basis method for a stock described in paragraph (e)(1)(i) of this section, the taxpayer must use the average basis method for all identical stock within that account. The taxpayer may use different basis determination methods for stock within an account that is not identical. Except as provided in paragraph (e)(10)(ii) of this section, a taxpayer must make separate elections to use the average basis method for stock held in separate accounts.
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Account rule for stock sold before 2012.</E>
+             A taxpayer's election to use the average basis method for shares of stock described in paragraph (e)(1)(i) of this section that a taxpayer sells, exchanges, or otherwise disposes of before January 1, 2012, applies to all identical shares of stock the taxpayer holds in any account.
+        </P>
+        <P>
+            (iii) 
+            <E T="03">Separate account.</E>
+             Unless the single-account election described in paragraph (e)(11)(i) of this section applies, stock described in paragraph (e)(1)(i) of this section that is a covered security (within the meaning of section 6045(g)(3)) is treated as held in a separate account from stock that is a noncovered security (as described in § 1.6045-1(a)(16)), regardless of when acquired.
+        </P>
+        <P>
+            (iv) 
+            <E T="03">Examples.</E>
+             The provisions of this paragraph (e)(10) are illustrated by the following examples:
+        </P>
+        <EXAMPLE>
+            <PRTPAGE P="56"/>
+            <HD SOURCE="HED">Example 1.</HD>
+            <P>(i) In 2012, Taxpayer G enters into an agreement with Y Broker establishing three accounts (G-1, G-2, and G-3) for the periodic acquisition of shares of P Company, a regulated investment company. Y makes periodic purchases of P Company for each of G's accounts. G elects to use the average basis method for account G-1. On July 1, 2013, G sells shares of P Company from account G-1.</P>
+            <P>(ii) G is not required to use the average basis method for the shares of P Company that G holds in accounts G-2 and G-3 because, under paragraph (e)(10)(i) of this section, the average basis method election applies to shares sold after 2011 on an account by account basis.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 2.</HD>
+            <P>
+                The facts are the same as in 
+                <E T="03">Example 1,</E>
+                 except that G also instructs Y to acquire shares of Q Company, a regulated investment company, for account G-1. Under paragraph (e)(10)(i) of this section, G may use any permissible basis determination method for the shares of Q Company because, under paragraph (e)(4) of this section, the shares of Q Company are not identical to the shares of P Company.
+            </P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 3.</HD>
+            <P>
+                (i) The facts are the same as in 
+                <E T="03">Example 1,</E>
+                 except that G establishes the accounts in 2011 and Y sells shares of P Company from account G-1 on July 1, 2011.
+            </P>
+            <P>(ii) For sales before 2012, under paragraph (e)(10)(ii) of this section, G's election applies to all accounts in which G holds identical stock. G must average together the basis of the shares in all accounts to determine the basis of the shares sold from account G-1.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 4.</HD>
+            <P>(i) In 2011, Taxpayer H acquires 80 shares of R Company and enrolls them in R Company's dividend reinvestment plan. In 2012, H acquires 50 shares of R Company in the dividend reinvestment plan. H elects to use the average basis method for the shares of R Company in the dividend reinvestment plan. R Company does not make the single-account election under paragraph (e)(11)(i) of this section.</P>
+            <P>(ii) Under section 6045(g)(3) and § 1.6045-1(a)(16), the 80 shares acquired in 2011 are noncovered securities and the 50 shares acquired in 2012 are covered securities. Therefore, under paragraph (e)(10)(iii) of this section, the 80 shares are treated as held in a separate account from the 50 shares. H must make a separate average basis method election for each account and must average the basis of the shares in each account separately from the shares in the other account.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 5.</HD>
+            <P>(i) B Broker maintains an account for Taxpayer J for the periodic acquisition of shares of S Company, a regulated investment company. In 2013, B purchases shares of S Company for J's account that are covered securities within the meaning of section 6045(g)(3). On April 15, 2014, J inherits shares of S Company that are noncovered securities and transfers the shares into the account with B.</P>
+            <P>(ii) Under paragraph (e)(10)(iii) of this section, J must treat the purchased shares and the inherited shares of S Company as held in separate accounts. J may elect to apply the average basis method to all the shares of S Company, but must make a separate election for each account, and must average the basis of the shares in each account separately from the shares in the other account.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 6.</HD>
+            <P>(i) In 2010, Taxpayer K purchases stock in T Company in an account with C Broker. In 2012, K purchases additional T Company stock and enrolls that stock in a dividend reinvestment plan maintained by C. K elects the average basis method for the T Company stock. In 2013, K transfers the T Company stock purchased in 2010 into the dividend reinvestment plan.</P>
+            <P>(ii) Under paragraphs (e)(1)(i) and (e)(6)(ii) of this section, the stock purchased in 2010 is not stock acquired after December 31, 2010, in connection with a dividend reinvestment plan before transfer into the dividend reinvestment plan. Therefore, the stock is not eligible for the average basis method at that time.</P>
+            <P>(iii) Once transferred into the dividend reinvestment plan in 2013, the stock K purchased in 2010 is acquired after December 31, 2010, in connection with a dividend reinvestment plan within the meaning of paragraph (e)(6)(ii) of this section and is eligible for the average basis method. Because stock purchased in 2010 is a noncovered security under § 1.6045-1(a)(16), under paragraph (e)(10)(iii) of this section, the 2010 stock and the 2012 stock must be treated as held in separate accounts. Under paragraph (e)(7)(i) of this section, the basis of the 2010 shares may not be averaged with the basis of the 2012 shares.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 7.</HD>
+            <P>
+                The facts are the same as in 
+                <E T="03">Example 6,</E>
+                 except that K purchases the initial T Company stock in January 2011. Because this stock is a covered security under section 6045(g)(3) and § 1.6045-1(a)(15)(iv)(A), the 2011 stock and the 2012 stock are not required under paragraph (e)(10)(iii) of this section to be treated as held in separate accounts. Under paragraph (e)(7)(i) of this section, the basis of the 2011 shares must be averaged with the basis of the 2012 shares.
+            </P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 8.</HD>
+            <P>
+                (i) The facts are the same as in 
+                <E T="03">Example 7,</E>
+                 except that K purchases the additional T Company stock and enrolls in the dividend reinvestment plan in March 2011. In September 2011, K transfers the T Company stock purchased in January 2011 into the dividend reinvestment plan. K sells some of the T Company stock in 2012.
+            </P>
+            <P>
+                (ii) Under section 6045(g)(3) and § 1.6045-1(a)(16), the stock K purchases in January 2011 is a covered security at the time of purchase but the stock K purchases and enrolls in the dividend reinvestment plan in March 2011 is a noncovered security. However, 
+                <PRTPAGE P="57"/>
+                under § 1.6045-1(a)(15)(iv)(A), the stock purchased in January 2011 becomes a noncovered security after it is transferred to the dividend reinvestment plan. Because all the shares in the dividend reinvestment plan in September 2011 are noncovered securities, when K sells stock in 2012, the January 2011 stock and the March 2011 stock are not required under paragraph (e)(10)(iii) of this section to be treated as held in separate accounts. Under paragraph (e)(7)(i) of this section, the basis of the January 2011 shares must be averaged with the basis of the March 2011 shares.
+            </P>
+        </EXAMPLE>
+        <P>
+            (11) 
+            <E T="03">Single-account election</E>
+            —(i) 
+            <E T="03">In general.</E>
+             Paragraph (e)(10)(iii) of this section does not apply if a regulated investment company or dividend reinvestment plan elects to treat all identical shares of stock described in paragraph (e)(1)(i) of this section as held in a single account (single-account election). The single-account election applies only to stock for which a taxpayer elects to use the average basis method that is held in separate accounts or treated as held in separate accounts maintained for the taxpayer and only to accounts with the same ownership. If a broker (as defined by section 6045(c)(1)) holds the stock as a nominee, the broker, and not the regulated investment company or dividend reinvestment plan, makes the election. The single-account election is irrevocable, but is void if the taxpayer revokes the average basis election under paragraph (e)(9)(iii) of this section.
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Scope of election.</E>
+             A company, plan, or broker may make a single-account election for one or more taxpayers for which it maintains an account, and for one or more stocks it holds for a taxpayer. The company, plan, or broker may make the election only for the shares of stock for which it has accurate basis information. A company, plan, or broker has accurate basis information if the company, plan, or broker neither knows nor has reason to know that the basis information is inaccurate. 
+            <E T="03">See</E>
+             also section 6724 and the associated regulations regarding standards for relief from information reporting penalties. Stock for which accurate basis information is unavailable may not be included in the single-account election and must be treated as held in a separate account.
+        </P>
+        <P>
+            (iii) 
+            <E T="03">Effect of single-account election.</E>
+             If a company, plan, or broker makes the single-account election, the basis of all identical shares of stock to which the election applies must be averaged together regardless of when the taxpayer acquires the shares, and all the shares are treated as covered securities. The single-account election applies to all identical stock a taxpayer later acquires in the account that is a covered security (within the meaning of section 6045(g)(3)). A company, plan, or broker may make another single-account election if, for example, the broker later acquires accurate basis information for a stock, or a taxpayer acquires identical stock in the account that is a noncovered security (as described in § 1.6045-1(a)(16)) for which the company, plan, or broker has accurate basis information.
+        </P>
+        <P>
+            (iv) 
+            <E T="03">Time and manner for making the single-account election.</E>
+             A company, plan, or broker makes the single-account election by clearly noting it on its books and records. The books and records must reflect the date of the election; the taxpayer's name, account number, and taxpayer identification number; the stock subject to the election; and the taxpayer's basis in the stock. The company, plan, or broker must provide copies of the books and records regarding the election to the taxpayer upon request. A company, plan, or broker may make the single-account election at any time.
+        </P>
+        <P>
+            (v) 
+            <E T="03">Notification to taxpayer.</E>
+             A company, plan, or broker making the single-account election must use reasonable means to notify the taxpayer of the election. Reasonable means include mailings, circulars, or electronic mail sent separately to the taxpayer or included with the taxpayer's account statement, or other means reasonably calculated to provide actual notice to the taxpayer. The notice must identify the securities subject to the election and advise the taxpayer that the securities will be treated as covered securities regardless of when acquired.
+        </P>
+        <P>
+            (vi) 
+            <E T="03">Examples.</E>
+             The provisions of this paragraph (e)(11) are illustrated by the following examples:
+        </P>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 1.</HD>
+            <P>
+                (i) E Broker maintains Accounts A and B for Taxpayer M for the acquisition and disposition of shares of T Company, a 
+                <PRTPAGE P="58"/>
+                regulated investment company. In 2011, E purchases 100 shares of T Company for M's Account A. E has accurate basis information for these shares. In 2012, E purchases 150 shares of T Company for M's Account A and 80 shares of T Company for M's Account B. M elects to use the average basis method for all shares of T Company. E makes a single-account election for M's T Company stock.
+            </P>
+            <P>(ii) The shares of T Company in Accounts A and B are held in separate accounts. Under section 6045(g)(3) and § 1.6045-1(a)(16), of the shares purchased in Account A, the 100 shares purchased in 2011 are noncovered securities and the 150 shares purchased in 2012 are covered securities. Under paragraph (e)(10)(iii) of this section, the 100 shares are treated as held in a separate account from the 150 shares. Under paragraph (e)(11)(i) of this section, the single-account election applies to all 330 shares of T Company in Accounts A and B. Thus, under paragraph (e)(11)(iii) of this section, the basis of the 330 shares of stock is averaged together and all the shares are treated as covered securities.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 2.</HD>
+            <P>
+                The facts are the same as in 
+                <E T="03">Example 1,</E>
+                 except that M owns Account B jointly with Taxpayer N. E may make a single-account election for the 250 shares of stock in M's Account A. However, under paragraph (e)(11)(i) of this section, E may not make a single-account election for Accounts A and B because the accounts do not have the same ownership.
+            </P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 3.</HD>
+            <P>(i) C Broker maintains an account for Taxpayer K for the acquisition and disposition of shares of T Company, a regulated investment company, and shares of V Company that K enrolls in C's dividend reinvestment plan. In 2011, C purchases for K's account 100 shares of T Company in multiple lots and 80 shares of V Company in multiple lots that are enrolled in the dividend reinvestment plan. C has accurate basis information for all 100 shares of T Company and 80 shares of V Company. In 2012, C acquires for K's account 150 shares of T Company and 160 shares of V Company that are enrolled in the dividend reinvestment plan. K elects to use the average basis method for all the shares of T Company and V Company.</P>
+            <P>(ii) Under paragraphs (e)(11)(i) and (ii) of this section, C may make a single-account election for the T Company stock or the V Company stock, or both. After making a single-account election for each stock, under paragraph (e)(11)(iii) of this section, the basis of all T Company stock is averaged together and the basis of all V Company stock is averaged together, regardless of when acquired, and all the shares of T Company and V Company are treated as covered securities.</P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 4.</HD>
+            <P>
+                The facts are the same as in 
+                <E T="03">Example 3,</E>
+                 except that K transfers the 100 shares of T Company acquired in 2011 from an account with another broker into K's account with C. C does not have accurate basis information for 30 of the 100 shares of T Company, which K had acquired in two lots. Under paragraph (e)(11)(ii) of this section, C may make the single-account election only for the 70 shares of T Company stock for which C has accurate basis information. C must treat the 30 shares of T Company for which C does not have accurate basis information as held in a separate account. K may use the average basis method for the 30 shares of T Company, but must make a separate average basis method election for these shares and must average the basis of these shares separately from the 70 shares subject to C's single-account election.
+            </P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 5.</HD>
+            <P>
+                The facts are the same as in 
+                <E T="03">Example 3,</E>
+                 except that C has made the single-account election and in 2013 K acquires additional shares of T Company that are covered securities in K's account with C. Under paragraph (e)(11)(iii) of this section, these shares of T Company are subject to C's single-account election.
+            </P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 6.</HD>
+            <P>
+                The facts are the same as in 
+                <E T="03">Example 3,</E>
+                 except that C has made the single-account election and in 2013 K inherits shares of T Company that are noncovered securities and transfers the shares into the account with C. C has accurate basis information for these shares. Under paragraph (e)(11)(iii) of this section, C may make a second single-account election to include the inherited T Company shares.
+            </P>
+        </EXAMPLE>
+        <EXAMPLE>
+            <HD SOURCE="HED">Example 7.</HD>
+            <P>(i) Between 2002 and 2011, Taxpayer L acquires 1,500 shares of W Company, a regulated investment company, in an account with D Broker, for which L uses the average basis method, and sells 500 shares. On January 5, 2012, based on accurate basis information, the averaged basis of L's remaining 1,000 shares of W Company is $24 per share. On January 5, 2012, L acquires 100 shares of W Company for $28 per share and makes an average basis election for those shares under paragraph (e)(9)(i) of this section.</P>
+            <P>(ii) On February 1, 2012, D makes a single-account election that includes all 1,100 of L's shares in W Company. Thereafter, the basis of L's shares of W Company is $24.36 per share (($24,000 + $2,800)/1,100). On September 12, 2012, under paragraph (e)(9)(iii) of this section, L revokes the average basis election for the 100 shares acquired on January 5, 2012.</P>
+            <P>(iii) Under paragraph (e)(11)(i) of this section, D's single-account election is void. Therefore, the basis of the 1,000 shares of W Company that L acquires before 2012 is $24 per share and the basis of the 100 shares of W Company that L acquires in 2012 is $28 per share.</P>
+        </EXAMPLE>
+        <P>
+            (12) 
+            <E T="03">Effective/applicability date.</E>
+             Except as otherwise provided in paragraphs (e)(1), (e)(2), (e)(7), (e)(9), and (e)(10) of this section, this paragraph (e) applies 
+            <PRTPAGE P="59"/>
+            for taxable years beginning after October 18, 2010.
+        </P>
+        <P>
+            (f) 
+            <E T="03">Special rules.</E>
+             For special rules for determining the basis for gain or loss in the case of certain vessels acquired through the Maritime Commission (or its successors) or pursuant to an agreement with the Secretary of Commerce, see sections 510, 511, and 607 of the Merchant Marine Act, 1936, as amended (46 U.S.C. 1160, 1161) and parts 2 and 3 of this chapter. For special rules for determining the unadjusted basis of property recovered in respect of war losses, see section 1336. For special rules with respect to taxable years beginning before January 1, 1964, for determining the basis for gain or loss in the case of a disposition of a share of stock acquired pursuant to the timely exercise of a restricted stock option where the option price was between 85 percent and 95 percent of the fair market value of the stock at the time the option was granted, see paragraph (b) of § 1.421-5. See section 423(c)(1) or 424(c)(1), whichever is applicable, for special rules with respect to taxable years ending after December 31, 1963, for determining the basis for gain or loss in the case of the disposition of a share of stock acquired pursuant to the timely exercise of a stock option described in such sections. See section 422(c)(1) for special rules with respect to taxable years ending after December 31, 1963, for determining the basis for gain or loss in the case of an exercise of a qualified stock option.
+        </P>
+        <P>
+            (g) 
+            <E T="03">Debt instruments issued in exchange for property</E>
+            —(1) 
+            <E T="03">In general.</E>
+             For purposes of paragraph (a) of this section, if a debt instrument is issued in exchange for property, the cost of the property that is attributable to the debt instrument is the issue price of the debt instrument as determined under § 1.1273-2 or § 1.1274-2, whichever is applicable. If, however, the issue price of the debt instrument is determined under section 1273(b)(4), the cost of the property attributable to the debt instrument is its stated principal amount reduced by any unstated interest (as determined under section 483).
+        </P>
+        <P>
+            (2) 
+            <E T="03">Certain tax-exempt obligations.</E>
+             This paragraph (g)(2) applies to a tax-exempt obligation (as defined in section 1275(a)(3)) that is issued in exchange for property and that has an issue price determined under § 1.1274-2(j) (concerning tax-exempt contingent payment obligations and certain tax-exempt variable rate debt instruments subject to section 1274). Notwithstanding paragraph (g)(1) of this section, if this paragraph (g)(2) applies to a tax-exempt obligation, for purposes of paragraph (a) of this section, the cost of the property that is attributable to the obligation is the sum of the present values of the noncontingent payments (as determined under § 1.1274-2(c)).
+        </P>
+        <P>
+            (3) 
+            <E T="03">Effective date.</E>
+             This paragraph (g) applies to sales or exchanges that occur on or after August 13, 1996.
+        </P>
+        <P>
+            (h) 
+            <E T="03">Determination of basis of digital assets</E>
+            —(1) 
+            <E T="03">Overview and general rule.</E>
+             This paragraph (h) provides rules to determine the basis of digital assets, as defined in § 1.6045-1(a)(19) other than a digital asset not required to be reported as a digital asset pursuant to § 1.6045-1(c)(8)(ii), (iii), or (iv), received in a purchase for cash, a transfer in connection with the performance of services, an exchange for digital assets or other property differing materially in kind or in extent, an exchange for a debt instrument described in paragraph (h)(1)(v) of this section, or in a part sale and part gift transfer described in paragraph (h)(1)(vi) of this section. Except as provided in paragraph (h)(1)(ii), (v), and (vi) of this section, the basis of digital assets received in a purchase or exchange is generally equal to the cost thereof at the date and time of the purchase or exchange, plus any allocable digital asset transaction costs as determined under paragraph (h)(2)(ii) of this section.
+        </P>
+        <P>
+            (i) 
+            <E T="03">Basis of digital assets purchased for cash.</E>
+             The basis of digital assets purchased for cash is the amount of cash used to purchase the digital assets plus any allocable digital asset transaction costs as determined under paragraph (h)(2)(ii)(A) of this section.
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Basis of digital assets received in connection with the performance of services.</E>
+             For rules regarding digital assets received in connection with the performance of services, 
+            <E T="03">see</E>
+             §§ 1.61-2(d)(2) and 1.83-4(b).
+        </P>
+        <P>
+            (iii) 
+            <E T="03">
+                Basis of digital assets received in exchange for property other than digital 
+                <PRTPAGE P="60"/>
+                assets.
+            </E>
+             The basis of digital assets received in exchange for property differing materially in kind or in extent, other than digital assets or debt instruments described in paragraph (h)(1)(v) of this section, is the cost as described in paragraph (h)(3) of this section of the digital assets received plus any allocable digital asset transaction costs as determined under paragraph (h)(2)(ii)(A) of this section.
+        </P>
+        <P>
+            (iv) 
+            <E T="03">Basis of digital assets received in exchange for other digital assets.</E>
+             The basis of digital assets received in an exchange for other digital assets differing materially in kind or in extent is the cost as described in paragraph (h)(3) of this section of the digital assets received.
+        </P>
+        <P>
+            (v) 
+            <E T="03">Basis of digital assets received in exchange for the issuance of a debt instrument.</E>
+             If a debt instrument is issued in exchange for digital assets, the cost of the digital assets attributable to the debt instrument is the amount determined under paragraph (g) of this section, plus any allocable digital asset transaction costs as determined under paragraph (h)(2)(ii)(A) of this section.
+        </P>
+        <P>
+            (vi) 
+            <E T="03">Basis of digital assets received in a part sale and part gift transfer.</E>
+             To the extent digital assets are received in a transfer, which is in part a sale and in part a gift, 
+            <E T="03">see</E>
+             § 1.1012-2.
+        </P>
+        <P>
+            (2) 
+            <E T="03">Digital asset transaction costs</E>
+            —(i) 
+            <E T="03">Definition.</E>
+             The term 
+            <E T="03">digital asset transaction costs</E>
+             under this paragraph (h) has the same meaning as in § 1.1001-7(b)(2)(i).
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Allocation of digital asset transaction costs.</E>
+             This paragraph (h)(2)(ii) provides the rules for allocating digital asset transaction costs, as defined in paragraph (h)(2)(i) of this section, for transactions described in paragraph (h)(1) of this section. Any other allocation or specific assignment of digital asset transaction costs is disregarded.
+        </P>
+        <P>
+            (A) 
+            <E T="03">Allocation of digital asset transaction costs on a purchase or exchange for digital assets.</E>
+             Except as provided in paragraphs (h)(2)(ii)(B) and (C) of this section, the total digital asset transaction costs paid by the taxpayer in connection with an acquisition of digital assets are allocable to the digital assets received.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Special rule for the allocation of digital asset transaction costs paid to effect an exchange of digital assets for other digital assets.</E>
+             Except as provided in paragraph (h)(2)(ii)(C) of this section, the total digital asset transaction costs paid by the taxpayer, to effect an exchange described in paragraph (h)(1)(iv) of this section are allocable exclusively to the disposition of the transferred digital assets.
+        </P>
+        <P>
+            (C) 
+            <E T="03">Special rule for allocating certain cascading digital asset transaction costs.</E>
+             This paragraph (h)(2)(ii)(C) provides a special rule for an exchange described in paragraph (h)(1)(iv) of this section (original transaction) and for which digital assets are withheld from digital assets acquired in the original transaction to pay the digital asset transaction costs to effect the original transaction. The total digital asset transaction costs paid by the taxpayer, to effect both the original transaction and any disposition of the withheld digital assets, are allocable exclusively to the disposition of digital assets in the original transaction.
+        </P>
+        <P>
+            (3) 
+            <E T="03">Determining the cost of the digital assets received.</E>
+             In the case of an exchange described in either paragraph (h)(1)(iii) or (iv) of this section, the cost of the digital assets received is the same as the fair market value used in determining the amount realized on the sale or disposition of the transferred property for purposes of section 1001 of the Code. Generally, the cost of a digital asset received is determined at the date and time of the exchange. The special rule in § 1.1001-7(b)(4) also applies in this section for purposes of determining the fair market value of a received digital asset when it cannot be determined with reasonable accuracy.
+        </P>
+        <P>
+            (4) 
+            <E T="03">Examples.</E>
+             The following examples illustrate the application of paragraphs (h)(1) through (3) of this section. Unless the facts specifically state otherwise, the transactions described in the following examples occur after the applicability date set forth in paragraph (h)(5) of this section. For purposes of the examples under this paragraph (h)(4), assume that TP is a digital asset investor, and that digital assets A, B, and C are materially different in kind or in extent from each other. 
+            <E T="03">See</E>
+             § 1.1001-7(b)(5) for examples illustrating 
+            <PRTPAGE P="61"/>
+            the determination of the amount realized and gain or loss in a sale or disposition of a digital asset for cash, other property differing materially in kind or in extent, or services.
+        </P>
+        <P>
+            (i) 
+            <E T="03">Example 1: Transaction fee paid in cash</E>
+            —(A) 
+            <E T="03">Facts.</E>
+             TP uses BEX, an unrelated third party, to exchange 10 units of digital asset A for 20 units of digital asset B. At the time of the exchange, a unit of digital asset A has a fair market value of $2, and a unit of digital asset B has a fair market value of $1. BEX charges TP a transaction fee of $2, which TP pays to BEX in cash at the time of the exchange.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Analysis.</E>
+             Under paragraph (h)(2)(i) of this section, TP has digital asset transaction costs of $2. Under paragraph (h)(2)(ii)(B) of this section, TP allocates the digital asset transaction costs ($2) to the disposition of the 10 units of digital asset A. Under paragraphs (h)(1)(iv) and (h)(3) of this section, TP's basis in the 20 units of digital asset B received is $20, which is the sum of the fair market value of the 20 units of digital asset B received ($20).
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Example 2: Transaction fee paid in other property</E>
+            —(A) 
+            <E T="03">Facts.</E>
+             The facts are the same as in paragraph (h)(4)(i)(A) of this section (the facts in 
+            <E T="03">Example 1</E>
+            ), except that BEX requires its customers to pay transaction fees using units of digital asset C. TP pays the transaction fees using 2 units of digital asset C that TP holds. At the time TP pays the transaction fees, each unit of digital asset C has a fair market value of $1. TP acquires 20 units of digital asset B with a fair market value of $20 in the exchange.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Analysis.</E>
+             Under paragraph (h)(2)(i) of this section, TP has digital asset transaction costs of $2. Under paragraph (h)(2)(ii)(B) of this section, TP must allocate the digital asset transaction costs ($2) to the disposition of the 10 units of digital asset A. Under paragraphs (h)(1)(iv) and (h)(3) of this section, TP's basis in the 20 units of digital asset B is $20, which is the sum of the fair market value of the 20 units of digital asset B received ($20).
+        </P>
+        <P>
+            (iii) 
+            <E T="03">Example 3: Digital asset transaction costs withheld from the transferred digital assets</E>
+            —(A) 
+            <E T="03">Facts.</E>
+             The facts are the same as in paragraph (h)(4)(i)(A) of this section (the facts in 
+            <E T="03">Example 1</E>
+            ), except that BEX withholds 1 unit of digital asset A in payment of the transaction fees and TP receives 18 units of digital asset B.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Analysis.</E>
+             Under paragraph (h)(2)(i) of this section, TP has digital asset transaction costs of $2. Under paragraph (h)(2)(ii)(B) of this section, TP must allocate the digital asset transaction costs ($2) to the disposition of the 10 units of digital asset A. Under paragraphs (h)(1)(iv) and (h)(3) of this section, TP's total basis in the digital asset B units is $18, which is the sum of the fair market value of the 18 units of digital asset B received ($18).
+        </P>
+        <P>
+            (5) 
+            <E T="03">Applicability date.</E>
+             This paragraph (h) is applicable to all acquisitions and dispositions of digital assets on or after January 1, 2025.
+        </P>
+        <P>(i) [Reserved]</P>
+        <P>
+            (j) 
+            <E T="03">Sale, disposition, or transfer of digital assets.</E>
+             Paragraphs (j)(1) and (2) of this section apply to digital assets not held in the custody of a broker, such as digital assets that are held in an unhosted wallet. Paragraph (j)(3) of this section applies to digital assets held in the custody of a broker. For the definitions of the terms 
+            <E T="03">wallet, hosted wallet,</E>
+             
+            <E T="03">unhosted wallet,</E>
+             and 
+            <E T="03">held in a wallet or account,</E>
+             as used in this paragraph (j), 
+            <E T="03">see</E>
+             § 1.6045-1(a)(25)(i) through (iv). For the definition of the term 
+            <E T="03">broker, see</E>
+             § 1.6045-1(a)(1). For the definition of the term 
+            <E T="03">digital asset, see</E>
+             § 1.6045-1(a)(19); however, a digital asset not required to be reported as a digital asset pursuant to § 1.6045-1(c)(8)(ii), (iii), or (iv) is not subject to the rules of this section.
+        </P>
+        <P>
+            (1) 
+            <E T="03">Digital assets not held in the custody of a broker.</E>
+             If a taxpayer sells, disposes of, or transfers less than all units of the same digital asset not held in the custody of the broker, such as in a single unhosted wallet or in a hosted wallet provided by a person other than a broker, the basis and holding period of the units sold, disposed of, or transferred are determined by making a specific identification of the units in the wallet that are sold, disposed of, or transferred, as provided in paragraph (j)(2) of this section. If a specific identification is not made, the basis and holding period of the units sold, disposed of, or transferred are determined by treating the units not held in the 
+            <PRTPAGE P="62"/>
+            custody of a broker as sold, disposed of, or transferred in order of time from the earliest date on which units of the same digital asset not held in the custody of a broker were acquired by the taxpayer. For purposes of the preceding sentence, the date any units were transferred into the taxpayer's wallet is disregarded.
+        </P>
+        <P>
+            (2) 
+            <E T="03">Specific identification of digital assets not held in the custody of a broker.</E>
+             A specific identification of the units of a digital asset sold, disposed of, or transferred is made if, no later than the date and time of the sale, disposition, or transfer, the taxpayer identifies on its books and records the particular units to be sold, disposed of, or transferred by reference to any identifier, such as purchase date and time or the purchase price for the unit, that is sufficient to identify the units sold, disposed of, or transferred. A specific identification can be made only if adequate records are maintained for the unit of a specific digital asset not held in the custody of a broker to establish that a unit sold, disposed of, or transferred is removed from the wallet.
+        </P>
+        <P>
+            (3) 
+            <E T="03">Digital assets held in the custody of a broker.</E>
+             This paragraph (j)(3) applies to digital assets held in the custody of a broker.
+        </P>
+        <P>
+            (i) 
+            <E T="03">Unit of a digital asset sold, disposed of, or transferred.</E>
+             Except as provided in paragraph (j)(3)(iii) of this section, where multiple units of the same digital asset are held in the custody of a broker, as defined in § 1.6045-1(a)(1), and the taxpayer does not provide the broker with an adequate identification of which units are sold, disposed of, or transferred by the date and time of the sale, disposition, or transfer, as provided in paragraph (j)(3)(ii) of this section, the basis and holding period of the units sold, disposed of, or transferred are determined by treating the units held in the custody of the broker as sold, disposed of, or transferred in order of time from the earliest date on which units of the same digital asset held in the custody of a broker were acquired by the taxpayer. For purposes of the preceding sentence, the date any units were transferred into the custody of the broker is disregarded.
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Adequate identification of units held in the custody of a broker.</E>
+             Except as provided in paragraph (j)(3)(iii) of this section, where multiple units of the same digital asset are held in the custody of a broker, as defined in § 1.6045-1(a)(1), an adequate identification occurs if, no later than the date and time of the sale, disposition, or transfer, the taxpayer specifies to the broker having custody of the digital assets the particular units of the digital asset to be sold, disposed of, or transferred by reference to any identifier, such as purchase date and time or purchase price, that the broker designates as sufficiently specific to identify the units sold, disposed of, or transferred. The taxpayer is responsible for maintaining records to substantiate the identification. A standing order or instruction for the specific identification of digital assets is treated as an adequate identification made at the time of sale, disposition, or transfer. In addition, a taxpayer's election to use average basis for a covered security for which average basis reporting is permitted and that is also a digital asset is also an adequate identification. In the case of a broker offering only one method of making a specific identification, such method is treated as a standing order or instruction.
+        </P>
+        <P>
+            (iii) 
+            <E T="03">Special rule for the identification of certain units withheld.</E>
+             Notwithstanding paragraph (j)(3)(i) or (ii) of this section, in the case of a transaction described in paragraph (h)(1)(iv) of this section (digital assets exchanged for different digital assets) and for which the broker withholds units of the same digital asset received for either the broker's backup withholding obligations under section 3406 of the Code, or for payment of services described in § 1.1001-7(b)(1)(ii) (digital asset transaction costs), the taxpayer is deemed to have made an adequate identification, within the meaning of paragraph (j)(3)(ii) of this section, for such withheld units regardless of any other adequate identification within the meaning of paragraph (j)(3)(ii) of this section designating other units of the same digital asset as the units sold, disposed of, or transferred.
+            <PRTPAGE P="63"/>
+        </P>
+        <P>
+            (4) 
+            <E T="03">Method for specifically identifying units of a digital asset.</E>
+             A method of specifically identifying the units of a digital asset sold, disposed of, or transferred under this paragraph (j), for example, by the earliest acquired, the latest acquired, or the highest basis, is not a method of accounting. Therefore, a change in the method of specifically identifying the digital asset sold, disposed of, or transferred, for example, from the earliest acquired to the latest acquired, is not a change in method of accounting to which sections 446 and 481 of the Code apply.
+        </P>
+        <P>
+            (5) 
+            <E T="03">Examples.</E>
+             The following examples illustrate the application of paragraphs (j)(1) through (j)(3) of this section. Unless the facts specifically state otherwise, the transactions described in the following examples occur after the applicability date set forth in paragraph (j)(6) of this section. For purposes of the examples under this paragraph (j)(5), assume that TP is a digital asset investor and that the units of digital assets in the examples are the only digital assets owned by TP.
+        </P>
+        <P>
+            (i) 
+            <E T="03">Example 1: Identification of digital assets not held in the custody of a broker</E>
+            —(A) 
+            <E T="03">Facts.</E>
+             On September 1, Year 2, TP transfers two lots of digital asset DE to a new digital asset address generated and controlled by an unhosted wallet, as defined in § 1.6045-1(a)(25)(iii). The first lot transferred into TP's wallet consists of 10 units of digital asset DE, with a purchase date of January 1, Year 1, and a basis of $2 per unit. The second lot transferred into TP's wallet consists of 20 units of digital asset DE, with a purchase date of January 1, Year 2, and a basis of $5 per unit. On September 2, Year 2, when the DE units have a fair market value of $10 per unit, TP purchases $100 worth of consumer goods from Merchant M. To make payment, TP transfers 10 units of digital asset DE from TP's wallet to CPP, a processor of digital asset payments as defined in § 1.6045-1(a)(22), that then pays $100 to M, in a transaction treated as a sale by TP of the 10 units of digital asset DE. Prior to making the transfer to CPP, TP keeps a record that the 10 units of DE sold in this transaction were from the second lot of units transferred into TP's wallet.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Analysis.</E>
+             Under the facts in paragraph (j)(5)(i)(A) of this section, TP's notation in its records on the date of sale, prior to the time of the sale, specifying that the 10 units sold were from the 20 units TP acquired on January 1, Year 2, is a specific identification within the meaning of paragraph (j)(2) of this section. TP's notation is sufficient to identify the 10 units of digital asset DE sold. Accordingly, TP has identified the units disposed of for purposes of determining the basis ($5 per unit) and holding period (one year or less) of the units sold in order to purchase the merchandise.
+        </P>
+        <P>
+            (ii) 
+            <E T="03">Example 2: Identification of digital assets not held in the custody of a broker</E>
+            —(A) 
+            <E T="03">Facts.</E>
+             The facts are the same as in paragraph (j)(5)(i)(A) of this section (the facts in 
+            <E T="03">Example 1</E>
+            ), except in making the transfer to CPP, TP did not keep a record at or prior to the time of the sale of the specific 10 units of digital asset DE that TP intended to sell.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Analysis.</E>
+             TP did not make a specific identification within the meaning of paragraph (j)(2) of this section for the 10 units of digital asset DE that were sold. Pursuant to the ordering rule provided in paragraph (j)(1) of this section, the units disposed of are determined by treating the units held in the unhosted wallet as disposed of in order of time from the earliest date on which units of the same digital asset held in the unhosted wallet were acquired by the taxpayer. Accordingly, TP must treat the 10 units sold as the 10 units with a purchase date of January 1, Year 1, and a basis of $2 per unit, transferred into the wallet.
+        </P>
+        <P>
+            (iii) 
+            <E T="03">Example 3: Identification of digital assets held in the custody of a broker</E>
+            —(A) 
+            <E T="03">Facts.</E>
+             On August 1, Year 1, TP opens a custodial account at CRX, a broker within the meaning of § 1.6045-1(a)(1), and purchases through CRX 10 units of digital asset DE for $9 per unit. On January 1, Year 2, TP opens a custodial account at BEX, an unrelated broker, and purchases through BEX 20 units of digital asset DE for $5 per unit. On August 1, Year 3, TP transfers the digital assets TP holds with CRX into TP's custodial account with BEX. BEX has a policy that purchase or transfer date and time, if necessary, is a sufficiently 
+            <PRTPAGE P="64"/>
+            specific identifier for customers to determine the units sold, disposed of, or transferred. On September 1, Year 3, TP directs BEX to sell 10 units of digital asset DE for $10 per unit and specifies that BEX sell the units that were purchased on January 1, Year 2. BEX effects the sale.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Analysis.</E>
+             No later than the date and time of the sale, TP specified to BEX the particular units of digital assets to be sold. Accordingly, under paragraph (j)(3)(ii) of this section, TP provided an adequate identification of the 10 units of digital asset DE sold. Accordingly, the 10 units of digital asset DE that TP sold are the 10 units that TP purchased on January 1, Year 2.
+        </P>
+        <P>
+            (iv) 
+            <E T="03">Example 4: Identification of digital assets held in the custody of a broker</E>
+            —(A) 
+            <E T="03">Facts.</E>
+             The facts are the same as in paragraph (j)(5)(iii)(A) of this section (the facts in 
+            <E T="03">Example 3</E>
+            ) except that TP directs BEX to sell 10 units of digital asset DE but does not make any identification of which units to sell. Additionally, TP does not provide purchase date information to BEX with respect to the units transferred into TP's account with BEX.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Analysis.</E>
+             Because TP did not specify to BEX no later than the date and time of the sale the particular units of digital assets to be sold, TP did not make an adequate identification within the meaning of paragraph (j)(3)(ii) of this section. Thus, the ordering rule provided in paragraph (j)(3)(i) of this section applies to determine the units of digital asset DE sold. Pursuant to this rule, the units sold must be determined by treating the units held in the custody of the broker as disposed of in order of time from the earliest date on which units of the same digital asset held in the custody of a broker were acquired by the taxpayer. The 10 units of digital asset DE sold must be attributed to the 10 units of digital asset DE acquired on August 1, Year 1, which are the earliest units of digital asset DE acquired by TP that are held in TP's account with BEX. In addition, because TP did not provide to BEX customer-provided acquisition information as defined in § 1.6045-1(d)(2)(ii)(B)(
+            <E T="03">4</E>
+            ) with respect to the units transferred into TP's account with BEX (or adopt a standing order to follow the ordering rule applicable to BEX under § 1.6045-1(d)(2)(ii)(B)(
+            <E T="03">2</E>
+            )), the units determined as sold by BEX under § 1.6045-1(d)(2)(ii)(B)(
+            <E T="03">1</E>
+            ) and that BEX will report as sold under § 1.6045-1 are not the same units that TP must treat as sold under this section. 
+            <E T="03">See</E>
+             § 1.6045-1(d)(2)(vii)(C) (
+            <E T="03">Example 3</E>
+            ).
+        </P>
+        <P>
+            (v) 
+            <E T="03">Example 5: Identification of the digital asset used to pay certain digital asset transaction costs</E>
+            —(A) 
+            <E T="03">Facts.</E>
+             On January 1, Year 1, TP purchases 10 units of digital asset AB and 30 units of digital asset CD in a custodial account with DRX, a broker within the meaning of § 1.6045-1(a)(1). DRX has a policy that purchase or transfer date and time, if necessary, is a sufficiently specific identifier by which its customers may identify the units sold, disposed of, or transferred. On June 30, Year 2, TP directs DRX to purchase 10 additional units of digital asset AB with 10 units of digital asset CD. DRX withholds one unit of the digital asset AB received for transaction fees. TP does not make any identification of the 1 unit of digital asset AB withheld by DRX. TP engages in no other transactions.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Analysis.</E>
+             DRX's withholding of 1 unit of digital asset AB from the 10 units acquired by TP is a disposition by TP of the 1 unit as of June 30, Year 2. 
+            <E T="03">See</E>
+             §§ 1.1001-7 and 1.1012-1(h) for determining the amount realized and basis of the disposed unit, respectively. Despite TP not making an adequate identification, within the meaning of paragraph (j)(3)(ii) of this section to DRX of the 1 unit withheld, under the special rule of paragraph (j)(3)(iii) of this section, the withheld unit of AB must be attributed to the units of AB acquired on June 30, Year 2 and held in TP's account with DRX.
+        </P>
+        <P>
+            (vi) 
+            <E T="03">Example 6: Identification of the digital asset used to pay certain digital asset transaction costs</E>
+            —(A) 
+            <E T="03">Facts.</E>
+             The facts are the same as in paragraph (j)(5)(v)(A) of this section (the facts in 
+            <E T="03">Example 5</E>
+            ) except that TP has a standing order with BEX to treat the earliest unit purchased in TP's account as the unit sold, disposed of, or transferred.
+        </P>
+        <P>
+            (B) 
+            <E T="03">Analysis.</E>
+             The transaction is an exchange of digital assets for different digital assets and for which the broker 
+            <PRTPAGE P="65"/>
+            withholds units of the same digital asset received in order to pay digital asset transaction costs. Accordingly, although TP's standing order to treat the earliest unit purchased in TP's account (that is, the units purchased by TP on January 1, Year 1) as the units sold is an adequate identification under paragraph (j)(3)(ii) of this section, TP is deemed to have made an adequate identification for such withheld units pursuant to paragraph (j)(3)(iii) of this section regardless of TP's adequate identification designating other units as the units sold. Thus, the results are the same as provided in paragraph (j)(5)(v)(B) of this section (the analysis in 
+            <E T="03">Example 5</E>
+            ).
+        </P>
+        <P>
+            (6) 
+            <E T="03">Applicability date.</E>
+             This paragraph (j) is applicable to all acquisitions and dispositions of digital assets on or after January 1, 2025.
+        </P>
+        <CITA>[T.D. 6500, 25 FR 11910, Nov. 26, 1960]</CITA>
+        <EDNOTE>
+            <HD SOURCE="HED">Editorial Note:</HD>
+            <P>
+                For 
+                <E T="04">Federal Register</E>
+                 citations affecting § 1.1012-1, see the List of CFR Sections Affected, which appears in the Finding Aids section of the printed volume and at 
+                <E T="03">www.govinfo.gov.</E>
+            </P>
+        </EDNOTE>
+    </SECTION>
+</CFRGRANULE>

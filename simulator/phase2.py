@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from statistics import median
 from typing import cast
 
 from simulator.account_transfers import TRANSFER_VARIANTS, run_account_transfers
 from simulator.clearing_readiness import run_clearing_readiness
 from simulator.focus import run_focus
+from simulator.governance_scenarios import run_governance_scenarios
 
 NOT_CLAIMED = (
     "production correctness",
@@ -33,11 +35,7 @@ def build_phase2_summary() -> dict[str, object]:
             "PASS": sum(row["disposition"] == "PASS" for row in rows),
             "HOLD": sum(row["disposition"] == "HOLD" for row in rows),
             "reasons": sorted(
-                {
-                    reason
-                    for row in rows
-                    for reason in cast(tuple[str, ...], row["reasons"])
-                }
+                {reason for row in rows for reason in cast(tuple[str, ...], row["reasons"])}
             ),
         }
     clearing_counts = {
@@ -51,23 +49,32 @@ def build_phase2_summary() -> dict[str, object]:
     focus_closes = cast(list[dict[str, object]], focus["closes"])
     focus_counts = {
         "PASS": sum(
-            cast(dict[str, bool], close["invariants"])["I13_FOCUS_TIE_OUT"]
+            cast(dict[str, bool], close["invariants"])["CONV4_REPORT_TIE_OUT"]
             for close in focus_closes
         ),
         "HOLD": sum(
-            not cast(dict[str, bool], close["invariants"])["I13_FOCUS_TIE_OUT"]
+            not cast(dict[str, bool], close["invariants"])["CONV4_REPORT_TIE_OUT"]
             for close in focus_closes
         ),
         "reasons": [],
     }
+    trade_seconds = cast(list[int], transfers["clean"]["approved_to_first_funded_trade_seconds"])
     return {
         "schema_version": "sim.phase-2/1",
         "synthetic": True,
+        "approved_to_first_funded_trade_seconds": {
+            "label": "synthetic",
+            "count": len(trade_seconds),
+            "minimum": min(trade_seconds),
+            "median": median(trade_seconds),
+            "maximum": max(trade_seconds),
+        },
         "legs": {
             "CONV-2": transfer_counts,
             "CONV-3": clearing_counts,
             "CONV-4": focus_counts,
         },
+        "governance_scenarios": run_governance_scenarios(),
         "license_gates": {
             "FINRA": "INDETERMINATE",
             "DTCC": "INDETERMINATE",
@@ -93,7 +100,11 @@ def publish_phase2(output: Path) -> None:
         )
         + "\n\n## Not claimed\n\n- "
         + "\n- ".join(cast(list[str], summary["not_claimed"]))
-        + "\n"
+        + "\n\n## Governance scenario scope\n\n"
+        + "- G1: scenario walkthrough; the control is simulated inside the scenario "
+        + "and is not a production control\n"
+        + "- G2: scenario walkthrough; the control is simulated inside the scenario "
+        + "and is not a production control\n"
     )
     for variant in TRANSFER_VARIANTS:
         target = output / "account-transfers" / variant

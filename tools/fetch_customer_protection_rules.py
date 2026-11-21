@@ -21,6 +21,7 @@ versioner, of:
 - 17 CFR 240.15c3-3, the customer protection rule,
 - 17 CFR 240.15c3-3a, Exhibit A to Rule 15c3-3, the reserve formula,
 - 17 CFR 240.17a-11, the early warning notification rule,
+- 17 CFR 240.10b-10, the customer confirmation rule,
 
 and the Securities and Exchange Commission (SEC) staff FAQ (frequently asked
 questions) on Rule 15c3-3 daily customer and PAB (proprietary accounts of
@@ -88,6 +89,7 @@ SOURCES: tuple[Source, ...] = (
         "17cfr240.15c3-3a", "17 CFR 240.15c3-3a", "RULE", "17-CFR-240.15c3-3a.xml", "240.15c3-3a"
     ),
     Source("17cfr240.17a-11", "17 CFR 240.17a-11", "RULE", "17-CFR-240.17a-11.xml", "240.17a-11"),
+    Source("17cfr240.10b-10", "17 CFR 240.10b-10", "RULE", "17-CFR-240.10b-10.xml", "240.10b-10"),
     Source(
         "sec-faq-15c3-3-daily",
         "SEC staff FAQ, Rule 15c3-3 daily customer and PAB reserve computations",

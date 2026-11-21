@@ -1,0 +1,8 @@
+{
+  "schema_version": "sim.calibration-manifest/1",
+  "pack_id": "firm-synthetic",
+  "version": "4",
+  "files": {
+    "calibration.json": "e97ffbe87f2ecd403401026c615821a9e29f7dfac8a37de116170e1adfa99aab"
+  }
+}

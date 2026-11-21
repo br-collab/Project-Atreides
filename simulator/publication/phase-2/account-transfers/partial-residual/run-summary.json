@@ -1,4 +1,5 @@
 {
+  "approved_to_first_funded_trade_seconds": [],
   "declared_policy": {
     "partial_rate": "1",
     "reject_rate": "0",
@@ -12,8 +13,10 @@
     {
       "account": "SYN-CUST-101",
       "disposition": "PASS",
+      "exception_owner": "ACATS_RESIDUAL_OPERATIONS",
       "i10_migration_conserved": true,
       "i10_reason": "statement compared independently with posted share and cent totals",
+      "lifecycle_status": "FUNDED",
       "posted_cash": "123456.79",
       "posted_quantity": "137",
       "reasons": [],
@@ -22,8 +25,10 @@
     {
       "account": "SYN-CUST-202",
       "disposition": "PASS",
+      "exception_owner": "ACATS_RESIDUAL_OPERATIONS",
       "i10_migration_conserved": true,
       "i10_reason": "statement compared independently with posted share and cent totals",
+      "lifecycle_status": "FUNDED",
       "posted_cash": "87654.32",
       "posted_quantity": "211",
       "reasons": [],

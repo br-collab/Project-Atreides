@@ -1,6 +1,6 @@
 [project]
 name = "atreides"
-version = "0.7.0"
+version = "1.3.0"
 description = "Aureon Asset Services — doctrine-native institutional governance framework"
 authors = [{name = "Guillermo Ravelo", email = "gar2163@columbia.edu"}]
 readme = "README.md"
@@ -14,9 +14,10 @@ classifiers = [
 keywords = ["asset-services", "post-trade", "custody", "governance", "doctrine"]
 
 dependencies = [
+    "cryptography==50.0.0",
     "pydantic>=2.6,<3.0",
     # Shared identifiers, digests, dispositions and halt context (CL-JUM-001 JUM-D-05).
-    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@v2.0.0",
+    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@d062cebca06bf1c925c38c3514e036abf3b49ab3",
 ]
 
 [project.optional-dependencies]
@@ -38,7 +39,7 @@ dev = [
     "pyarrow-stubs>=20",
     # SIM-1B is source-only test infrastructure. It drives the committed L.C.
     # lifecycle/capture/allocation package; production imports still refuse simulator/.
-    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@66f6597d49c2451acb2141b50a34506c1a7450bc",
+    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@4ccfd9c5aba6fa6ac6f3a16d8a23e1dc7e848dc2",
 ]
 
 [build-system]
@@ -54,6 +55,8 @@ include = ["atreides*"]
 # Atreides as a package, so an undeclared file is missing there.
 # tests/customer_protection/test_package_data.py keeps this list complete.
 [tool.setuptools.package-data]
+atreides = ["trusted_producer_keys.json", "client_reporting_requirements.json"]
+"atreides.supervision" = ["*.json"]
 "atreides.customer_protection.rules" = ["table.json", "sources/*"]
 "atreides.deadlines.rules" = ["table.json", "sources/*"]
 "atreides.deadlines.calendars" = ["*.json"]

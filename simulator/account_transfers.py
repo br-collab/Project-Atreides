@@ -4,11 +4,39 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 
+from cannae_kernel.account import AccountStatus
+from cannae_kernel.actor import ActorKind, ActorRef
+from cannae_kernel.ids import ActorId
+
+from atreides.account_lifecycle import (
+    AccountApplication,
+    AccountLifecycleStore,
+    ActorRegistryApproverVerifier,
+    AuthoritativeEvidenceResolver,
+    EligibilityResultRecord,
+    FirstPermittedTradeRecord,
+    KYBClearResultRecord,
+    KYCDecisionRecord,
+    LegalEntityEvidenceRecord,
+    TransferInRecord,
+    attest_first_permitted_trade,
+    record_kyc_decision,
+)
+from atreides.account_lifecycle import (
+    AccountType as LifecycleAccountType,
+)
+from atreides.agents.tier2.eligibility import (
+    EligibilityInputs,
+    KYCEvidence,
+    OFACScreeningEvidence,
+    SanctionsScreeningEvidence,
+    verify_eligibility,
+)
 from atreides.books.ledger import (
     AccountType,
     EquitiesBooks,
@@ -19,7 +47,9 @@ from atreides.books.ledger import (
 )
 from atreides.deadlines.acats import AcatsTransfer, assess_acats
 from atreides.deadlines.calendar import Market, MarketCalendar
+from atreides.reference_data import LegalEntityRecord
 from simulator.conversion import STATEMENT, StatementLine, _posting
+from simulator.synthetic_attestation_fixture import LC_KEY_ID, LC_PRIVATE_KEY
 
 TransferVariant = Literal["clean", "reject", "partial-residual", "late"]
 TRANSFER_VARIANTS: tuple[TransferVariant, ...] = (
@@ -29,6 +59,137 @@ TRANSFER_VARIANTS: tuple[TransferVariant, ...] = (
     "late",
 )
 FINRA_LICENSE_GATE = "INDETERMINATE"
+
+
+_C2_TRANSFER_APPROVER = ActorRef(
+    actor_id=ActorId("act_01K00000000000000000000000"),
+    actor_kind=ActorKind.HUMAN,
+    role="synthetic transfer approver",
+    entitlement_refs=("SIM-1-ACATS",),
+    authenticated=True,
+)
+_C2_ACTOR_REGISTRY = {
+    str(_C2_TRANSFER_APPROVER.actor_id): _C2_TRANSFER_APPROVER,
+}
+
+
+def _eligibility_result(account: str, at: datetime) -> EligibilityResultRecord:
+    result = verify_eligibility(
+        EligibilityInputs(
+            check_time=at,
+            kyc=KYCEvidence(
+                beneficial_owner_id=account,
+                kyc_reference_id=f"SIM-1-KYC-{account}",
+                verified_at=at,
+                expires_at=at + timedelta(days=30),
+            ),
+            requires_kyb=False,
+            ofac_screenings=(
+                OFACScreeningEvidence(
+                    subject_id=account,
+                    screening_id=f"SIM-1-OFAC-{account}",
+                    matched=False,
+                    screened_at=at,
+                ),
+            ),
+            sanctions_screenings=(
+                SanctionsScreeningEvidence(
+                    subject_id=account,
+                    screening_id=f"SIM-1-SANCTIONS-{account}",
+                    matched=False,
+                    screened_at=at,
+                ),
+            ),
+        )
+    )
+    return EligibilityResultRecord(
+        record_id=f"SIM-1-ELIGIBILITY-{account}",
+        account_id=account,
+        verified_at=at,
+        result=result,
+    )
+
+
+def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
+    application_records: dict[str, AccountApplication] = {}
+    kyc_records: dict[str, KYCDecisionRecord] = {}
+    eligibility_records: dict[str, EligibilityResultRecord] = {}
+    transfer_records: dict[str, TransferInRecord] = {}
+    trade_attestations: dict[str, bytes] = {}
+    legal_entity_records: dict[str, LegalEntityEvidenceRecord] = {}
+    kyb_records: dict[str, KYBClearResultRecord] = {}
+    for index, line in enumerate(STATEMENT, 1):
+        kyc_id = f"SIM-1-KYC-{line.account}"
+        application_id = f"SIM-1-APPLICATION-{line.account}"
+        transfer_id = f"SYN-ACATS-{index:04d}"
+        trade_id = f"SYN-LC-TRADE-{index:04d}"
+        legal_entity_id = f"SIM-1-LEGAL-{index:04d}"
+        kyb_id = f"SIM-1-KYB-{index:04d}"
+        entity_id = f"SYN-ENTITY-{index:04d}"
+        kyc_records[kyc_id] = record_kyc_decision(
+            record_id=kyc_id,
+            account_id=line.account,
+            path_id="KYC_ELIGIBLE_CLEAR",
+            decided_at=at,
+            maximum_age_seconds=300,
+            account_type=LifecycleAccountType.INSTITUTIONAL,
+            person_id=None,
+            legal_entity_record_id=legal_entity_id,
+            kyb_result_record_id=kyb_id,
+        )
+        application_records[application_id] = AccountApplication(
+            record_id=application_id,
+            account_id=line.account,
+            account_type=LifecycleAccountType.INSTITUTIONAL,
+            person_id=None,
+            applied_at=at,
+            legal_entity_record_id=legal_entity_id,
+            kyb_result_record_id=kyb_id,
+        )
+        legal_entity_records[legal_entity_id] = LegalEntityEvidenceRecord(
+            record_id=legal_entity_id,
+            account_id=line.account,
+            legal_entity=LegalEntityRecord(
+                provenance="synthetic simulator fixture",
+                effective_date=at.date(),
+                lei=f"SYNTHETICLEI{index:08d}",
+                entity_id=entity_id,
+            ),
+        )
+        kyb_records[kyb_id] = KYBClearResultRecord(
+            record_id=kyb_id,
+            account_id=line.account,
+            entity_id=entity_id,
+            clear=True,
+            verified_at=at,
+        )
+        eligibility = _eligibility_result(line.account, at)
+        eligibility_records[eligibility.record_id] = eligibility
+        transfer_records[transfer_id] = TransferInRecord(
+            record_id=transfer_id,
+            account_id=line.account,
+            completed=True,
+            completed_at=datetime(2026, 10, 5, 14, tzinfo=UTC),
+        )
+        trade_attestations[trade_id] = attest_first_permitted_trade(
+            FirstPermittedTradeRecord(
+                record_id=trade_id,
+                account_id=line.account,
+                permitted=True,
+                traded_at=datetime(2026, 10, 5, 14, minute=14 + index, tzinfo=UTC),
+            ),
+            key_id=LC_KEY_ID,
+            private_key=LC_PRIVATE_KEY,
+        )
+    return AuthoritativeEvidenceResolver(
+        application_records=application_records,
+        kyc_dsor_records=kyc_records,
+        eligibility_records=eligibility_records,
+        transfer_records=transfer_records,
+        first_trade_attestations=trade_attestations,
+        legal_entity_records=legal_entity_records,
+        kyb_records=kyb_records,
+    )
 
 
 @dataclass(frozen=True)
@@ -50,6 +211,8 @@ class TransferClose:
     posted_cash: Decimal
     i10_migration_conserved: bool | None
     i10_reason: str
+    lifecycle_status: str
+    exception_owner: str | None
 
 
 POLICIES = {
@@ -144,7 +307,7 @@ def _account_totals(books: EquitiesBooks, line: StatementLine) -> tuple[Decimal,
     return quantity, cash
 
 
-def run_account_transfers(
+def run_account_transfers(  # noqa: PLR0915
     variant: TransferVariant, *, mutation: Literal["drop-residual"] | None = None
 ) -> dict[str, object]:
     """Run transfers; all deadline dispositions come from ``assess_acats``.
@@ -162,9 +325,32 @@ def run_account_transfers(
     evaluated_at = datetime(2026, 10, 9 if variant == "late" else 5, 14, tzinfo=UTC)
     books = EquitiesBooks(break_owner="CONV_2_TRANSFER_OPS")
     closes: list[TransferClose] = []
+    lifecycle_actor = _C2_TRANSFER_APPROVER
+    lifecycle_now = instruction_at
+    lifecycle = AccountLifecycleStore(
+        ActorRegistryApproverVerifier(_C2_ACTOR_REGISTRY),
+        _evidence_resolver(instruction_at),
+        clock=lambda: lifecycle_now,
+        kyc_maximum_age_seconds=300,
+    )
 
     for index, line in enumerate(STATEMENT, 1):
+        lifecycle_now = instruction_at
         transfer_id = f"SYN-ACATS-{index:04d}"
+        kyc_id = f"SIM-1-KYC-{line.account}"
+        eligibility_id = f"SIM-1-ELIGIBILITY-{line.account}"
+        lifecycle.apply(f"SIM-1-APPLICATION-{line.account}")
+        lifecycle.transition(
+            line.account,
+            AccountStatus.APPROVED,
+            actor=lifecycle_actor,
+            timestamp=instruction_at,
+            reason="synthetic account approved before transfer",
+            evidence_refs=("SIM-1-HUMAN",),
+            kyc_record_id=kyc_id,
+            eligibility_record_id=eligibility_id,
+            human_approval_ref="SIM-1-HUMAN",
+        )
         assessment = assess_acats(
             AcatsTransfer(
                 transfer_id=transfer_id,
@@ -218,6 +404,46 @@ def run_account_transfers(
             invariant = quantity == line.quantity and cash == line.cash_credit
             invariant_reason = "statement compared independently with posted share and cent totals"
         disposition = "HOLD" if reasons or rejected else assessment.disposition.value
+        if variant == "clean" and invariant:
+            lifecycle_now = evaluated_at
+            lifecycle.transition(
+                line.account,
+                AccountStatus.FUNDED,
+                actor=lifecycle_actor,
+                timestamp=evaluated_at,
+                reason="completed synthetic transfer-in",
+                evidence_refs=(),
+                transfer_record_id=transfer_id,
+            )
+            trade_time = evaluated_at.replace(minute=14 + index)
+            lifecycle_now = trade_time
+            lifecycle.transition(
+                line.account,
+                AccountStatus.ACTIVE,
+                actor=lifecycle_actor,
+                timestamp=trade_time,
+                reason="first permitted synthetic L.C. trade",
+                evidence_refs=(),
+                first_trade_record_id=f"SYN-LC-TRADE-{index:04d}",
+            )
+            lifecycle_status = lifecycle.status(line.account).value
+            exception_owner = None
+        elif variant == "partial-residual" and invariant:
+            lifecycle_now = evaluated_at
+            lifecycle.transition(
+                line.account,
+                AccountStatus.FUNDED,
+                actor=lifecycle_actor,
+                timestamp=evaluated_at,
+                reason="completed transfer-in with owned residual",
+                evidence_refs=(),
+                transfer_record_id=transfer_id,
+            )
+            lifecycle_status = lifecycle.status(line.account).value
+            exception_owner = "ACATS_RESIDUAL_OPERATIONS"
+        else:
+            lifecycle_status = lifecycle.status(line.account).value
+            exception_owner = "ACATS_TRANSFER_OPERATIONS"
         closes.append(
             TransferClose(
                 transfer_id=transfer_id,
@@ -228,6 +454,8 @@ def run_account_transfers(
                 posted_cash=cash,
                 i10_migration_conserved=invariant,
                 i10_reason=invariant_reason,
+                lifecycle_status=lifecycle_status,
+                exception_owner=exception_owner,
             )
         )
 
@@ -238,6 +466,9 @@ def run_account_transfers(
         "declared_policy": {key: str(value) for key, value in asdict(policy).items()},
         "finra_license_gate": FINRA_LICENSE_GATE,
         "finra_claim_reason": "reproduction permission not established; existing pin retained",
+        "approved_to_first_funded_trade_seconds": list(
+            lifecycle.approval_to_first_funded_trade_seconds()
+        ),
         "transfers": [
             {
                 **asdict(close),

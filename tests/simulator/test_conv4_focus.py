@@ -9,7 +9,8 @@ def test_focus_ties_books_to_engines_at_every_month_end() -> None:
     closes = result["closes"]
     assert isinstance(closes, list)
     assert len(closes) == 3
-    assert all(close["invariants"]["I13_FOCUS_TIE_OUT"] for close in closes)
+    assert all(close["invariants"]["CONV4_REPORT_TIE_OUT"] for close in closes)
+    assert all("I13_FOCUS_TIE_OUT" not in close["invariants"] for close in closes)
 
 
 def test_17a3_inventory_does_not_invent_missing_records() -> None:

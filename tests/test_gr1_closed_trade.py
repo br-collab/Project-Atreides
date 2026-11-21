@@ -21,7 +21,7 @@ from atreides.reference_data import (
     LegalEntityRecord,
     SettlementInstructionRecord,
 )
-from emulators.ficc import emit_inbound
+from simulator.ficc_emulator import emit_inbound
 
 
 def instruction(
@@ -120,9 +120,9 @@ def test_production_refuses_synthetic_provenance() -> None:
 
 def test_production_profile_cannot_import_emulators(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ATREIDES_PROFILE", "production")
-    sys.modules.pop("emulators", None)
+    sys.modules.pop("simulator.ficc_emulator", None)
     with pytest.raises(ImportError, match="production profile"):
-        importlib.import_module("emulators")
+        importlib.import_module("simulator.ficc_emulator")
 
 
 # Rule 29: generated uneven quantities and cents; seed recorded for replay.

@@ -4,6 +4,13 @@
 
 Tier `small`: 200 accounts, 20 issues, 1,000 executions per day. All close invariants green: `True`.
 
+## Publication change reasons
+
+- N2 restricts net capital haircut inputs to firm proprietary positions
+- N3 includes PAB free credits in the PAB reserve computation
+- N4 removes fails to deliver from the Rule 15c3-3(d)(2) control location
+- N5 declares stock-loan holdings as loaned
+
 ## Firm section
 
 - Executions: 5,000
@@ -17,7 +24,7 @@ Tier `small`: 200 accounts, 20 issues, 1,000 executions per day. All close invar
 - reserve: `5` PASS, `0` HOLD; independently required: `PASS / PASS / PASS / PASS / PASS`; reasons: `none`
 - pab_reserve: `5` PASS, `0` HOLD; independently required: `PASS / PASS / PASS / PASS / PASS`; reasons: `none`
 - net_capital: `5` PASS, `0` HOLD; independently required: `PASS / PASS / PASS / PASS / PASS`; reasons: `none`
-- possession_or_control: `4` PASS, `1` HOLD; independently required: `PASS / HOLD / PASS / PASS / PASS`; reasons: `loaned[SYN-SCF1-ISSUE-0000]; SYN-SCF1-ISSUE-0000: 100 fully paid or excess margin securities are not in possession or control`
+- possession_or_control: `4` PASS, `1` HOLD; independently required: `PASS / HOLD / PASS / PASS / PASS`; reasons: `SYN-SCF1-ISSUE-0000: 100 fully paid or excess margin securities are not in possession or control`
 
 ## Not claimed
 
