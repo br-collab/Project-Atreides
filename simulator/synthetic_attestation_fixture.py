@@ -70,6 +70,16 @@ def configure_synthetic_trust() -> None:
             revoked=False,
         )
     )
+    install_lc_anchor(
+        LCTrustAnchor(
+            key_id=LC_STATUS_KEY_ID,
+            producer="atreides",
+            public_key=LC_STATUS_PRIVATE_KEY.public_key(),
+            valid_from=datetime(2000, 1, 1, tzinfo=UTC),
+            valid_to=datetime(2035, 1, 1, tzinfo=UTC),
+            revoked=False,
+        )
+    )
     install_runtime_trust_anchor(
         TrustAnchor(
             key_id=AML_OFFICER_KEY_ID,
