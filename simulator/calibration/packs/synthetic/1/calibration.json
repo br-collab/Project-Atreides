@@ -31,6 +31,7 @@
       "values": {
         "quantity_min": 73,
         "quantity_max": 311,
+        "auction_quantity_each": 5,
         "account_count_min": 2,
         "account_count_max": 5,
         "account_weight_max": 9,

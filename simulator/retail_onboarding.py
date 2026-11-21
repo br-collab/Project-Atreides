@@ -8,7 +8,6 @@ from typing import Literal
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.ids import ActorId
-from cannae_kernel.journal import ChainReport
 from pydantic import BaseModel, ConfigDict
 
 from atreides.account_lifecycle import (
@@ -19,7 +18,7 @@ from atreides.account_lifecycle import (
     ActorRegistryApproverVerifier,
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
-    KYCDecisionRecord,
+    record_kyc_decision,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -168,6 +167,15 @@ def _run_one(
             ),
         )
     )
+    kyc_record = record_kyc_decision(
+        record_id=kyc_id,
+        account_id=account_id,
+        path_id="KYC_ELIGIBLE_CLEAR",
+        decided_at=START + timedelta(seconds=10),
+        maximum_age_seconds=3600,
+        account_type=AccountType.NATURAL_PERSON,
+        person_id=person_id,
+    )
     resolver = AuthoritativeEvidenceResolver(
         application_records={
             application_id: AccountApplication(
@@ -178,25 +186,7 @@ def _run_one(
                 applied_at=START,
             )
         },
-        kyc_dsor_records={
-            kyc_id: KYCDecisionRecord(
-                record_id=kyc_id,
-                account_id=account_id,
-                path_id="KYC_ELIGIBLE_CLEAR",
-                decided_at=START + timedelta(seconds=10),
-                maximum_age_seconds=3600,
-                account_type=AccountType.NATURAL_PERSON,
-                person_id=person_id,
-            )
-        },
-        kyc_chain_reports={
-            kyc_id: ChainReport(
-                ok=True,
-                event_count=1,
-                head_digest="sha256:" + "22" * 32,
-                issues=(),
-            )
-        },
+        kyc_dsor_records={kyc_id: kyc_record},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
                 record_id=eligibility_id,
@@ -220,6 +210,8 @@ def _run_one(
             }
         ),
         resolver,
+        clock=lambda: approval_time,
+        kyc_maximum_age_seconds=300,
     )
     lifecycle.apply(application_id)
     approval_time = START + timedelta(seconds=30)

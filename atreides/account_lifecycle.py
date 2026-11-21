@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -13,7 +14,7 @@ from cannae_kernel.canonical import canonical_bytes
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.domains import Domain
 from cannae_kernel.events import EventEnvelope, seal
-from cannae_kernel.ids import CheckpointId, EventId, LifecycleId
+from cannae_kernel.ids import ActorId, CheckpointId, EventId, LifecycleId, encode_ulid
 from cannae_kernel.journal import ChainReport, JournalCheckpoint, verify_chain
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.signed_attestation import (
@@ -23,6 +24,7 @@ from cannae_kernel.signed_attestation import (
     sign_attestation,
     verify_attestation,
 )
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atreides.agents.tier2.outputs import EligibilityVerification
@@ -42,6 +44,9 @@ from atreides.trust_anchors import (
     resolve_pinned_anchor,
 )
 
+SYNTHETIC_KYC_KEY_ID = "synthetic-atreides-kyc-key-1"
+SYNTHETIC_KYC_PRIVATE_KEY = Ed25519PrivateKey.from_private_bytes(bytes([17]) * 32)
+
 
 class RefusalReason(StrEnum):
     ILLEGAL_TRANSITION = "ILLEGAL_TRANSITION"
@@ -55,6 +60,9 @@ class RefusalReason(StrEnum):
     KYC_EVIDENCE_NOT_FOUND = "KYC_EVIDENCE_NOT_FOUND"
     KYC_ACCOUNT_MISMATCH = "KYC_ACCOUNT_MISMATCH"
     KYC_CHAIN_INVALID = "KYC_CHAIN_INVALID"
+    KYC_SEALER_INVALID = "KYC_SEALER_INVALID"
+    KYC_SIGNATURE_MISSING = "KYC_SIGNATURE_MISSING"
+    KYC_SIGNATURE_INVALID = "KYC_SIGNATURE_INVALID"
     ATREIDES_ELIGIBILITY_FAILED = "ATREIDES_ELIGIBILITY_FAILED"
     ELIGIBILITY_EVIDENCE_NOT_FOUND = "ELIGIBILITY_EVIDENCE_NOT_FOUND"
     ELIGIBILITY_ACCOUNT_MISMATCH = "ELIGIBILITY_ACCOUNT_MISMATCH"
@@ -126,8 +134,8 @@ class AccountType(StrEnum):
     NATURAL_PERSON = "NATURAL_PERSON"
 
 
-class KYCDecisionRecord(BaseModel):
-    """Authoritative KYC ladder record resolved from the DSOR."""
+class KYCDecisionPayload(BaseModel):
+    """Immutable facts sealed when one Know Your Customer decision is recorded."""
 
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
     record_id: str = Field(min_length=1)
@@ -141,10 +149,96 @@ class KYCDecisionRecord(BaseModel):
     kyb_result_record_id: str | None = None
 
     @model_validator(mode="after")
-    def _person_binding_matches_account_type(self) -> KYCDecisionRecord:
+    def _person_binding_matches_account_type(self) -> KYCDecisionPayload:
         if (self.account_type is AccountType.NATURAL_PERSON) != (self.person_id is not None):
             raise ValueError("natural-person KYC requires one person binding")
         return self
+
+
+class KYCDecisionRecord(KYCDecisionPayload):
+    """Authoritative decision stored together with its sealed event chain."""
+
+    event_chain: tuple[EventEnvelope[KYCDecisionPayload], ...] = Field(min_length=1)
+    signed_attestation: bytes
+
+    def payload(self) -> KYCDecisionPayload:
+        return KYCDecisionPayload.model_validate(
+            self.model_dump(exclude={"event_chain", "signed_attestation"})
+        )
+
+
+def record_kyc_decision(
+    *,
+    record_id: str,
+    account_id: str,
+    account_type: AccountType,
+    path_id: str,
+    decided_at: datetime,
+    maximum_age_seconds: int,
+    key_id: str = SYNTHETIC_KYC_KEY_ID,
+    private_key: SigningKey = SYNTHETIC_KYC_PRIVATE_KEY,
+    person_id: str | None = None,
+    legal_entity_record_id: str | None = None,
+    kyb_result_record_id: str | None = None,
+) -> KYCDecisionRecord:
+    """Seal and store one Know Your Customer decision as one operation."""
+    payload = KYCDecisionPayload(
+        record_id=record_id,
+        account_id=account_id,
+        account_type=account_type,
+        person_id=person_id,
+        path_id=path_id,
+        decided_at=decided_at,
+        maximum_age_seconds=maximum_age_seconds,
+        legal_entity_record_id=legal_entity_record_id,
+        kyb_result_record_id=kyb_result_record_id,
+    )
+    actor = ActorRef(
+        actor_id=ActorId("act_00000000000000000000000001"),
+        actor_kind=ActorKind.DETERMINISTIC_SERVICE,
+        role="kyc-decision-record-writer",
+        entitlement_refs=("KYC_DSOR_WRITE",),
+        authenticated=True,
+    )
+    decision_digest = hashlib.sha256(canonical_bytes(payload)).hexdigest()
+    timestamp_ms = int(payload.decided_at.timestamp() * 1000)
+    digest_bytes = bytes.fromhex(decision_digest)
+    event = seal(
+        event_id=EventId(f"evt_{encode_ulid(timestamp_ms, digest_bytes[:10])}"),
+        lifecycle_id=LifecycleId(f"lif_{encode_ulid(timestamp_ms, digest_bytes[10:20])}"),
+        parent_ids=(),
+        producer_domain=Domain.ATREIDES,
+        event_type="KYCDecisionRecorded",
+        schema_version="atreides.kyc_decision_recorded/1",
+        rule_version="kyc-dsor/1",
+        times=EventTimes(
+            event_time=payload.decided_at,
+            observation_time=payload.decided_at,
+            processing_time=payload.decided_at,
+            decision_time=payload.decided_at,
+        ),
+        provenance=Provenance.POLICY_RESULT,
+        actor=actor,
+        idempotency_key=f"kyc:{payload.record_id}",
+        payload=payload,
+        prior_event_digest=None,
+    )
+    signed_attestation = sign_attestation(
+        canonical_bytes(event),
+        producer="atreides",
+        key_id=key_id,
+        private_key=private_key,
+    )
+    return KYCDecisionRecord(
+        **payload.model_dump(), event_chain=(event,), signed_attestation=signed_attestation
+    )
+
+
+def kyc_chain_report(
+    chain: tuple[EventEnvelope[KYCDecisionPayload], ...],
+) -> ChainReport:
+    """Verify a stored Know Your Customer decision event chain."""
+    return verify_chain(chain)
 
 
 class EligibilityResultRecord(BaseModel):
@@ -171,6 +265,7 @@ class FirstPermittedTradeRecord(BaseModel):
     account_id: str = Field(min_length=1)
     permitted: bool
     traded_at: datetime
+    source_event_id: str | None = Field(default=None, min_length=1)
     signature_scope: Literal["synthetic mode: signatures authenticate within one run only"] = (
         "synthetic mode: signatures authenticate within one run only"
     )
@@ -264,7 +359,6 @@ class AuthoritativeEvidenceResolver:
         self,
         *,
         kyc_dsor_records: Mapping[str, KYCDecisionRecord],
-        kyc_chain_reports: Mapping[str, ChainReport],
         eligibility_records: Mapping[str, EligibilityResultRecord],
         transfer_records: Mapping[str, TransferInRecord],
         first_trade_attestations: Mapping[str, bytes],
@@ -276,7 +370,6 @@ class AuthoritativeEvidenceResolver:
         kyb_records: Mapping[str, KYBClearResultRecord] | None = None,
     ) -> None:
         self._kyc_dsor_records = kyc_dsor_records
-        self._kyc_chain_reports = kyc_chain_reports
         self._eligibility_records = eligibility_records
         self._transfer_records = transfer_records
         self._first_trade_attestations = first_trade_attestations
@@ -293,9 +386,37 @@ class AuthoritativeEvidenceResolver:
         record = self._kyc_dsor_records.get(record_id)
         if record is None:
             raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_NOT_FOUND)
-        report = self._kyc_chain_reports.get(record_id)
-        if report is None or not report.ok:
+        chain = record.event_chain
+        report = kyc_chain_report(chain)
+        if not report.ok or report.event_count != 1:
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
+        if chain[-1].payload != record.payload():
+            raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
+        sealer = chain[-1]
+        if (
+            sealer.actor.actor_kind is not ActorKind.DETERMINISTIC_SERVICE
+            or sealer.actor.role != "kyc-decision-record-writer"
+            or "KYC_DSOR_WRITE" not in sealer.actor.entitlement_refs
+            or sealer.provenance is not Provenance.POLICY_RESULT
+        ):
+            raise AccountTransitionRefusedError(RefusalReason.KYC_SEALER_INVALID)
+        if not record.signed_attestation:
+            raise AccountTransitionRefusedError(RefusalReason.KYC_SIGNATURE_MISSING)
+        try:
+            anchor, registry = resolve_pinned_anchor(
+                record.signed_attestation,
+                expected_producer="atreides",
+            )
+            signed_payload = verify_attestation(
+                record.signed_attestation,
+                expected_producer="atreides",
+                registry=registry,
+            )
+            require_anchor_valid_at(anchor, record.decided_at)
+        except (TrustAnchorError, AttestationVerificationError) as exc:
+            raise AccountTransitionRefusedError(RefusalReason.KYC_SIGNATURE_INVALID) from exc
+        if signed_payload != canonical_bytes(sealer):
+            raise AccountTransitionRefusedError(RefusalReason.KYC_SIGNATURE_INVALID)
         return record
 
     def resolve_eligibility(self, record_id: str) -> EligibilityResultRecord:
@@ -523,8 +644,8 @@ class AccountLifecycleStore:
         evidence_resolver: EvidenceResolver,
         principal_policy: PrincipalApproverPolicyRow = PRINCIPAL_APPROVER_POLICY,
         *,
-        clock: Callable[[], datetime] | None = None,
-        kyc_maximum_age_seconds: int | None = None,
+        clock: Callable[[], datetime],
+        kyc_maximum_age_seconds: int,
     ) -> None:
         self._approver_verifier = approver_verifier
         self._evidence_resolver = evidence_resolver
@@ -579,12 +700,7 @@ class AccountLifecycleStore:
     ) -> None:
         if evidence.account_id != account_id:
             raise AccountTransitionRefusedError(RefusalReason.KYC_ACCOUNT_MISMATCH)
-        maximum_age = (
-            evidence.maximum_age_seconds
-            if self._kyc_maximum_age_seconds is None
-            else self._kyc_maximum_age_seconds
-        )
-        if (timestamp - evidence.decided_at).total_seconds() > maximum_age:
+        if (timestamp - evidence.decided_at).total_seconds() > self._kyc_maximum_age_seconds:
             raise AccountTransitionRefusedError(RefusalReason.KYC_EVIDENCE_STALE)
         refusals = {
             "KYC_MISSING_HALT": RefusalReason.KYC_MISSING,
@@ -616,10 +732,9 @@ class AccountLifecycleStore:
         profile_record_id: str | None = None,
         principal_acceptance_record_id: str | None = None,
     ) -> EventEnvelope[AccountEvent]:
-        # An injected run clock is authoritative. In production-style compositions a
-        # caller cannot make stale evidence look fresh by selecting an earlier time.
-        if self._clock is not None:
-            timestamp = self._clock()
+        # The injected clock is authoritative. The retained timestamp argument is
+        # compatibility-only and cannot make stale evidence look fresh.
+        timestamp = self._clock()
         prior = self.status(account_id)
         rule = TRANSITION_RULES.get((prior, target))
         if rule is None:

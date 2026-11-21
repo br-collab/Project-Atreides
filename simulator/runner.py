@@ -14,6 +14,7 @@ from typing import Any, cast
 
 from cannae_kernel.canonical import canonical_bytes_of
 
+from atreides.books.ledger import EquitiesBooks
 from atreides.customer_protection.reserve import ComputationMode
 from atreides.customer_protection.rules import load_rule_table
 from atreides.deadlines.calendar import Market, MarketCalendar
@@ -25,6 +26,8 @@ from simulator.estate import (
     DepositPolicy,
     ReserveDeposit,
     drive_estate,
+    exercise_simulator_market_access,
+    seed_customer_cash,
     simulated_filed_credit_total,
 )
 from simulator.invariants import InvariantEvidence, evaluate_invariants
@@ -263,14 +266,19 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         matched_at=base + timedelta(seconds=3),
         execution_price=order_price - price_spread,
     )
+    auction_quantity = int(pack.value("generator", "auction_quantity_each"))
     opening = auction_print(
-        order=order.model_copy(update={"order_id": f"ORD-{index}-OPEN", "quantity": 5}),
+        order=order.model_copy(
+            update={"order_id": f"ORD-{index}-OPEN", "quantity": auction_quantity}
+        ),
         clearing_price=order_price - Decimal("0.02"),
         imbalance=rng.randrange(1, 5),
         session="OPEN_AUCTION",
     )
     closing = auction_print(
-        order=order.model_copy(update={"order_id": f"ORD-{index}-CLOSE", "quantity": 5}),
+        order=order.model_copy(
+            update={"order_id": f"ORD-{index}-CLOSE", "quantity": auction_quantity}
+        ),
         clearing_price=order_price + Decimal("0.02"),
         imbalance=rng.randrange(1, 5),
         session="CLOSE_AUCTION",
@@ -488,6 +496,26 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
     carried = reserve_history.get("reserve_bank", (Decimal(0), Decimal(0)))
     assert isinstance(carried, tuple)
     opening_balances = (Decimal(carried[0]), Decimal(carried[1]))
+    allocation_accounts = tuple(f"ACCOUNT-{position + 1}" for position in range(account_count))
+    books = EquitiesBooks(break_owner="SIM_SETTLEMENT_OPS")
+    seed_customer_cash(
+        books,
+        run_number=index,
+        business_date=business_date,
+        accounts=allocation_accounts,
+        account_weights=account_weights,
+        balance=customer_credit,
+    )
+    market_payload, market_register = exercise_simulator_market_access(
+        run_number=index,
+        business_date=business_date,
+        issue=issue,
+        reports=reports,
+        account_weights=account_weights,
+        prior_close=prior_close,
+        pack=pack,
+        books=books,
+    )
     estate = drive_estate(
         run_number=index,
         business_date=business_date,
@@ -497,7 +525,7 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         street_quantity=Decimal(sum(m.securities for m in cns)),
         prior_close=prior_close,
         protection_inputs_missing=protection_inputs_missing,
-        customer_credit_balance=customer_credit,
+        customer_credit_balance=Decimal(0),
         average_total_credits=average_credits,
         daily_requirement_effective_date=effective,
         computation_mode=mode,
@@ -508,6 +536,10 @@ def _simulate_close(  # noqa: PLR0915 - one close keeps every independent source
         pab_fail_to_receive=pab_fail_to_receive,
         reserve_bank_opening=opening_balances,
         deposit_policy=deposit_policy,
+        account_ids=allocation_accounts,
+        books=books,
+        approved_payload=market_payload,
+        approved_register=market_register,
     )
     reserve_history["reserve_bank"] = tuple(
         deposit.closing_balance for deposit in estate.reserve_deposits

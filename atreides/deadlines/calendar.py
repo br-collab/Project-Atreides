@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol, Self
@@ -45,12 +45,27 @@ class _CalendarFile(BaseModel):
     confidence: str = Field(min_length=1)
     holidays: dict[int, tuple[date, ...]]
     year_sources: dict[int, tuple[_CalendarSource, ...]] = Field(default_factory=dict)
+    regular_close: time | None = None
+    early_close: time | None = None
+    early_closes: dict[int, tuple[date, ...]] = Field(default_factory=dict)
+    session_sources: tuple[_CalendarSource, ...] = ()
 
     @model_validator(mode="after")
     def _dates_match_years(self) -> Self:
         for year, dates in self.holidays.items():
             if any(day.year != year for day in dates):
                 raise ValueError(f"holiday is outside declared year {year}")
+        for year, dates in self.early_closes.items():
+            if year not in self.holidays:
+                raise ValueError(f"early closes name year {year} without holiday data")
+            if any(day.year != year for day in dates):
+                raise ValueError(f"early close is outside declared year {year}")
+            if any(day in self.holidays[year] for day in dates):
+                raise ValueError(f"early close in {year} is also a holiday")
+        if self.early_closes and (self.regular_close is None or self.early_close is None):
+            raise ValueError("early closes need both a regular and an early close time")
+        if self.early_closes and not self.session_sources:
+            raise ValueError("session close data needs a source")
         if any(year not in self.holidays for year in self.year_sources):
             raise ValueError("calendar year source names a year without holiday data")
         return self
@@ -66,6 +81,10 @@ class MarketCalendar:
         self.confidence = document.confidence
         self.year_sources = document.year_sources
         self._holidays = {year: frozenset(days) for year, days in document.holidays.items()}
+        self._regular_close = document.regular_close
+        self._early_close = document.early_close
+        self._early_closes = {year: frozenset(days) for year, days in document.early_closes.items()}
+        self.session_sources = document.session_sources
 
     @classmethod
     def load(cls, market: Market) -> MarketCalendar:
@@ -82,6 +101,26 @@ class MarketCalendar:
                 f"{self.market.value} calendar has no loaded data for {value.year}"
             )
         return value.weekday() < 5 and value not in self._holidays[value.year]
+
+    def session_close(self, value: date) -> time:
+        """Local close time of the regular session on a business day.
+
+        Raises ``CalendarIndeterminateError`` when the year has no session-close data, and
+        ``ValueError`` when the market is closed that day. A missing early-close list is never
+        read as "no early closes".
+        """
+
+        if not self.is_business_day(value):
+            raise ValueError(f"{self.market.value} is closed on {value.isoformat()}")
+        if value.year not in self._early_closes or self._regular_close is None:
+            raise CalendarIndeterminateError(
+                f"{self.market.value} calendar has no session-close data for {value.year}"
+            )
+        if value in self._early_closes[value.year]:
+            if self._early_close is None:
+                raise CalendarIndeterminateError(f"{self.market.value} has no early close time")
+            return self._early_close
+        return self._regular_close
 
     def add_business_days(self, start: date, days: int) -> date:
         if days < 0:

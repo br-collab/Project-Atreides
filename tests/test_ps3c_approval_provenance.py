@@ -1,0 +1,60 @@
+"""PS-3C Part 4 run-level approval and KYC provenance controls."""
+
+import pytest
+
+from simulator.golden_path import Variant, run_golden_path
+
+
+@pytest.mark.parametrize(
+    ("variant", "reason"),
+    [
+        (Variant.KYC_WRONG_ACTOR, "KYC_SEALER_INVALID"),
+        (Variant.KYC_UNSIGNED, "KYC_SIGNATURE_MISSING"),
+        (Variant.KYC_BAD_SIGNATURE, "KYC_SIGNATURE_INVALID"),
+    ],
+)
+def test_golden_path_refuses_untrusted_kyc_provenance(
+    variant: Variant, reason: str
+) -> None:
+    result = run_golden_path(variant)
+
+    assert result.refusal == reason, "KYC signer provenance control did not fail"
+
+
+@pytest.mark.parametrize(
+    ("variant", "reason"),
+    [
+        (Variant.PRINCIPAL_APPROVAL_MISSING, "PRINCIPAL_ACCEPTANCE_NOT_FOUND"),
+        (Variant.PRINCIPAL_SELF_APPROVAL, "PRINCIPAL_ROLE_CONFLICT"),
+    ],
+)
+def test_golden_path_refuses_missing_or_self_principal_approval(
+    variant: Variant, reason: str
+) -> None:
+    result = run_golden_path(variant)
+
+    assert result.refusal == reason, "principal approval control did not fail"
+
+
+@pytest.mark.parametrize(
+    ("variant", "message"),
+    [
+        (Variant.INTENT_SERVICE_HUMAN_JUDGMENT, "HUMAN_APPROVAL_ATTESTATION_REQUIRED"),
+        (Variant.INTENT_HUMAN_NO_ATTESTATION, "HUMAN_APPROVAL_ATTESTATION_REQUIRED"),
+        (Variant.INTENT_HUMAN_BAD_SIGNATURE, "HUMAN_APPROVAL_SIGNATURE_INVALID"),
+    ],
+)
+def test_golden_path_refuses_unattested_approved_intent(
+    variant: Variant, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        run_golden_path(variant)
+
+
+def test_golden_path_pack_has_one_attested_human_decision() -> None:
+    result = run_golden_path()
+    human = tuple(item for item in result.evidence if item.actor_kind == "HUMAN")
+
+    assert len(human) == 1, "golden path must publish exactly one human decision"
+    assert human[0].attestation_id == "MVP3-HUMAN-APPROVAL"
+    assert human[0].signature_status == "VERIFIED"

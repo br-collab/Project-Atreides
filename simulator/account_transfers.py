@@ -12,7 +12,6 @@ from typing import Literal
 from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.ids import ActorId
-from cannae_kernel.journal import ChainReport
 
 from atreides.account_lifecycle import (
     AccountApplication,
@@ -26,6 +25,7 @@ from atreides.account_lifecycle import (
     LegalEntityEvidenceRecord,
     TransferInRecord,
     attest_first_permitted_trade,
+    record_kyc_decision,
 )
 from atreides.account_lifecycle import (
     AccountType as LifecycleAccountType,
@@ -126,7 +126,7 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
         legal_entity_id = f"SIM-1-LEGAL-{index:04d}"
         kyb_id = f"SIM-1-KYB-{index:04d}"
         entity_id = f"SYN-ENTITY-{index:04d}"
-        kyc_records[kyc_id] = KYCDecisionRecord(
+        kyc_records[kyc_id] = record_kyc_decision(
             record_id=kyc_id,
             account_id=line.account,
             path_id="KYC_ELIGIBLE_CLEAR",
@@ -184,15 +184,6 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
     return AuthoritativeEvidenceResolver(
         application_records=application_records,
         kyc_dsor_records=kyc_records,
-        kyc_chain_reports={
-            record_id: ChainReport(
-                ok=True,
-                event_count=1,
-                head_digest="sha256:" + "11" * 32,
-                issues=(),
-            )
-            for record_id in kyc_records
-        },
         eligibility_records=eligibility_records,
         transfer_records=transfer_records,
         first_trade_attestations=trade_attestations,
@@ -335,12 +326,16 @@ def run_account_transfers(  # noqa: PLR0915
     books = EquitiesBooks(break_owner="CONV_2_TRANSFER_OPS")
     closes: list[TransferClose] = []
     lifecycle_actor = _C2_TRANSFER_APPROVER
+    lifecycle_now = instruction_at
     lifecycle = AccountLifecycleStore(
         ActorRegistryApproverVerifier(_C2_ACTOR_REGISTRY),
         _evidence_resolver(instruction_at),
+        clock=lambda: lifecycle_now,
+        kyc_maximum_age_seconds=300,
     )
 
     for index, line in enumerate(STATEMENT, 1):
+        lifecycle_now = instruction_at
         transfer_id = f"SYN-ACATS-{index:04d}"
         kyc_id = f"SIM-1-KYC-{line.account}"
         eligibility_id = f"SIM-1-ELIGIBILITY-{line.account}"
@@ -410,6 +405,7 @@ def run_account_transfers(  # noqa: PLR0915
             invariant_reason = "statement compared independently with posted share and cent totals"
         disposition = "HOLD" if reasons or rejected else assessment.disposition.value
         if variant == "clean" and invariant:
+            lifecycle_now = evaluated_at
             lifecycle.transition(
                 line.account,
                 AccountStatus.FUNDED,
@@ -420,6 +416,7 @@ def run_account_transfers(  # noqa: PLR0915
                 transfer_record_id=transfer_id,
             )
             trade_time = evaluated_at.replace(minute=14 + index)
+            lifecycle_now = trade_time
             lifecycle.transition(
                 line.account,
                 AccountStatus.ACTIVE,
@@ -432,6 +429,7 @@ def run_account_transfers(  # noqa: PLR0915
             lifecycle_status = lifecycle.status(line.account).value
             exception_owner = None
         elif variant == "partial-residual" and invariant:
+            lifecycle_now = evaluated_at
             lifecycle.transition(
                 line.account,
                 AccountStatus.FUNDED,
