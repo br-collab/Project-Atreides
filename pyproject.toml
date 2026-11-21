@@ -14,10 +14,10 @@ classifiers = [
 keywords = ["asset-services", "post-trade", "custody", "governance", "doctrine"]
 
 dependencies = [
-    "cryptography==50.0.0",
+    "cryptography==50.0.2",
     "pydantic>=2.6,<3.0",
     # Shared identifiers, digests, dispositions and halt context (CL-JUM-001 JUM-D-05).
-    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@d062cebca06bf1c925c38c3514e036abf3b49ab3",
+    "cannae-kernel @ git+https://github.com/br-collab/cannae-kernel.git@5ea352e5ce9234370398c4a6f243ba58c79fc1e4",
 ]
 
 [project.optional-dependencies]
@@ -39,7 +39,7 @@ dev = [
     "pyarrow-stubs>=20",
     # SIM-1B is source-only test infrastructure. It drives the committed L.C.
     # lifecycle/capture/allocation package; production imports still refuse simulator/.
-    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@4ccfd9c5aba6fa6ac6f3a16d8a23e1dc7e848dc2",
+    "legiones-cannenses @ git+https://github.com/br-collab/L.C..git@dd638b14f8d49bd62a3618a76232923dee0e144e",
 ]
 
 [build-system]
