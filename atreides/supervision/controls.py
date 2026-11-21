@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
 
+from atreides.supervision.aml import AMLCase
+
 
 @dataclass(frozen=True, slots=True)
 class ReviewRecord:
@@ -215,20 +217,60 @@ def build_3130_draft(*, report: TestingReport, ceo: str) -> CertificationDraft:
     return CertificationDraft(f"3130-{report.run_id}", ceo, report.report_id)
 
 
+_SURVEILLANCE_DISPOSITIONS = frozenset(
+    {
+        "SURVEIL_CLEAR",
+        "SURVEIL_DATA_INCOMPLETE",
+        "SURVEIL_PATTERN_FLAGGED",
+        "SURVEIL_PATTERN_ESCALATE",
+    }
+)
+
+
 def build_public_summary(
     *,
-    wsp_rows: tuple[dict[str, Any], ...],
-    testing_report: TestingReport,
-    cat_summary: dict[str, int],
-    aml_alert_count: int,
+    junit_xml: Path,
+    cat_feedback_file: Path,
+    aml_cases: tuple[AMLCase, ...],
     surveillance_dispositions: tuple[str, ...],
+    publication: Path,
 ) -> dict[str, Any]:
-    """Build public counts only from engine outputs and omit confidential case data."""
-    return {
-        "wsp_count": len(wsp_rows),
-        "3120_exception_count": testing_report.exception_count,
-        "cat_record_count": cat_summary["record_count"],
-        "cat_exception_count": cat_summary["exception_count"],
-        "aml_alert_count": aml_alert_count,
-        "surveillance_dispositions": surveillance_dispositions,
+    """Write Phase A public counts from engine outputs and omit confidential case data.
+
+    Rule 3120 counts come from ``run_3120_testing``. CAT (Consolidated Audit Trail) record
+    and feedback counts come from the feedback file that engine wrote. Anti-money laundering
+    alert counts are the length of the monitoring result. No suspicious activity report field
+    and no case identifier is written. No run calls this yet.
+    """
+
+    if any(case.decision is not None or case.draft_sar is not None for case in aml_cases):
+        raise ValueError("PUBLIC_SUMMARY_SAR_REFUSED")
+    unknown = set(surveillance_dispositions) - _SURVEILLANCE_DISPOSITIONS
+    if unknown:
+        raise ValueError("PUBLIC_SUMMARY_DISPOSITION_UNKNOWN")
+    report = run_3120_testing(junit_xml=junit_xml)
+    feedback = json.loads(cat_feedback_file.read_text(encoding="utf-8"))
+    if not isinstance(feedback, dict) or not isinstance(feedback.get("record_count"), int):
+        raise ValueError("CAT_FEEDBACK_UNREADABLE")
+    rejections = feedback.get("rejections", [])
+    if not isinstance(rejections, list):
+        raise ValueError("CAT_FEEDBACK_UNREADABLE")
+    summary: dict[str, Any] = {
+        "phase": "A",
+        "wsp_register_version": report.register_version,
+        "wsp_register_status": "CLEAR" if report.exception_count == 0 else "EXCEPTIONS",
+        "wsp_row_count": len(report.tests),
+        "3120_passed_count": sum(item.status == "PASS" for item in report.tests),
+        "3120_exception_count": report.exception_count,
+        "3120_label": "Phase A",
+        "cat_record_count": feedback["record_count"],
+        "cat_feedback_count": len(rejections),
+        "aml_alert_count": len(aml_cases),
+        "surveillance_dispositions": list(surveillance_dispositions),
     }
+    publication.mkdir(parents=True, exist_ok=True)
+    (publication / "public-summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return summary
