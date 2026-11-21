@@ -7,6 +7,7 @@ allocation functions and the Atreides journal and CNS engines; it has no submiss
 from __future__ import annotations
 
 import hashlib
+import json
 import random
 import resource
 import sys
@@ -18,15 +19,17 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal, cast
 
+from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
-from cannae_kernel.canonical import canonical_bytes_of, digest, digest_bytes
+from cannae_kernel.canonical import canonical_bytes, canonical_bytes_of, digest, digest_bytes
 from cannae_kernel.clocks import EventTimes
 from cannae_kernel.effects import OperationEffects
 from cannae_kernel.envelopes import ApprovedIntentEnvelope, ExecutionEvent
 from cannae_kernel.ids import ActorId, AllocationId, EventId, IntentId, LifecycleId, OrderId
 from cannae_kernel.provenance import Provenance
 from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
-from lc.events import LifecycleState, OrderTerms, OrderType, TimeInForce
+from cannae_kernel.signed_attestation import sign_attestation
+from lc.events import OrderTerms, OrderType, TimeInForce
 from lc.lifecycle import (
     ApprovedIntentPayload,
     AuthorityManifest,
@@ -37,12 +40,29 @@ from lc.lifecycle import (
     activate_parent,
     authorize_strategy,
     split_parent,
-    transition,
+)
+from lc.market_access import (
+    AttestedInput,
+    CapacityAccount,
+    CapacityDocument,
+    CapacityPosition,
+    ChildRelease,
+    LimitsManifest,
+    MarketAccessGate,
+    SellMark,
+    record_decision,
 )
 from lc.policy import ExecutionReport, apply_execution
 from lc.trade import AllocationPlan, AllocationRule, AllocationTarget, allocate, capture
 
-from atreides.account_lifecycle import ActorRegistryApproverVerifier
+from atreides.account_lifecycle import (
+    AccountType as LifecycleAccountType,
+)
+from atreides.account_lifecycle import (
+    AccountTypeStatusDocument,
+    AccountTypeStatusEntry,
+    ActorRegistryApproverVerifier,
+)
 from atreides.approval_attestations import HumanApproval, attest_human_approval
 from atreides.books.ledger import (
     AccountType,
@@ -135,6 +155,8 @@ from simulator.street import (
 from simulator.synthetic_attestation_fixture import (
     HUMAN_APPROVAL_KEY_ID,
     HUMAN_APPROVAL_PRIVATE_KEY,
+    LC_STATUS_KEY_ID,
+    LC_STATUS_PRIVATE_KEY,
     ensure_synthetic_trust,
 )
 
@@ -206,6 +228,12 @@ class FirmExecution:
 
 
 @dataclass(frozen=True, slots=True)
+class RefusedOrder:
+    order_id: str
+    reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class FirmDay:
     business_date: date
     executions: int
@@ -225,6 +253,7 @@ class FirmDay:
     early_warning_notices: tuple[EarlyWarningNotice, ...]
     rule_204_close_outs: dict[str, date]
     economics_digest: str
+    refused_orders: tuple[RefusedOrder, ...] = ()
     control_breaks: tuple[ControlBreak, ...] = ()
 
 
@@ -287,6 +316,7 @@ MUTATIONS = (
     "EARLY_WARNING_MISSING_OWNER",
     "DEPOSITORY_ONE_SHARE",
     "STREET_ONE_SHARE",
+    "MARKET_ACCESS_OVER_LIMIT",
 )
 
 
@@ -514,8 +544,11 @@ def draw_executions(profile: FirmProfile, day: date, seed: int) -> tuple[FirmExe
 
 
 def _lc_allocate_batch(
-    rows: tuple[FirmExecution, ...], business_date: date, sequence: int
-) -> tuple[tuple[str, Decimal, Decimal], ...]:
+    rows: tuple[FirmExecution, ...],
+    business_date: date,
+    sequence: int,
+    books: EquitiesBooks,
+) -> tuple[tuple[tuple[str, Decimal, Decimal], ...], RefusedOrder | None]:
     """Drive real L.C. lifecycle, capture and allocation for one issue/side batch."""
     actor = _actor()
     approver = _volume_approver(sequence)
@@ -609,14 +642,94 @@ def _lc_allocate_batch(
             ),
         ),
     ).journal
-    register = transition(
+    market_policy = json.loads(
+        Path(__file__).with_name("market_access_policy.json").read_text(encoding="utf-8")
+    )
+    if not market_policy.get("rationale") or not market_policy.get("approver_role"):
+        raise ValueError("MARKET_ACCESS_POLICY_APPROVAL_MISSING")
+    accounts = tuple(dict.fromkeys(row.account for row in rows))
+    status = AccountTypeStatusDocument(
+        as_of=base,
+        maximum_age_seconds=300,
+        accounts=tuple(
+            AccountTypeStatusEntry(
+                account_id=account,
+                account_type=LifecycleAccountType.NATURAL_PERSON,
+                status=AccountStatus.ACTIVE,
+                last_event_id=str(register.events[-1].event_id),
+            )
+            for account in accounts
+        ),
+    )
+    status_wire = sign_attestation(
+        canonical_bytes(status),
+        producer="atreides",
+        key_id=LC_STATUS_KEY_ID,
+        private_key=LC_STATUS_PRIVATE_KEY,
+    )
+    capacity = CapacityDocument(
+        schema_version="atreides.equities_account_capacity/3",
+        as_of=base,
+        maximum_age_seconds=300,
+        synthetic=True,
+        journal_digest=books.digest(),
+        firm_participant_id="SCF-1-FIRM",
+        accounts=tuple(
+            CapacityAccount(
+                account_id=account,
+                capacity="CUSTOMER",
+                buying_power=Decimal(market_policy["account_credit_limit"]),
+                margin_excess=Decimal(market_policy["account_credit_limit"]),
+                margin_result_digest=digest_bytes(
+                    canonical_bytes_of({"account_id": account, "source": "synthetic books"})
+                ),
+                positions=(
+                    CapacityPosition(issue=rows[0].issue, quantity=Decimal("1000000000")),
+                ),
+            )
+            for account in accounts
+        ),
+    )
+    capacity_wire = canonical_bytes(capacity)
+    decision = MarketAccessGate().evaluate(
+        ChildRelease(
+            order_event=register.events[-1],
+            lifecycle_register=register,
+            reference_price=rows[0].price,
+            sell_mark=SellMark.LONG if rows[0].side != "BUY" else None,
+            submitted_at=base,
+        ),
+        limits=LimitsManifest(
+            version=str(market_policy["version"]),
+            authority=str(market_policy["approver_role"]),
+            account_credit_limits={
+                account: Decimal(market_policy["account_credit_limit"])
+                for account in accounts
+            },
+            firm_aggregate_threshold=Decimal(market_policy["account_credit_limit"]),
+            price_collar_percent=Decimal("0.10"),
+            maximum_quantity=Decimal(market_policy["maximum_quantity"]),
+            maximum_notional=Decimal(market_policy["firm_volume_maximum_notional"]),
+            duplicate_window_seconds=60,
+        ),
+        capacity_input=AttestedInput(
+            payload=capacity_wire,
+            payload_digest=digest_bytes(capacity_wire),
+        ),
+        locates_input=None,
+        account_status_input=status_wire,
+    )
+    register = record_decision(
         register,
-        order_id=child,
-        target=LifecycleState.MARKET_ACCESS_PASSED,
-        reason="SCF-1 synthetic release",
+        decision,
         actor=actor,
         event=_event(4_000_004 + sequence * 10, base),
     )
+    if decision.terminal:
+        return (), RefusedOrder(
+            order_id=str(child),
+            reasons=tuple(item.reason for item in decision.checks if not item.passed),
+        )
     reports = tuple(
         ExecutionReport(
             execution_id=row.execution_id,
@@ -687,8 +800,9 @@ def _lc_allocate_batch(
             rounding_method="LARGEST_REMAINDER",
         ),
     )
-    return tuple(
-        (entry.account, entry.quantity, entry.consideration) for entry in allocated.entries
+    return (
+        tuple((entry.account, entry.quantity, entry.consideration) for entry in allocated.entries),
+        None,
     )
 
 
@@ -1755,6 +1869,17 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
         executions = draw_executions(profile, business_date, seed)
         total_executions += len(executions)
         accepted = tuple(execution for execution in executions if not execution.refused)
+        if mutation == "MARKET_ACCESS_OVER_LIMIT" and day_index == 0:
+            market_policy = json.loads(
+                Path(__file__).with_name("market_access_policy.json").read_text(encoding="utf-8")
+            )
+            accepted = (
+                replace(
+                    accepted[0],
+                    quantity=Decimal(market_policy["maximum_quantity"]) + Decimal(1),
+                ),
+                *accepted[1:],
+            )
         expected_customer_accounts.update(
             execution.account for execution in accepted if not execution.pab
         )
@@ -1771,10 +1896,14 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
             for issue, fails in carried_input.items()
         ]
         posted: list[JournalEntry] = []
+        refused_orders: list[RefusedOrder] = []
         for batch_index, (_, rows_list) in enumerate(sorted(groups.items())):
             rows = tuple(rows_list)
             sequence = day_index * 10_000 + batch_index
-            allocations = _lc_allocate_batch(rows, business_date, sequence)
+            allocations, refusal = _lc_allocate_batch(rows, business_date, sequence, books)
+            if refusal is not None:
+                refused_orders.append(refusal)
+                continue
             if mutation == "UPSTREAM_ALLOCATION_QUANTITY" and day_index == 0 and batch_index == 0:
                 first = allocations[0]
                 allocations = (
@@ -2368,6 +2497,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                         }
                     )
                 ).hexdigest(),
+                refused_orders=tuple(refused_orders),
                 control_breaks=day_control_breaks,
             )
         )
