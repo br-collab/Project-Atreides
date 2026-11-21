@@ -1,4 +1,21 @@
 {
   "schema_version": "atreides.trusted_producer_keys/1",
-  "keys": []
+  "keys": [
+    {
+      "key_id": "synthetic-atreides-kyc-key-1",
+      "producer": "atreides",
+      "public_key_b64": "0EqyMnQrtKs6E2i9RhXk5tAiSrcaAWuvhSCjMsl3hzc=",
+      "valid_from": "2026-01-01T00:00:00+00:00",
+      "valid_to": "2035-12-31T23:59:59+00:00",
+      "revoked": false
+    },
+    {
+      "key_id": "synthetic-atreides-human-approval-key-1",
+      "producer": "atreides",
+      "public_key_b64": "Md6+VdN8cidosTcTHKpghwgLLgtguUvXhdFFdc+kmLw=",
+      "valid_from": "2026-01-01T00:00:00+00:00",
+      "valid_to": "2035-12-31T23:59:59+00:00",
+      "revoked": false
+    }
+  ]
 }

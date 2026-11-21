@@ -24,6 +24,7 @@ from cannae_kernel.signed_attestation import (
     sign_attestation,
     verify_attestation,
 )
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atreides.agents.tier2.outputs import EligibilityVerification
@@ -43,6 +44,9 @@ from atreides.trust_anchors import (
     resolve_pinned_anchor,
 )
 
+SYNTHETIC_KYC_KEY_ID = "synthetic-atreides-kyc-key-1"
+SYNTHETIC_KYC_PRIVATE_KEY = Ed25519PrivateKey.from_private_bytes(bytes([17]) * 32)
+
 
 class RefusalReason(StrEnum):
     ILLEGAL_TRANSITION = "ILLEGAL_TRANSITION"
@@ -56,6 +60,9 @@ class RefusalReason(StrEnum):
     KYC_EVIDENCE_NOT_FOUND = "KYC_EVIDENCE_NOT_FOUND"
     KYC_ACCOUNT_MISMATCH = "KYC_ACCOUNT_MISMATCH"
     KYC_CHAIN_INVALID = "KYC_CHAIN_INVALID"
+    KYC_SEALER_INVALID = "KYC_SEALER_INVALID"
+    KYC_SIGNATURE_MISSING = "KYC_SIGNATURE_MISSING"
+    KYC_SIGNATURE_INVALID = "KYC_SIGNATURE_INVALID"
     ATREIDES_ELIGIBILITY_FAILED = "ATREIDES_ELIGIBILITY_FAILED"
     ELIGIBILITY_EVIDENCE_NOT_FOUND = "ELIGIBILITY_EVIDENCE_NOT_FOUND"
     ELIGIBILITY_ACCOUNT_MISMATCH = "ELIGIBILITY_ACCOUNT_MISMATCH"
@@ -152,9 +159,12 @@ class KYCDecisionRecord(KYCDecisionPayload):
     """Authoritative decision stored together with its sealed event chain."""
 
     event_chain: tuple[EventEnvelope[KYCDecisionPayload], ...] = Field(min_length=1)
+    signed_attestation: bytes
 
     def payload(self) -> KYCDecisionPayload:
-        return KYCDecisionPayload.model_validate(self.model_dump(exclude={"event_chain"}))
+        return KYCDecisionPayload.model_validate(
+            self.model_dump(exclude={"event_chain", "signed_attestation"})
+        )
 
 
 def record_kyc_decision(
@@ -165,6 +175,8 @@ def record_kyc_decision(
     path_id: str,
     decided_at: datetime,
     maximum_age_seconds: int,
+    key_id: str = SYNTHETIC_KYC_KEY_ID,
+    private_key: SigningKey = SYNTHETIC_KYC_PRIVATE_KEY,
     person_id: str | None = None,
     legal_entity_record_id: str | None = None,
     kyb_result_record_id: str | None = None,
@@ -211,7 +223,15 @@ def record_kyc_decision(
         payload=payload,
         prior_event_digest=None,
     )
-    return KYCDecisionRecord(**payload.model_dump(), event_chain=(event,))
+    signed_attestation = sign_attestation(
+        canonical_bytes(event),
+        producer="atreides",
+        key_id=key_id,
+        private_key=private_key,
+    )
+    return KYCDecisionRecord(
+        **payload.model_dump(), event_chain=(event,), signed_attestation=signed_attestation
+    )
 
 
 def kyc_chain_report(
@@ -372,6 +392,31 @@ class AuthoritativeEvidenceResolver:
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
         if chain[-1].payload != record.payload():
             raise AccountTransitionRefusedError(RefusalReason.KYC_CHAIN_INVALID)
+        sealer = chain[-1]
+        if (
+            sealer.actor.actor_kind is not ActorKind.DETERMINISTIC_SERVICE
+            or sealer.actor.role != "kyc-decision-record-writer"
+            or "KYC_DSOR_WRITE" not in sealer.actor.entitlement_refs
+            or sealer.provenance is not Provenance.POLICY_RESULT
+        ):
+            raise AccountTransitionRefusedError(RefusalReason.KYC_SEALER_INVALID)
+        if not record.signed_attestation:
+            raise AccountTransitionRefusedError(RefusalReason.KYC_SIGNATURE_MISSING)
+        try:
+            anchor, registry = resolve_pinned_anchor(
+                record.signed_attestation,
+                expected_producer="atreides",
+            )
+            signed_payload = verify_attestation(
+                record.signed_attestation,
+                expected_producer="atreides",
+                registry=registry,
+            )
+            require_anchor_valid_at(anchor, record.decided_at)
+        except (TrustAnchorError, AttestationVerificationError) as exc:
+            raise AccountTransitionRefusedError(RefusalReason.KYC_SIGNATURE_INVALID) from exc
+        if signed_payload != canonical_bytes(sealer):
+            raise AccountTransitionRefusedError(RefusalReason.KYC_SIGNATURE_INVALID)
         return record
 
     def resolve_eligibility(self, record_id: str) -> EligibilityResultRecord:
