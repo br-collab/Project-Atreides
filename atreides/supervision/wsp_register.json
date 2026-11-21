@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "rule_basis": {
     "FINRA-3110": "Pinned reproduction basis, FINRA Rule 3110",
     "FINRA-3120": "Pinned reproduction basis, FINRA Rule 3120",
@@ -14,8 +14,7 @@
       "review_frequency": "each decision",
       "evidence": "account lifecycle event",
       "escalation_path": "SENIOR_REGISTERED_PRINCIPAL",
-      "test": null,
-      "test_gap": "Its control is principal approval. No run plants an approval defect yet (no approval, self-approval). Owed by PS-3C Part 4 with approved intent."
+      "test": "tests/test_ps3c_approval_provenance.py::test_golden_path_refuses_missing_or_self_principal_approval"
     },
     {
       "gate": "KYC",
@@ -65,8 +64,7 @@
       "review_frequency": "each order",
       "evidence": "approved intent envelope",
       "escalation_path": "TRADING_PRINCIPAL",
-      "test": null,
-      "test_gap": "No run-level test plants a defect in approval provenance yet. PS-3C Part 4 owes it."
+      "test": "tests/test_ps3c_approval_provenance.py::test_golden_path_refuses_unattested_approved_intent"
     },
     {
       "gate": "fill booking",
