@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+PS-3C Part 5 routes every firm-volume child order through L.C.'s market-access gate. A terminal
+decision is recorded as a refused order and is not booked, while the day continues through all six
+reconciliations. The synthetic market-access policy states its independent rationale and approving
+role instead of deriving its limits from the generator ceiling.
+
 Phase A: `build_public_summary` writes `public-summary.json` from engine outputs. The file carries the written supervisory procedure register status and version, the Rule 3120 counts from `run_3120_testing` labelled Phase A, Consolidated Audit Trail record and feedback counts, the anti-money laundering alert count, and surveillance dispositions. It has no suspicious activity report field and no case identifier. No run calls this yet.
 
 PS-3C Part 4B removes repository-reconstructible Know Your Customer and human-approval
