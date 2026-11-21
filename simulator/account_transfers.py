@@ -49,7 +49,12 @@ from atreides.deadlines.acats import AcatsTransfer, assess_acats
 from atreides.deadlines.calendar import Market, MarketCalendar
 from atreides.reference_data import LegalEntityRecord
 from simulator.conversion import STATEMENT, StatementLine, _posting
-from simulator.synthetic_attestation_fixture import LC_KEY_ID, LC_PRIVATE_KEY
+from simulator.synthetic_attestation_fixture import (
+    KYC_KEY_ID,
+    KYC_PRIVATE_KEY,
+    LC_KEY_ID,
+    LC_PRIVATE_KEY,
+)
 
 TransferVariant = Literal["clean", "reject", "partial-residual", "late"]
 TRANSFER_VARIANTS: tuple[TransferVariant, ...] = (
@@ -132,6 +137,8 @@ def _evidence_resolver(at: datetime) -> AuthoritativeEvidenceResolver:
             path_id="KYC_ELIGIBLE_CLEAR",
             decided_at=at,
             maximum_age_seconds=300,
+            key_id=KYC_KEY_ID,
+            private_key=KYC_PRIVATE_KEY,
             account_type=LifecycleAccountType.INSTITUTIONAL,
             person_id=None,
             legal_entity_record_id=legal_entity_id,

@@ -4,6 +4,22 @@
 
 Phase A: `build_public_summary` writes `public-summary.json` from engine outputs. The file carries the written supervisory procedure register status and version, the Rule 3120 counts from `run_3120_testing` labelled Phase A, Consolidated Audit Trail record and feedback counts, the anti-money laundering alert count, and surveillance dispositions. It has no suspicious activity report field and no case identifier. No run calls this yet.
 
+PS-3C Part 4B removes repository-reconstructible Know Your Customer and human-approval
+signing keys. Both identities are generated per process and installed before verification;
+the committed trust file contains neither public half, and the KYC writer has no default
+signer. Firm volume uses kernel `HUMAN_JUDGMENT` with a signed per-run synthetic human
+approver. L.C. commit `c89b67c2c096419453f4bd2ec8386c116e0cdbdb` owns approval verification;
+the simulator wrapper and policy-result envelope are deleted. Approvers must resolve from
+the verified synthetic-principal register. WSP register version 1.3.0 records the changed
+account-opening and approved-intent evidence.
+
+Gate G3 correction to PS-3C Part 4B (#214): `run_firm` ignored a `REFUSED` outcome from L.C.
+`accept_intent` and went on to authorize, split and allocate the order, then crashed with a bare
+`KeyError` inside L.C.; and it relied on pytest's conftest to install the synthetic keys, so a
+direct call refused every intent. The firm run now raises `FIRM_INTENT_REFUSED` with L.C.'s
+reason, and both runs install their keys through `ensure_synthetic_trust`, which is a no-op when
+every key is installed and refuses a partial set (`SYNTHETIC_TRUST_PARTIAL`).
+
 Gate G3 correction to PS-3D Part 5 (#212): the synthetic AML (anti-money laundering) officer key was derived from a label published in `atreides/supervision/aml.py`, its public key was pinned in `trusted_producer_keys.json`, and the signer shipped in `atreides`, so anyone could sign a SAR decision. A forged `NO_SAR` decision was accepted on `b010bab`. The officer key is now generated per process in `simulator/synthetic_attestation_fixture.py` and installed at the composition root; nothing in `atreides` can sign, and the pin is removed (the trust file is byte-identical to 1.3.0 plus #211). The runtime installer now holds one key per producer, each set once, none after the first verification.
 
 Phase A: a suspicious activity report (SAR) decision is accepted only as a signed attestation from the synthetic AML officer's per-run key. Officer, outcome, reason and date are read from the verified payload. `extend_for_unidentified_suspect` records the officer attestation, the decision date and the stated basis that no suspect was identified on the date of initial detection, and it refuses an extension without them or made after day 30 (inventory finding F1, 20 November 2026). No run calls these yet.

@@ -5,21 +5,11 @@ from pathlib import Path
 
 import emulators.venue
 import pytest
-from cannae_kernel.actor import ActorKind, ActorRef
-from cannae_kernel.effects import OperationEffects
-from cannae_kernel.envelopes import ApprovedIntentEnvelope
-from cannae_kernel.ids import ActorId, IntentId, LifecycleId
-from cannae_kernel.provenance import Provenance
-from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
 
 from atreides.account_lifecycle import AccountTransitionRefusedError, RefusalReason
 from atreides.books.ledger import EquitiesBooks
 from simulator.calibration import load_calibration_pack
-from simulator.estate import (
-    exercise_simulator_market_access,
-    seed_customer_cash,
-    validate_approval_provenance,
-)
+from simulator.estate import exercise_simulator_market_access, seed_customer_cash
 from simulator.golden_path import (
     Variant,
     replay_evidence_digest,
@@ -64,35 +54,6 @@ def test_cash_statement_short_by_one_cent_fails_its_golden_row() -> None:
         "Atreides equities books",
         "synthetic firm bank statement",
     )
-
-
-def test_service_approver_cannot_claim_human_judgment() -> None:
-    actor = ActorRef(
-        actor_id=ActorId("act_00000000000000000000000001"),
-        actor_kind=ActorKind.DETERMINISTIC_SERVICE,
-        role="synthetic service",
-        entitlement_refs=("SIM-1B",),
-        authenticated=True,
-    )
-    envelope = ApprovedIntentEnvelope(
-        envelope_id=IntentId("int_00000000000000000000000001"),
-        lifecycle_id=LifecycleId("lif_00000000000000000000000001"),
-        revision=1,
-        prior_digest=None,
-        session=SessionContext(
-            session=MarketSession.REGULAR,
-            business_date=BusinessDate(
-                value=date(2026, 11, 18), calendar="SIFMA-US", established_by="test"
-            ),
-        ),
-        approved_by=actor,
-        provenance=Provenance.HUMAN_JUDGMENT,
-        effects=OperationEffects(operation="test", effects=(), note="synthetic only"),
-        payload_digest="sha256:" + "0" * 64,
-    )
-
-    with pytest.raises(ValueError, match="HUMAN_APPROVAL_ATTESTATION_REQUIRED"):
-        validate_approval_provenance(envelope)
 
 
 def test_duplicate_evidence_id_fails_pack_check() -> None:

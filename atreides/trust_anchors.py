@@ -103,6 +103,13 @@ def install_runtime_trust_anchor(anchor: TrustAnchor) -> None:
         _runtime_state.anchors[anchor.key_id] = anchor
 
 
+def runtime_anchor_installed(key_id: str) -> bool:
+    """Whether this process has installed a runtime key under ``key_id``."""
+
+    with _runtime_lock:
+        return key_id in _runtime_state.anchors
+
+
 def resolve_pinned_anchor(
     wire: bytes,
     *,

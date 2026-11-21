@@ -18,7 +18,7 @@ from cannae_kernel.envelopes import ExecutionEvent
 from cannae_kernel.events import seal
 from cannae_kernel.events import verify as verify_event
 from cannae_kernel.ids import ActorId, IntentId, LifecycleId, OrderId
-from cannae_kernel.signed_attestation import sign_attestation
+from cannae_kernel.signed_attestation import SigningKey, sign_attestation
 from emulators.settlement import (  # type: ignore[import-untyped]
     RailOutcome,
     SyntheticEntitledMember,
@@ -31,7 +31,13 @@ from emulators.venue import (  # type: ignore[import-untyped]
     VenueOutcome,
 )
 from lc.events import OrderTerms, OrderType, TimeInForce
-from lc.lifecycle import ApprovedIntentPayload, AuthorityManifest, OrderSide, PolicyManifest
+from lc.lifecycle import (
+    ApprovedIntentPayload,
+    AuthorityManifest,
+    OrderSide,
+    PolicyManifest,
+    accept_intent,
+)
 from lc.market_access import (
     AttestedInput,
     CapacityDocument,
@@ -48,7 +54,6 @@ from lc.recommendation_profile import (
 from pydantic import BaseModel, ConfigDict, Field
 
 from atreides.account_lifecycle import (
-    SYNTHETIC_KYC_PRIVATE_KEY,
     AccountApplication,
     AccountLifecycleStore,
     AccountTransitionRefusedError,
@@ -126,7 +131,6 @@ from simulator.estate import (
     _event,
     _identifier,
     _wire,
-    accept_intent,
     drive_estate,
 )
 from simulator.estate import _actor as estate_actor
@@ -151,12 +155,14 @@ from simulator.street import (
 from simulator.synthetic_attestation_fixture import (
     HUMAN_APPROVAL_KEY_ID,
     HUMAN_APPROVAL_PRIVATE_KEY,
+    KYC_KEY_ID,
+    KYC_PRIVATE_KEY,
     LC_KEY_ID,
     LC_PRIVATE_KEY,
     LC_STATUS_KEY_ID,
     LC_STATUS_PRIVATE_KEY,
     configure_lc_status_trust,
-    configure_synthetic_trust,
+    ensure_synthetic_trust,
 )
 
 START = datetime(2026, 11, 13, 14, tzinfo=UTC)
@@ -185,6 +191,7 @@ class Variant(StrEnum):
     INTENT_SERVICE_HUMAN_JUDGMENT = "INTENT_SERVICE_HUMAN_JUDGMENT"
     INTENT_HUMAN_NO_ATTESTATION = "INTENT_HUMAN_NO_ATTESTATION"
     INTENT_HUMAN_BAD_SIGNATURE = "INTENT_HUMAN_BAD_SIGNATURE"
+    INTENT_APPROVER_UNREGISTERED = "INTENT_APPROVER_UNREGISTERED"
 
 
 class FixedRunClock:
@@ -317,11 +324,7 @@ def _configure_trust() -> None:
     global _TRUST_CONFIGURED  # noqa: PLW0603 - process-local synthetic composition root
     if _TRUST_CONFIGURED:
         return
-    try:
-        configure_synthetic_trust()
-    except RuntimeError:
-        # The test composition root installs this exact process-local fixture.
-        pass
+    ensure_synthetic_trust()
     try:
         configure_lc_status_trust()
     except RuntimeError:
@@ -647,6 +650,8 @@ def run_golden_path(  # noqa: PLR0915
     funding_cash: Decimal | None = None,
     depository_quantity_delta: Decimal = Decimal(),
     bank_statement_delta: Decimal = Decimal(),
+    kyc_private_key: SigningKey = KYC_PRIVATE_KEY,
+    human_approval_private_key: SigningKey = HUMAN_APPROVAL_PRIVATE_KEY,
 ) -> GoldenPathResult:
     """Run one deterministic account, or one named fail-closed mutation."""
     _configure_trust()
@@ -654,6 +659,9 @@ def run_golden_path(  # noqa: PLR0915
     books = EquitiesBooks(break_owner="MVP3_SETTLEMENT_OPERATIONS")
     principal = _human("2", "synthetic retail principal")
     approver = _human("1", "synthetic human approver")
+    approver_registry = ActorRegistryApproverVerifier(
+        {str(principal.actor_id): principal, str(approver.actor_id): approver}
+    )
     application_id = "MVP3-APPLICATION"
     kyc_id = "MVP3-KYC"
     eligibility_id = "MVP3-ELIGIBILITY"
@@ -742,6 +750,8 @@ def run_golden_path(  # noqa: PLR0915
         path_id="KYC_ELIGIBLE_CLEAR",
         decided_at=START + timedelta(seconds=5),
         maximum_age_seconds=999999,
+        key_id=KYC_KEY_ID,
+        private_key=kyc_private_key,
         account_type=AccountType.NATURAL_PERSON,
         person_id=PERSON,
     )
@@ -752,6 +762,8 @@ def run_golden_path(  # noqa: PLR0915
             path_id="KYC_ELIGIBLE_CLEAR",
             decided_at=START + timedelta(seconds=6),
             maximum_age_seconds=999999,
+            key_id=KYC_KEY_ID,
+            private_key=kyc_private_key,
             account_type=AccountType.NATURAL_PERSON,
             person_id="SYN-PERSON-GOLDEN002",
         )
@@ -776,8 +788,8 @@ def run_golden_path(  # noqa: PLR0915
         signature = sign_attestation(
             canonical_bytes(resealed),
             producer="atreides",
-            key_id="synthetic-atreides-kyc-key-1",
-            private_key=SYNTHETIC_KYC_PRIVATE_KEY,
+            key_id=KYC_KEY_ID,
+            private_key=kyc_private_key,
         )
         kyc_record = kyc_record.model_copy(
             update={"event_chain": (resealed,), "signed_attestation": signature}
@@ -822,9 +834,7 @@ def run_golden_path(  # noqa: PLR0915
         },
     )
     lifecycle = AccountLifecycleStore(
-        ActorRegistryApproverVerifier(
-            {str(principal.actor_id): principal, str(approver.actor_id): approver}
-        ),
+        approver_registry,
         resolver,
         clock=clock,
         kyc_maximum_age_seconds=KYC_MAXIMUM_AGE_SECONDS,
@@ -1095,6 +1105,8 @@ def run_golden_path(  # noqa: PLR0915
     intent_approver = (
         estate_actor() if variant is Variant.INTENT_SERVICE_HUMAN_JUDGMENT else approver
     )
+    if variant is Variant.INTENT_APPROVER_UNREGISTERED:
+        intent_approver = _human("3", "unregistered synthetic approver")
     envelope = KernelEnvelope(
         envelope_id=payload.intent_id,
         lifecycle_id=LifecycleId(_identifier("lif_", 20001)),
@@ -1113,16 +1125,7 @@ def run_golden_path(  # noqa: PLR0915
         ),
         payload_digest=kernel_digest_bytes(wire),
     )
-    approval_wire: bytes | None = attest_human_approval(
-        HumanApproval(
-            approval_id="MVP3-HUMAN-APPROVAL",
-            decision_digest=envelope.payload_digest,
-            approver=approver,
-            approved_at=clock(),
-        ),
-        key_id=HUMAN_APPROVAL_KEY_ID,
-        private_key=HUMAN_APPROVAL_PRIVATE_KEY,
-    )
+    approval_wire: bytes | None
     if variant in {
         Variant.INTENT_SERVICE_HUMAN_JUDGMENT,
         Variant.INTENT_HUMAN_NO_ATTESTATION,
@@ -1130,6 +1133,18 @@ def run_golden_path(  # noqa: PLR0915
         approval_wire = None
     elif variant is Variant.INTENT_HUMAN_BAD_SIGNATURE:
         approval_wire = b"not-an-attestation"
+    else:
+        approval_wire = attest_human_approval(
+            HumanApproval(
+                approval_id="MVP3-HUMAN-APPROVAL",
+                decision_digest=envelope.payload_digest,
+                approver=intent_approver,
+                approved_at=clock(),
+            ),
+            key_id=HUMAN_APPROVAL_KEY_ID,
+            private_key=human_approval_private_key,
+            approver_verifier=approver_registry,
+        )
     if approval_wire is not None and variant is not Variant.INTENT_HUMAN_BAD_SIGNATURE:
         _append_evidence(
             evidence_items,
@@ -1151,6 +1166,8 @@ def run_golden_path(  # noqa: PLR0915
         event=_event(40001, clock()),
         approval_attestation=approval_wire,
     )
+    if outcome.refusal is not None:
+        raise ValueError(outcome.refusal.evidence)
     outcome = authorize_strategy(outcome, actor=actor, event=_event(40002, clock()))
     outcome = activate_parent(outcome, actor=actor, event=_event(40003, clock()))
     child = ChildOrder(

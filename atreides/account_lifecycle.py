@@ -24,7 +24,6 @@ from cannae_kernel.signed_attestation import (
     sign_attestation,
     verify_attestation,
 )
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from atreides.agents.tier2.outputs import EligibilityVerification
@@ -44,8 +43,7 @@ from atreides.trust_anchors import (
     resolve_pinned_anchor,
 )
 
-SYNTHETIC_KYC_KEY_ID = "synthetic-atreides-kyc-key-1"
-SYNTHETIC_KYC_PRIVATE_KEY = Ed25519PrivateKey.from_private_bytes(bytes([17]) * 32)
+KYC_PRODUCER = "atreides-kyc"
 
 
 class RefusalReason(StrEnum):
@@ -175,8 +173,8 @@ def record_kyc_decision(
     path_id: str,
     decided_at: datetime,
     maximum_age_seconds: int,
-    key_id: str = SYNTHETIC_KYC_KEY_ID,
-    private_key: SigningKey = SYNTHETIC_KYC_PRIVATE_KEY,
+    key_id: str,
+    private_key: SigningKey,
     person_id: str | None = None,
     legal_entity_record_id: str | None = None,
     kyb_result_record_id: str | None = None,
@@ -225,7 +223,7 @@ def record_kyc_decision(
     )
     signed_attestation = sign_attestation(
         canonical_bytes(event),
-        producer="atreides",
+        producer=KYC_PRODUCER,
         key_id=key_id,
         private_key=private_key,
     )
@@ -405,11 +403,11 @@ class AuthoritativeEvidenceResolver:
         try:
             anchor, registry = resolve_pinned_anchor(
                 record.signed_attestation,
-                expected_producer="atreides",
+                expected_producer=KYC_PRODUCER,
             )
             signed_payload = verify_attestation(
                 record.signed_attestation,
-                expected_producer="atreides",
+                expected_producer=KYC_PRODUCER,
                 registry=registry,
             )
             require_anchor_valid_at(anchor, record.decided_at)

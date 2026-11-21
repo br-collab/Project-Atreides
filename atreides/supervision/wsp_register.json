@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "rule_basis": {
     "FINRA-3110": "Pinned reproduction basis, FINRA Rule 3110",
     "FINRA-3120": "Pinned reproduction basis, FINRA Rule 3120",
@@ -12,7 +12,7 @@
       "control": "principal approval",
       "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_ONBOARDING",
       "review_frequency": "each decision",
-      "evidence": "account lifecycle event",
+      "evidence": "registered principal acceptance and signed approval attestation",
       "escalation_path": "SENIOR_REGISTERED_PRINCIPAL",
       "test": "tests/test_ps3c_approval_provenance.py::test_golden_path_refuses_missing_or_self_principal_approval"
     },
@@ -62,7 +62,7 @@
       "control": "approved intent lineage",
       "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_INTENT",
       "review_frequency": "each order",
-      "evidence": "approved intent envelope",
+      "evidence": "L.C.-verified signed approval attestation bound to approved intent",
       "escalation_path": "TRADING_PRINCIPAL",
       "test": "tests/test_ps3c_approval_provenance.py::test_golden_path_refuses_unattested_approved_intent"
     },

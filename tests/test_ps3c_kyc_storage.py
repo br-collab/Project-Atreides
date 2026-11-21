@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from atreides.account_lifecycle import AccountType, record_kyc_decision
 from simulator.golden_path import Variant, run_golden_path
+from simulator.synthetic_attestation_fixture import KYC_KEY_ID, KYC_PRIVATE_KEY
 
 
 def test_golden_path_refuses_a_chain_stored_for_another_kyc_record() -> None:
@@ -22,6 +23,8 @@ def test_two_kyc_decisions_never_share_an_event_identifier() -> None:
         path_id="KYC_ELIGIBLE_CLEAR",
         decided_at=decided_at,
         maximum_age_seconds=300,
+        key_id=KYC_KEY_ID,
+        private_key=KYC_PRIVATE_KEY,
     )
     second = record_kyc_decision(
         record_id="SYN-KYC-PS3C-B",
@@ -31,6 +34,8 @@ def test_two_kyc_decisions_never_share_an_event_identifier() -> None:
         path_id="KYC_ELIGIBLE_CLEAR",
         decided_at=decided_at + timedelta(seconds=1),
         maximum_age_seconds=300,
+        key_id=KYC_KEY_ID,
+        private_key=KYC_PRIVATE_KEY,
     )
 
     assert first.event_chain[0].event_id != second.event_chain[0].event_id
