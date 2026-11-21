@@ -135,6 +135,7 @@ from simulator.street import (
 from simulator.synthetic_attestation_fixture import (
     HUMAN_APPROVAL_KEY_ID,
     HUMAN_APPROVAL_PRIVATE_KEY,
+    ensure_synthetic_trust,
 )
 
 TierName = Literal["small", "medium", "large"]
@@ -578,6 +579,9 @@ def _lc_allocate_batch(
         event=_event(4_000_000 + sequence * 10, base),
         approval_attestation=approval_attestation,
     )
+    if outcome.refusal is not None:
+        # Fail closed by name: a refused intent is never authorized, split or allocated.
+        raise ValueError(f"FIRM_INTENT_REFUSED: {outcome.refusal.evidence}")
     outcome = authorize_strategy(
         outcome, actor=actor, event=_event(4_000_001 + sequence * 10, base)
     )
@@ -1724,6 +1728,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
 ) -> FirmRun:
     if mutation is not None and mutation not in MUTATIONS:
         raise ValueError(f"unknown firm mutation: {mutation}")
+    ensure_synthetic_trust()
     books = EquitiesBooks(break_owner="SCF1_SETTLEMENT_CONTROL")
     _seed_inventory(books, profile, start, days)
     opening_depository = _opening_street(profile, days)

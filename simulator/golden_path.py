@@ -162,7 +162,7 @@ from simulator.synthetic_attestation_fixture import (
     LC_STATUS_KEY_ID,
     LC_STATUS_PRIVATE_KEY,
     configure_lc_status_trust,
-    configure_synthetic_trust,
+    ensure_synthetic_trust,
 )
 
 START = datetime(2026, 11, 13, 14, tzinfo=UTC)
@@ -324,11 +324,7 @@ def _configure_trust() -> None:
     global _TRUST_CONFIGURED  # noqa: PLW0603 - process-local synthetic composition root
     if _TRUST_CONFIGURED:
         return
-    try:
-        configure_synthetic_trust()
-    except RuntimeError:
-        # The test composition root installs this exact process-local fixture.
-        pass
+    ensure_synthetic_trust()
     try:
         configure_lc_status_trust()
     except RuntimeError:
