@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Phase A: a suspicious activity report (SAR) decision is accepted only as a signed attestation from the pinned synthetic AML (anti-money laundering) officer. Officer, outcome, reason and date are read from the verified payload. `extend_for_unidentified_suspect` records the officer attestation, the decision date and the stated basis that no suspect was identified on the date of initial detection, and it refuses an extension without them or made after day 30 (inventory finding F1, 20 November 2026). No run calls these yet.
+
 PS-3C Part 4 binds stored Know Your Customer decisions to a pinned Atreides signature and to the
 deterministic service holding `KYC_DSOR_WRITE` with policy-result provenance. Human approved
 intents require a pinned signed attestation bound to the exact intent digest and human approver;

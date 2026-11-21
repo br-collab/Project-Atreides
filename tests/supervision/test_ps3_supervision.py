@@ -13,6 +13,8 @@ from atreides.supervision.aml import (
     missed_clock_exception,
     monitor,
     record_human_decision,
+    sign_aml_officer_attestation,
+    unidentified_suspect_basis,
 )
 from atreides.supervision.controls import (
     TestOutcome,
@@ -230,39 +232,49 @@ def _planted_case():
     )[0]
 
 
+def _decision_wire(outcome: str, *, decided_on: date = date(2026, 11, 5)) -> bytes:
+    return sign_aml_officer_attestation(
+        {
+            "purpose": "SAR_DECISION",
+            "officer": "HUMAN_AML_OFFICER:Alex",
+            "outcome": outcome,
+            "reason": "documented synthetic reason",
+            "decided_on": decided_on.isoformat(),
+        }
+    )
+
+
 def test_a_sar_decision_does_not_stop_the_filing_clock() -> None:
     case = _planted_case()
-    decided = record_human_decision(
-        case,
-        officer="HUMAN_AML_OFFICER:Alex",
-        outcome="SAR",
-        reason="documented synthetic reason",
-        decided_on=date(2026, 11, 5),
-    )
+    decided = record_human_decision(case, _decision_wire("SAR"))
     assert not missed_clock_exception(decided, as_of=case.due_on)
     assert missed_clock_exception(decided, as_of=case.due_on + timedelta(days=1))
 
 
 def test_a_no_sar_decision_stops_the_clock() -> None:
     case = _planted_case()
-    decided = record_human_decision(
-        case,
-        officer="HUMAN_AML_OFFICER:Alex",
-        outcome="NO_SAR",
-        reason="documented synthetic reason",
-        decided_on=date(2026, 11, 5),
-    )
+    decided = record_human_decision(case, _decision_wire("NO_SAR"))
     assert not missed_clock_exception(decided, as_of=case.due_on + timedelta(days=10))
 
 
 def test_unidentified_suspect_extension_caps_at_60_days_from_detection() -> None:
     case = _planted_case()
-    extended = extend_for_unidentified_suspect(case, policy=AMLPolicy())
+    decided = case.alert.detected_on + timedelta(days=10)
+    basis = unidentified_suspect_basis(case.alert.detected_on)
+    signed = sign_aml_officer_attestation(
+        {
+            "purpose": "UNIDENTIFIED_SUSPECT_EXTENSION",
+            "officer": "HUMAN_AML_OFFICER:Alex",
+            "decided_on": decided.isoformat(),
+            "basis": basis,
+        }
+    )
+    extended = extend_for_unidentified_suspect(case, signed, decided, basis, policy=AMLPolicy())
     assert extended.extended_due_on == case.alert.detected_on + timedelta(days=60)
     assert not missed_clock_exception(extended, as_of=case.due_on + timedelta(days=1))
     assert missed_clock_exception(extended, as_of=extended.extended_due_on + timedelta(days=1))
     with pytest.raises(ValueError, match="SAR_CLOCK_ALREADY_EXTENDED"):
-        extend_for_unidentified_suspect(extended, policy=AMLPolicy())
+        extend_for_unidentified_suspect(extended, signed, decided, basis, policy=AMLPolicy())
 
 
 def test_one_token_trade_does_not_hide_deposit_withdrawal_movement() -> None:
@@ -285,13 +297,7 @@ def test_aml_file_decision_produces_unfiled_draft() -> None:
         instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),),
         policy=AMLPolicy(),
     )[0]
-    decided = record_human_decision(
-        case,
-        officer="HUMAN_AML_OFFICER:Alex",
-        outcome="SAR",
-        reason="documented synthetic reason",
-        decided_on=date(2026, 11, 5),
-    )
+    decided = record_human_decision(case, _decision_wire("SAR"))
     assert decided.draft_sar == {"status": "DRAFT_NOT_FILED", "case_id": case.case_id}
 
 
