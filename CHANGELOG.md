@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Phase A: `build_public_summary` writes `public-summary.json` from engine outputs. The file carries the written supervisory procedure register status and version, the Rule 3120 counts from `run_3120_testing` labelled Phase A, Consolidated Audit Trail record and feedback counts, the anti-money laundering alert count, and surveillance dispositions. It has no suspicious activity report field and no case identifier. No run calls this yet.
+
 PS-3C Part 4B removes repository-reconstructible Know Your Customer and human-approval
 signing keys. Both identities are generated per process and installed before verification;
 the committed trust file contains neither public half, and the KYC writer has no default

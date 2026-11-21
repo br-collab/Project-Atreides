@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -309,23 +310,45 @@ def test_sar_confidentiality_across_every_published_artifact() -> None:
 
 
 def test_cop_and_pack_counts_equal_engine_results(tmp_path: Path) -> None:
-    rows = load_wsp_register()
-    report = run_3120_testing(junit_xml=_junit_from_runner(tmp_path, "3120-pub.xml"))
-    summary = build_public_summary(
-        wsp_rows=rows,
-        testing_report=report,
-        cat_summary={"record_count": 3, "exception_count": 1},
-        aml_alert_count=3,
-        surveillance_dispositions=("SURVEIL_CLEAR", "SURVEIL_DATA_INCOMPLETE"),
+    junit_xml = _junit_from_runner(tmp_path, "3120-pub.xml")
+    report = run_3120_testing(junit_xml=junit_xml)
+    alerts = monitor(
+        customer_id="PLANTED",
+        books_events=(event(EventKind.CASH_DEPOSIT, 1),),
+        instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),),
+        policy=AMLPolicy(),
     )
-    assert summary == {
-        "wsp_count": len(rows),
-        "3120_exception_count": report.exception_count,
-        "cat_record_count": 3,
-        "cat_exception_count": 1,
-        "aml_alert_count": 3,
-        "surveillance_dispositions": ("SURVEIL_CLEAR", "SURVEIL_DATA_INCOMPLETE"),
-    }
+    feedback = tmp_path / "cat-feedback.json"
+    feedback.write_text(
+        '{"record_count": 4, "rejections": [{}, {}]}\n',
+        encoding="utf-8",
+    )
+    publication = tmp_path / "publication"
+    summary = build_public_summary(
+        junit_xml=junit_xml,
+        cat_feedback_file=feedback,
+        aml_cases=alerts,
+        surveillance_dispositions=("SURVEIL_CLEAR", "SURVEIL_DATA_INCOMPLETE"),
+        publication=publication,
+    )
+    written = json.loads((publication / "public-summary.json").read_text(encoding="utf-8"))
+    assert written == summary
+    assert summary["phase"] == "A"
+    assert summary["3120_label"] == "Phase A"
+    assert summary["wsp_register_version"] == report.register_version
+    assert summary["wsp_register_status"] == (
+        "CLEAR" if report.exception_count == 0 else "EXCEPTIONS"
+    )
+    assert summary["wsp_row_count"] == len(report.tests)
+    assert summary["3120_passed_count"] == sum(item.status == "PASS" for item in report.tests)
+    assert summary["3120_exception_count"] == report.exception_count
+    assert summary["cat_record_count"] == 4
+    assert summary["cat_feedback_count"] == 2
+    assert summary["aml_alert_count"] == len(alerts)
+    rendered = json.dumps(summary)
+    assert "sar" not in rendered.lower()
+    assert "CASE-" not in rendered
+    assert "ALERT-" not in rendered
 
 
 def test_customer_artifacts_unchanged_and_free_of_ps3_data() -> None:
