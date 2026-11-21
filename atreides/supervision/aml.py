@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
-from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
@@ -12,10 +10,8 @@ from enum import StrEnum
 
 from cannae_kernel.signed_attestation import (
     AttestationVerificationError,
-    sign_attestation,
     verify_attestation,
 )
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from atreides.trust_anchors import (
     TrustAnchorError,
@@ -24,8 +20,6 @@ from atreides.trust_anchors import (
 )
 
 AML_OFFICER_PRODUCER = "synthetic-aml-officer"
-AML_OFFICER_KEY_ID = "synthetic-aml-officer-1"
-_OFFICER_SEED_LABEL = b"synthetic-aml-officer-phase-a"
 SAR_DECISION_PURPOSE = "SAR_DECISION"
 EXTENSION_PURPOSE = "UNIDENTIFIED_SUSPECT_EXTENSION"
 _NO_SUSPECT_BASIS = "no suspect was identified on the date of initial detection"
@@ -100,23 +94,6 @@ def unidentified_suspect_basis(detected_on: date) -> str:
     """The stated basis an extension must carry: no suspect on the detection date."""
 
     return f"{_NO_SUSPECT_BASIS} {detected_on.isoformat()}"
-
-
-def _officer_private_key() -> Ed25519PrivateKey:
-    seed = hashlib.sha256(_OFFICER_SEED_LABEL).digest()
-    return Ed25519PrivateKey.from_private_bytes(seed)
-
-
-def sign_aml_officer_attestation(payload: Mapping[str, str]) -> bytes:
-    """Sign a synthetic AML officer payload. Decision functions accept only the wire."""
-
-    body = json.dumps(dict(payload), sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return sign_attestation(
-        body,
-        producer=AML_OFFICER_PRODUCER,
-        key_id=AML_OFFICER_KEY_ID,
-        private_key=_officer_private_key(),
-    )
 
 
 def _verified_officer_bytes(wire: bytes) -> bytes:
