@@ -709,7 +709,7 @@ def _lc_allocate_batch(
             firm_aggregate_threshold=Decimal(market_policy["account_credit_limit"]),
             price_collar_percent=Decimal("0.10"),
             maximum_quantity=Decimal(market_policy["maximum_quantity"]),
-            maximum_notional=Decimal(market_policy["maximum_notional"]),
+            maximum_notional=Decimal(market_policy["firm_volume_maximum_notional"]),
             duplicate_window_seconds=60,
         ),
         capacity_input=AttestedInput(
