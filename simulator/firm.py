@@ -2422,7 +2422,7 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                     business_date,
                     Decimal("1.00"),
                     InstructionKind.CUSTOMER_DEPOSIT,
-                    "FIRM-OPERATING-CASH",
+                    "UNPOSTED-DEPOSIT-CASH",
                 )
             )
         cash_statement = instruction_log.statement(
@@ -2437,7 +2437,12 @@ def run_firm(  # noqa: PLR0915 - one run keeps the independent evidence sources 
                 }
             ),
             account_ids=frozenset(
-                {"CLEARING", "FIRM-OPERATING-CASH", "FIRM-OPENING-OFFSET"}
+                {
+                    "CLEARING",
+                    "FIRM-OPERATING-CASH",
+                    "FIRM-OPENING-OFFSET",
+                    "UNPOSTED-DEPOSIT-CASH",
+                }
             ),
         )
         cash_result = reconcile_ps1(
