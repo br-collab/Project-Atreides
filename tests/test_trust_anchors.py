@@ -7,7 +7,7 @@ import tomllib
 from atreides.account_lifecycle import AuthoritativeEvidenceResolver
 from atreides.trust_anchors import TRUST_ANCHOR_PATH, resolve_pinned_anchor
 
-EXPECTED_CHECKSUM = "776df3e1861d91d6c67a3dd70f0370318aed9da3370222a1eac8523158aa507c"
+EXPECTED_CHECKSUM = "5e5823e983848187e36617c20f246744b584b45d932244e04fd48da342fa681a"
 
 
 def test_trust_anchor_file_checksum() -> None:

@@ -56,3 +56,34 @@ For every row the report must quote:
 
 The report must identify every gate input and show it is read from a run artifact, signed attestation, or pinned file. Anything else blocks acceptance.
 
+
+## Addendum, 202611201100 (US Eastern): where each planned test went
+
+PS-3B merged and was **partly accepted** on 18 November: only the firm-run reconciliation rows
+were verified. Of the 38 run-level tests this plan names, 2 exist under these names on `main`
+(`test_clean_five_day_small_firm_has_six_zero_break_reconciliations_daily`,
+`test_firm_run_one_share_depository_difference_is_one_break`). The other 36 were not built in
+PS-3B. Their requirements moved to the orders below; this table is the record, so the plan is
+not read as delivered.
+
+| Planned test (prefix shortened) | Moved to | State on 20 Nov |
+|---|---|---|
+| firm_run_street_rows_derive_status_owner_and_breaks | PS-3C Part 1 | Done (`tests/simulator/test_ps3c_street_gate.py`) |
+| firm_run_unposted_cns_instruction_is_one_break, firm_run_missing_reserve_bank_receipt_is_one_break | PS-3C Part 2 | Done (`tests/simulator/test_ps3c_money_breaks.py`); construction residual N5 in PS-3C Part 6 |
+| firm_run_instruction_log_has_three_issued_source_kinds | PS-3C Part 6 (N5) | Open |
+| golden_path_kyc_chain_is_stored_at_decision_time, golden_path_refuses_kyc_chain_for_other_record | PS-3C Part 3 | Done (`tests/test_ps3c_kyc_storage.py`); authenticity (M2) in Part 4 |
+| golden_path_approval_provenance_matches_record | PS-3C Part 4 | Open |
+| firm_run_records_refused_order_and_continues, firm_run_market_access_limits_equal_pinned_policy, golden_path_margin_digest_binds_computed_result | PS-3C Part 5 | Open |
+| changelog_retractions_and_pack_digest_write_times | PS-3C Part 6 | Retraction done (#208); digest write times open |
+| ci_workflows_pin_aureon_and_use_correct_pr_label, real_11c9db2_tombstone_fixture_migrates_and_evicts_by_age, superseded_lists_old_sim1_runner_packs, golden_path_sale_confirmation_quantity_is_negative, golden_path_lot_election_deadline_follows_pinned_text | PS-3C Part 6 | Open |
+| golden_path_emits_review_for_every_actual_gate | PS-3D Part 1 (Phase B) | Open |
+| golden_path_3120_reads_same_run_junit_xml, golden_path_3120_missing_junit_test_is_exception | PS-3D Part 2 | Done for Phase A (#206, #207, #209); run wiring in Phase B |
+| golden_path_cat_* (six tests) | PS-3D Part 3 | T+3 holidays done (L.C. #159); the rest open |
+| firm_run_aml_scenarios_and_clean_golden_customer | PS-3D Part 4 (Phase B) | Open |
+| firm_run_missed_sar_clock_is_supervisory_exception | PS-3D Part 4 | Clock logic done for Phase A (#209); run wiring open |
+| firm_run_sar_decision_reads_signed_officer_attestation, real_publication_tree_contains_no_sar_or_case_identifier | PS-3D Part 5 | Open |
+| live_pack_and_cop_counts_equal_run_engines | PS-3D Part 6 | Open |
+| golden_path_surveillance_reads_lc_run_adapter, golden_path_wash_match_uses_all_four_predicates, golden_path_empty_surveillance_and_cftc_are_not_clear_or_ready | PS-3D Part 7 | Open |
+| golden_path_marking_close_uses_market_calendar | PS-3D Part 7 | Calendar done (aureon #155); run adapter open |
+| security_md_records_audit_expiry | aureon CI | Done (aureon #154 enforces the expiry in the workflow) |
+| golden_path_customer_artifacts_unchanged_and_clean | Acceptance probe of every order | Run at each gate G3 |

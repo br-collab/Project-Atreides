@@ -15,8 +15,10 @@ from cannae_kernel.account import AccountStatus
 from cannae_kernel.actor import ActorKind, ActorRef
 from cannae_kernel.canonical import canonical_bytes, canonical_bytes_of, digest, digest_bytes
 from cannae_kernel.envelopes import ExecutionEvent
+from cannae_kernel.events import seal
 from cannae_kernel.events import verify as verify_event
 from cannae_kernel.ids import ActorId, IntentId, LifecycleId, OrderId
+from cannae_kernel.signed_attestation import sign_attestation
 from emulators.settlement import (  # type: ignore[import-untyped]
     RailOutcome,
     SyntheticEntitledMember,
@@ -46,6 +48,7 @@ from lc.recommendation_profile import (
 from pydantic import BaseModel, ConfigDict, Field
 
 from atreides.account_lifecycle import (
+    SYNTHETIC_KYC_PRIVATE_KEY,
     AccountApplication,
     AccountLifecycleStore,
     AccountTransitionRefusedError,
@@ -54,10 +57,9 @@ from atreides.account_lifecycle import (
     AuthoritativeEvidenceResolver,
     EligibilityResultRecord,
     FirstPermittedTradeRecord,
-    KYCDecisionRecord,
     TransferInRecord,
     attest_first_permitted_trade,
-    kyc_event_chain,
+    record_kyc_decision,
 )
 from atreides.agents.tier2.eligibility import (
     EligibilityInputs,
@@ -66,6 +68,7 @@ from atreides.agents.tier2.eligibility import (
     SanctionsScreeningEvidence,
     verify_eligibility,
 )
+from atreides.approval_attestations import HumanApproval, attest_human_approval
 from atreides.books.ledger import (
     EquitiesBooks,
     JournalEntry,
@@ -77,6 +80,7 @@ from atreides.books.ps1 import (
     ACCOUNT_TREATMENT_ROWS,
     TAX_LOT_RULES,
     ControlResult,
+    ControlStatus,
     InstructionKind,
     InstructionLog,
     MoneyInstruction,
@@ -113,6 +117,7 @@ from atreides.retail_identity import (
     build_cip_record,
 )
 from simulator.account_transfers import _post_transfer
+from simulator.central_reconciliation import reconcile_observed_street
 from simulator.conversion import StatementLine
 from simulator.estate import (
     DepositDraw,
@@ -121,8 +126,8 @@ from simulator.estate import (
     _event,
     _identifier,
     _wire,
+    accept_intent,
     drive_estate,
-    validate_approval_provenance,
 )
 from simulator.estate import _actor as estate_actor
 from simulator.focus import FirmFocusLines, tie_out_firm_close
@@ -137,13 +142,15 @@ from simulator.street import (
     IndependentSourceInputs,
     OpenFail,
     ReconciliationCompletion,
+    ReconciliationStatus,
     SettlementOutcome,
     StreetBreak,
     build_independent_sources,
-    reconcile,
     reconciliation_calendar,
 )
 from simulator.synthetic_attestation_fixture import (
+    HUMAN_APPROVAL_KEY_ID,
+    HUMAN_APPROVAL_PRIVATE_KEY,
     LC_KEY_ID,
     LC_PRIVATE_KEY,
     LC_STATUS_KEY_ID,
@@ -169,6 +176,15 @@ class Variant(StrEnum):
     SETTLEMENT_FAIL = "SETTLEMENT_FAIL"
     FORGED_STATUS = "FORGED_STATUS"
     STALE_CALLER_TIME = "STALE_CALLER_TIME"
+    KYC_CHAIN_SWAP = "KYC_CHAIN_SWAP"
+    KYC_WRONG_ACTOR = "KYC_WRONG_ACTOR"
+    KYC_UNSIGNED = "KYC_UNSIGNED"
+    KYC_BAD_SIGNATURE = "KYC_BAD_SIGNATURE"
+    PRINCIPAL_APPROVAL_MISSING = "PRINCIPAL_APPROVAL_MISSING"
+    PRINCIPAL_SELF_APPROVAL = "PRINCIPAL_SELF_APPROVAL"
+    INTENT_SERVICE_HUMAN_JUDGMENT = "INTENT_SERVICE_HUMAN_JUDGMENT"
+    INTENT_HUMAN_NO_ATTESTATION = "INTENT_HUMAN_NO_ATTESTATION"
+    INTENT_HUMAN_BAD_SIGNATURE = "INTENT_HUMAN_BAD_SIGNATURE"
 
 
 class FixedRunClock:
@@ -192,6 +208,7 @@ class EvidenceEvent(BaseModel):
     artifact_digest: str
     recorded_at: datetime
     actor_kind: str
+    attestation_id: str | None = None
 
 
 class StateSnapshot(BaseModel):
@@ -338,6 +355,8 @@ def _evidence_event(
     summary: str,
     artifact: BaseModel | bytes,
     recorded_at: datetime,
+    actor_kind: str,
+    attestation_id: str | None,
 ) -> EvidenceEvent:
     return EvidenceEvent(
         event_id=event_id,
@@ -347,7 +366,8 @@ def _evidence_event(
         summary=summary,
         artifact_digest=digest_bytes(_artifact_bytes(artifact)),
         recorded_at=recorded_at,
-        actor_kind="HUMAN" if summary == "account approved" else "SERVICE",
+        actor_kind=actor_kind,
+        attestation_id=attestation_id,
     )
 
 
@@ -374,6 +394,8 @@ def _append_evidence(
     cause_event_id: str | None,
     summary: str,
     artifact: BaseModel | bytes,
+    actor_kind: str = "SERVICE",
+    attestation_id: str | None = None,
 ) -> None:
     event = _evidence_event(
         event_id=event_id,
@@ -383,6 +405,8 @@ def _append_evidence(
         summary=summary,
         artifact=artifact,
         recorded_at=START + timedelta(microseconds=len(events)),
+        actor_kind=actor_kind,
+        attestation_id=attestation_id,
     )
     events.append(event)
     artifacts[event_id] = _artifact_bytes(artifact).hex()
@@ -525,31 +549,20 @@ def _run_daily_close(
     )
     capital = required_net_capital(books, {ISSUE: price}, Decimal("1000000"), rules)
     control = required_control(books, {ISSUE: price}, rules)
-    location_balances: dict[tuple[str, str], Decimal] = {}
     observed_accounts: set[str] = set()
     for entry in books.entries:
         if entry.effective_date > as_of.date():
             continue
         for line in entry.lines:
-            if line.record_side is RecordSide.LOCATION and line.issue is not None:
-                key = (line.issue, line.account_type.value)
-                location_balances[key] = location_balances.get(key, Decimal()) + line.quantity
             if line.account_type.value in {"CUSTOMER_CASH", "CUSTOMER_MARGIN"}:
                 observed_accounts.add(line.account_id)
-    location_balances = {
-        key: value
-        for key, value in location_balances.items()
-        if value and key[1] in {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
-    }
-    if depository_quantity_delta:
-        key = (ISSUE, "DTC")
-        location_balances[key] = location_balances.get(key, Decimal()) + depository_quantity_delta
-    location_balances = {key: value for key, value in location_balances.items() if value}
     readers = build_independent_sources(
         books,
         IndependentSourceInputs(
             as_of=as_of.date(),
-            opening_depository=(),
+            opening_depository=(DepositoryPosition(ISSUE, "DTC", depository_quantity_delta),)
+            if depository_quantity_delta
+            else (),
             settlement_outcomes=(
                 ()
                 if fail_id is not None
@@ -579,10 +592,12 @@ def _run_daily_close(
             loan_instructions=(),
         ),
     )
-    street_breaks, street_completion = reconcile(
-        location_balances,
-        tuple(reader.read() for reader in readers),
+    street_breaks, street_completion = reconcile_observed_street(
+        books,
+        readers[0],
         as_of=as_of.date(),
+        item_id="stock-record-to-street",
+        failure_location="DTC",
     )
     control_lines = (
         ()
@@ -721,7 +736,7 @@ def run_golden_path(  # noqa: PLR0915
         )
     }
     trades: dict[str, bytes] = {}
-    kyc_record = KYCDecisionRecord(
+    kyc_record = record_kyc_decision(
         record_id=kyc_id,
         account_id=ACCOUNT,
         path_id="KYC_ELIGIBLE_CLEAR",
@@ -730,6 +745,47 @@ def run_golden_path(  # noqa: PLR0915
         account_type=AccountType.NATURAL_PERSON,
         person_id=PERSON,
     )
+    if variant is Variant.KYC_CHAIN_SWAP:
+        foreign_record = record_kyc_decision(
+            record_id="MVP3-KYC-FOREIGN",
+            account_id="SYN-ACCOUNT-GOLDEN002",
+            path_id="KYC_ELIGIBLE_CLEAR",
+            decided_at=START + timedelta(seconds=6),
+            maximum_age_seconds=999999,
+            account_type=AccountType.NATURAL_PERSON,
+            person_id="SYN-PERSON-GOLDEN002",
+        )
+        kyc_record = kyc_record.model_copy(update={"event_chain": foreign_record.event_chain})
+    elif variant is Variant.KYC_WRONG_ACTOR:
+        original = kyc_record.event_chain[0]
+        resealed = seal(
+            event_id=original.event_id,
+            lifecycle_id=original.lifecycle_id,
+            parent_ids=original.parent_ids,
+            producer_domain=original.producer_domain,
+            event_type=original.event_type,
+            schema_version=original.schema_version,
+            rule_version=original.rule_version,
+            times=original.times,
+            provenance=original.provenance,
+            actor=_human("3", "synthetic unauthorized KYC sealer"),
+            idempotency_key=original.idempotency_key,
+            payload=original.payload,
+            prior_event_digest=original.prior_event_digest,
+        )
+        signature = sign_attestation(
+            canonical_bytes(resealed),
+            producer="atreides",
+            key_id="synthetic-atreides-kyc-key-1",
+            private_key=SYNTHETIC_KYC_PRIVATE_KEY,
+        )
+        kyc_record = kyc_record.model_copy(
+            update={"event_chain": (resealed,), "signed_attestation": signature}
+        )
+    elif variant is Variant.KYC_UNSIGNED:
+        kyc_record = kyc_record.model_copy(update={"signed_attestation": b""})
+    elif variant is Variant.KYC_BAD_SIGNATURE:
+        kyc_record = kyc_record.model_copy(update={"signed_attestation": b"not-an-attestation"})
     resolver = AuthoritativeEvidenceResolver(
         application_records={
             application_id: AccountApplication(
@@ -741,7 +797,6 @@ def run_golden_path(  # noqa: PLR0915
             )
         },
         kyc_dsor_records={kyc_id: kyc_record},
-        kyc_event_chains={kyc_id: kyc_event_chain(kyc_record)},
         eligibility_records={
             eligibility_id: EligibilityResultRecord(
                 record_id=eligibility_id,
@@ -754,14 +809,14 @@ def run_golden_path(  # noqa: PLR0915
         first_trade_attestations=trades,
         cip_records={cip_id: cip},
         profile_records={profile_id: profile},
-        principal_acceptance_records={
+        principal_acceptance_records={} if variant is Variant.PRINCIPAL_APPROVAL_MISSING else {
             principal_id: PrincipalAcceptanceRecord(
                 record_id=principal_id,
                 account_id=ACCOUNT,
                 person_id=PERSON,
                 profile_record_id=profile_id,
                 accepted_at=START + timedelta(seconds=20),
-                actor=approver,
+                actor=principal if variant is Variant.PRINCIPAL_SELF_APPROVAL else approver,
                 approval_ref="MVP3-HUMAN-APPROVAL",
             )
         },
@@ -1031,13 +1086,15 @@ def run_golden_path(  # noqa: PLR0915
     from cannae_kernel.session import BusinessDate, MarketSession, SessionContext
     from lc.lifecycle import (
         ChildOrder,
-        accept_intent,
         activate_parent,
         authorize_strategy,
         split_parent,
     )
 
     wire = _wire(payload)
+    intent_approver = (
+        estate_actor() if variant is Variant.INTENT_SERVICE_HUMAN_JUDGMENT else approver
+    )
     envelope = KernelEnvelope(
         envelope_id=payload.intent_id,
         lifecycle_id=LifecycleId(_identifier("lif_", 20001)),
@@ -1049,20 +1106,50 @@ def run_golden_path(  # noqa: PLR0915
                 value=clock().date(), calendar="SIFMA-US", established_by="MVP-3 run clock"
             ),
         ),
-        approved_by=approver,
+        approved_by=intent_approver,
         provenance=Provenance.HUMAN_JUDGMENT,
         effects=OperationEffects(
             operation="MVP-3 approved intent", effects=(), note="synthetic only"
         ),
         payload_digest=kernel_digest_bytes(wire),
     )
-    validate_approval_provenance(envelope)
+    approval_wire: bytes | None = attest_human_approval(
+        HumanApproval(
+            approval_id="MVP3-HUMAN-APPROVAL",
+            decision_digest=envelope.payload_digest,
+            approver=approver,
+            approved_at=clock(),
+        ),
+        key_id=HUMAN_APPROVAL_KEY_ID,
+        private_key=HUMAN_APPROVAL_PRIVATE_KEY,
+    )
+    if variant in {
+        Variant.INTENT_SERVICE_HUMAN_JUDGMENT,
+        Variant.INTENT_HUMAN_NO_ATTESTATION,
+    }:
+        approval_wire = None
+    elif variant is Variant.INTENT_HUMAN_BAD_SIGNATURE:
+        approval_wire = b"not-an-attestation"
+    if approval_wire is not None and variant is not Variant.INTENT_HUMAN_BAD_SIGNATURE:
+        _append_evidence(
+            evidence_items,
+            stored_artifacts,
+            event_id="MVP3-HUMAN-APPROVAL",
+            producer="Atreides",
+            signature_status="VERIFIED",
+            cause_event_id=str(payload.intent_id),
+            summary="approved intent human approval",
+            artifact=approval_wire,
+            actor_kind="HUMAN",
+            attestation_id="MVP3-HUMAN-APPROVAL",
+        )
     outcome = accept_intent(
         envelope,
         wire,
         parent_order_id=OrderId(_identifier("ord_", 30002)),
         actor=actor,
         event=_event(40001, clock()),
+        approval_attestation=approval_wire,
     )
     outcome = authorize_strategy(outcome, actor=actor, event=_event(40002, clock()))
     outcome = activate_parent(outcome, actor=actor, event=_event(40003, clock()))
@@ -1489,18 +1576,6 @@ def run_golden_path(  # noqa: PLR0915
     )
     clock.advance(timedelta(days=(settlement_date - clock().date()).days))
     reconciliation_date = clock().date()
-    street_books: dict[tuple[str, str], Decimal] = {}
-    for entry in books.entries:
-        if entry.effective_date > reconciliation_date:
-            continue
-        for line in entry.lines:
-            if (
-                line.record_side is RecordSide.LOCATION
-                and line.issue is not None
-                and line.account_type.value in {"DTC", "FAIL_TO_RECEIVE", "STOCK_LOANED"}
-            ):
-                key = (line.issue, line.account_type.value)
-                street_books[key] = street_books.get(key, Decimal()) + line.quantity
     street_readers = build_independent_sources(
         books,
         IndependentSourceInputs(
@@ -1520,33 +1595,23 @@ def run_golden_path(  # noqa: PLR0915
             loan_instructions=(),
         ),
     )
-    street_sources = tuple(reader.read() for reader in street_readers)
     street_specs = (
-        ("stock-record-to-street", "DTC", street_sources[0]),
-        ("ftr-to-cns-fail-statement", "FAIL_TO_RECEIVE", street_sources[1]),
-        ("stock-loan-to-contract-register", "STOCK_LOANED", street_sources[2]),
+        ("stock-record-to-street", "DTC", street_readers[0]),
+        ("ftr-to-cns-fail-statement", "FAIL_TO_RECEIVE", street_readers[1]),
+        ("stock-loan-to-contract-register", "STOCK_LOANED", street_readers[2]),
     )
     street_completions = []
     street_breaks: list[StreetBreak] = []
-    for item_id, location, source in street_specs:
-        scoped_books = {key: value for key, value in street_books.items() if key[1] == location}
-        item_breaks, completion = reconcile(
-            scoped_books,
-            (source,),
+    for item_id, location, reader in street_specs:
+        item_breaks, completion = reconcile_observed_street(
+            books,
+            reader,
             as_of=reconciliation_date,
             item_id=item_id,
+            failure_location=location,
         )
         street_breaks.extend(item_breaks)
-        street_completions.append(
-            ReconciliationCompletion(
-                item_id=item_id,
-                close_date=reconciliation_date,
-                sources_read=("Atreides equities books", *completion.sources_read),
-                break_count=len(item_breaks),
-                status="FAILED" if item_breaks else "COMPLETED",
-                error="reconciliation break" if item_breaks else None,
-            )
-        )
+        street_completions.append(completion)
 
     instruction_log = InstructionLog()
     cash_instructions = (
@@ -1626,7 +1691,11 @@ def run_golden_path(  # noqa: PLR0915
             close_date=reconciliation_date,
             sources_read=control.sources_read,
             break_count=len(control.breaks),
-            status="FAILED" if control.status == "FAILED" else "COMPLETED",
+            status=(
+                ReconciliationStatus.FAILED
+                if control.status == ControlStatus.FAILED
+                else ReconciliationStatus.COMPLETED
+            ),
             error="reconciliation break" if control.breaks else None,
         )
 

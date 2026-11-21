@@ -11,8 +11,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from enum import StrEnum
 from pathlib import Path
-from typing import Literal, cast
+from typing import cast
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,7 +127,7 @@ class ReconciliationCompletion:
     close_date: date
     sources_read: tuple[str, ...]
     break_count: int
-    status: Literal["COMPLETED", "FAILED"]
+    status: ReconciliationStatus
     error: str | None = None
 
 
@@ -147,10 +148,21 @@ class StreetBreak:
 class CalendarRun:
     item_id: str
     close_date: date
-    status: Literal["RAN", "FAILED", "NOT_RUN"]
+    status: CalendarStatus
     sources_read: tuple[str, ...]
     break_count: int | None
     reason: str
+
+
+class ReconciliationStatus(StrEnum):
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+class CalendarStatus(StrEnum):
+    RAN = "RAN"
+    FAILED = "FAILED"
+    NOT_RUN = "NOT_RUN"
 
 
 class SyntheticDepository:
@@ -286,7 +298,7 @@ def reconcile(
         close_date=as_of,
         sources_read=tuple(source.name for source in sources),
         break_count=len(result),
-        status="FAILED" if result else "COMPLETED",
+        status=ReconciliationStatus.FAILED if result else ReconciliationStatus.COMPLETED,
         error="reconciliation differences detected" if result else None,
     )
 
@@ -331,7 +343,7 @@ def observed_reconcile(
             close_date=as_of,
             sources_read=tuple(source_names),
             break_count=1,
-            status="FAILED",
+            status=ReconciliationStatus.FAILED,
             error=f"{type(error).__name__}: {error}",
         )
 
@@ -348,13 +360,22 @@ def reconciliation_calendar(
         item_id = str(row["id"])
         completion = by_id.get(item_id)
         if completion is None:
-            results.append(CalendarRun(item_id, as_of, "NOT_RUN", (), None, "no completion record"))
-        elif completion.status == "FAILED":
             results.append(
                 CalendarRun(
                     item_id,
                     as_of,
-                    "FAILED",
+                    CalendarStatus.NOT_RUN,
+                    (),
+                    None,
+                    "no completion record",
+                )
+            )
+        elif completion.status == ReconciliationStatus.FAILED:
+            results.append(
+                CalendarRun(
+                    item_id,
+                    as_of,
+                    CalendarStatus.FAILED,
                     completion.sources_read,
                     completion.break_count,
                     completion.error or "reconciliation failed",
@@ -365,7 +386,7 @@ def reconciliation_calendar(
                 CalendarRun(
                     item_id,
                     as_of,
-                    "RAN",
+                    CalendarStatus.RAN,
                     completion.sources_read,
                     completion.break_count,
                     "reconciliation completed",

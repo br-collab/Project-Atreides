@@ -1,10 +1,65 @@
 # Changelog
 
+## Unreleased
+
+Phase A: a suspicious activity report (SAR) decision is accepted only as a signed attestation from the pinned synthetic AML (anti-money laundering) officer. Officer, outcome, reason and date are read from the verified payload. `extend_for_unidentified_suspect` records the officer attestation, the decision date and the stated basis that no suspect was identified on the date of initial detection, and it refuses an extension without them or made after day 30 (inventory finding F1, 20 November 2026). No run calls these yet.
+
+PS-3C Part 4 binds stored Know Your Customer decisions to a pinned Atreides signature and to the
+deterministic service holding `KYC_DSOR_WRITE` with policy-result provenance. Human approved
+intents require a pinned signed attestation bound to the exact intent digest and human approver;
+firm volume records deterministic-service policy results instead of claiming human action. Golden
+path mutations prove wrong KYC sealers, missing or bad signatures, missing principal approval,
+self-approval, and unattested intent approval are refused. The account-opening and approved-intent
+written supervisory procedure rows now point at those run-level tests. Register version 1.2.0.
+
+The suspicious activity report clock runs to filing, not to the decision (inventory finding N4).
+Under 31 CFR 1023.320(b)(3) the period is 30 calendar days from initial detection, extendable by
+30 when no suspect is identified, never past 60. A `NO_SAR` decision stops the clock; a `SAR`
+decision does not, because the simulator never files. `extend_for_unidentified_suspect` applies
+the extension once. One token trade no longer hides deposit and withdrawal movement: trading
+below a synthetic policy share of the cash moved (`trading_share_floor`, 10%) counts as none.
+The Rule 3120 report now carries the WSP register version it graded (M3), and the WSP runner
+loads the repository conftest as CI does (M4). Still Phase A: no run calls these yet.
+
+Reconciliation break causes are now read from the two sides (missing outside record, missing
+book entry, sign difference, quantity difference, unsourced location), never from age. Until
+now every carried break was labelled `TIMING`, which hid aged, unexplained differences
+(inventory finding N1, 19 November 2026). Age stays on each break as `age_calendar_days` with a
+new `carried` flag, and the five-day firm run now passes each day's control breaks forward, so
+an unposted deposit shows as `MISSING_BOOK_ENTRY` aged 0, 1 and 2 days. Test:
+`tests/books/test_ps3_break_causes.py`, through `run_firm`.
+
+The US equities calendar now carries the regular 4:00 p.m. close and the NYSE 1:00 p.m. early
+closes for 2026 and 2027 (27 November 2026, 24 December 2026, 26 November 2027), read from
+the NYSE Holidays and Trading Hours page on 20 November 2026. `MarketCalendar.session_close`
+fails closed for a year without session data.
+
+**Retraction (1.2.0).** The 1.2.0 entry below says the anti-money laundering monitoring runs
+"over books and instruction-log events" and that breaks are classified "from their own facts".
+Neither was true at 1.2.0: no run called the AML engine, and carried breaks were classified by
+age. Break causes are fixed above; AML wiring is PS-3D Phase B.
+
+PS-3D Phase A: Rule 3120 testing. Not yet called by `run_golden_path` or `run_firm`;
+PS-3D Phase B wires it into the runs. Until then it runs only from the test suite.
+
+Rule 3120 grades each written supervisory procedure row from the outcome the pytest
+runner recorded in its JUnit XML file: a test that ran and failed is a `FAILED` exception,
+an absent or skipped test is `NOT_RUN`, and rows match on the full test node identifier.
+The report no longer accepts an executed-test set from its caller, and the placeholder
+tests that only re-read the register are deleted.
+
+Coverage is partial. Rows name an existing test that exercises the control, most through
+the golden path or the firm run; the confirmation and statement tests call their builders
+on golden path output, and the fail-to-receive row plants a source outage, not a quantity
+difference. Customer profile and recommendation share one golden path test. One row has no
+run-level test yet and is an exception with its owner: stock loan to register, owed by PS-4A.
+WSP register version 1.2.0.
+
 ## 1.3.0 - 18 Nov 2026
 
 Correct securities-count sign convention and make the clean five-day firm reconciliation run
 truthful. Record both reserve-transfer instruction legs, derive street reconciliation status and
-owner, use service policy provenance for simulator approvals, pin market-access limits separately
+owner, retain the enforced human-judgment approval model pending a signed approval record, and pin market-access limits separately
 from generator bounds, bind capacity to its computed result, apply the pinned earlier-of deadline
 for lot identification, sign confirmation quantity by side, and record publication anchor write
 time when written.

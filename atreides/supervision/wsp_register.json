@@ -1,28 +1,192 @@
 {
-  "version": "1.0.0",
+  "version": "1.2.0",
   "rule_basis": {
     "FINRA-3110": "Pinned reproduction basis, FINRA Rule 3110",
     "FINRA-3120": "Pinned reproduction basis, FINRA Rule 3120",
     "FINRA-3130": "Pinned reproduction basis, FINRA Rule 3130"
   },
   "rows": [
-    {"gate":"account opening","rule":"FINRA-3110","control":"principal approval","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_ONBOARDING","review_frequency":"each decision","evidence":"account lifecycle event","escalation_path":"SENIOR_REGISTERED_PRINCIPAL","test":"test_account_opening_gate"},
-    {"gate":"KYC","rule":"FINRA-3110","control":"KYC evidence replay","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_KYC","review_frequency":"each decision","evidence":"KYC decision chain","escalation_path":"AML_OFFICER","test":"test_kyc_gate"},
-    {"gate":"customer profile","rule":"FINRA-3110","control":"profile completeness","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_PROFILE","review_frequency":"each change","evidence":"profile record","escalation_path":"COMPLIANCE_PRINCIPAL","test":"test_customer_profile_gate"},
-    {"gate":"recommendation","rule":"FINRA-3110","control":"recommendation evidence","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_SUITABILITY","review_frequency":"each recommendation","evidence":"recommendation record","escalation_path":"COMPLIANCE_PRINCIPAL","test":"test_recommendation_gate"},
-    {"gate":"market access","rule":"FINRA-3110","control":"market access decision","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_MARKET_ACCESS","review_frequency":"each order","evidence":"market access record","escalation_path":"MARKET_ACCESS_PRINCIPAL","test":"test_market_access_gate"},
-    {"gate":"approved intent","rule":"FINRA-3110","control":"approved intent lineage","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_INTENT","review_frequency":"each order","evidence":"approved intent envelope","escalation_path":"TRADING_PRINCIPAL","test":"test_approved_intent_gate"},
-    {"gate":"fill booking","rule":"FINRA-3110","control":"venue fill booking","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_BOOKS","review_frequency":"each fill","evidence":"books entry","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_fill_booking_gate"},
-    {"gate":"confirmation","rule":"FINRA-3110","control":"confirmation tie-out","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_REPORTING","review_frequency":"each confirmation","evidence":"furnished confirmation","escalation_path":"REPORTING_PRINCIPAL","test":"test_confirmation_gate"},
-    {"gate":"statement","rule":"FINRA-3110","control":"statement tie-out","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_REPORTING","review_frequency":"each statement","evidence":"issued statement","escalation_path":"REPORTING_PRINCIPAL","test":"test_statement_gate"},
-    {"gate":"stock record to street","rule":"FINRA-3110","control":"daily reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_SETTLEMENT","review_frequency":"daily","evidence":"reconciliation result","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_stock_record_reconciliation_gate"},
-    {"gate":"fail to receive to CNS","rule":"FINRA-3110","control":"daily reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_SETTLEMENT","review_frequency":"daily","evidence":"reconciliation result","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_fail_reconciliation_gate"},
-    {"gate":"stock loan to register","rule":"FINRA-3110","control":"daily reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_SETTLEMENT","review_frequency":"daily","evidence":"reconciliation result","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_stock_loan_reconciliation_gate"},
-    {"gate":"cash to bank","rule":"FINRA-3110","control":"daily reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_TREASURY","review_frequency":"daily","evidence":"reconciliation result","escalation_path":"FINANCIAL_OPERATIONS_PRINCIPAL","test":"test_cash_reconciliation_gate"},
-    {"gate":"reserve bank to books","rule":"FINRA-3110","control":"reserve reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_PROTECTION","review_frequency":"each computation","evidence":"reconciliation result","escalation_path":"FINANCIAL_OPERATIONS_PRINCIPAL","test":"test_reserve_reconciliation_gate"},
-    {"gate":"securities count","rule":"FINRA-3110","control":"securities count reconciliation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_COUNT","review_frequency":"periodic","evidence":"reconciliation result","escalation_path":"OPERATIONS_PRINCIPAL","test":"test_securities_count_gate"},
-    {"gate":"reserve","rule":"FINRA-3110","control":"customer reserve computation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_PROTECTION","review_frequency":"daily","evidence":"reserve result","escalation_path":"FINANCIAL_OPERATIONS_PRINCIPAL","test":"test_reserve_gate"},
-    {"gate":"net capital","rule":"FINRA-3110","control":"net capital computation","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_FINOP","review_frequency":"daily","evidence":"net capital result","escalation_path":"CHIEF_FINANCIAL_OFFICER","test":"test_net_capital_gate"},
-    {"gate":"early warning","rule":"FINRA-3110","control":"early warning threshold","supervisor_role":"SYNTHETIC_REGISTERED_PRINCIPAL_FINOP","review_frequency":"daily","evidence":"early warning result","escalation_path":"CHIEF_FINANCIAL_OFFICER","test":"test_early_warning_gate"}
-  ]
+    {
+      "gate": "account opening",
+      "rule": "FINRA-3110",
+      "control": "principal approval",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_ONBOARDING",
+      "review_frequency": "each decision",
+      "evidence": "account lifecycle event",
+      "escalation_path": "SENIOR_REGISTERED_PRINCIPAL",
+      "test": "tests/test_ps3c_approval_provenance.py::test_golden_path_refuses_missing_or_self_principal_approval"
+    },
+    {
+      "gate": "KYC",
+      "rule": "FINRA-3110",
+      "control": "KYC evidence replay",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_KYC",
+      "review_frequency": "each decision",
+      "evidence": "KYC decision chain",
+      "escalation_path": "AML_OFFICER",
+      "test": "tests/test_ps3c_kyc_storage.py::test_golden_path_refuses_a_chain_stored_for_another_kyc_record"
+    },
+    {
+      "gate": "customer profile",
+      "rule": "FINRA-3110",
+      "control": "profile completeness",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_PROFILE",
+      "review_frequency": "each change",
+      "evidence": "profile record",
+      "escalation_path": "COMPLIANCE_PRINCIPAL",
+      "test": "tests/test_golden_path.py::test_fail_closed_variants_have_owned_exceptions_and_no_close"
+    },
+    {
+      "gate": "recommendation",
+      "rule": "FINRA-3110",
+      "control": "recommendation evidence",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_SUITABILITY",
+      "review_frequency": "each recommendation",
+      "evidence": "recommendation record",
+      "escalation_path": "COMPLIANCE_PRINCIPAL",
+      "test": "tests/test_golden_path.py::test_fail_closed_variants_have_owned_exceptions_and_no_close"
+    },
+    {
+      "gate": "market access",
+      "rule": "FINRA-3110",
+      "control": "market access decision",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_MARKET_ACCESS",
+      "review_frequency": "each order",
+      "evidence": "market access record",
+      "escalation_path": "MARKET_ACCESS_PRINCIPAL",
+      "test": "tests/test_golden_path.py::test_books_projected_capacity_refuses_underfunded_order"
+    },
+    {
+      "gate": "approved intent",
+      "rule": "FINRA-3110",
+      "control": "approved intent lineage",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_INTENT",
+      "review_frequency": "each order",
+      "evidence": "approved intent envelope",
+      "escalation_path": "TRADING_PRINCIPAL",
+      "test": "tests/test_ps3c_approval_provenance.py::test_golden_path_refuses_unattested_approved_intent"
+    },
+    {
+      "gate": "fill booking",
+      "rule": "FINRA-3110",
+      "control": "venue fill booking",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_BOOKS",
+      "review_frequency": "each fill",
+      "evidence": "books entry",
+      "escalation_path": "OPERATIONS_PRINCIPAL",
+      "test": "tests/test_golden_path.py::test_sealed_quantity_changes_venue_fill_and_books"
+    },
+    {
+      "gate": "confirmation",
+      "rule": "FINRA-3110",
+      "control": "confirmation tie-out",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_REPORTING",
+      "review_frequency": "each confirmation",
+      "evidence": "furnished confirmation",
+      "escalation_path": "REPORTING_PRINCIPAL",
+      "test": "tests/test_client_reporting.py::test_confirmation_refuses_fill_price_that_disagrees_with_books"
+    },
+    {
+      "gate": "statement",
+      "rule": "FINRA-3110",
+      "control": "statement tie-out",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_REPORTING",
+      "review_frequency": "each statement",
+      "evidence": "issued statement",
+      "escalation_path": "REPORTING_PRINCIPAL",
+      "test": "tests/test_client_reporting.py::test_statement_that_does_not_tie_is_refused"
+    },
+    {
+      "gate": "stock record to street",
+      "rule": "FINRA-3110",
+      "control": "daily reconciliation",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_SETTLEMENT",
+      "review_frequency": "daily",
+      "evidence": "reconciliation result",
+      "escalation_path": "OPERATIONS_PRINCIPAL",
+      "test": "tests/simulator/test_ps3c_street_gate.py::test_street_one_share_mutation_fails_its_central_gate_row"
+    },
+    {
+      "gate": "fail to receive to CNS",
+      "rule": "FINRA-3110",
+      "control": "daily reconciliation",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_SETTLEMENT",
+      "review_frequency": "daily",
+      "evidence": "reconciliation result",
+      "escalation_path": "OPERATIONS_PRINCIPAL",
+      "test": "tests/simulator/test_mvp1c_fail_closed_lots.py::test_only_cns_source_failure_is_failed_and_closes_i3"
+    },
+    {
+      "gate": "stock loan to register",
+      "rule": "FINRA-3110",
+      "control": "daily reconciliation",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_SETTLEMENT",
+      "review_frequency": "daily",
+      "evidence": "reconciliation result",
+      "escalation_path": "OPERATIONS_PRINCIPAL",
+      "test": null,
+      "test_gap": "No run mutation breaks the stock loan reconciliation yet. Owed by PS-4A."
+    },
+    {
+      "gate": "cash to bank",
+      "rule": "FINRA-3110",
+      "control": "daily reconciliation",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_TREASURY",
+      "review_frequency": "daily",
+      "evidence": "reconciliation result",
+      "escalation_path": "FINANCIAL_OPERATIONS_PRINCIPAL",
+      "test": "tests/simulator/test_ps3c_money_breaks.py::test_money_mutation_fails_exactly_its_reconciliation_row[UNPOSTED_DEPOSIT_INSTRUCTION-cash-to-bank]"
+    },
+    {
+      "gate": "reserve bank to books",
+      "rule": "FINRA-3110",
+      "control": "reserve reconciliation",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_PROTECTION",
+      "review_frequency": "each computation",
+      "evidence": "reconciliation result",
+      "escalation_path": "FINANCIAL_OPERATIONS_PRINCIPAL",
+      "test": "tests/simulator/test_ps3c_money_breaks.py::test_money_mutation_fails_exactly_its_reconciliation_row[RESERVE_DEPOSIT_NOT_RECEIVED-reserve-bank-to-books]"
+    },
+    {
+      "gate": "securities count",
+      "rule": "FINRA-3110",
+      "control": "securities count reconciliation",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_COUNT",
+      "review_frequency": "periodic",
+      "evidence": "reconciliation result",
+      "escalation_path": "OPERATIONS_PRINCIPAL",
+      "test": "tests/simulator/test_ps3b_end_to_end.py::test_firm_run_one_share_depository_difference_is_one_break"
+    },
+    {
+      "gate": "reserve",
+      "rule": "FINRA-3110",
+      "control": "customer reserve computation",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_PROTECTION",
+      "review_frequency": "daily",
+      "evidence": "reserve result",
+      "escalation_path": "FINANCIAL_OPERATIONS_PRINCIPAL",
+      "test": "tests/simulator/test_scf1_firm.py::test_real_reserve_engine_lie_fails_i6"
+    },
+    {
+      "gate": "net capital",
+      "rule": "FINRA-3110",
+      "control": "net capital computation",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_FINOP",
+      "review_frequency": "daily",
+      "evidence": "net capital result",
+      "escalation_path": "CHIEF_FINANCIAL_OFFICER",
+      "test": "tests/simulator/test_phase2_closing.py::test_each_protection_engine_lie_turns_i6_false[net_capital]"
+    },
+    {
+      "gate": "early warning",
+      "rule": "FINRA-3110",
+      "control": "early warning threshold",
+      "supervisor_role": "SYNTHETIC_REGISTERED_PRINCIPAL_FINOP",
+      "review_frequency": "daily",
+      "evidence": "early warning result",
+      "escalation_path": "CHIEF_FINANCIAL_OFFICER",
+      "test": "tests/simulator/test_mvp2_focus_warning.py::test_missing_or_unowned_warning_draft_turns_i16_false"
+    }
+  ],
+  "test_basis": "Each row names the pytest node identifier of a test that plants a defect in that control through run_golden_path or run_firm and asserts the control catches it. A null test is an honest gap: Rule 3120 reports it as an exception (NO_RUN_LEVEL_TEST) with its owner until a run-level test exists."
 }
