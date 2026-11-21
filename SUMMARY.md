@@ -2,12 +2,12 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 
 # SIM-1 run summary
 
-- Seed: `20261023`
+- Seed: `44902524682`
 - Pack: `synthetic` version `1`
 - Manifest: `sha256:a5db4b717f0776a0cfe999f2c4236b50817f20754f62b0fd07b45a59ca5db356`
 - Classes: `SYNTHETIC`
-- Closes: `5`
-- Window: `2026-12-28` through `2027-01-04` (`declared synthetic start`)
+- Closes: `250`
+- Window: `2026-12-28` through `2027-12-23` (`declared synthetic start`)
 - Final SOFR: `None` percent
 - Final financing need: `$None`
 - Final financing charge: `$None`
@@ -17,9 +17,9 @@ SYNTHETIC SIMULATION: invariants held on generated data; this is not evidence of
 ## Reserve protection
 
 - Customer deposit policy: declared SYNTHETIC in the pack
-- Customer reserve: `1` PASS, `4` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `4` missing inputs or other engine reasons)
+- Customer reserve: `216` PASS, `34` HOLD (`0` no declared deposit, `9` simulated short or late deposit, `25` missing inputs or other engine reasons)
 - PAB deposit policy: declared SYNTHETIC in the pack
-- PAB reserve: `1` PASS, `4` HOLD (`0` no declared deposit, `0` simulated short or late deposit, `4` missing inputs or other engine reasons)
+- PAB reserve: `219` PASS, `31` HOLD (`0` no declared deposit, `6` simulated short or late deposit, `25` missing inputs or other engine reasons)
 
 ## New York Fed notices
 
