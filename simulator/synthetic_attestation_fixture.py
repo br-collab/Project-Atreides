@@ -1,11 +1,15 @@
 """Process-local Ed25519 identity for offline synthetic simulator evidence."""
 
+import json
+from collections.abc import Mapping
 from datetime import UTC, datetime
 
+from cannae_kernel.signed_attestation import sign_attestation
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from lc.trust_anchors import TrustAnchor as LCTrustAnchor
 from lc.trust_anchors import install_runtime_trust_anchor as install_lc_anchor
 
+from atreides.supervision.aml import AML_OFFICER_PRODUCER
 from atreides.trust_anchors import TrustAnchor, install_runtime_trust_anchor
 
 LC_KEY_ID = "synthetic-lc-run-key-1"
@@ -13,6 +17,9 @@ LC_PRIVATE_KEY = Ed25519PrivateKey.generate()
 LC_STATUS_KEY_ID = "synthetic-atreides-status-key-1"
 LC_STATUS_PRIVATE_KEY = Ed25519PrivateKey.generate()
 HUMAN_APPROVAL_KEY_ID = "synthetic-atreides-human-approval-key-1"
+AML_OFFICER_KEY_ID = "synthetic-aml-officer-run-key-1"
+# Generated per process: no repository bytes can reproduce this officer's signature.
+AML_OFFICER_PRIVATE_KEY = Ed25519PrivateKey.generate()
 HUMAN_APPROVAL_PRIVATE_KEY = Ed25519PrivateKey.from_private_bytes(bytes([23]) * 32)
 
 
@@ -28,6 +35,32 @@ def configure_synthetic_trust() -> None:
             valid_to=datetime(2035, 12, 31, 23, 59, 59, tzinfo=UTC),
             revoked=False,
         )
+    )
+    install_runtime_trust_anchor(
+        TrustAnchor(
+            key_id=AML_OFFICER_KEY_ID,
+            producer=AML_OFFICER_PRODUCER,
+            public_key=AML_OFFICER_PRIVATE_KEY.public_key(),
+            valid_from=datetime(2026, 1, 1, tzinfo=UTC),
+            valid_to=datetime(2035, 12, 31, 23, 59, 59, tzinfo=UTC),
+            revoked=False,
+        )
+    )
+
+
+def sign_aml_officer_attestation(payload: Mapping[str, str]) -> bytes:
+    """Sign a synthetic AML officer payload with this process's generated officer key.
+
+    This is the simulator's stand-in for a named human officer. It lives in the composition
+    root, not in ``atreides``: the decision functions accept only a verified wire.
+    """
+
+    body = json.dumps(dict(payload), sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return sign_attestation(
+        body,
+        producer=AML_OFFICER_PRODUCER,
+        key_id=AML_OFFICER_KEY_ID,
+        private_key=AML_OFFICER_PRIVATE_KEY,
     )
 
 
