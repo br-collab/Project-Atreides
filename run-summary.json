@@ -709,8 +709,8 @@
   "repository_shas": {
     "Cato-FICC-MCP": "bbd953d27fdd890a621907135d6ae75198d73a9d",
     "L.C.": "a203ab2ba246bdd54b6a9cf8c9068ec9bce1800e",
-    "atreides": "df0da55a6d5218f17c597311d4165e526d051b0b",
-    "aureon": "62f05965e71786469f76bed3262d828f0acbc027",
+    "atreides": "ddf39f4c2eb72af38197e1a50b8637565b9d1088",
+    "aureon": "d5ab65cc2f606a24885abc709c9ed395ce0d7a30",
     "cannae-kernel": "5ea352e5ce9234370398c4a6f243ba58c79fc1e4"
   },
   "scenario_counts": {
