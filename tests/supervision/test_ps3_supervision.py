@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from atreides.supervision.aml import (
+    AMLCase,
     AMLPolicy,
     EventKind,
     MonitoringEvent,
@@ -232,7 +233,7 @@ def _planted_case():
     )[0]
 
 
-def _decision_wire(outcome: str, *, decided_on: date = date(2026, 11, 5)) -> bytes:
+def _decision_wire(case: AMLCase, outcome: str, *, decided_on: date = date(2026, 11, 5)) -> bytes:
     return sign_aml_officer_attestation(
         {
             "purpose": "SAR_DECISION",
@@ -240,20 +241,22 @@ def _decision_wire(outcome: str, *, decided_on: date = date(2026, 11, 5)) -> byt
             "outcome": outcome,
             "reason": "documented synthetic reason",
             "decided_on": decided_on.isoformat(),
+            "case_id": case.case_id,
+            "alert_id": case.alert.alert_id,
         }
     )
 
 
 def test_a_sar_decision_does_not_stop_the_filing_clock() -> None:
     case = _planted_case()
-    decided = record_human_decision(case, _decision_wire("SAR"))
+    decided = record_human_decision(case, _decision_wire(case, "SAR"))
     assert not missed_clock_exception(decided, as_of=case.due_on)
     assert missed_clock_exception(decided, as_of=case.due_on + timedelta(days=1))
 
 
 def test_a_no_sar_decision_stops_the_clock() -> None:
     case = _planted_case()
-    decided = record_human_decision(case, _decision_wire("NO_SAR"))
+    decided = record_human_decision(case, _decision_wire(case, "NO_SAR"))
     assert not missed_clock_exception(decided, as_of=case.due_on + timedelta(days=10))
 
 
@@ -267,6 +270,8 @@ def test_unidentified_suspect_extension_caps_at_60_days_from_detection() -> None
             "officer": "HUMAN_AML_OFFICER:Alex",
             "decided_on": decided.isoformat(),
             "basis": basis,
+            "case_id": case.case_id,
+            "alert_id": case.alert.alert_id,
         }
     )
     extended = extend_for_unidentified_suspect(case, signed, decided, basis, policy=AMLPolicy())
@@ -297,7 +302,7 @@ def test_aml_file_decision_produces_unfiled_draft() -> None:
         instruction_events=(event(EventKind.CASH_WITHDRAWAL, 2),),
         policy=AMLPolicy(),
     )[0]
-    decided = record_human_decision(case, _decision_wire("SAR"))
+    decided = record_human_decision(case, _decision_wire(case, "SAR"))
     assert decided.draft_sar == {"status": "DRAFT_NOT_FILED", "case_id": case.case_id}
 
 
