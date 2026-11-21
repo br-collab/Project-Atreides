@@ -13,7 +13,6 @@ from atreides.supervision.aml import (
     missed_clock_exception,
     monitor,
     record_human_decision,
-    sign_aml_officer_attestation,
     unidentified_suspect_basis,
 )
 from atreides.supervision.controls import (
@@ -27,6 +26,7 @@ from atreides.supervision.controls import (
     run_3120_testing,
 )
 from simulator.golden_path import run_golden_path
+from simulator.synthetic_attestation_fixture import sign_aml_officer_attestation
 from tests.supervision.junit_runner import execute_tests_to_junit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
