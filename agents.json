@@ -3,14 +3,14 @@
   "domain": "ATREIDES",
   "phase": "A",
   "synthetic": true,
-  "taken_at": "2026-11-21T03:33:40.407069Z",
+  "taken_at": "2026-11-21T03:48:58.360067Z",
   "tick": {
     "state": "recorded",
     "value": 0
   },
   "last_tick_at": {
     "state": "recorded",
-    "value": "2026-11-21T03:33:40.407069Z"
+    "value": "2026-11-21T03:48:58.360067Z"
   },
   "halted": false,
   "halt_reason": {
@@ -43,7 +43,7 @@
       },
       "last_observed_at": {
         "state": "recorded",
-        "value": "2026-11-21T03:33:40.407069Z"
+        "value": "2026-11-21T03:48:58.360067Z"
       },
       "last_provenance": {
         "state": "recorded",
@@ -80,7 +80,7 @@
       },
       "last_observed_at": {
         "state": "recorded",
-        "value": "2026-11-21T03:33:40.407069Z"
+        "value": "2026-11-21T03:48:58.360067Z"
       },
       "last_provenance": {
         "state": "recorded",
@@ -117,7 +117,7 @@
       },
       "last_observed_at": {
         "state": "recorded",
-        "value": "2026-11-21T03:33:40.407069Z"
+        "value": "2026-11-21T03:48:58.360067Z"
       },
       "last_provenance": {
         "state": "recorded",
@@ -154,7 +154,7 @@
       },
       "last_observed_at": {
         "state": "recorded",
-        "value": "2026-11-21T03:33:40.407069Z"
+        "value": "2026-11-21T03:48:58.360067Z"
       },
       "last_provenance": {
         "state": "recorded",
@@ -170,7 +170,7 @@
         "value": {
           "code": "NO_RECORDED_HANDOFF",
           "detail": "Refused at the receiving agent: a lateral agent-to-agent input with no recorded handoff authorization (nothing recorded · operator-direct under CAOM-001). No C2 runtime exists to issue one, so every lateral input is refused (W3 § R1, WP-A2).",
-          "observed_at": "2026-11-21T03:33:40.407069Z"
+          "observed_at": "2026-11-21T03:48:58.360067Z"
         }
       },
       "recommendations": 0,
