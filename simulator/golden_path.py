@@ -161,7 +161,6 @@ from simulator.synthetic_attestation_fixture import (
     LC_PRIVATE_KEY,
     LC_STATUS_KEY_ID,
     LC_STATUS_PRIVATE_KEY,
-    configure_lc_status_trust,
     ensure_synthetic_trust,
 )
 
@@ -325,11 +324,6 @@ def _configure_trust() -> None:
     if _TRUST_CONFIGURED:
         return
     ensure_synthetic_trust()
-    try:
-        configure_lc_status_trust()
-    except RuntimeError:
-        # Another synthetic path installed this exact process-local fixture.
-        pass
     _TRUST_CONFIGURED = True
 
 
