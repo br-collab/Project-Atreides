@@ -12,8 +12,8 @@ def test_government_calendar_crosses_year_end_without_failing_open() -> None:
 
 def test_unloaded_year_is_indeterminate_with_reason() -> None:
     calendar = MarketCalendar.load(Market.US_EQUITIES)
-    with pytest.raises(CalendarIndeterminateError, match="no loaded data for 2028"):
-        calendar.is_business_day(date(2028, 1, 3))
+    with pytest.raises(CalendarIndeterminateError, match="no loaded data for 2029"):
+        calendar.is_business_day(date(2029, 1, 2))
 
 
 def test_close1_stress_years_are_sourced_and_observe_good_friday() -> None:
@@ -52,3 +52,33 @@ def test_session_close_fails_closed_without_data_or_on_a_holiday() -> None:
         calendar.session_close(date(2026, 11, 26))
     with pytest.raises(CalendarIndeterminateError):
         MarketCalendar.load(Market.US_GOVERNMENT_SECURITIES).session_close(date(2026, 11, 27))
+
+
+def test_nyse_2028_calendar_from_the_exchange_announcement() -> None:
+    """F3: 2028 as NYSE Group announced it on 23 Dec 2025.
+
+    1 Jan 2028 is a Saturday, so no New Year's Day holiday is observed and 3 Jan is open.
+    """
+
+    from datetime import time
+
+    calendar = MarketCalendar.load(Market.US_EQUITIES)
+    holidays_2028 = [
+        date(2028, 1, 17),
+        date(2028, 2, 21),
+        date(2028, 4, 14),
+        date(2028, 5, 29),
+        date(2028, 6, 19),
+        date(2028, 7, 4),
+        date(2028, 9, 4),
+        date(2028, 11, 23),
+        date(2028, 12, 25),
+    ]
+    for day in holidays_2028:
+        assert not calendar.is_business_day(day), day
+    assert calendar.is_business_day(date(2028, 1, 3))
+    assert calendar.is_business_day(date(2028, 12, 22))
+    assert calendar.session_close(date(2028, 7, 3)) == time(13, 0)
+    assert calendar.session_close(date(2028, 11, 24)) == time(13, 0)
+    assert calendar.session_close(date(2028, 12, 22)) == time(16, 0)
+    assert calendar.add_business_days(date(2027, 12, 31), 1) == date(2028, 1, 3)
