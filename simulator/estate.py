@@ -109,8 +109,7 @@ from simulator.synthetic_attestation_fixture import (
     HUMAN_APPROVAL_PRIVATE_KEY,
     LC_STATUS_KEY_ID,
     LC_STATUS_PRIVATE_KEY,
-    configure_lc_status_trust,
-    configure_synthetic_trust,
+    ensure_synthetic_trust,
 )
 
 #: SIM-1G deposit outcomes that leave the computation short at its deadline.
@@ -517,16 +516,7 @@ def exercise_simulator_market_access(
         payload_digest=digest_bytes(_wire(payload)),
     )
     if not _STATUS_TRUST_INSTALLED:
-        try:
-            configure_synthetic_trust()
-        except RuntimeError:
-            # Another composition root installed this process-local fixture.
-            pass
-        try:
-            configure_lc_status_trust()
-        except RuntimeError:
-            # Another composition root installed this process-local fixture.
-            pass
+        ensure_synthetic_trust()
         _STATUS_TRUST_INSTALLED = True
     approval_attestation = attest_human_approval(
         HumanApproval(
